@@ -1,0 +1,120 @@
+apiVersion: apps/v1beta2
+kind: StatefulSet
+metadata:
+  name: {{ template "fullname" . }}
+  labels:
+    app: {{ template "name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "name" . }}
+      release: {{ .Release.Name }}
+
+  serviceName: {{ template "serviceName" . }}
+
+  replicas: {{ .Values.mysql.replicas }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      initContainers:
+      - name: init-mysql
+        image: {{ .Values.tools.image }}
+        command: ["db", "db_init"]
+        env:
+          - name: TITANIUM_CONFIG_DIR
+            value: /mnt/conf.d/
+          - name: TITANIUM_CONFIG_MAP_DIR
+            value: /mnt/config-map/
+        volumeMounts:
+        - name: conf
+          mountPath: /mnt/conf.d
+        - name: config-map
+          mountPath: /mnt/config-map
+      - name: clone-mysql
+        image: {{ .Values.tools.image }} # gcr.io/google-samples/xtrabackup:1.0
+        command: ["db", "clone"]
+        env:
+          - name: TITANIUM_CONFIG_DIR
+            value: /etc/mysql/conf.d
+          - name: TITANIUM_MYSQL_DATA_DIR
+            value: /var/lib/mysql
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+          subPath: mysql
+        - name: conf
+          mountPath: /etc/mysql/conf.d
+      containers:
+      - name: mysql
+        image: {{ .Values.mysql.image }}
+        env:
+        - name: MYSQL_ALLOW_EMPTY_PASSWORD
+          value: "1"
+        ports:
+        - name: mysql
+          containerPort: 3306
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+          subPath: mysql
+        - name: conf
+          mountPath: /etc/mysql/conf.d
+        resources:
+          {{- toYaml .Values.mysql.resources | nindent 10 }}
+        livenessProbe:
+          exec:
+            command: ["mysqladmin", "ping"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            # Check we can execute queries over TCP (skip-networking is off).
+            command: ["mysql", "-h", "127.0.0.1", "-e", "SELECT 1"]
+          initialDelaySeconds: 5
+          periodSeconds: 2
+          timeoutSeconds: 1
+      - name: xtrabackup
+        image: {{ .Values.tools.image }}
+        ports:
+        - name: xtrabackup
+          containerPort: 3307
+        command: ["db", "backups_server"]
+        env:
+          - name: TITANIUM_CONFIG_DIR
+            value: /etc/mysql/conf.d
+          - name: TITANIUM_MYSQL_DATA_DIR
+            value: /var/lib/mysql
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+          subPath: mysql
+        - name: conf
+          mountPath: /etc/mysql/conf.d
+        resources:
+          {{ toYaml .Values.tools.resources | nindent 10 }}
+      volumes:
+      - name: conf
+        emptyDir: {}
+      - name: config-map
+        configMap:
+          name: {{ .Release.Name }}-mysql
+
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        app: {{ template "name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      accessModes:
+        - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: {{ .Values.mysql.persistence.storage }}

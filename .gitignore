@@ -99,3 +99,12 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# exclude pylint config file
+pylintrc
+
+# emacs
+.\#*
+
+# vim
+*.swp

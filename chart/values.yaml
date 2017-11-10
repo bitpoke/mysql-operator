@@ -1,0 +1,21 @@
+---
+mysql:
+  image: mysql:5.7
+  replicas: 3
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+  persistence:
+    storage: 8Gi
+
+
+tools:
+    image: gcr.io/pl-infra/titanium-toolbox:latest
+
+  # backup server resources
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
