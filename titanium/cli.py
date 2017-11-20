@@ -4,10 +4,12 @@ import pkgutil
 import importlib
 
 import titanium.commands as cmds_module
+# import vendors to configureat logging, and some sh commands
+import titanium.vendors  # pylint: disable=unused-import
 
 
 def get_commands(parser):
-    subparser = parser.add_subparsers(title='custome commands')
+    subparser = parser.add_subparsers(title='custom commands')
     for _, name, _ in pkgutil.iter_modules(cmds_module.__path__):
         if name.endswith('base'):
             continue

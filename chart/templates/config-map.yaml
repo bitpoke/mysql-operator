@@ -16,3 +16,7 @@ data:
     # Apply this config only on slaves.
     [mysqld]
     super-read-only
+  rclone.conf: |
+    [gs]
+    type = google cloud storage
+    service_account_file = /var/run/secrets/credentials.json

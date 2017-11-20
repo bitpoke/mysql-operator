@@ -12,17 +12,16 @@ LOGGING = {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'console'
             },
     },
     'root': {
         'handlers': ['console'],
-        'level': logging.DEBUG
+        'level': LOG_LEVEL
     }
 }
 
 
-CONFIG_DIR = os.getenv('TITANIUM_CONFIG_DIR', '/mnt/config.d/')
+CONFIG_DIR = os.getenv('TITANIUM_CONFIG_DIR', '/etc/mysql/conf.d/')
 CONFIG_MAP_DIR = os.getenv('TITANIUM_CONFIG_MAP_DIR', '/mnt/config-map/')
 
 MYSQL_DATA_DIR = os.getenv('TITANIUM_MYSQL_DATA_DIR', '/var/lib/mysql/')
@@ -31,10 +30,12 @@ GOVERNING_SERVICE = os.getenv('TITANIUM_GOVERNING_SERVICE', 'mysql')
 
 EXPOSE_BACKUPS_PORT = os.getenv('TITANIUM_EXPOSE_BACKUPS_PORT', '3307')
 
+PROJECT_NAME = os.getenv('TITANIUM_PROJECT_NAME', 'mysql')
+
 
 # https://github.com/ncw/rclone
 BACKUP_BUCKET = os.getenv('TITANIUM_BACKUP_BUCKET')
-INIT_BUCKET = os.getenv('TITANIUM_INIT_BUCKET')
+INIT_BUCKET_URI = os.getenv('TITANIUM_INIT_BUCKET_URI')
 
 
 # replication

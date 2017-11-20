@@ -12,10 +12,15 @@ mysql:
 
 
 tools:
-    image: gcr.io/pl-infra/titanium-toolbox:latest
-
-  # backup server resources
+  image: gcr.io/pl-infra/titanium-toolbox:latest
   resources:
+    # backup server resources
     requests:
       cpu: 100m
       memory: 100Mi
+
+
+gsCredentialsFile:
+
+initBucketURI:
+backupBucket:

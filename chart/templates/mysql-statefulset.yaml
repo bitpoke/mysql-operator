@@ -31,30 +31,37 @@ spec:
             value: /mnt/conf.d/
           - name: TITANIUM_CONFIG_MAP_DIR
             value: /mnt/config-map/
+          - name: TITANIUM_GOVERNING_SERVICE
+            value: {{ template "serviceName" . }}
         volumeMounts:
         - name: conf
           mountPath: /mnt/conf.d
         - name: config-map
           mountPath: /mnt/config-map
       - name: clone-mysql
-        image: {{ .Values.tools.image }} # gcr.io/google-samples/xtrabackup:1.0
+        image: {{ .Values.tools.image }}
         command: ["db", "clone"]
         env:
-          - name: TITANIUM_CONFIG_DIR
-            value: /etc/mysql/conf.d
-          - name: TITANIUM_MYSQL_DATA_DIR
-            value: /var/lib/mysql
+          - name: TITANIUM_INIT_BUCKET_URI
+            value: {{ .Values.initBucketURI }}
+          - name: TITANIUM_GOVERNING_SERVICE
+            value: {{ template "serviceName" . }}
         volumeMounts:
         - name: data
           mountPath: /var/lib/mysql
           subPath: mysql
         - name: conf
           mountPath: /etc/mysql/conf.d
+        # those are used for rclone
+        - name: secret-conf
+          mountPath: /var/run/secrets/
+        - name: config-map
+          mountPath: /mnt/config-map
       containers:
       - name: mysql
         image: {{ .Values.mysql.image }}
         env:
-        - name: MYSQL_ALLOW_EMPTY_PASSWORD
+        - name: MYSQL_ALLOW_EMPTY_PASSWORD  # TODO: remove it
           value: "1"
         ports:
         - name: mysql
@@ -86,11 +93,6 @@ spec:
         - name: xtrabackup
           containerPort: 3307
         command: ["db", "backups_server"]
-        env:
-          - name: TITANIUM_CONFIG_DIR
-            value: /etc/mysql/conf.d
-          - name: TITANIUM_MYSQL_DATA_DIR
-            value: /var/lib/mysql
         volumeMounts:
         - name: data
           mountPath: /var/lib/mysql
@@ -105,6 +107,10 @@ spec:
       - name: config-map
         configMap:
           name: {{ .Release.Name }}-mysql
+      - name: secret-conf
+        secret:
+          secretName: {{ .Release.Name }}-mysql-secrets
+
 
   volumeClaimTemplates:
   - metadata:

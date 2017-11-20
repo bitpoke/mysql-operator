@@ -1,7 +1,8 @@
 import re
 import socket
+from shutil import copyfile
 
-from titanium.settings import GOVERNING_SERVICE
+from titanium import settings
 
 
 def hostname():
@@ -21,7 +22,7 @@ def get_host_for(ordinal):
     host = hostname()
     base = host.rsplit('-', 1)[0]
 
-    return f'{base}-{ordinal}.{GOVERNING_SERVICE}'
+    return f'{base}-{ordinal}.{settings.GOVERNING_SERVICE}'
 
 
 def parse_slave_info_xtb_file(xtb_file_name):

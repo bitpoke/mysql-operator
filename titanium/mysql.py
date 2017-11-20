@@ -5,22 +5,21 @@ import os.path
 from shutil import copyfile
 
 import sh
+from sh.contrib import rclone  # pylint: disable=import-error
 
 from titanium import settings, utils
 
 
-
-server_id_config_template = """
-[mysql]
-server-id={server_id}
-"""
-
-
 class MysqlNode:
+    """
+    This class contains all the logic for configuring and exposing backup
+    of a mysql pod.
+    """
 
     def __init__(self):
         self.hostname = utils.hostname()
         self.ordinal = utils.get_ordinal()
+        self.server_id = 100 + self.ordinal
 
         if not self.is_master():
             self.source_host = utils.get_host_for(self.ordinal - 1)
@@ -41,32 +40,49 @@ class MysqlNode:
             return False
 
     def configure(self):
-        """Return config file for this node."""
-        server_id = 100 + self.ordinal
+        """Writes config file for this node."""
         with open(os.path.join(settings.CONFIG_DIR, 'server-id.cnf'), 'w+') as f:
-            f.write(server_id_config_template.format(server_id))
+            f.write(
+                '[mysqld]\n'
+                f'server-id={self.server_id}\n'
+            )
 
         src_config_file_name = 'master.cnf' if self.is_master() else 'slave.cnf'
         src_path = os.path.join(settings.CONFIG_MAP_DIR, src_config_file_name)
         dest_path = os.path.join(settings.CONFIG_DIR, src_config_file_name)
         copyfile(src_path, dest_path)
 
+        # TODO: create replication user if not exists.
+
     def clone(self):
         """Clone data from source."""
         # Skip the clone if data already exists or is master.
-        if self.exists_data() or self.is_master:
+        if self.exists_data():
             return
 
-        sh.xbstream(
-            sh.ncat('--recv-only', self.source_host, settings.EXPOSE_BACKUPS_PORT, _piped=True),
-            '-x', '-C', settings.MYSQL_DATA_DIR,
-        )
+        if self.is_master():
+            if not settings.INIT_BUCKET_URI:
+                return
+            # if is a master node and INIT_BUCKET_URI is set then clone for storage.
+            self.get_data_from_storages()
+        else:
+            self.get_data_from_source_node()
 
         sh.xtrabackup(
             '--prepare', f'--target-dir={settings.MYSQL_DATA_DIR}',
             '--user={settings.MASTER_REPLICATION_USER}',
             '--password={settings.MASTER_REPLICATION_PASSWORD}'
         )
+
+    def get_data_from_source_node(self):
+        sh.xbstream(
+            sh.ncat('--recv-only', self.source_host, settings.EXPOSE_BACKUPS_PORT, _piped=True),
+            '-x', '-C', settings.MYSQL_DATA_DIR,
+        )
+
+    def get_data_from_storages(self):
+        """Get data from INIT buckets specified in settings.INIT_BUCKET_URI."""
+        sh.gzip(rclone.cat(settings.INIT_BUCKET_URI, _piped=True), '-d', _cwd=settings.MYSQL_DATA_DIR)
 
     def get_binlog_position(self):
         """
@@ -90,7 +106,7 @@ class MysqlNode:
         return None, None
 
     def configure_slave_replication(self, binlog_file, binlog_pos):
-        logging.info('Initializing replication from clone position')
+        logging.info('Initializing replication from clone position.')
         query = f"""
         CHANGE MASTER TO MASTER_LOG_FILE='{binlog_file}',
         MASTER_LOG_POS={binlog_pos},
@@ -119,8 +135,12 @@ class MysqlNode:
     def expose_backup(self):
         """Run xtrabackup for backups."""
 
+        xtrabackup_cmd = [
+            'xtrabackup', '--backup', '--slave-info', '--stream=xbstream', '--host=127.0.0.1',
+            f'--user={settings.MASTER_REPLICATION_USER}', f'--password={settings.MASTER_REPLICATION_PASSWORD}'
+        ]
+
         sh.ncat(
-            '--listen', '--keep-open', '--send-only', '--max-conns=1', settings.EXPOSE_BACKUPS_PORT, '-c',
-            'xtrabackup --backup --slave-info --stream=xbstream --host=127.0.0.1 '
-            f'--user={settings.MASTER_REPLICATION_USER}'
+            '--listen', '--keep-open', '--send-only', '--max-conns=1',
+            settings.EXPOSE_BACKUPS_PORT, '-c', ' '.join(xtrabackup_cmd)
         )
