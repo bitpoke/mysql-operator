@@ -35,11 +35,11 @@ class MysqlNode:
 
     def is_ready(self):
         try:
-            return self.mysql('-e', 'SELECT 1') == '1'
+            return self.mysql('-e', 'SELECT 1').strip() == '1'
         except sh.ErrorReturnCode:
             return False
 
-    def configure(self):
+    def create_config_files(self):
         """Writes config file for this node."""
         with open(os.path.join(settings.CONFIG_DIR, 'server-id.cnf'), 'w+') as f:
             f.write(
@@ -52,11 +52,11 @@ class MysqlNode:
         dest_path = os.path.join(settings.CONFIG_DIR, src_config_file_name)
         copyfile(src_path, dest_path)
 
-        # TODO: create replication user if not exists.
-
     def clone(self):
         """Clone data from source."""
-        # Skip the clone if data already exists or is master.
+
+        # Skip the clone if data already exists,
+        # this may happen when pods restarts
         if self.exists_data():
             return
 
@@ -70,8 +70,8 @@ class MysqlNode:
 
         sh.xtrabackup(
             '--prepare', f'--target-dir={settings.MYSQL_DATA_DIR}',
-            '--user={settings.MASTER_REPLICATION_USER}',
-            '--password={settings.MASTER_REPLICATION_PASSWORD}'
+            f'--user={settings.MASTER_REPLICATION_USER}',
+            f'--password={settings.MASTER_REPLICATION_PASSWORD}'
         )
 
     def get_data_from_source_node(self):
@@ -132,15 +132,17 @@ class MysqlNode:
                 time.sleep(1)
             self.configure_slave_replication(binlog_file, binlog_pos)
 
-    def expose_backup(self):
-        """Run xtrabackup for backups."""
+    def configure_master(self):
+        """Configure master replication. Create user for replication"""
+        if not self.is_master():
+            return
 
-        xtrabackup_cmd = [
-            'xtrabackup', '--backup', '--slave-info', '--stream=xbstream', '--host=127.0.0.1',
-            f'--user={settings.MASTER_REPLICATION_USER}', f'--password={settings.MASTER_REPLICATION_PASSWORD}'
-        ]
+        while not self.is_ready():
+            time.sleep(1)
 
-        sh.ncat(
-            '--listen', '--keep-open', '--send-only', '--max-conns=1',
-            settings.EXPOSE_BACKUPS_PORT, '-c', ' '.join(xtrabackup_cmd)
-        )
+        # This query will create the user if not exists.
+        self.mysql(_in=(
+            f"GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* "
+            f"TO '{settings.MASTER_REPLICATION_USER}'@'%' "  # TODO: limit to: %.{settings.GOVERNING_SERVICE}
+            f"IDENTIFIED BY '{settings.MASTER_REPLICATION_PASSWORD}'"
+        ))

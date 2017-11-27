@@ -1,3 +1,4 @@
+{{- if and .Values.scheduleBackup .Values.backupBucket }}
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
@@ -8,7 +9,7 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
-  schedule: "*/5 * * * *"  # evry hour
+  schedule: {{ .Values.scheduleBackup }}
 
   jobTemplate:
     spec:
@@ -40,4 +41,4 @@ spec:
                 mountPath: /var/run/secrets/
               - name: config-map
                 mountPath: /mnt/config-map
-
+{{- end }}

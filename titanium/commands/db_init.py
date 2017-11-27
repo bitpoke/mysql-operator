@@ -12,4 +12,4 @@ class Command(BaseCommand):
     def handle(self):
         logging.info("Configure node.")
         node = MysqlNode()
-        node.configure()
+        node.create_config_files()

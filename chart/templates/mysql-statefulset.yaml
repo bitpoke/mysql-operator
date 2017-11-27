@@ -42,10 +42,20 @@ spec:
         image: {{ .Values.tools.image }}
         command: ["db", "clone"]
         env:
-          - name: TITANIUM_INIT_BUCKET_URI
-            value: {{ .Values.initBucketURI }}
-          - name: TITANIUM_GOVERNING_SERVICE
-            value: {{ template "serviceName" . }}
+        - name: TITANIUM_INIT_BUCKET_URI
+          value: {{ .Values.initBucketURI }}
+        - name: TITANIUM_GOVERNING_SERVICE
+          value: {{ template "serviceName" . }}
+        - name: TITANIUM_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-mysql-secrets
+              key: TITANIUM_REPLICATION_USER
+        - name: TITANIUM_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-mysql-secrets
+              key: TITANIUM_REPLICATION_PASSWORD
         volumeMounts:
         - name: data
           mountPath: /var/lib/mysql
@@ -60,9 +70,6 @@ spec:
       containers:
       - name: mysql
         image: {{ .Values.mysql.image }}
-        env:
-        - name: MYSQL_ALLOW_EMPTY_PASSWORD  # TODO: remove it
-          value: "1"
         ports:
         - name: mysql
           containerPort: 3306
@@ -87,12 +94,26 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 2
           timeoutSeconds: 1
-      - name: xtrabackup
+      - name: titanium
         image: {{ .Values.tools.image }}
         ports:
         - name: xtrabackup
           containerPort: 3307
-        command: ["db", "backups_server"]
+        command: ["/bin/sh","-c"]
+        args: ["db configure; db serve_backups"]
+        env:
+        - name: TITANIUM_GOVERNING_SERVICE
+          value: {{ template "serviceName" . }}
+        - name: TITANIUM_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-mysql-secrets
+              key: TITANIUM_REPLICATION_USER
+        - name: TITANIUM_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-mysql-secrets
+              key: TITANIUM_REPLICATION_PASSWORD
         volumeMounts:
         - name: data
           mountPath: /var/lib/mysql
@@ -110,9 +131,13 @@ spec:
       - name: secret-conf
         secret:
           secretName: {{ .Release.Name }}-mysql-secrets
-
+      {{- if .Values.persistenceDisabled }}
+      - name: data
+        emptyDir: {}
+      {{- end }}
 
   volumeClaimTemplates:
+{{- if not .Values.persistenceDisabled }}
   - metadata:
       name: data
       labels:
@@ -124,3 +149,5 @@ spec:
       resources:
         requests:
           storage: {{ .Values.mysql.persistence.storage }}
+{{- else }} []
+{{- end }}

@@ -10,6 +10,12 @@ mysql:
   persistence:
     storage: 8Gi
 
+  replication:
+    user: ''
+    password: ''
+    # user: 'random_string'
+    # password: 'random_string123'
+
 
 tools:
   image: gcr.io/pl-infra/titanium-toolbox:latest
@@ -24,3 +30,7 @@ gsCredentialsFile:
 
 initBucketURI:
 backupBucket:
+
+scheduleBackup: "0 * * * *"
+
+persistenceDisabled: false

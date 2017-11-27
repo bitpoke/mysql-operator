@@ -42,8 +42,13 @@ def parse_xtb_binlog_file(xtb_file_name):
     Parse file xtrabackup_binlog_info.
 
     File example:
+    dthhwim-titanium-0-bin.000003	154
     """
-    regex = re.compile(r'^(.*?)[[:space:]]+(.*?)$')
     with open(xtb_file_name, 'r') as f:
-        result = regex.search(f.read())
-        return result.group(0), result.group(1)
+        try:
+            result = f.read().split()
+            return result[0], result[1]
+        except IndexError:
+            f.seek(0)
+            print("XTB_FILE content: ", f.read())
+            raise
