@@ -1,17 +1,13 @@
 # pylint: disable=no-member
-import socket
-import time
-import json
 import tempfile
 import os
 from random import choice
 from string import ascii_lowercase
-import threading
 
 import pytest
 import yaml
 import sh
-from kubernetes import client, config, watch
+from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 import pymysql
 import backoff
@@ -27,6 +23,8 @@ INIT_CONFIG = {
     'persistenceDisabled': True,  # for fasts tests
     'mysql': {
         'replicas': 2,
+        #'allowEmptyPassword': True,
+        'rootPassword': 'supersecret'
     },
     'scheduleBackup': None
 }
@@ -35,13 +33,14 @@ config.load_kube_config()
 
 def pytest_addoption(parser):
     parser.addoption("--deploy", action="store_true", default=False,
-                     help="Build image and publish it to GS. (Default: false)")
+                     help="Build image and publish it to GS.")
 
 
 def deploy():
-    print(f'Start building image {TITANIUM_IMAGE}...')
+    """Helper for local development."""
+    print(f'\nStart building image {TITANIUM_IMAGE} ...')
     sh.docker.build('-t', TITANIUM_IMAGE, '.')
-    print(f'Pusing image to GS...')
+    print(f'Pushing docker image to GS ...')
     sh.gcloud.docker('--', 'push', TITANIUM_IMAGE)
 
 
@@ -49,11 +48,20 @@ class Release:
     def __init__(self, release, namespace=NAMESPACE, values=None):
         self.release = release
         self.namespace = namespace
+        values = values or {}
+
         self.values = {
             **INIT_CONFIG,
-            **(values or {})
+            **values
         }
-        self.v1 = client.CoreV1Api()
+        if 'mysql' in values:
+            self.values['mysql'] = {
+                **INIT_CONFIG['mysql'],
+                **values['mysql']
+            }
+
+        self.mysql_password = self.values['mysql'].get('rootPassword', '')
+        self.kubeV1 = client.CoreV1Api()
 
     def apply(self):
         with tempfile.NamedTemporaryFile('w+', suffix='.yaml') as config_file:
@@ -65,10 +73,11 @@ class Release:
             print(out)
 
     def delete(self):
-        sh.helm.delete('--purge', self.release)
+        sh.helm.delete('--purge', self.release, '--timeout', 10, '--no-hooks')
 
-    def execute(self, pod, cmd):
-        return sh.kubectl.exec('-it', f'{self.release}-titanium-{pod}', '--', cmd)
+    def execute(self, pod, cmd, container='titanium'):
+        return sh.kubectl.exec('--namespace', NAMESPACE, '-it', f'{self.release}-titanium-{pod}',
+                               '-c', container, '--', cmd, _tty_out=False, _tty_in=False)
 
     def pod_forward_ports(self, pod, ports):
         ports = map(str, ports)
@@ -77,22 +86,6 @@ class Release:
                           f'{self.release}-titanium-{pod}', ' '.join(ports),
                           _bg=True)
         return process
-
-
-    def wait_for_pod1(self, pod_ordinal, desired_state='Running'):
-        def parse_output(data, _, process):
-            print(f'EVENT: {data}')
-            if data.strip() == desired_state:
-                print('KILL PROCESS')
-                process.terminate()
-
-        print(f'Waiting for pod {pod_ordinal}...')
-        try:
-            sh.kubectl.get.pod(f'{self.release}-titanium-{pod_ordinal}', '--namespace', self.namespace,
-                               '--watch=true', '--output=go-template={{ .status.phase }}\n', _out=parse_output,
-                               _ok_code=[0,1])
-        except sh.SignalException_SIGTERM:
-            print('Killed')
 
     @backoff.on_predicate(backoff.fibo, max_value=15)
     @backoff.on_exception(backoff.expo, ApiException, max_tries=8)
@@ -105,7 +98,7 @@ class Release:
 
     @backoff.on_exception(backoff.expo, ApiException, max_tries=3)
     def get_pod_status(self, pod):
-        return self.v1.read_namespaced_pod_status(
+        return self.kubeV1.read_namespaced_pod_status(
             f'{self.release}-titanium-{pod}', self.namespace
         )
 
@@ -144,22 +137,22 @@ class DBFixture:
         self.conn = None
         self.init = False
 
-        self.connect_to_pod(0)
-
-    def connect_to_pod(self, pod):
+    def connect_to_pod(self, pod, user=None, password=None):
         print(f'Connect to pod {pod} ...')
         if self.init:
             self.conn.close()
             self.p.terminate()
+            self.init = False
 
         self.p = self.release.pod_forward_ports(pod, [3306])
-        self._connect_to_mysql()
+        self._connect_to_mysql(user, password)
 
     @backoff.on_exception(backoff.expo, pymysql.err.OperationalError, max_tries=10)
-    def _connect_to_mysql(self):
+    def _connect_to_mysql(self, user=None, password=None):
         print('Trying to connect to MYSQL...')
         self.conn = pymysql.connect(
-            host='127.0.0.1', user='root'
+            host='127.0.0.1', user=(user or 'root'),
+            password=(password or self.release.mysql_password)
         )
         self.init = True
 
@@ -181,17 +174,17 @@ class DBFixture:
             return cursor.fetchmany(size)
 
     def cleanup(self):
-        self.conn.close()
-        self.p.terminate()
+        try:
+            self.conn.close()
+            self.p.terminate()
+        except (pymysql.err.Error, ProcessLookupError):
+            pass
+
 
 
 @pytest.fixture(scope='session')
 def db(helm):
-    release = helm.install(values={
-        'mysql': {
-            'replicas': 2
-        }
-    })
+    release = helm.install()
 
     release.wait_for_pod(0)
     release.wait_for_pod(1)

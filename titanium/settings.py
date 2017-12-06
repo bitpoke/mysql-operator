@@ -21,16 +21,19 @@ LOGGING = {
 }
 
 
-CONFIG_DIR = os.getenv('TITANIUM_CONFIG_DIR', '/etc/mysql/conf.d/')
+# used in init-mysql init container
+CONFIG_MYSQL = os.getenv('TITANIUM_CONFIG_MYSQL_DIR', '/etc/mysql')
+CONFIG_DIR = os.getenv('TITANIUM_CONFIG_DIR', os.path.join(CONFIG_MYSQL, 'conf.d/'))
+
 CONFIG_MAP_DIR = os.getenv('TITANIUM_CONFIG_MAP_DIR', '/mnt/config-map/')
+SECRETS_DIR = os.getenv('TITANIUM_SECRETS_DIR', '/var/run/secrets/')
 
-MYSQL_DATA_DIR = os.getenv('TITANIUM_MYSQL_DATA_DIR', '/var/lib/mysql/')
 
-GOVERNING_SERVICE = os.getenv('TITANIUM_GOVERNING_SERVICE', 'mysql')
-
+# xtrabackup expose backups
 EXPOSE_BACKUPS_PORT = os.getenv('TITANIUM_EXPOSE_BACKUPS_PORT', '3307')
 
 PROJECT_NAME = os.getenv('TITANIUM_PROJECT_NAME', 'mysql')
+GOVERNING_SERVICE = os.getenv('TITANIUM_GOVERNING_SERVICE', 'mysql')
 
 
 # https://github.com/ncw/rclone
@@ -42,3 +45,12 @@ INIT_BUCKET_URI = os.getenv('TITANIUM_INIT_BUCKET_URI')
 MASTER_REPLICATION_USER = os.getenv('TITANIUM_REPLICATION_USER', 'root')
 MASTER_REPLICATION_PASSWORD = os.getenv('TITANIUM_REPLICATION_PASSWORD', '')
 MASTER_CONNECT_RETRY = 10
+
+
+# mysql
+MYSQL_HOST = '127.0.0.1'
+MYSQL_PORT = '3306'
+MYSQL_ROOT_PASSWORD = os.getenv('MYSQL_ROOT_PASSWORD', '')
+MYSQL_DATA_DIR = os.getenv('TITANIUM_MYSQL_DATA_DIR', '/var/lib/mysql/')
+
+INNODB_BUFFER_POOL_SIZE_DEFAULT = '800M'

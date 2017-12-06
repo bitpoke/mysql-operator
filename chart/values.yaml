@@ -1,10 +1,10 @@
 ---
 mysql:
   image: mysql:5.7
-  replicas: 3
+  replicas: 1
   resources:
     requests:
-      cpu: 500m
+      cpu: 200m
       memory: 1Gi
 
   persistence:
@@ -13,8 +13,14 @@ mysql:
   replication:
     user: ''
     password: ''
-    # user: 'random_string'
-    # password: 'random_string123'
+
+  allowEmptyPassword: false
+  rootPassword: ''
+
+db:
+  name: ''
+  user: ''
+  password: ''
 
 
 tools:

@@ -27,17 +27,37 @@ spec:
         image: {{ .Values.tools.image }}
         command: ["db", "db_init"]
         env:
-          - name: TITANIUM_CONFIG_DIR
-            value: /mnt/conf.d/
+          - name: TITANIUM_CONFIG_MYSQL_DIR
+            value: /mnt/mysql
           - name: TITANIUM_CONFIG_MAP_DIR
             value: /mnt/config-map/
           - name: TITANIUM_GOVERNING_SERVICE
             value: {{ template "serviceName" . }}
+         {{- if .Values.mysql.allowEmptyPassword }}
+          - name: MYSQL_ALLOW_EMPTY_PASSWORD
+            value: "true"
+          {{- else }}
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-mysql-secrets
+                key: MYSQL_ROOT_PASSWORD
+          - name: MYSQL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-mysql-secrets
+                key: MYSQL_PASSWORD
+          {{- end }}
         volumeMounts:
         - name: conf
-          mountPath: /mnt/conf.d
+          mountPath: /mnt/mysql
         - name: config-map
           mountPath: /mnt/config-map
+        - name: secret-conf
+          mountPath: /var/run/secrets/
+        - name: podinfo
+          mountPath: /mnt/podinfo
+          readOnly: false
       - name: clone-mysql
         image: {{ .Values.tools.image }}
         command: ["db", "clone"]
@@ -61,7 +81,7 @@ spec:
           mountPath: /var/lib/mysql
           subPath: mysql
         - name: conf
-          mountPath: /etc/mysql/conf.d
+          mountPath: /etc/mysql
         # those are used for rclone
         - name: secret-conf
           mountPath: /var/run/secrets/
@@ -70,6 +90,35 @@ spec:
       containers:
       - name: mysql
         image: {{ .Values.mysql.image }}
+        env:
+          {{- if .Values.mysql.allowEmptyPassword }}
+          - name: MYSQL_ALLOW_EMPTY_PASSWORD
+            value: "true"
+          {{- else }}
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-mysql-secrets
+                key: MYSQL_ROOT_PASSWORD
+          {{- end }}
+          {{- if .Values.db.name }}
+          - name: MYSQL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-mysql-secrets
+                key: MYSQL_PASSWORD
+          - name: MYSQL_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-mysql-secrets
+                key: MYSQL_USER
+          - name: MYSQL_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-mysql-secrets
+                key: MYSQL_DATABASE
+          {{- end }}
+
         ports:
         - name: mysql
           containerPort: 3306
@@ -78,19 +127,19 @@ spec:
           mountPath: /var/lib/mysql
           subPath: mysql
         - name: conf
-          mountPath: /etc/mysql/conf.d
+          mountPath: /etc/mysql
         resources:
           {{- toYaml .Values.mysql.resources | nindent 10 }}
         livenessProbe:
           exec:
-            command: ["mysqladmin", "ping"]
+            command: ["mysqladmin", "--defaults-file=/etc/mysql/client.conf", "ping"]
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
         readinessProbe:
           exec:
             # Check we can execute queries over TCP (skip-networking is off).
-            command: ["mysql", "-h", "127.0.0.1", "-e", "SELECT 1"]
+            command: ["mysql", "--defaults-file=/etc/mysql/client.conf", "-e", "SELECT 1"]
           initialDelaySeconds: 5
           periodSeconds: 2
           timeoutSeconds: 1
@@ -102,6 +151,10 @@ spec:
         command: ["/bin/sh","-c"]
         args: ["db configure; db serve_backups"]
         env:
+        - name: TITANIUM_BACKUP_BUCKET
+          value: {{ .Values.backupBucket }}
+        - name: TITANIUM_PROJECT_NAME
+          value: {{ template "fullname" . }}
         - name: TITANIUM_GOVERNING_SERVICE
           value: {{ template "serviceName" . }}
         - name: TITANIUM_REPLICATION_USER
@@ -119,7 +172,12 @@ spec:
           mountPath: /var/lib/mysql
           subPath: mysql
         - name: conf
-          mountPath: /etc/mysql/conf.d
+          mountPath: /etc/mysql
+        # those are used for rclone
+        - name: secret-conf
+          mountPath: /var/run/secrets/
+        - name: config-map
+          mountPath: /mnt/config-map
         resources:
           {{ toYaml .Values.tools.resources | nindent 10 }}
       volumes:
@@ -131,6 +189,13 @@ spec:
       - name: secret-conf
         secret:
           secretName: {{ .Release.Name }}-mysql-secrets
+      - name: podinfo
+        downwardAPI:
+          items:
+            - path: mem_request
+              resourceFieldRef:
+                containerName: mysql
+                resource: requests.memory
       {{- if .Values.persistenceDisabled }}
       - name: data
         emptyDir: {}

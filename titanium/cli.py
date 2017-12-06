@@ -9,7 +9,7 @@ import titanium.vendors  # pylint: disable=unused-import
 
 
 def get_commands(parser):
-    subparser = parser.add_subparsers(title='custom commands')
+    subparser = parser.add_subparsers(title='Custom commands')
     for _, name, _ in pkgutil.iter_modules(cmds_module.__path__):
         if name.endswith('base'):
             continue
@@ -26,8 +26,8 @@ def get_commands(parser):
 def main():
     "Main CLI endtrypoint"
     parser = argparse.ArgumentParser(
-            description='Mysql presslabs tools.'
-        )
+        description='Mysql presslabs tools.'
+    )
 
     get_commands(parser)
     args = parser.parse_args()

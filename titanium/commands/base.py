@@ -15,7 +15,7 @@ class BaseCommand(object):
     def add_arguments(self, parser):
         pass
 
-    def handle(self, args):
+    def handle(self, **args):
         raise NotImplementedError
 
     def __call__(self, args=None):

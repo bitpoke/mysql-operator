@@ -2,7 +2,7 @@
 import time
 import logging
 import os.path
-from shutil import copyfile
+import configparser
 
 import sh
 from sh.contrib import rclone  # pylint: disable=import-error
@@ -25,7 +25,7 @@ class MysqlNode:
             self.source_host = utils.get_host_for(self.ordinal - 1)
             self.master_host = utils.get_host_for(0)
 
-        self.mysql = sh.mysql.bake('-NB', '-h', '127.0.0.1')
+        self.mysql = sh.mysql.bake(f'--defaults-file={settings.CONFIG_MYSQL}/client.conf', '-NB')
 
     def is_master(self):
         return self.ordinal == 0
@@ -39,18 +39,44 @@ class MysqlNode:
         except sh.ErrorReturnCode:
             return False
 
+    def configuration_mysqld(self, config):
+        config['mysqld']['server-id'] = str(self.server_id)
+        config['mysqld']['datadir'] = settings.MYSQL_DATA_DIR
+        config['mysqld']['innodb-buffer-pool-size'] = utils.get_innodb_buffer_pool_size()
+        return config
+
+    def configuration_mysql_client(self, config):
+        config['client'] = {}
+        config['client']['host'] = settings.MYSQL_HOST
+        config['client']['port'] = settings.MYSQL_PORT
+        if settings.MYSQL_ROOT_PASSWORD:
+            config['client']['password'] = settings.MYSQL_ROOT_PASSWORD
+
+        return config
+
     def create_config_files(self):
         """Writes config file for this node."""
-        with open(os.path.join(settings.CONFIG_DIR, 'server-id.cnf'), 'w+') as f:
-            f.write(
-                '[mysqld]\n'
-                f'server-id={self.server_id}\n'
-            )
+
+        if not os.path.exists(settings.CONFIG_DIR):
+            os.makedirs(settings.CONFIG_DIR)
 
         src_config_file_name = 'master.cnf' if self.is_master() else 'slave.cnf'
-        src_path = os.path.join(settings.CONFIG_MAP_DIR, src_config_file_name)
-        dest_path = os.path.join(settings.CONFIG_DIR, src_config_file_name)
-        copyfile(src_path, dest_path)
+        src = os.path.join(settings.CONFIG_MAP_DIR, src_config_file_name)
+
+        config = configparser.ConfigParser()
+        config.read(src)
+        config = self.configuration_mysqld(config)
+
+        dest = os.path.join(settings.CONFIG_MYSQL, 'my.cnf')
+        with open(dest, 'w+') as f:
+            config.write(f)
+
+        config = configparser.ConfigParser()
+        config = self.configuration_mysql_client(config)
+
+        dest = os.path.join(settings.CONFIG_MYSQL, 'client.conf')
+        with open(dest, 'w+') as f:
+            config.write(f)
 
     def clone(self):
         """Clone data from source."""
@@ -64,6 +90,7 @@ class MysqlNode:
             if not settings.INIT_BUCKET_URI:
                 return
             # if is a master node and INIT_BUCKET_URI is set then clone for storage.
+            logging.info(f'Clone from storage. URI: {settings.INIT_BUCKET_URI}')
             self.get_data_from_storages()
         else:
             self.get_data_from_source_node()
@@ -82,7 +109,10 @@ class MysqlNode:
 
     def get_data_from_storages(self):
         """Get data from INIT buckets specified in settings.INIT_BUCKET_URI."""
-        sh.gzip(rclone.cat(settings.INIT_BUCKET_URI, _piped=True), '-d', _cwd=settings.MYSQL_DATA_DIR)
+        sh.xbstream(
+            sh.gzip(rclone.cat(settings.INIT_BUCKET_URI, _piped=True), '-d', _piped=True),
+            '-x', '-C', settings.MYSQL_DATA_DIR
+        )
 
     def get_binlog_position(self):
         """
@@ -92,12 +122,18 @@ class MysqlNode:
         """
         xtb_slave_info_file_name = os.path.join(settings.MYSQL_DATA_DIR, 'xtrabackup_slave_info')
         if os.path.exists(xtb_slave_info_file_name):
-            return utils.parse_slave_info_xtb_file(xtb_slave_info_file_name)
+            # XtraBackup already generated a partial "CHANGE MASTER TO" query
+            # because we're cloning from an existing slave.
+            info =  utils.parse_slave_info_xtb_file(xtb_slave_info_file_name)
+
+        if info: return info
 
         xtb_binlog_file_name = os.path.join(settings.MYSQL_DATA_DIR, 'xtrabackup_binlog_info')
         if os.path.exists(xtb_binlog_file_name):
-            # data cloned from master
-            return utils.parse_xtb_binlog_file(xtb_binlog_file_name)
+            # We're cloning directly from master. Parse binlog position.
+            info = utils.parse_xtb_binlog_file(xtb_binlog_file_name)
+
+        if info: return info
 
         if self.is_master():
             data = self.mysql('-e', 'SHOW MASTER STATUS').split()
