@@ -1,8 +1,6 @@
 import os
 import socket
 
-import humanfriendly
-
 from titanium import settings
 
 
