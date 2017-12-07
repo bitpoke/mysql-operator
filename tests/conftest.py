@@ -1,4 +1,5 @@
-# pylint: disable=no-member
+# pylint: disable=no-member,redefined-outer-name
+import time
 import tempfile
 import os
 from random import choice
@@ -72,7 +73,7 @@ class Release:
 
             out = sh.helm.install('-f', config_file.name, '--name', self.release, '--debug',
                                   '--namespace', self.namespace, CHART_PATH)
-            print(out)
+            print('\n'.join(out.stdout.decode('utf-8').splitlines()[-25:]))
 
     def delete(self):
         sh.helm.delete('--purge', self.release, '--timeout', 10, '--no-hooks')
@@ -93,7 +94,7 @@ class Release:
     @backoff.on_exception(backoff.expo, ApiException, max_tries=8)
     def wait_for_pod(self, pod_ordinal, desired_state='Running'):
         pod = self.get_pod_status(pod_ordinal)
-        print('POD[{}]: {}'.format(pod_ordinal, pod.status.phase))
+        #print('POD[{}]: {}'.format(pod_ordinal, pod.status.phase))
         if pod.status.phase == desired_state:
             return True
         return False
@@ -133,20 +134,28 @@ def helm(request):
 
 
 class DBFixture:
+    fixtures = []
+
     def __init__(self, release):
         self.release = release
-        self.p = None
+        self.forward_process = None
         self.conn = None
         self.init = False
+        self.fixtures.append(self)
+
+    def __call__(self, release):
+        self.disconnect()
+        time.sleep(1)  # wait until process is killed
+        return DBFixture(release)
 
     def connect_to_pod(self, pod, user=None, password=None):
         print('Connect to pod {} ...'.format(pod))
         if self.init:
             self.conn.close()
-            self.p.terminate()
+            self.forward_process.terminate()
             self.init = False
 
-        self.p = self.release.pod_forward_ports(pod, [3306])
+        self.forward_process = self.release.pod_forward_ports(pod, [3306])
         self._connect_to_mysql(user, password)
 
     @backoff.on_exception(backoff.expo, pymysql.err.OperationalError, max_tries=10)
@@ -158,6 +167,19 @@ class DBFixture:
         )
         self.init = True
 
+    def disconnect(self):
+        try:
+            if self.conn:
+                self.conn.close()
+        except pymysql.err.Error:
+            pass
+        try:
+            if self.init:
+                self.forward_process.terminate()
+                self.init = False
+        except ProcessLookupError:
+            pass
+
     def create_db(self, name):
         self.query('CREATE DATABASE {};'.format(name))
         self.conn.select_db(name)
@@ -165,32 +187,31 @@ class DBFixture:
     def use_db(self, name):
         self.conn.select_db(name)
 
-    def insertQ(self, query, values):
+    def query(self, query, values=None, size=1):
+        if values:
+            with self.conn.cursor() as cursor:
+                cursor.execute(query, values)
+            self.conn.commit()
+            return
         with self.conn.cursor() as cursor:
             cursor.execute(query, values)
-        self.conn.commit()
-
-    def query(self, query, size=1):
-        with self.conn.cursor() as cursor:
-            cursor.execute(query)
             return cursor.fetchmany(size)
 
-    def cleanup(self):
-        try:
-            self.conn.close()
-            self.p.terminate()
-        except (pymysql.err.Error, ProcessLookupError):
-            pass
-
+    @classmethod
+    def cleanup(cls):
+        for fixture in cls.fixtures:
+            fixture.disconnect()
 
 
 @pytest.fixture(scope='session')
-def db(helm):
+def release(helm):
     release = helm.install()
-
     release.wait_for_pod(0)
     release.wait_for_pod(1)
+    return release
 
-    db_fixture = DBFixture(release)
-    yield db_fixture
-    db_fixture.cleanup()
+
+@pytest.fixture()
+def db():
+    yield DBFixture
+    DBFixture.cleanup()

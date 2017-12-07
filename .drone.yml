@@ -28,4 +28,4 @@ pipeline:
     commands:
       - /usr/local/bin/setup-credentials-helper.sh
       - pip3 install -r requirements.dev.txt
-      - python3 -m pytest --capture=no
+      - python3 -m pytest -v --capture=no

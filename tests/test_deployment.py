@@ -1,9 +1,8 @@
 import pytest
 
-from tests.conftest import DBFixture, Helm
 
-
-def test_mysql_running_replication(db):
+def test_mysql_running_replication(db, release):
+    db = db(release)
     db.connect_to_pod(0)
     db.create_db('test_1')
     db.query("""
@@ -16,7 +15,7 @@ def test_mysql_running_replication(db):
     """)
 
     expected_values = ('n1', 'n2')
-    db.insertQ(
+    db.query(
         "INSERT INTO `test` (name, value) VALUES (%s, %s)",
         expected_values
     )
@@ -32,9 +31,8 @@ def test_mysql_running_replication(db):
     assert actual_values[0] == expected_values
 
 
-def test_backup_on_demand(helm, db):
-    release = db.release
-    release.wait_for_pod(0)
+def test_backup_on_demand(helm, release, db):
+    db = db(release)
     db.connect_to_pod(0)
     db.create_db('test_2')
     db.query("""
@@ -46,7 +44,7 @@ def test_backup_on_demand(helm, db):
     );
     """)
     expected_values = ('n1', 'n2')
-    db.insertQ(
+    db.query(
         "INSERT INTO `test` (name, value) VALUES (%s, %s)",
         expected_values
     )
@@ -67,16 +65,16 @@ def test_backup_on_demand(helm, db):
         }
     })
     release2.wait_for_pod(0)
-    db2 = DBFixture(release2)
+
+    db2 = db(release2)
     db2.connect_to_pod(0)
     db2.use_db('test_2')
 
     actual_values = db2.query('SELECT name, value FROM test')
     assert actual_values[0] == expected_values
-    db2.cleanup()
 
 
-def test_user_creation(helm):
+def test_user_creation(helm, db):
     db_name, db_user, db_pass = 'xxTestxx', 'xxUserxx', 'xxPaSSxx'
     release = helm.install({
         'mysql' : {
@@ -90,6 +88,7 @@ def test_user_creation(helm):
         }
     })
     release.wait_for_pod(0)
-    db = DBFixture(release)
+
+    db = db(release)
     db.connect_to_pod(0, db_user, db_pass)
     db.use_db(db_name)
