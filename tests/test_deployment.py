@@ -73,6 +73,7 @@ def test_backup_on_demand(helm, db):
 
     actual_values = db2.query('SELECT name, value FROM test')
     assert actual_values[0] == expected_values
+    db2.cleanup()
 
 
 def test_user_creation(helm):

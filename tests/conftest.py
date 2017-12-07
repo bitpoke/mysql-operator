@@ -14,10 +14,11 @@ import backoff
 
 
 TITANIUM_IMAGE = 'gcr.io/pl-infra/titanium-toolbox'
+TITANIUM_IMAGE_TAG = os.getenv('TITANIUM_IMAGE_TAG', 'latest')
 NAMESPACE = 'titanium-testing'
 CHART_PATH = os.path.join(os.path.dirname(__file__), '../chart/')
 INIT_CONFIG = {
-    'gsCredentialsFile': os.getenv('TITANIUM_TEST_GS_CREDENTIALS',''),
+    'gsCredentialsFile': os.getenv('TITANIUM_TEST_GS_CREDENTIALS', os.getenv('GOOGLE_CREDENTIALS', '')),
     # 'initBucketURI': None,
     'backupBucket': 'gs:pl-test-mysql-backups',
     'persistenceDisabled': True,  # for fasts tests
@@ -26,7 +27,8 @@ INIT_CONFIG = {
         #'allowEmptyPassword': True,
         'rootPassword': 'supersecret'
     },
-    'scheduleBackup': None
+    'scheduleBackup': None,
+    'image': '{}:{}'.format(TITANIUM_IMAGE, TITANIUM_IMAGE_TAG)
 }
 config.load_kube_config()
 
@@ -38,9 +40,9 @@ def pytest_addoption(parser):
 
 def deploy():
     """Helper for local development."""
-    print(f'\nStart building image {TITANIUM_IMAGE} ...')
+    print('\nStart building image {} ...'.format(TITANIUM_IMAGE))
     sh.docker.build('-t', TITANIUM_IMAGE, '.')
-    print(f'Pushing docker image to GS ...')
+    print('Pushing docker image to GS ...')
     sh.gcloud.docker('--', 'push', TITANIUM_IMAGE)
 
 
@@ -76,14 +78,14 @@ class Release:
         sh.helm.delete('--purge', self.release, '--timeout', 10, '--no-hooks')
 
     def execute(self, pod, cmd, container='titanium'):
-        return sh.kubectl.exec('--namespace', NAMESPACE, '-it', f'{self.release}-titanium-{pod}',
+        return sh.kubectl.exec('--namespace', NAMESPACE, '-it', '{}-titanium-{}'.format(self.release, pod),
                                '-c', container, '--', cmd, _tty_out=False, _tty_in=False)
 
     def pod_forward_ports(self, pod, ports):
         ports = map(str, ports)
         print('Starting port forwarding...')
         process = sh.kubectl('port-forward', '--namespace', self.namespace,
-                          f'{self.release}-titanium-{pod}', ' '.join(ports),
+                          '{}-titanium-{}'.format(self.release, pod), ' '.join(ports),
                           _bg=True)
         return process
 
@@ -91,7 +93,7 @@ class Release:
     @backoff.on_exception(backoff.expo, ApiException, max_tries=8)
     def wait_for_pod(self, pod_ordinal, desired_state='Running'):
         pod = self.get_pod_status(pod_ordinal)
-        print(f'POD[{pod_ordinal}]: {pod.status.phase}')
+        print('POD[{}]: {}'.format(pod_ordinal, pod.status.phase))
         if pod.status.phase == desired_state:
             return True
         return False
@@ -99,7 +101,7 @@ class Release:
     @backoff.on_exception(backoff.expo, ApiException, max_tries=3)
     def get_pod_status(self, pod):
         return self.kubeV1.read_namespaced_pod_status(
-            f'{self.release}-titanium-{pod}', self.namespace
+            '{}-titanium-{}'.format(self.release, pod), self.namespace
         )
 
 
@@ -138,7 +140,7 @@ class DBFixture:
         self.init = False
 
     def connect_to_pod(self, pod, user=None, password=None):
-        print(f'Connect to pod {pod} ...')
+        print('Connect to pod {} ...'.format(pod))
         if self.init:
             self.conn.close()
             self.p.terminate()
@@ -157,7 +159,7 @@ class DBFixture:
         self.init = True
 
     def create_db(self, name):
-        self.query(f'CREATE DATABASE {name};')
+        self.query('CREATE DATABASE {};'.format(name))
         self.conn.select_db(name)
 
     def use_db(self, name):

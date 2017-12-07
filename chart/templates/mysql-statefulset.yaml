@@ -42,11 +42,6 @@ spec:
               secretKeyRef:
                 name: {{ .Release.Name }}-mysql-secrets
                 key: MYSQL_ROOT_PASSWORD
-          - name: MYSQL_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Release.Name }}-mysql-secrets
-                key: MYSQL_PASSWORD
           {{- end }}
         volumeMounts:
         - name: conf
