@@ -30,3 +30,11 @@ pipeline:
       - /usr/local/bin/setup-credentials-helper.sh
       - pip3 install -r requirements.dev.txt
       - python3 -m pytest -v --capture=no
+
+  publish-chart:
+    image: gcr.io/pl-infra/kluster-toolbox:latest
+    pull: true
+    secrets:
+      - GOOGLE_CREDENTIALS
+    commands:
+      - publish-helm-chart.sh ./chart kluster-charts
