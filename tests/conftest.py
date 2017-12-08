@@ -29,7 +29,9 @@ INIT_CONFIG = {
         'rootPassword': 'supersecret'
     },
     'scheduleBackup': None,
-    'image': '{}:{}'.format(TITANIUM_IMAGE, TITANIUM_IMAGE_TAG)
+    'tools': {
+        'image': '{}:{}'.format(TITANIUM_IMAGE, TITANIUM_IMAGE_TAG)
+    }
 }
 config.load_kube_config()
 
@@ -122,17 +124,6 @@ class Helm:
             release.delete()
 
 
-@pytest.fixture(autouse=True, scope='session')
-def helm(request):
-    if request.config.getoption('--deploy'):
-        # trigger deploy
-        deploy()
-
-    helm_client = Helm()
-    yield helm_client
-    helm_client.cleanup()
-
-
 class DBFixture:
     fixtures = []
 
@@ -168,17 +159,18 @@ class DBFixture:
         self.init = True
 
     def disconnect(self):
+        if not self.init:
+            return
         try:
-            if self.conn:
-                self.conn.close()
+            self.conn.close()
         except pymysql.err.Error:
             pass
         try:
-            if self.init:
-                self.forward_process.terminate()
-                self.init = False
+            self.forward_process.terminate()
         except ProcessLookupError:
             pass
+
+        self.init = False
 
     def create_db(self, name):
         self.query('CREATE DATABASE {};'.format(name))
@@ -201,6 +193,17 @@ class DBFixture:
     def cleanup(cls):
         for fixture in cls.fixtures:
             fixture.disconnect()
+
+
+@pytest.fixture(autouse=True, scope='session')
+def helm(request):
+    if request.config.getoption('--deploy'):
+        # trigger deploy
+        deploy()
+
+    helm_client = Helm()
+    yield helm_client
+    helm_client.cleanup()
 
 
 @pytest.fixture(scope='session')

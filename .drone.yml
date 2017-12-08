@@ -21,7 +21,7 @@ pipeline:
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
-      - TITANIUM_IMAGE_TAG="${DRONE_COMMIT_SHA:0:7}"
+      - TITANIUM_IMAGE_TAG=${DRONE_COMMIT_SHA:0:7}
       - PLUGIN_PROJECT=staging-reactor
       - PLUGIN_ZONE=us-east1-b
       - PLUGIN_CLUSTER=test
