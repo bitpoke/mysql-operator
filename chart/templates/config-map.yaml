@@ -17,6 +17,12 @@ data:
     # Apply this config only on slaves.
     [mysqld]
     super-read-only = on
+
+    # Crash safe
+    # https://www.percona.com/blog/2013/09/13/enabling-crash-safe-slaves-with-mysql-5-6/
+    relay_log_info_repository = TABLE
+    relay_log_recovery = ON
+
     {{- include "mysqld-cnf" . | nindent 4 }}
   rclone.conf: |
     [gs]

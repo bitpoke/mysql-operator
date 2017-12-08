@@ -42,4 +42,5 @@ innodb-file-per-table          = 1
 # LOGGING #
 log-queries-not-using-indexes  = 1
 slow-query-log                 = 1
+
 {{- end }}
