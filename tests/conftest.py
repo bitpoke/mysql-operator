@@ -94,9 +94,14 @@ class Release:
         return process
 
     def get_logs(self, pod, container='mysql'):
-        out = sh.kubectl.logs('--namespace', NAMESPACE, '{}-titanium-{}'.format(self.release, pod),
-                              '-c', container)
-        return out.stdout.decode('utf-8')
+        try:
+            out = sh.kubectl.logs(
+                '--namespace', NAMESPACE, '{}-titanium-{}'.format(self.release, pod),
+                '-c', container
+            )
+            return out.stdout.decode('utf-8')
+        except sh.ErrorReturnCode:
+            return 'Fail to fetch logs.'
 
     def all_logs(self):
         for pod in range(self.no_pods):
@@ -104,11 +109,10 @@ class Release:
                 print('\n=== Logs for: {}-titanium-{} - {} ==='.format(self.release, pod, container))
                 print(self.get_logs(pod, container))
 
-    @backoff.on_predicate(backoff.fibo, max_value=15)
+    @backoff.on_predicate(backoff.fibo, max_value=10)
     @backoff.on_exception(backoff.expo, ApiException, max_tries=8)
     def wait_for_pod(self, pod_ordinal, desired_state='Running'):
         pod = self.get_pod_status(pod_ordinal)
-        #print('POD[{}]: {}'.format(pod_ordinal, pod.status.phase))
         if pod.status.phase == desired_state:
             return True
         return False
@@ -228,8 +232,13 @@ def helm(request):
 @pytest.fixture(scope='session')
 def release(helm):
     release = helm.install()
-    release.wait_for_pod(0)
-    release.wait_for_pod(1)
+    try:
+        release.wait_for_pod(0)
+        release.wait_for_pod(1)
+    except ApiException:
+        helm.cleanup()
+        raise
+
     return release
 
 

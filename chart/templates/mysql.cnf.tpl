@@ -3,6 +3,8 @@
 # GENERAL #
 #user                           = root
 default-storage-engine         = InnoDB
+gtid-mode                    = on
+enforce-gtid-consistency     = on
 
 # MyISAM #
 key-buffer-size                = 32M
