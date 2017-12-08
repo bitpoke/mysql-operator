@@ -98,4 +98,4 @@ def test_gtid_mode_enabled(db, release):
     db = db(release)
     db.connect_to_pod(0)
     out = db.query("SHOW GLOBAL VARIABLES LIKE 'GTID_MODE'")
-    assert out[0][1].decode('utf-8') == 'ON'
+    assert out[0][1] == 'ON'
