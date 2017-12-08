@@ -67,6 +67,7 @@ class Release:
 
         self.mysql_password = self.values['mysql'].get('rootPassword', '')
         self.kubeV1 = client.CoreV1Api()
+        self.no_pods = self.values['mysql']['replicas']
 
     def apply(self):
         with tempfile.NamedTemporaryFile('w+', suffix='.yaml') as config_file:
@@ -91,6 +92,17 @@ class Release:
                           '{}-titanium-{}'.format(self.release, pod), ' '.join(ports),
                           _bg=True)
         return process
+
+    def get_logs(self, pod, container='mysql'):
+        out = sh.kubectl.logs('--namespace', NAMESPACE, '{}-titanium-{}'.format(self.release, pod),
+                              '-c', container)
+        return out.stdout.decode('utf-8')
+
+    def all_logs(self):
+        for pod in range(self.no_pods):
+            for container in ['init-mysql', 'clone-mysql', 'mysql', 'titanium']:
+                print('\n=== Logs for: {}-titanium{} - {} ==='.format(self.release, pod, container))
+                print(self.get_logs(pod, container))
 
     @backoff.on_predicate(backoff.fibo, max_value=15)
     @backoff.on_exception(backoff.expo, ApiException, max_tries=8)
@@ -118,6 +130,10 @@ class Helm:
         release.apply()
         self._releases.append(release)
         return release
+
+    def print_all_logs(self):
+        for release in self._releases:
+            release.all_logs()
 
     def cleanup(self):
         for release in self._releases:
@@ -203,6 +219,9 @@ def helm(request):
 
     helm_client = Helm()
     yield helm_client
+
+    if request.session.testsfailed:
+        helm_client.print_all_logs()
     helm_client.cleanup()
 
 
