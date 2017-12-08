@@ -20,6 +20,7 @@ pipeline:
     pull: true
     secrets:
       - GOOGLE_CREDENTIALS
+      - TITANIUM_TEST_GS_CREDENTIALS
     environment:
       - TITANIUM_IMAGE_TAG=${DRONE_COMMIT_SHA:0:7}
       - PLUGIN_PROJECT=staging-reactor
