@@ -76,7 +76,8 @@ class Release:
 
             out = sh.helm.install('-f', config_file.name, '--name', self.release, '--debug',
                                   '--namespace', self.namespace, CHART_PATH)
-            print('\n'.join(out.stdout.decode('utf-8').splitlines()[-25:]))
+            print (out)
+            #print('\n'.join(out.stdout.decode('utf-8').splitlines()[-25:]))
 
     def delete(self):
         sh.helm.delete('--purge', self.release, '--timeout', 10, '--no-hooks')
@@ -101,7 +102,7 @@ class Release:
     def all_logs(self):
         for pod in range(self.no_pods):
             for container in ['init-mysql', 'clone-mysql', 'mysql', 'titanium']:
-                print('\n=== Logs for: {}-titanium{} - {} ==='.format(self.release, pod, container))
+                print('\n=== Logs for: {}-titanium-{} - {} ==='.format(self.release, pod, container))
                 print(self.get_logs(pod, container))
 
     @backoff.on_predicate(backoff.fibo, max_value=15)
