@@ -55,7 +55,11 @@ class MysqlNode:
         return config
 
     def create_config_files(self):
-        """Writes config file for this node."""
+        """
+        Writes config file for this node.
+         - /etc/mysql/my.cnf       = mysqld configuration
+         - /etc/mysql/client.conf  = mysql client configuration
+        """
 
         if not os.path.exists(settings.CONFIG_DIR):
             os.makedirs(settings.CONFIG_DIR)
@@ -102,13 +106,20 @@ class MysqlNode:
         )
 
     def get_data_from_source_node(self):
+        """
+        Connects to source_host (usually master node) and downloads a backup and using
+        xbstream data is extracted to /var/lib/mysql.
+        """
         sh.xbstream(
             sh.ncat('--recv-only', self.source_host, settings.EXPOSE_BACKUPS_PORT, _piped=True),
             '-x', '-C', settings.MYSQL_DATA_DIR,
         )
 
     def get_data_from_storages(self):
-        """Get data from INIT buckets specified in settings.INIT_BUCKET_URI."""
+        """
+        Get data from INIT buckets specified in settings.INIT_BUCKET_URI.
+        Data is extracted in /var/lib/mysql
+        """
         sh.xbstream(
             sh.gzip(rclone.cat(settings.INIT_BUCKET_URI, _piped=True), '-d', _piped=True),
             '-x', '-C', settings.MYSQL_DATA_DIR
@@ -124,16 +135,16 @@ class MysqlNode:
         if os.path.exists(xtb_slave_info_file_name):
             # XtraBackup already generated a partial "CHANGE MASTER TO" query
             # because we're cloning from an existing slave.
-            info =  utils.parse_slave_info_xtb_file(xtb_slave_info_file_name)
-
-        if info: return info
+            info = utils.parse_slave_info_xtb_file(xtb_slave_info_file_name)
+            if info:
+                return info
 
         xtb_binlog_file_name = os.path.join(settings.MYSQL_DATA_DIR, 'xtrabackup_binlog_info')
         if os.path.exists(xtb_binlog_file_name):
             # We're cloning directly from master. Parse binlog position.
             info = utils.parse_xtb_binlog_file(xtb_binlog_file_name)
-
-        if info: return info
+            if info:
+                return info
 
         if self.is_master():
             data = self.mysql('-e', 'SHOW MASTER STATUS').split()
@@ -169,7 +180,7 @@ class MysqlNode:
             self.configure_slave_replication(binlog_file, binlog_pos)
 
     def configure_master(self):
-        """Configure master replication. Create user for replication"""
+        """Configure master replication. Create user for replication."""
         if not self.is_master():
             return
 
