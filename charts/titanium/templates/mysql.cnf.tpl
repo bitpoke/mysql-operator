@@ -1,14 +1,16 @@
 {{- define "mysqld-cnf" }}
 
 # GENERAL #
-#user                           = root
 default-storage-engine         = InnoDB
-gtid-mode                    = on
-enforce-gtid-consistency     = on
+gtid-mode                      = on
+enforce-gtid-consistency       = on
+
+character-set-server           = utf8mb4
+collation-server               = utf8mb4_unicode_ci
+
 
 # MyISAM #
 key-buffer-size                = 32M
-#myisam-recover                 = FORCE,BACKUP
 
 # SAFETY #
 max-allowed-packet             = 16M

@@ -37,4 +37,4 @@ pipeline:
     secrets:
       - GOOGLE_CREDENTIALS
     commands:
-      - publish-helm-chart.sh ./chart kluster-charts
+      - publish-helm-chart.sh ./charts/titanium kluster-charts
