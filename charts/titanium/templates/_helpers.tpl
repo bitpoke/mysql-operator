@@ -52,3 +52,14 @@ mysql://{{ template "dbUser" . }}:{{ template "dbPassword" . }}@
 {{- template "dbHost" . }}:{{ template "dbPort" }}/
 {{- template "dbName" . -}}?charset=utf8mb4&conn_max_age=300
 {{- end -}}
+
+{{- define "mysqld-cnf" -}}
+default-storage-engine         = InnoDB
+gtid-mode                      = on
+enforce-gtid-consistency       = on
+
+{{ range $key, $value := .Values.mysqlConfig -}}
+{{ $key }} = {{ $value }}
+{{- end }}
+
+{{- end -}}
