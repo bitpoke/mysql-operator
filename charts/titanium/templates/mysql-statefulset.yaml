@@ -127,14 +127,14 @@ spec:
           {{- toYaml .Values.mysql.resources | nindent 10 }}
         livenessProbe:
           exec:
-            command: ["mysqladmin", "--defaults-file=/etc/mysql/client.conf", "ping"]
+            command: ["mysqladmin", "--defaults-file=/etc/mysql/client.cnf", "ping"]
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
         readinessProbe:
           exec:
             # Check we can execute queries over TCP (skip-networking is off).
-            command: ["mysql", "--defaults-file=/etc/mysql/client.conf", "-e", "SELECT 1"]
+            command: ["mysql", "--defaults-file=/etc/mysql/client.cnf", "-e", "SELECT 1"]
           initialDelaySeconds: 5
           periodSeconds: 2
           timeoutSeconds: 1

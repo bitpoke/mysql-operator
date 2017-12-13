@@ -1,6 +1,6 @@
 ---
 mysql:
-  image: mysql:5.7
+  image: percona:5.7
   replicas: 1
   resources:
     requests:

@@ -8,9 +8,9 @@ enforce-gtid-consistency       = on
 character-set-server           = utf8mb4
 collation-server               = utf8mb4_unicode_ci
 
-
 # MyISAM #
 key-buffer-size                = 32M
+myisam-recover-options         = FORCE,BACKUP
 
 # SAFETY #
 max-allowed-packet             = 16M
@@ -20,7 +20,7 @@ sql-mode                       = STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,
 sysdate-is-now                 = 1
 
 # BINARY LOGGING #
-expire-logs-days               = 14
+expire-logs-days               = 5
 sync-binlog                    = 1
 
 # CACHES AND LIMITS #

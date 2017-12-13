@@ -25,7 +25,7 @@ class MysqlNode:
             self.source_host = utils.get_host_for(self.ordinal - 1)
             self.master_host = utils.get_host_for(0)
 
-        self.mysql = sh.mysql.bake(f'--defaults-file={settings.CONFIG_MYSQL}/client.conf', '-NB')
+        self.mysql = sh.mysql.bake(f'--defaults-file={settings.CONFIG_MYSQL}/client.cnf', '-NB')
 
     def is_master(self):
         return self.ordinal == 0
@@ -58,7 +58,7 @@ class MysqlNode:
         """
         Writes config file for this node.
          - /etc/mysql/my.cnf       = mysqld configuration
-         - /etc/mysql/client.conf  = mysql client configuration
+         - /etc/mysql/client.cnf  = mysql client configuration
         """
 
         if not os.path.exists(settings.CONFIG_DIR):
@@ -78,7 +78,7 @@ class MysqlNode:
         config = configparser.ConfigParser()
         config = self.configuration_mysql_client(config)
 
-        dest = os.path.join(settings.CONFIG_MYSQL, 'client.conf')
+        dest = os.path.join(settings.CONFIG_MYSQL, 'client.cnf')
         with open(dest, 'w+') as f:
             config.write(f)
 
