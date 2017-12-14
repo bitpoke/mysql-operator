@@ -10,17 +10,15 @@ mysql:
   persistence:
     storage: 8Gi
 
-  replication:
-    user: ''
-    password: ''
+  replicationUser: ''
+  replicationPassword: ''
 
   allowEmptyPassword: false
   rootPassword: ''
 
-db:
-  name: ''
-  user: ''
-  password: ''
+  dbName: ''
+  dbUser: ''
+  dbPassword: ''
 
 mysqlConfig:
   character-set-server: utf8mb4

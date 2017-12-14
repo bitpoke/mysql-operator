@@ -78,13 +78,10 @@ def test_user_creation(helm, db):
     db_name, db_user, db_pass = 'xxTestxx', 'xxUserxx', 'xxPaSSxx'
     release = helm.install({
         'mysql' : {
-            'replicas': 1
-        },
-        'db':
-        {
-            'name': db_name,
-            'user': db_user,
-            'password': db_pass
+            'replicas': 1,
+            'dbName': db_name,
+            'dbUser': db_user,
+            'dbPassword': db_pass
         }
     })
     release.wait_for_pod(0)

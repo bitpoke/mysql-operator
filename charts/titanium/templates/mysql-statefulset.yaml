@@ -96,7 +96,7 @@ spec:
                 name: {{ .Release.Name }}-mysql-secrets
                 key: MYSQL_ROOT_PASSWORD
           {{- end }}
-          {{- if .Values.db.name }}
+          {{- if .Values.mysql.dbName }}
           - name: MYSQL_PASSWORD
             valueFrom:
               secretKeyRef:

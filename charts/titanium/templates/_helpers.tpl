@@ -28,15 +28,15 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- end -}}
 
 {{- define "dbUser" -}}
-{{ required "Missing .db.user" .Values.db.user }}
+{{ required "Missing mysql.dbUser" .Values.dbUser }}
 {{- end -}}
 
 {{- define "dbPassword" -}}
-{{ required "Missing .db.password" .Values.db.password }}
+{{ required "Missing .mysql.dbPassword" .Values.mysql.dbPassword }}
 {{- end -}}
 
 {{- define "dbName" -}}
-{{ required "Missing .db.name" .Values.db.name }}
+{{ required "Missing .mysql.dbName" .Values.mysql.dbName }}
 {{- end -}}
 
 {{- define "dbHost" -}}
