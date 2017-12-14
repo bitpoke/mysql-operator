@@ -148,7 +148,11 @@ spec:
         env:
         - name: TITANIUM_BACKUP_BUCKET
           value: {{ .Values.backupBucket }}
-        - name: TITANIUM_PROJECT_NAME
+        {{- if .Values.backupPrefix }}
+        - name: TITANIUM_BACKUP_PREFIX
+          value: {{ .Values.backupPrefix }}
+        {{- end }}
+        - name: TITANIUM_RELEASE_NAME
           value: {{ template "fullname" . }}
         - name: TITANIUM_GOVERNING_SERVICE
           value: {{ template "serviceName" . }}

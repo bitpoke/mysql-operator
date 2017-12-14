@@ -32,13 +32,13 @@ SECRETS_DIR = os.getenv('TITANIUM_SECRETS_DIR', '/var/run/secrets/')
 # xtrabackup expose backups
 EXPOSE_BACKUPS_PORT = os.getenv('TITANIUM_EXPOSE_BACKUPS_PORT', '3307')
 
-PROJECT_NAME = os.getenv('TITANIUM_PROJECT_NAME', 'mysql')
 GOVERNING_SERVICE = os.getenv('TITANIUM_GOVERNING_SERVICE', 'mysql')
-
+RELEASE_NAME = os.getenv('TITANIUM_RELEASE_NAME', 'mysql')
 
 # https://github.com/ncw/rclone
-BACKUP_BUCKET = os.getenv('TITANIUM_BACKUP_BUCKET')
 INIT_BUCKET_URI = os.getenv('TITANIUM_INIT_BUCKET_URI')
+BACKUP_BUCKET = os.getenv('TITANIUM_BACKUP_BUCKET')
+BACKUP_PREFIX = os.getenv('TITANIUM_BACKUP_PREFIX', RELEASE_NAME)
 
 
 # replication

@@ -64,6 +64,7 @@ class Release:
                 **INIT_CONFIG['mysql'],
                 **values['mysql']
             }
+        print('Tools image: ', self.values['tools']['image'])
 
         self.mysql_password = self.values['mysql'].get('rootPassword', '')
         self.kubeV1 = client.CoreV1Api()

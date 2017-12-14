@@ -58,7 +58,7 @@ default-storage-engine         = InnoDB
 gtid-mode                      = on
 enforce-gtid-consistency       = on
 
-{{ range $key, $value := .Values.mysqlConfig -}}
+{{- range $key, $value := .Values.mysqlConfig }}
 {{ $key }} = {{ $value }}
 {{- end }}
 

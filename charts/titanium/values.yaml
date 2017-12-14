@@ -32,12 +32,12 @@ mysqlConfig:
 
   # SAFETY #
   max-allowed-packet: 16M
-  max-connect-errors: 1000000
+  max-connect-errors: "1000000"
   skip-name-resolve: "ON"
-  sql-mode: >-
-    STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,
-    NO_AUTO_CREATE_USER,NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,
-    NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY
+  sql-mode:
+    "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,\
+    NO_AUTO_CREATE_USER,NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,\
+    NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY"
   sysdate-is-now: 1
 
   # BINARY LOGGING #
@@ -61,7 +61,7 @@ mysqlConfig:
   innodb-log-file-size: 128M
   innodb-flush-log-at-trx-commit: 2
   innodb-file-per-table: 1
-  # innodb-buffer-pool-size: 800M
+  # innodb-buffer-pool-size: 800M  # setted for 80% from RAM
 
   # LOGGING #
   log-queries-not-using-indexes: 1
@@ -81,6 +81,7 @@ gsCredentialsFile:
 
 initBucketURI:
 backupBucket:
+backupPredix: 
 
 scheduleBackup: "0 * * * *"
 
