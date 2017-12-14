@@ -41,6 +41,7 @@ mysqlConfig:
   # BINARY LOGGING #
   expire-logs-days: 5
   sync-binlog: 1
+  binlog-format: ROW
 
   # CACHES AND LIMITS #
   tmp-table-size: 32M
