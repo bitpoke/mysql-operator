@@ -33,7 +33,7 @@ SECRETS_DIR = os.getenv('TITANIUM_SECRETS_DIR', '/var/run/secrets/')
 EXPOSE_BACKUPS_PORT = os.getenv('TITANIUM_EXPOSE_BACKUPS_PORT', '3307')
 
 GOVERNING_SERVICE = os.getenv('TITANIUM_GOVERNING_SERVICE', 'mysql')
-RELEASE_NAME = os.getenv('TITANIUM_RELEASE_NAME', 'mysql')
+RELEASE_NAME = os.getenv('TITANIUM_RELEASE_NAME')
 
 # https://github.com/ncw/rclone
 INIT_BUCKET_URI = os.getenv('TITANIUM_INIT_BUCKET_URI')

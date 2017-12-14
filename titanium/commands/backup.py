@@ -22,8 +22,8 @@ class Command(BaseCommand):
         if not settings.BACKUP_BUCKET:
             logging.error("BACKUP_BUCKET is not configured.")
             return
-        if not settings.PROJECT_NAME:
-            logging.error("PROJECT_NAME is not configured.")
+        if not settings.BACKUP_PREFIX:
+            logging.error("TITANIUM_RELEASE_NAME or TITANIUM_BACKUP_PREFIX is not configured.")
             return
 
         self.backup(current_pod)
@@ -31,14 +31,14 @@ class Command(BaseCommand):
     def get_backup_uri(self):
         date = datetime.utcnow().isoformat(timespec='minutes')
         rand_str = ''.join(choice(ascii_uppercase) for i in range(7))
-        return f'{settings.BACKUP_BUCKET}/{settings.PROJECT_NAME}/{date}-{rand_str}.xbackup.gz'
+        return f'{settings.BACKUP_BUCKET}/{settings.BACKUP_PREFIX}/{date}-{rand_str}.xbackup.gz'
 
     def get_source_host(self, use_current_pod):
         """Get the master mysql hostname."""
         if use_current_pod:
             return '127.0.0.1'
 
-        return f'{settings.PROJECT_NAME}-0.{settings.GOVERNING_SERVICE}'
+        return f'{settings.RELEASE_NAME}-0.{settings.GOVERNING_SERVICE}'
 
     def backup(self, use_current_pod):
         """If BACKUP_BUCKET is set this will push backups to that bucket."""
