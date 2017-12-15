@@ -24,7 +24,7 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- end -}}
 
 {{- define "master-node-name" -}}
-{{ .Release.Name }}-titanium-0
+{{ template "fullname" . }}-0
 {{- end -}}
 
 {{- define "dbUser" -}}

@@ -82,6 +82,6 @@ initBucketURI:
 backupBucket:
 backupPredix: 
 
-scheduleBackup: "0 * * * *"
+scheduleBackup: "0 0 * * *"
 
 persistenceDisabled: false
