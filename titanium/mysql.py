@@ -128,38 +128,14 @@ class MysqlNode:
             '-x', '-C', settings.MYSQL_DATA_DIR
         )
 
-    def get_binlog_position(self):
+    def configure_slave_replication(self):
         """
-        Determine binlog position from cloned data.
-
-        Returns: <binlog file name>, <binlog position>
+        Sets the user/password for replication and to use GTID-based
+        auto-positioning.
         """
-        xtb_slave_info_file_name = os.path.join(settings.MYSQL_DATA_DIR, 'xtrabackup_slave_info')
-        if os.path.exists(xtb_slave_info_file_name):
-            # XtraBackup already generated a partial "CHANGE MASTER TO" query
-            # because we're cloning from an existing slave.
-            info = utils.parse_slave_info_xtb_file(xtb_slave_info_file_name)
-            if info:
-                return info
-
-        xtb_binlog_file_name = os.path.join(settings.MYSQL_DATA_DIR, 'xtrabackup_binlog_info')
-        if os.path.exists(xtb_binlog_file_name):
-            # We're cloning directly from master. Parse binlog position.
-            info = utils.parse_xtb_binlog_file(xtb_binlog_file_name)
-            if info:
-                return info
-
-        if self.is_master():
-            data = self.mysql('-e', 'SHOW MASTER STATUS').split()
-            return data[0], data[1]
-
-        return None, None
-
-    def configure_slave_replication(self, binlog_file, binlog_pos):
         logging.info('Initializing replication from clone position.')
         query = f"""
-        CHANGE MASTER TO MASTER_LOG_FILE='{binlog_file}',
-        MASTER_LOG_POS={binlog_pos},
+        CHANGE MASTER TO MASTER_AUTO_POSITION=1,
         MASTER_HOST='{self.master_host}',
         MASTER_USER='{settings.MASTER_REPLICATION_USER}',
         MASTER_PASSWORD='{settings.MASTER_REPLICATION_PASSWORD}',
@@ -175,12 +151,11 @@ class MysqlNode:
         if self.is_master():
             return
 
-        binlog_file, binlog_pos = self.get_binlog_position()
-        if binlog_file:
-            logging.info('Waiting for mysqld to be ready (accepting connections)')
-            while not self.is_ready():
-                time.sleep(1)
-            self.configure_slave_replication(binlog_file, binlog_pos)
+        logging.info('Waiting for mysqld to be ready (accepting connections)...')
+        while not self.is_ready():
+            time.sleep(1)
+
+        self.configure_slave_replication()
 
     def configure_master(self):
         """Configure master replication. Create user for replication."""
