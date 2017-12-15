@@ -40,5 +40,5 @@ pipeline:
       - GOOGLE_CREDENTIALS
     commands:
       - /usr/local/bin/setup-credentials-helper.sh
-      - sed -i "/gcr.io\/pl-infra\/titanium-toolbox:latest/c\ \ image:\ gcr.io\/pl-infra\/titanium-toolbox:$TITANIUM_RELEASE" charts/titanium/values.yaml
+      - ./change_tag.sh $TITANIUM_RELEASE
       - publish-helm-chart.sh ./charts/titanium kluster-charts
