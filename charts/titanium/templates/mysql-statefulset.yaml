@@ -27,29 +27,11 @@ spec:
         image: {{ .Values.tools.image }}
         command: ["db", "db_init"]
         env:
-          - name: TITANIUM_CONFIG_MYSQL_DIR
-            value: /mnt/mysql
-          - name: TITANIUM_CONFIG_MAP_DIR
-            value: /mnt/config-map/
-          - name: TITANIUM_GOVERNING_SERVICE
-            value: {{ template "serviceName" . }}
-         {{- if .Values.mysql.allowEmptyPassword }}
-          - name: MYSQL_ALLOW_EMPTY_PASSWORD
-            value: "true"
-          {{- else }}
-          - name: MYSQL_ROOT_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Release.Name }}-mysql-secrets
-                key: MYSQL_ROOT_PASSWORD
-          {{- end }}
+        {{- include "titanium.env" . | nindent 8 }}
+        {{- include "titanium.env.rootPassword" . | nindent 8 }}
         volumeMounts:
-        - name: conf
-          mountPath: /mnt/mysql
-        - name: config-map
-          mountPath: /mnt/config-map
-        - name: secret-conf
-          mountPath: /var/run/secrets/
+        {{- include "titanium.volumeMount" . | nindent 8 }}
+        # used to compute config files 
         - name: podinfo
           mountPath: /mnt/podinfo
           readOnly: false
@@ -57,45 +39,15 @@ spec:
         image: {{ .Values.tools.image }}
         command: ["db", "clone"]
         env:
-        - name: TITANIUM_INIT_BUCKET_URI
-          value: {{ .Values.initBucketURI }}
-        - name: TITANIUM_GOVERNING_SERVICE
-          value: {{ template "serviceName" . }}
-        - name: TITANIUM_REPLICATION_USER
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-mysql-secrets
-              key: TITANIUM_REPLICATION_USER
-        - name: TITANIUM_REPLICATION_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-mysql-secrets
-              key: TITANIUM_REPLICATION_PASSWORD
+        {{- include "titanium.env" . | nindent 8 }}
+        {{- include "titanium.env.replication" . | nindent 8 }}
         volumeMounts:
-        - name: data
-          mountPath: /var/lib/mysql
-          subPath: mysql
-        - name: conf
-          mountPath: /etc/mysql
-        # those are used for rclone
-        - name: secret-conf
-          mountPath: /var/run/secrets/
-        - name: config-map
-          mountPath: /mnt/config-map
+        {{- include "titanium.volumeMount" . | nindent 8 }}
       containers:
       - name: mysql
         image: {{ .Values.mysql.image }}
         env:
-          {{- if .Values.mysql.allowEmptyPassword }}
-          - name: MYSQL_ALLOW_EMPTY_PASSWORD
-            value: "true"
-          {{- else }}
-          - name: MYSQL_ROOT_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Release.Name }}-mysql-secrets
-                key: MYSQL_ROOT_PASSWORD
-          {{- end }}
+          {{- include "titanium.env.rootPassword" . | nindent 10 }}
           {{- if .Values.mysql.dbName }}
           - name: MYSQL_PASSWORD
             valueFrom:
@@ -113,7 +65,6 @@ spec:
                 name: {{ .Release.Name }}-mysql-secrets
                 key: MYSQL_DATABASE
           {{- end }}
-
         ports:
         - name: mysql
           containerPort: 3306
@@ -146,37 +97,10 @@ spec:
         command: ["/bin/sh","-c"]
         args: ["db configure; db serve_backups"]
         env:
-        - name: TITANIUM_BACKUP_BUCKET
-          value: {{ .Values.backupBucket }}
-        {{- if .Values.backupPrefix }}
-        - name: TITANIUM_BACKUP_PREFIX
-          value: {{ .Values.backupPrefix }}
-        {{- end }}
-        - name: TITANIUM_RELEASE_NAME
-          value: {{ template "fullname" . }}
-        - name: TITANIUM_GOVERNING_SERVICE
-          value: {{ template "serviceName" . }}
-        - name: TITANIUM_REPLICATION_USER
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-mysql-secrets
-              key: TITANIUM_REPLICATION_USER
-        - name: TITANIUM_REPLICATION_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-mysql-secrets
-              key: TITANIUM_REPLICATION_PASSWORD
+        {{- include "titanium.env" . | nindent 8 }}
+        {{- include "titanium.env.replication" . | nindent 8 }}
         volumeMounts:
-        - name: data
-          mountPath: /var/lib/mysql
-          subPath: mysql
-        - name: conf
-          mountPath: /etc/mysql
-        # those are used for rclone
-        - name: secret-conf
-          mountPath: /var/run/secrets/
-        - name: config-map
-          mountPath: /mnt/config-map
+        {{- include "titanium.volumeMount" . | nindent 8 }}
         resources:
           {{ toYaml .Values.tools.resources | nindent 10 }}
       volumes:

@@ -63,3 +63,60 @@ enforce-gtid-consistency       = on
 {{- end }}
 
 {{- end -}}
+
+{{- define "titanium.volumeMount" }}
+- name: data
+  mountPath: /var/lib/mysql
+  subPath: mysql
+- name: conf
+  mountPath: /etc/mysql
+- name: secret-conf  # those are used for rclone
+  mountPath: /var/run/secrets/
+- name: config-map
+  mountPath: /mnt/config-map
+{{ end -}}
+
+{{- define "titanium.env.rootPassword" }}
+{{- if .Values.mysql.allowEmptyPassword }}
+- name: MYSQL_ALLOW_EMPTY_PASSWORD
+  value: "true"
+{{- else }}
+- name: MYSQL_ROOT_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Release.Name }}-mysql-secrets
+      key: MYSQL_ROOT_PASSWORD
+{{- end }}
+{{ end -}}
+
+{{- define "titanium.env.replication" }}
+- name: TITANIUM_REPLICATION_USER
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Release.Name }}-mysql-secrets
+      key: TITANIUM_REPLICATION_USER
+- name: TITANIUM_REPLICATION_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Release.Name }}-mysql-secrets
+      key: TITANIUM_REPLICATION_PASSWORD
+{{ end -}}
+
+{{- define "titanium.env.rootPassword" }}
+{{ end -}}
+
+
+{{- define "titanium.env" }}
+- name: TITANIUM_BACKUP_BUCKET
+  value: {{ .Values.backupBucket }}
+{{- if .Values.backupPrefix }}
+- name: TITANIUM_BACKUP_PREFIX
+  value: {{ .Values.backupPrefix }}
+{{- end }}
+- name: TITANIUM_RELEASE_NAME
+  value: {{ template "fullname" . }}
+- name: TITANIUM_GOVERNING_SERVICE
+  value: {{ template "serviceName" . }}
+- name: TITANIUM_INIT_BUCKET_URI
+  value: {{ .Values.initBucketURI }}
+{{ end -}}
