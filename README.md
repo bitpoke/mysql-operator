@@ -11,7 +11,7 @@ Bulletproof mysql on kubernetes
 ### Backup on demand
 Run `db backup` command on `pod-0`.
 ```
-$ kubectl exec -it <release-name>-titanium-0 -- db backup
+$ kubectl exec -it <release-name>-titanium-0 -c titanium -- db backup
 ```
 ### Configuration
 Value name   | Description | Default
@@ -23,11 +23,12 @@ mysql.rootPassword | Root password. (required) | ''
  | |
 gsCredentialsFile | Service account json key to access backup. | _NULL_
 initBucketURI     | URI for db initialization. | _NULL_
-backupBucket      | Bucket for backups. | _NULL_
-scheduleBackup    | Allows to schedule backup jobs. | "0 0 * * *"
+backupBucket      | Bucket for backups. (e.g. gs:<bucket\_name>) | _NULL_
+backupPrefix      | Prefix where to put backups. | _(release name)_
+scheduleBackup    | Allows to schedule backup jobs. | 0 0 * * * _(daily)_
  | |
 mysql.image | Mysql image. | percona:5.7
-oysql.resources | Kubernetes resources per pod. | cpu: 200m, mem: 1Gi
+mysql.resources | Kubernetes resources per pod. | cpu: 200m, mem: 1Gi
 mysql.persistence.storage | Size of PVC. | 8Gi
 mysql.replicationUser | Replication user. | _(random string)_
 mysql.replicationPassword | Replication password. | _(random string)_
@@ -36,7 +37,8 @@ persistenceDisabled | Used for testing. Disable PVC volumes. | _false_
 mysqlConfig | Object that forms the my.cnf file. | [values.yaml](https://github.com/PressLabs/titanium/blob/master/charts/titanium/values.yaml)
 
 ### Integration with other projects
-The connect credentials and configurations are located in `{{ .Release.Name }}-db-credentials` secret.
+The connection configuration is located in `{{ .Release.Name }}-db-credentials`
+secret, that containes the following:
 
 Key | Description
 --- | ---
