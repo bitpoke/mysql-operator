@@ -29,12 +29,7 @@ spec:
               image: {{ .Values.tools.image }}
               command: [ "db", "backup" ]
               env:
-                - name: TITANIUM_BACKUP_BUCKET
-                  value: {{ .Values.backupBucket }}
-                - name: TITANIUM_PROJECT_NAME
-                  value: {{ template "fullname" . }}
-                - name: TITANIUM_GOVERNING_SERVICE
-                  value: {{ template "serviceName" . }}
+              {{- include "titanium.env" . | nindent 14 }}
 
               volumeMounts:
               - name: secret-conf
