@@ -1,7 +1,7 @@
 import logging
 
 from .base import BaseCommand
-from titanium.mysql import MysqlNode
+from titanium.mysql import InitPhase
 
 
 class Command(BaseCommand):
@@ -11,5 +11,5 @@ class Command(BaseCommand):
 
     def handle(self):
         logging.info("Start cloning.")
-        node = MysqlNode()
+        node = InitPhase()
         node.clone()

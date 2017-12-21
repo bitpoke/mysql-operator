@@ -25,7 +25,7 @@ spec:
       initContainers:
       - name: init-mysql
         image: {{ .Values.tools.image }}
-        command: ["db", "db_init"]
+        command: ["db", "config_files"]
         env:
         {{- include "titanium.env" . | nindent 8 }}
         {{- include "titanium.env.rootPassword" . | nindent 8 }}

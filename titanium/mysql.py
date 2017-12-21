@@ -10,7 +10,7 @@ from sh.contrib import rclone  # pylint: disable=import-error
 from titanium import settings, utils
 
 
-class MysqlNode:
+class MysqlNodeContext:
     """
     This class contains all the logic for configuring and exposing backup
     of a mysql pod.
@@ -25,7 +25,6 @@ class MysqlNode:
             self.source_host = utils.get_host_for(self.ordinal - 1)
             self.master_host = utils.get_host_for(0)
 
-        self.mysql = sh.mysql.bake(f'--defaults-file={settings.CONFIG_MYSQL}/client.cnf', '-NB')
 
     def is_master(self):
         return self.ordinal == 0
@@ -33,11 +32,9 @@ class MysqlNode:
     def exists_data(self):
         return os.path.exists(os.path.join(settings.MYSQL_DATA_DIR, 'mysql'))
 
-    def is_ready(self):
-        try:
-            return self.mysql('-e', 'SELECT 1').strip() == '1'
-        except sh.ErrorReturnCode:
-            return False
+
+class ConfigPhase(MysqNodeContext):
+    """Runs in init container: init-mysql."""
 
     def configuration_mysqld(self, config):
         config['mysqld']['server-id'] = str(self.server_id)
@@ -85,6 +82,10 @@ class MysqlNode:
         with open(dest, 'w+') as f:
             config.write(f)
 
+
+class InitPhase(MysqlNodeContext):
+    """Runs in init container: clone-mysql."""
+
     def clone(self):
         """Clone data from source."""
 
@@ -97,8 +98,7 @@ class MysqlNode:
             if not settings.INIT_BUCKET_URI:
                 return
             # if is a master node and INIT_BUCKET_URI is set then clone for storage.
-            logging.info(f'Clone from storage. URI: {settings.INIT_BUCKET_URI}')
-            self.get_data_from_storages()
+            self.get_data_from_storages(settings.INIT_BUCKET_URI)
         else:
             self.get_data_from_source_node()
 
@@ -113,26 +113,47 @@ class MysqlNode:
         Connects to source_host (usually master node) and downloads a backup and using
         xbstream data is extracted to /var/lib/mysql.
         """
+        logging.info(f'Cloning from {self.source_host} ...')
         sh.xbstream(
             sh.ncat('--recv-only', self.source_host, settings.EXPOSE_BACKUPS_PORT, _piped=True),
             '-x', '-C', settings.MYSQL_DATA_DIR,
         )
 
-    def get_data_from_storages(self):
+    def get_data_from_storages(self, bucket_uri):
         """
         Get data from INIT buckets specified in settings.INIT_BUCKET_URI.
         Data is extracted in /var/lib/mysql
         """
+        logging.info(f'Cloning from {bucket_uri} ...')
         sh.xbstream(
-            sh.gzip(rclone.cat(settings.INIT_BUCKET_URI, _piped=True), '-d', _piped=True),
+            sh.gzip(rclone.cat(bucket_uri, _piped=True), '-d', _piped=True),
             '-x', '-C', settings.MYSQL_DATA_DIR
         )
 
-    def configure_slave_replication(self):
+
+class RunningPhase(MysqlNodeContext):
+    """Runs in containers with mysql, named: titanium."""
+    def __init__(self):
+        super().__init__()
+        self.mysql = sh.mysql.bake(f'--defaults-file={settings.CONFIG_MYSQL}/client.cnf', '-NB')
+
+    def is_ready(self):
+        try:
+            return self.mysql('-e', 'SELECT 1').strip() == '1'
+        except sh.ErrorReturnCode:
+            return False
+
+    def wait_until_ready(self):
+        logging.info('Waiting for mysqld to be ready (accepting connections)...')
+        while not self.is_ready():
+            time.sleep(1)
+
+    def configure_slave(self):
         """
         Sets the user/password for replication and to use GTID-based
         auto-positioning.
         """
+
         logging.info('Initializing replication from clone position.')
         query = f"""
         CHANGE MASTER TO MASTER_AUTO_POSITION=1,
@@ -146,24 +167,8 @@ class MysqlNode:
 
         self.mysql(_in=query)
 
-    def configure_slave(self):
-        """Configure slave replication."""
-        if self.is_master():
-            return
-
-        logging.info('Waiting for mysqld to be ready (accepting connections)...')
-        while not self.is_ready():
-            time.sleep(1)
-
-        self.configure_slave_replication()
-
     def configure_master(self):
         """Configure master replication. Create user for replication."""
-        if not self.is_master():
-            return
-
-        while not self.is_ready():
-            time.sleep(1)
 
         # This query will create the user if not exists.
         self.mysql(_in=(
@@ -171,3 +176,11 @@ class MysqlNode:
             f"TO '{settings.MASTER_REPLICATION_USER}'@'%' "  # TODO: limit to: %.{settings.GOVERNING_SERVICE}
             f"IDENTIFIED BY '{settings.MASTER_REPLICATION_PASSWORD}'"
         ))
+
+    def configure(self):
+        self.wait_until_ready()
+
+        if self.is_master():
+            self.configure_master()
+        else:
+            self.configure_slave()

@@ -1,7 +1,7 @@
 import logging
 
 from .base import BaseCommand
-from titanium.mysql import MysqlNode
+from titanium.mysql import RunningPhase
 
 
 class Command(BaseCommand):
@@ -11,12 +11,5 @@ class Command(BaseCommand):
 
     def handle(self):
         logging.info("Configure mysql replication...")
-        node = MysqlNode()
-
-        if node.is_master():
-            logging.info('Configuring MASTER node.')
-            node.configure_master()
-        else:
-            logging.info('Configuring SLAVE node.')
-            node.configure_slave()
-
+        node = RunningPhase()
+        node.configure()
