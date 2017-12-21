@@ -33,7 +33,7 @@ class MysqlNodeContext:
         return os.path.exists(os.path.join(settings.MYSQL_DATA_DIR, 'mysql'))
 
 
-class ConfigPhase(MysqNodeContext):
+class ConfigPhase(MysqlNodeContext):
     """Runs in init container: init-mysql."""
 
     def configuration_mysqld(self, config):
