@@ -108,3 +108,6 @@ pylintrc
 
 # vim
 *.swp
+
+# ignore bin
+bin/
