@@ -17,7 +17,7 @@ import backoff
 TITANIUM_IMAGE = 'gcr.io/pl-infra/titanium-toolbox'
 TITANIUM_IMAGE_TAG = os.getenv('TITANIUM_IMAGE_TAG', 'latest')
 NAMESPACE = 'titanium-testing'
-CHART_PATH = os.path.join(os.path.dirname(__file__), '../charts/titanium/')
+CHART_PATH = os.path.join(os.path.dirname(__file__), '../../charts/titanium/')
 INIT_CONFIG = {
     'gsCredentialsFile': os.getenv('TITANIUM_TEST_GS_CREDENTIALS', os.getenv('GOOGLE_CREDENTIALS', '')),
     # 'initBucketURI': None,
