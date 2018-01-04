@@ -4,6 +4,8 @@ pipeline:
     mirror: https://mirror.gcr.io
     registry: gcr.io
     repo: gcr.io/pl-infra/titanium-toolbox
+    dockerfile: toolbox/Dockerfile
+    context: toolbox/
     username: _json_key
     tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
     force_tag: true
@@ -28,17 +30,6 @@ pipeline:
       - PLUGIN_CLUSTER=test
     commands:
       - /usr/local/bin/setup-credentials-helper.sh
+      - cd toolbox
       - pip3 install -r requirements.dev.txt
       - python3 -m pytest -v --capture=no
-
-  publish-chart:
-    image: gcr.io/pl-infra/kluster-toolbox:latest
-    pull: true
-    environment:
-      - TITANIUM_RELEASE=${DRONE_COMMIT_SHA:0:7}
-    secrets:
-      - GOOGLE_CREDENTIALS
-    commands:
-      - /usr/local/bin/setup-credentials-helper.sh
-      - ./change_tag.sh $TITANIUM_RELEASE
-      - publish-helm-chart.sh ./charts/titanium kluster-charts
