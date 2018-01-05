@@ -1,4 +1,4 @@
-package controller
+package clustercontroller
 
 import (
 	"time"
@@ -9,49 +9,50 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
+	controllerpkg "github.com/presslabs/titanium/pkg/controller"
 	"github.com/presslabs/titanium/pkg/util/k8sutil"
 )
 
 var initRetryWaitTime = 30 * time.Second
 
-type Event struct {
-	Type kwatch.EventType
-	//Object *api.EtcdCluster
-}
-
 type Controller struct {
 	logger *logrus.Entry
-	Config
 
-	//clusters map[string]*cluster.Cluster
-}
-
-type Config struct {
 	Namespace      string
 	ServiceAccount string
-	KubeCli        kubernetes.Interface
-	KubeExtCli     apiextensionsclient.Interface
-	CreateCRD      bool
+
+	KubeCli    kubernetes.Interface
+	KubeExtCli apiextensionsclient.Interface
+
+	CreateCRD bool
 }
 
-func New(cfg Config) *Controller {
+func New(namespace string, serviceAccount string,
+	kubecli kubernetes.Interface,
+	kubeExtCli apiextensionsclient.Interface,
+	createCRD bool,
+) *Controller {
 	return &Controller{
-		logger: logrus.WithField("pkg", "controller"),
+		logger:     logrus.WithField("pkg", "controller"),
+		Namespace:  namespace,
+		KubeCli:    kubecli,
+		KubeExtCli: kubeExtCli,
+		CreateCRD:  createCRD,
 
-		Config: cfg,
 		//clusters: make(map[string]*cluster.Cluster),
 	}
 }
 
-func (c *Controller) Start() error {
+func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 	c.logger.Info("Starting controller ...")
 
-	if !c.Config.CreateCRD {
+	if !c.CreateCRD {
 		err := c.createCRDIfNotExists()
 		if err != nil {
 			return err
 		}
 	}
+	// create informar that watch for events.
 	return nil
 }
 
@@ -70,4 +71,18 @@ func (c *Controller) createCRDIfNotExists() error {
 		return err
 	}
 	return k8sutil.WaitCRDReady(c.KubeExtCli, api.MysqlClusterCRDName)
+}
+
+const ControllerName = "mysqlclusterController"
+
+func init() {
+	controllerpkg.Register(ControllerName, func(ctx *controllerpkg.Context) controllerpkg.Interface {
+		return New(
+			ctx.Namespace,
+			ctx.ServiceAccount,
+			ctx.KubeCli,
+			ctx.KubeExtCli,
+			ctx.CreateCRD,
+		).Start
+	})
 }

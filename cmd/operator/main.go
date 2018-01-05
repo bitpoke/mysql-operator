@@ -2,7 +2,10 @@ package main
 
 import (
 	"flag"
-	"time"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -10,67 +13,70 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
-	"github.com/presslabs/titanium/pkg/controller"
+	"github.com/presslabs/titanium/cmd/operator/options"
+	controllerpkg "github.com/presslabs/titanium/pkg/controller"
 	"github.com/presslabs/titanium/pkg/util"
 	"github.com/presslabs/titanium/pkg/util/k8sutil"
+
+	// Add here all controllers
+	_ "github.com/presslabs/titanium/pkg/controller/clustercontroller"
 )
 
 var (
-	namespace string
-	name      string
+	opt                  *options.ControllerOptions
+	onlyOneSignalHandler = make(chan struct{})
+	shutdownSignals      = []os.Signal{os.Interrupt, syscall.SIGTERM}
 )
 
 func init() {
+	opt = options.NewControllerOptions()
+	opt.AddFlags()
 	flag.Parse()
+	err := opt.Validate()
+	if err != nil {
+		logrus.Fatalf("Config validation error: %v", err)
+	}
 }
 
 func main() {
-	namespace = util.GetPodNamespace()
-	name = util.GetPodName()
+	stopCh := setupSignalHandler()
 
-	kubecli := k8sutil.MustNewKubeClient()
-	// TODO: handle signals SIGINT, SIGTERM
-	// add promithius endpoints...
+	ctx := newControllerContext()
+	run := func(_ <-chan struct{}) {
 
-	leaderelection.RunOrDie(leaderelection.LeaderElectionConfig{
-		Lock:          getResourceLock(kubecli),
-		LeaseDuration: 15 * time.Second,
-		RenewDeadline: 10 * time.Second,
-		RetryPeriod:   2 * time.Second,
-		Callbacks: leaderelection.LeaderCallbacks{
-			OnStartedLeading: run,
-			OnStoppedLeading: func() {
-				logrus.Fatalf("leader election lost")
-			},
-		},
-	})
+		// build controllers map
+		var controllers = make(map[string]controllerpkg.Interface)
+		for n, fn := range controllerpkg.Known() {
+			logrus.Infof("Register controller: %s", n)
+			controllers[n] = fn(ctx)
+		}
+
+		var wg sync.WaitGroup
+		for n, cRoutine := range controllers {
+			wg.Add(1)
+			go func(n string, cRoutine controllerpkg.Interface) {
+				defer wg.Done()
+
+				logrus.Infof("Starting controller: %s", n)
+				err := cRoutine(2, stopCh)
+
+				if err != nil {
+					logrus.Fatalf("error running %s controller: %s", n, err.Error())
+				}
+			}(n, cRoutine)
+		}
+		//ctx.SharedInformerFactory.Start(stopCh)
+		//ctx.KubeSharedInformerFactory.Start(stopCh)
+		wg.Wait() // wait for controllers to finish
+		logrus.Fatalf("Control loops exited")
+	}
+
+	startLeadingElection(run)
 
 	panic("unreachable")
 }
 
-func run(stop <-chan struct{}) {
-	cfg := newControllerConfig()
-	c := controller.New(cfg)
-	err := c.Start()
-	logrus.Fatalf("controller Start() failed: %v", err)
-}
-
-func getResourceLock(kubecli kubernetes.Interface) resourcelock.Interface {
-	rl, err := resourcelock.New(resourcelock.EndpointsResourceLock,
-		namespace,
-		"mysql-operator-titanium",
-		kubecli.CoreV1(),
-		resourcelock.ResourceLockConfig{
-			Identity:      util.GetPodHostName(),
-			EventRecorder: util.CreateEventRecorder(kubecli, name, namespace),
-		})
-	if err != nil {
-		logrus.Fatalf("error creating lock: %v", err)
-	}
-	return rl
-}
-
-func newControllerConfig() controller.Config {
+func newControllerContext() *controllerpkg.Context {
 	kubecli := k8sutil.MustNewKubeClient()
 
 	serviceAccount, err := getMyPodServiceAccount(kubecli)
@@ -78,23 +84,72 @@ func newControllerConfig() controller.Config {
 		logrus.Fatalf("fail to get my pod's service account: %v", err)
 	}
 
-	cfg := controller.Config{
-		Namespace:      namespace,
+	return &controllerpkg.Context{
+		Namespace:      opt.Namespace,
 		ServiceAccount: serviceAccount,
 		KubeCli:        kubecli,
 		KubeExtCli:     k8sutil.MustNewKubeExtClient(),
 	}
-
-	return cfg
 }
 
 func getMyPodServiceAccount(kubecli kubernetes.Interface) (string, error) {
 	var sa string
-	pod, err := kubecli.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+	pod, err := kubecli.CoreV1().Pods(opt.Namespace).Get(opt.PodName, metav1.GetOptions{})
 	if err != nil {
-		logrus.Errorf("fail to get operator pod (%s): %v", name, err)
+		logrus.Errorf("fail to get operator pod (%s): %v", opt.PodName, err)
 		return sa, nil
 	}
 	sa = pod.Spec.ServiceAccountName
 	return sa, nil
+}
+
+// SetupSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
+// which is closed on one of these signals. If a second signal is caught, the program
+// is terminated with exit code 1.
+func setupSignalHandler() (stopCh <-chan struct{}) {
+	close(onlyOneSignalHandler) // panics when called twice
+
+	stop := make(chan struct{})
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, shutdownSignals...)
+	go func() {
+		<-c
+		close(stop)
+		<-c
+		os.Exit(1) // second signal. Exit directly.
+	}()
+
+	return stop
+}
+
+func startLeadingElection(run func(<-chan struct{})) {
+	kubecli := k8sutil.MustNewKubeClient()
+
+	leaderelection.RunOrDie(leaderelection.LeaderElectionConfig{
+		Lock:          getResourceLock(kubecli),
+		LeaseDuration: opt.LeaderElectionLeaseDuration,
+		RenewDeadline: opt.LeaderElectionRenewDeadline,
+		RetryPeriod:   opt.LeaderElectionRetryPeriod,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: run,
+			OnStoppedLeading: func() {
+				logrus.Fatalf("Leader election lost")
+			},
+		},
+	})
+}
+
+func getResourceLock(kubecli kubernetes.Interface) resourcelock.Interface {
+	rl, err := resourcelock.New(resourcelock.EndpointsResourceLock,
+		opt.Namespace,
+		"mysql-operator-titanium",
+		kubecli.CoreV1(),
+		resourcelock.ResourceLockConfig{
+			Identity:      util.GetPodHostName(),
+			EventRecorder: util.CreateEventRecorder(kubecli, opt.PodName, opt.Namespace),
+		})
+	if err != nil {
+		logrus.Fatalf("error creating lock: %v", err)
+	}
+	return rl
 }
