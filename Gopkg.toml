@@ -25,9 +25,15 @@ required = [
   branch = "release-1.8"
   source = "https://github.com/munnerz/code-generator.git"
 
+# Needed for apimachinery
+[[constraint]]
+  name = "github.com/hashicorp/golang-lru"
+  branch = "master"
+
 # gengo needs to be manually pinned to the version listed in code-generators
 # Gopkg.toml, because the k8s project does not produce Gopkg.toml files & dep
 # does not parse the Godeps.json file to determine revisions to use.
 [[override]]
   name = "k8s.io/gengo"
   revision = "9e661e9308f078838e266cca1c673922088c0ea4"
+
