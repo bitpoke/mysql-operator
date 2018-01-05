@@ -15,6 +15,8 @@ import (
 
 	"github.com/presslabs/titanium/cmd/operator/options"
 	controllerpkg "github.com/presslabs/titanium/pkg/controller"
+	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
+	informers "github.com/presslabs/titanium/pkg/generated/informers/externalversions"
 	"github.com/presslabs/titanium/pkg/util"
 	"github.com/presslabs/titanium/pkg/util/k8sutil"
 
@@ -84,12 +86,35 @@ func newControllerContext() *controllerpkg.Context {
 		logrus.Fatalf("fail to get my pod's service account: %v", err)
 	}
 
-	return &controllerpkg.Context{
-		Namespace:      opt.Namespace,
-		ServiceAccount: serviceAccount,
-		KubeCli:        kubecli,
-		KubeExtCli:     k8sutil.MustNewKubeExtClient(),
+	sIF, err := getSharedInformerFactory()
+	if err != nil {
+		logrus.Fatalf("fail to get shered inform factory: %v", err)
 	}
+
+	return &controllerpkg.Context{
+		Namespace:             opt.Namespace,
+		ServiceAccount:        serviceAccount,
+		KubeCli:               kubecli,
+		KubeExtCli:            k8sutil.MustNewKubeExtClient(),
+		SharedInformerFactory: sIF,
+	}
+}
+
+func getSharedInformerFactory() (informers.SharedInformerFactory, error) {
+	kubeCfg, err := k8sutil.ClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	intcl, err := clientset.NewForConfig(kubeCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	sharedInformerFactory := informers.NewFilteredSharedInformerFactory(intcl,
+		opt.InformersResyncTime, opt.Namespace, nil)
+	return sharedInformerFactory, nil
+
 }
 
 func getMyPodServiceAccount(kubecli kubernetes.Interface) (string, error) {

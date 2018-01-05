@@ -19,6 +19,8 @@ type ControllerOptions struct {
 	LeaderElectionLeaseDuration time.Duration
 	LeaderElectionRenewDeadline time.Duration
 	LeaderElectionRetryPeriod   time.Duration
+
+	InformersResyncTime time.Duration
 }
 
 const (
@@ -43,6 +45,7 @@ func NewControllerOptions() *ControllerOptions {
 		LeaderElectionLeaseDuration: defaultLeaderElectionLeaseDuration,
 		LeaderElectionRenewDeadline: defaultLeaderElectionRenewDeadline,
 		LeaderElectionRetryPeriod:   defaultLeaderElectionRetryPeriod,
+		InformersResyncTime: 30 * time.Second
 	}
 }
 
