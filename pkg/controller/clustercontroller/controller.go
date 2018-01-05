@@ -1,15 +1,18 @@
 package clustercontroller
 
 import (
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	kwatch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/workqueue"
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	controllerpkg "github.com/presslabs/titanium/pkg/controller"
+	mcinformers "github.com/presslabs/titanium/pkg/generated/informers/externalversions/titanium/v1alpha1"
+	mclisters "github.com/presslabs/titanium/pkg/generated/listers/titanium/v1alpha1"
 	"github.com/presslabs/titanium/pkg/util/k8sutil"
 )
 
@@ -25,14 +28,20 @@ type Controller struct {
 	KubeExtCli apiextensionsclient.Interface
 
 	CreateCRD bool
+
+	clusterLister mclisters.MysqlClusterLister
+
+	queue    workqueue.RateLimitingInterface
+	workerWg sync.WaitGroup
 }
 
-func New(namespace string, serviceAccount string,
+func New(mysqlClusterInformer mcinformers.MysqlClusterInformer,
+	namespace string, serviceAccount string,
 	kubecli kubernetes.Interface,
 	kubeExtCli apiextensionsclient.Interface,
 	createCRD bool,
 ) *Controller {
-	return &Controller{
+	ctrl := &Controller{
 		logger:     logrus.WithField("pkg", "controller"),
 		Namespace:  namespace,
 		KubeCli:    kubecli,
@@ -41,6 +50,14 @@ func New(namespace string, serviceAccount string,
 
 		//clusters: make(map[string]*cluster.Cluster),
 	}
+
+	ctrl.queue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "mysqlcluster")
+	mysqlClusterInformer.Informer().AddEventHandler(&controllerpkg.QueuingEventHandler{Queue: ctrl.queue})
+
+	ctrl.clusterLister = mysqlClusterInformer.Lister()
+
+	return ctrl
+
 }
 
 func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
@@ -78,6 +95,7 @@ const ControllerName = "mysqlclusterController"
 func init() {
 	controllerpkg.Register(ControllerName, func(ctx *controllerpkg.Context) controllerpkg.Interface {
 		return New(
+			ctx.SharedInformerFactory.Titanium().V1alpha1().MysqlClusters(),
 			ctx.Namespace,
 			ctx.ServiceAccount,
 			ctx.KubeCli,
