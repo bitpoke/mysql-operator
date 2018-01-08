@@ -32,8 +32,8 @@ type TitaniumV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *TitaniumV1alpha1Client) MysqlClusters(namespace string) MysqlClusterInterface {
-	return newMysqlClusters(c, namespace)
+func (c *TitaniumV1alpha1Client) MysqlClusters() MysqlClusterInterface {
+	return newMysqlClusters(c)
 }
 
 // NewForConfig creates a new TitaniumV1alpha1Client for the given config.

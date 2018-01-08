@@ -45,7 +45,7 @@ func NewControllerOptions() *ControllerOptions {
 		LeaderElectionLeaseDuration: defaultLeaderElectionLeaseDuration,
 		LeaderElectionRenewDeadline: defaultLeaderElectionRenewDeadline,
 		LeaderElectionRetryPeriod:   defaultLeaderElectionRetryPeriod,
-		InformersResyncTime: 30 * time.Second
+		InformersResyncTime:         30 * time.Second,
 	}
 }
 
