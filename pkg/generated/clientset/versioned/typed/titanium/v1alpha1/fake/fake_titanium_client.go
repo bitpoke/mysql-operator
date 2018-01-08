@@ -25,8 +25,8 @@ type FakeTitaniumV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeTitaniumV1alpha1) MysqlClusters(namespace string) v1alpha1.MysqlClusterInterface {
-	return &FakeMysqlClusters{c, namespace}
+func (c *FakeTitaniumV1alpha1) MysqlClusters() v1alpha1.MysqlClusterInterface {
+	return &FakeMysqlClusters{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

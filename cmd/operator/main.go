@@ -67,7 +67,7 @@ func main() {
 				}
 			}(n, cRoutine)
 		}
-		//ctx.SharedInformerFactory.Start(stopCh)
+		ctx.SharedInformerFactory.Start(stopCh)
 		//ctx.KubeSharedInformerFactory.Start(stopCh)
 		wg.Wait() // wait for controllers to finish
 		logrus.Fatalf("Control loops exited")

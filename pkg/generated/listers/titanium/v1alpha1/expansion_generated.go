@@ -21,7 +21,3 @@ package v1alpha1
 // MysqlClusterListerExpansion allows custom methods to be added to
 // MysqlClusterLister.
 type MysqlClusterListerExpansion interface{}
-
-// MysqlClusterNamespaceListerExpansion allows custom methods to be added to
-// MysqlClusterNamespaceLister.
-type MysqlClusterNamespaceListerExpansion interface{}

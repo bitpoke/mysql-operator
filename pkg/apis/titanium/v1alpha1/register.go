@@ -9,7 +9,7 @@ import (
 const (
 	MysqlClusterCRDKind   = "MysqlCluster"
 	MysqlClusterCRDPlural = "mysqlclusters"
-	groupName             = "mysql.presslabs.com"
+	groupName             = "titanium.k8s.io"
 )
 
 var (
