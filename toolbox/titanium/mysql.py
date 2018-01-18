@@ -40,9 +40,6 @@ class ConfigPhase(MysqlNodeContext):
         config['mysqld']['server-id'] = str(self.server_id)
         config['mysqld']['datadir'] = settings.MYSQL_DATA_DIR
 
-        if not config['mysqld'].get('innodb-buffer-pool-size'):
-            config['mysqld']['innodb-buffer-pool-size'] = utils.get_innodb_buffer_pool_size()
-
         return config
 
     def configuration_mysql_client(self, config):

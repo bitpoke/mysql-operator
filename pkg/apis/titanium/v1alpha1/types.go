@@ -14,11 +14,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +genclient
-// +genclient:nonNamespaced
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +resource:path=mysqlcluster
@@ -26,7 +26,8 @@ import (
 type MysqlCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              ClusterSpec `json:"spec"`
+	Spec              ClusterSpec   `json:"spec"`
+	Status            ClusterStatus `json:status,omitempty`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -38,8 +39,82 @@ type MysqlClusterList struct {
 }
 
 type ClusterSpec struct {
-	Size      int    `json:"size"`
-	BaseImage string `json:"baseImage,omitempty"`
-	Version   string `json:"version,omitempty"`
-	// .Values...
+	Replicas   int32  `json:"replicas"`
+	SecretName string `json:secretName`
+
+	MysqlRootPassword string `json:mysqlRootPassword`
+
+	MysqlReplicationUser     string `json:mysqlReplicationUser,omitempty`
+	MysqlReplicationPassword string `json:mysqlReplicationPassword,omitempty`
+
+	MysqlUser     string `json:mysqlUser,omitempty`
+	MysqlPassword string `json:mysqlPassword,omitempty`
+	MysqlDatabase string `json:mysqlDatabase,omitempty`
+
+	InitBucketURI        string `json:initBucketURI,omitempty`
+	InitBucketSecretName string `json:initBucketSecretName,omitempty`
+
+	BackupBucketURI        string `json:backupBucketURI,omitempty`
+	BackupBucketSecertName string `json:backupBucketSecretName,omitempty`
+
+	BackupSchedule string `json:backupSchedule,omitempty`
+
+	PodSpec     PodSpec     `json:podSpec,omitempty`
+	MysqlConfig MysqlConfig `json:mysqlConfig,omitempty`
+	// TODO: https://godoc.org/k8s.io/api/core/v1#PersistentVolumeSpec
+	VolumeSpec VolumeSpec `json:volumeSpec,omitempty`
+}
+
+type MysqlConfig map[string]string
+
+type ClusterStatus struct {
+	Conditions []ClusterCondition `json:conditions`
+}
+
+type ClusterCondition struct {
+	// type of cluster condition, values in (\"Ready\")
+	Type ClusterConditionType `json:type`
+	// Status of the condition, one of (\"True\", \"False\", \"Unknown\")
+	Status ConditionStatus `json:status`
+
+	// optional TODO: detail each member.
+	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+	Reason             string      `json:"reason"`
+	Message            string      `json:"message"`
+}
+
+type ClusterConditionType string
+
+const (
+	ClusterConditionReady ClusterConditionType = "Ready"
+)
+
+type ConditionStatus string
+
+const (
+	ConditionTrue    ConditionStatus = "True"
+	ConditionFalse   ConditionStatus = "False"
+	ConditionUnknown ConditionStatus = "Unknown"
+)
+
+type PodSpec struct {
+	Image                   string            `json:image,omitempty`
+	ImagePullPolicy         apiv1.PullPolicy  `json:imagePullPolicy,omitempty`
+	TitaniumImage           string            `json:titaniumImage,omitempty`
+	TitaniumImagePullPolicy apiv1.PullPolicy  `json:titaniumImagePullPolicy,omitempty`
+	MetricsImage            string            `json:metricsImage,omitempty`
+	MetricsImagePullPolicy  apiv1.PullPolicy  `json:metricsImagePullPolicy,omitempty`
+	ImagePullSecrets        map[string]string `json:imagePullSecrets,omitempty`
+
+	Labels       map[string]string          `json:labels`
+	Annotations  map[string]string          `json:annotations`
+	Resources    apiv1.ResourceRequirements `json:resources`
+	Affinity     apiv1.Affinity             `json:affinity`
+	NodeSelector map[string]string          `json:nodeSelector`
+}
+
+type VolumeSpec struct {
+	apiv1.PersistentVolumeClaimSpec `json:",inline"`
+
+	PersistenceEnabled bool `json:persistenceEnabled,omitempty`
 }

@@ -29,8 +29,8 @@ import (
 type MysqlClusterLister interface {
 	// List lists all MysqlClusters in the indexer.
 	List(selector labels.Selector) (ret []*v1alpha1.MysqlCluster, err error)
-	// Get retrieves the MysqlCluster from the index for a given name.
-	Get(name string) (*v1alpha1.MysqlCluster, error)
+	// MysqlClusters returns an object that can list and get MysqlClusters.
+	MysqlClusters(namespace string) MysqlClusterNamespaceLister
 	MysqlClusterListerExpansion
 }
 
@@ -52,9 +52,38 @@ func (s *mysqlClusterLister) List(selector labels.Selector) (ret []*v1alpha1.Mys
 	return ret, err
 }
 
-// Get retrieves the MysqlCluster from the index for a given name.
-func (s *mysqlClusterLister) Get(name string) (*v1alpha1.MysqlCluster, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+// MysqlClusters returns an object that can list and get MysqlClusters.
+func (s *mysqlClusterLister) MysqlClusters(namespace string) MysqlClusterNamespaceLister {
+	return mysqlClusterNamespaceLister{indexer: s.indexer, namespace: namespace}
+}
+
+// MysqlClusterNamespaceLister helps list and get MysqlClusters.
+type MysqlClusterNamespaceLister interface {
+	// List lists all MysqlClusters in the indexer for a given namespace.
+	List(selector labels.Selector) (ret []*v1alpha1.MysqlCluster, err error)
+	// Get retrieves the MysqlCluster from the indexer for a given namespace and name.
+	Get(name string) (*v1alpha1.MysqlCluster, error)
+	MysqlClusterNamespaceListerExpansion
+}
+
+// mysqlClusterNamespaceLister implements the MysqlClusterNamespaceLister
+// interface.
+type mysqlClusterNamespaceLister struct {
+	indexer   cache.Indexer
+	namespace string
+}
+
+// List lists all MysqlClusters in the indexer for a given namespace.
+func (s mysqlClusterNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.MysqlCluster, err error) {
+	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.MysqlCluster))
+	})
+	return ret, err
+}
+
+// Get retrieves the MysqlCluster from the indexer for a given namespace and name.
+func (s mysqlClusterNamespaceLister) Get(name string) (*v1alpha1.MysqlCluster, error) {
+	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
 	if err != nil {
 		return nil, err
 	}

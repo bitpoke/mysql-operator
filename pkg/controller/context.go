@@ -4,6 +4,7 @@ import (
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 
+	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
 	informers "github.com/presslabs/titanium/pkg/generated/informers/externalversions"
 )
 
@@ -16,6 +17,9 @@ type Context struct {
 	KubeExtCli apiextensionsclient.Interface
 
 	CreateCRD bool
+
+	// this should be renamed
+	MCClient clientset.Interface
 
 	SharedInformerFactory informers.SharedInformerFactory
 }
