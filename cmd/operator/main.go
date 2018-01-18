@@ -80,16 +80,9 @@ func main() {
 
 func newControllerContext() *controllerpkg.Context {
 	kubecli := k8sutil.MustNewKubeClient()
-
-	serviceAccount, err := getMyPodServiceAccount(kubecli)
-	if err != nil {
-		logrus.Fatalf("fail to get my pod's service account: %v", err)
-	}
-
-	sIF, err := getSharedInformerFactory()
-	if err != nil {
-		logrus.Fatalf("fail to get shered inform factory: %v", err)
-	}
+	serviceAccount := getMyPodServiceAccount(kubecli)
+	intcl := getClientSet()
+	sIF := getSharedInformerFactory(intcl)
 
 	return &controllerpkg.Context{
 		Namespace:             opt.Namespace,
@@ -97,35 +90,39 @@ func newControllerContext() *controllerpkg.Context {
 		KubeCli:               kubecli,
 		KubeExtCli:            k8sutil.MustNewKubeExtClient(),
 		SharedInformerFactory: sIF,
+		MCClient:              intcl,
 	}
 }
 
-func getSharedInformerFactory() (informers.SharedInformerFactory, error) {
+func getClientSet() clientset.Interface {
 	kubeCfg, err := k8sutil.ClusterConfig()
 	if err != nil {
-		return nil, err
+		logrus.Fatalf("fail to get clientset: %v", err)
 	}
 
 	intcl, err := clientset.NewForConfig(kubeCfg)
 	if err != nil {
-		return nil, err
+		logrus.Fatalf("fail to get clientset: %v", err)
 	}
+	return intcl
+}
+
+func getSharedInformerFactory(intcl clientset.Interface) informers.SharedInformerFactory {
 
 	sharedInformerFactory := informers.NewFilteredSharedInformerFactory(intcl,
 		opt.InformersResyncTime, opt.Namespace, nil)
-	return sharedInformerFactory, nil
+	return sharedInformerFactory
 
 }
 
-func getMyPodServiceAccount(kubecli kubernetes.Interface) (string, error) {
+func getMyPodServiceAccount(kubecli kubernetes.Interface) string {
 	var sa string
 	pod, err := kubecli.CoreV1().Pods(opt.Namespace).Get(opt.PodName, metav1.GetOptions{})
 	if err != nil {
-		logrus.Errorf("fail to get operator pod (%s): %v", opt.PodName, err)
-		return sa, nil
+		logrus.Fatalf("fail to get operator pod (%s): %v", opt.PodName, err)
 	}
 	sa = pod.Spec.ServiceAccountName
-	return sa, nil
+	return sa
 }
 
 // SetupSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned

@@ -28,6 +28,7 @@ import (
 // FakeMysqlClusters implements MysqlClusterInterface
 type FakeMysqlClusters struct {
 	Fake *FakeTitaniumV1alpha1
+	ns   string
 }
 
 var mysqlclustersResource = schema.GroupVersionResource{Group: "titanium.k8s.io", Version: "v1alpha1", Resource: "mysqlclusters"}
@@ -37,7 +38,8 @@ var mysqlclustersKind = schema.GroupVersionKind{Group: "titanium.k8s.io", Versio
 // Get takes name of the mysqlCluster, and returns the corresponding mysqlCluster object, and an error if there is any.
 func (c *FakeMysqlClusters) Get(name string, options v1.GetOptions) (result *v1alpha1.MysqlCluster, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(mysqlclustersResource, name), &v1alpha1.MysqlCluster{})
+		Invokes(testing.NewGetAction(mysqlclustersResource, c.ns, name), &v1alpha1.MysqlCluster{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -47,7 +49,8 @@ func (c *FakeMysqlClusters) Get(name string, options v1.GetOptions) (result *v1a
 // List takes label and field selectors, and returns the list of MysqlClusters that match those selectors.
 func (c *FakeMysqlClusters) List(opts v1.ListOptions) (result *v1alpha1.MysqlClusterList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(mysqlclustersResource, mysqlclustersKind, opts), &v1alpha1.MysqlClusterList{})
+		Invokes(testing.NewListAction(mysqlclustersResource, mysqlclustersKind, c.ns, opts), &v1alpha1.MysqlClusterList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -68,13 +71,15 @@ func (c *FakeMysqlClusters) List(opts v1.ListOptions) (result *v1alpha1.MysqlClu
 // Watch returns a watch.Interface that watches the requested mysqlClusters.
 func (c *FakeMysqlClusters) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(mysqlclustersResource, opts))
+		InvokesWatch(testing.NewWatchAction(mysqlclustersResource, c.ns, opts))
+
 }
 
 // Create takes the representation of a mysqlCluster and creates it.  Returns the server's representation of the mysqlCluster, and an error, if there is any.
 func (c *FakeMysqlClusters) Create(mysqlCluster *v1alpha1.MysqlCluster) (result *v1alpha1.MysqlCluster, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(mysqlclustersResource, mysqlCluster), &v1alpha1.MysqlCluster{})
+		Invokes(testing.NewCreateAction(mysqlclustersResource, c.ns, mysqlCluster), &v1alpha1.MysqlCluster{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -84,7 +89,20 @@ func (c *FakeMysqlClusters) Create(mysqlCluster *v1alpha1.MysqlCluster) (result 
 // Update takes the representation of a mysqlCluster and updates it. Returns the server's representation of the mysqlCluster, and an error, if there is any.
 func (c *FakeMysqlClusters) Update(mysqlCluster *v1alpha1.MysqlCluster) (result *v1alpha1.MysqlCluster, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(mysqlclustersResource, mysqlCluster), &v1alpha1.MysqlCluster{})
+		Invokes(testing.NewUpdateAction(mysqlclustersResource, c.ns, mysqlCluster), &v1alpha1.MysqlCluster{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.MysqlCluster), err
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeMysqlClusters) UpdateStatus(mysqlCluster *v1alpha1.MysqlCluster) (*v1alpha1.MysqlCluster, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(mysqlclustersResource, "status", c.ns, mysqlCluster), &v1alpha1.MysqlCluster{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -94,13 +112,14 @@ func (c *FakeMysqlClusters) Update(mysqlCluster *v1alpha1.MysqlCluster) (result 
 // Delete takes name of the mysqlCluster and deletes it. Returns an error if one occurs.
 func (c *FakeMysqlClusters) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(mysqlclustersResource, name), &v1alpha1.MysqlCluster{})
+		Invokes(testing.NewDeleteAction(mysqlclustersResource, c.ns, name), &v1alpha1.MysqlCluster{})
+
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeMysqlClusters) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(mysqlclustersResource, listOptions)
+	action := testing.NewDeleteCollectionAction(mysqlclustersResource, c.ns, listOptions)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.MysqlClusterList{})
 	return err
@@ -109,7 +128,8 @@ func (c *FakeMysqlClusters) DeleteCollection(options *v1.DeleteOptions, listOpti
 // Patch applies the patch and returns the patched mysqlCluster.
 func (c *FakeMysqlClusters) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.MysqlCluster, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(mysqlclustersResource, name, data, subresources...), &v1alpha1.MysqlCluster{})
+		Invokes(testing.NewPatchSubresourceAction(mysqlclustersResource, c.ns, name, data, subresources...), &v1alpha1.MysqlCluster{})
+
 	if obj == nil {
 		return nil, err
 	}

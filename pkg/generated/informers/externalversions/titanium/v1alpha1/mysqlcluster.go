@@ -40,32 +40,33 @@ type MysqlClusterInformer interface {
 type mysqlClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	namespace        string
 }
 
 // NewMysqlClusterInformer constructs a new informer for MysqlCluster type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewMysqlClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredMysqlClusterInformer(client, resyncPeriod, indexers, nil)
+func NewMysqlClusterInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredMysqlClusterInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredMysqlClusterInformer constructs a new informer for MysqlCluster type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredMysqlClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredMysqlClusterInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.TitaniumV1alpha1().MysqlClusters().List(options)
+				return client.TitaniumV1alpha1().MysqlClusters(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.TitaniumV1alpha1().MysqlClusters().Watch(options)
+				return client.TitaniumV1alpha1().MysqlClusters(namespace).Watch(options)
 			},
 		},
 		&titanium_v1alpha1.MysqlCluster{},
@@ -75,7 +76,7 @@ func NewFilteredMysqlClusterInformer(client versioned.Interface, resyncPeriod ti
 }
 
 func (f *mysqlClusterInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredMysqlClusterInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredMysqlClusterInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *mysqlClusterInformer) Informer() cache.SharedIndexInformer {

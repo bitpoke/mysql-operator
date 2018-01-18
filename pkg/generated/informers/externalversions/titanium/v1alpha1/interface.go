@@ -41,5 +41,5 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 
 // MysqlClusters returns a MysqlClusterInformer.
 func (v *version) MysqlClusters() MysqlClusterInformer {
-	return &mysqlClusterInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+	return &mysqlClusterInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
