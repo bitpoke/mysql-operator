@@ -1,9 +1,9 @@
 package util
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"encoding/base64"
 	"os"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
@@ -14,12 +14,6 @@ import (
 
 	"github.com/presslabs/titanium/pkg/util/constants"
 )
-
-var random *rand.Rand // Rand for this package.
-
-func init() {
-	random = rand.New(rand.NewSource(time.Now().UnixNano()))
-}
 
 func GetPodNamespace() string {
 	ns := os.Getenv(constants.EnvOperatorPodNamespace)
@@ -55,10 +49,9 @@ func CreateEventRecorder(kubecli kubernetes.Interface, name, namespace string) r
 }
 
 func RandomString(length int) string {
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-	result := make([]byte, length)
-	for i := range result {
-		result[i] = chars[random.Intn(len(chars))]
+	buf := make([]byte, length)
+	if _, err := rand.Read(buf); err != nil {
+		panic(err)
 	}
-	return string(result)
+	return base64.StdEncoding.EncodeToString(buf)
 }

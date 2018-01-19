@@ -22,8 +22,7 @@ if settings.SENTRY_DSN:
 
 @contrib('rclone')
 def rclone_cmd(rclone):
-    config_file = os.path.join(settings.CONFIG_MAP_DIR, 'rclone.conf')
-    if not os.path.exists(config_file):
-        logging.warning(f'RCLONE config file ({config_file}) does not exists.')
+    if not os.path.exists(settings.RCLONE_CONFIG_FILE):
+        logging.warning(f'RCLONE config file ({settings.RCLONE_CONFIG_FILE}) does not exists.')
 
-    return rclone.bake(f'--config={config_file}')
+    return rclone.bake(f'--config={settings.RCLONE_CONFIG_FILE}')

@@ -18,7 +18,6 @@ type Context struct {
 
 	CreateCRD bool
 
-	// this should be renamed
 	MCClient clientset.Interface
 
 	SharedInformerFactory informers.SharedInformerFactory
