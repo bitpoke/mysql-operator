@@ -30,8 +30,3 @@ func (c *Controller) Sync(ctx context.Context, cluster *v1alpha1.MysqlCluster, n
 
 	return nil
 }
-
-func (c *Controller) Delete(ctx context.Context, cluster *v1alpha1.MysqlCluster) error {
-	c.logger.Info("Called delete cluster!")
-	return nil
-}

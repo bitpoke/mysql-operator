@@ -12,6 +12,7 @@ import (
 
 const (
 	InnodbBufferSizePercent = 80
+	PersistenceEnabled      = true
 )
 
 func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
@@ -63,6 +64,10 @@ func (c *ClusterSpec) UpdateDefaults() error {
 			// TODO: make it human readable
 			c.MysqlConfig["innodb-buffer-pool-size"] = res.String()
 		}
+	}
+
+	if c.VolumeSpec.PersistenceEnabled {
+		c.VolumeSpec.PersistenceEnabled = PersistenceEnabled
 	}
 
 	return nil

@@ -1,6 +1,8 @@
 package mysqlcluster
 
 import (
+	"fmt"
+
 	"k8s.io/api/apps/v1beta2"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,8 +54,9 @@ func (c *cluster) getPodTempalteSpec() apiv1.PodTemplateSpec {
 			Containers:     c.getContainersSpec(),
 			Volumes:        c.getVolumes(),
 
-			Affinity:     &c.cl.Spec.PodSpec.Affinity,
-			NodeSelector: c.cl.Spec.PodSpec.NodeSelector,
+			Affinity:         &c.cl.Spec.PodSpec.Affinity,
+			NodeSelector:     c.cl.Spec.PodSpec.NodeSelector,
+			ImagePullSecrets: c.cl.Spec.PodSpec.ImagePullSecrets,
 		},
 	}
 }
@@ -274,6 +277,7 @@ func getVolumeMounts(extra ...apiv1.VolumeMount) []apiv1.VolumeMount {
 
 func (c *cluster) getVolumeClaimTemplates() []apiv1.PersistentVolumeClaim {
 	if !c.cl.Spec.VolumeSpec.PersistenceEnabled {
+		fmt.Println("Persistence is disabled.")
 		return nil
 	}
 

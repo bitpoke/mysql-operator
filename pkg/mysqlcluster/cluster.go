@@ -17,10 +17,6 @@ import (
 
 type Interface interface {
 	Sync(ctx context.Context) error
-
-	//	Create(ctx context.Context) error
-	//	Update(ctx context.Context) error
-	//	Delete(ctx context.Context) error
 }
 
 type cluster struct {

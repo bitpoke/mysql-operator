@@ -61,8 +61,7 @@ type ClusterSpec struct {
 
 	PodSpec     PodSpec     `json:podSpec,omitempty`
 	MysqlConfig MysqlConfig `json:mysqlConfig,omitempty`
-	// TODO: https://godoc.org/k8s.io/api/core/v1#PersistentVolumeSpec
-	VolumeSpec VolumeSpec `json:volumeSpec,omitempty`
+	VolumeSpec  VolumeSpec  `json:volumeSpec,omitempty`
 }
 
 type MysqlConfig map[string]string
@@ -98,13 +97,13 @@ const (
 )
 
 type PodSpec struct {
-	Image                   string            `json:image,omitempty`
-	ImagePullPolicy         apiv1.PullPolicy  `json:imagePullPolicy,omitempty`
-	TitaniumImage           string            `json:titaniumImage,omitempty`
-	TitaniumImagePullPolicy apiv1.PullPolicy  `json:titaniumImagePullPolicy,omitempty`
-	MetricsImage            string            `json:metricsImage,omitempty`
-	MetricsImagePullPolicy  apiv1.PullPolicy  `json:metricsImagePullPolicy,omitempty`
-	ImagePullSecrets        map[string]string `json:imagePullSecrets,omitempty`
+	Image                   string                       `json:image,omitempty`
+	ImagePullPolicy         apiv1.PullPolicy             `json:imagePullPolicy,omitempty`
+	TitaniumImage           string                       `json:titaniumImage,omitempty`
+	TitaniumImagePullPolicy apiv1.PullPolicy             `json:titaniumImagePullPolicy,omitempty`
+	MetricsImage            string                       `json:metricsImage,omitempty`
+	MetricsImagePullPolicy  apiv1.PullPolicy             `json:metricsImagePullPolicy,omitempty`
+	ImagePullSecrets        []apiv1.LocalObjectReference `json:imagePullSecrets,omitempty`
 
 	Labels       map[string]string          `json:labels`
 	Annotations  map[string]string          `json:annotations`
