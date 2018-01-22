@@ -28,10 +28,7 @@ CONFIG_DIR = os.getenv('TITANIUM_CONFIG_DIR', os.path.join(CONFIG_MYSQL, 'conf.d
 CONFIG_MAP_DIR = os.getenv('TITANIUM_CONFIG_MAP_DIR', '/mnt/config-map/')
 SECRETS_DIR = os.getenv('TITANIUM_SECRETS_DIR', '/var/run/secrets/')
 
-RCLONE_CONFIG_FILE = f'{CONFIG_MYSQL}/rclone.conf'
-RCLONE_CONFIG_FILE_JSON = f'{CONFIG_MYSQL}/credentials.json'
-BUCKET_SECRETS_DIR = f'{SECRETS_DIR}/buckets/'
-
+RCLONE_CONFIG_FILE = '/etc/rclone.conf'
 
 # xtrabackup expose backups
 EXPOSE_BACKUPS_PORT = os.getenv('TITANIUM_EXPOSE_BACKUPS_PORT', '3307')

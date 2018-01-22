@@ -16,7 +16,7 @@ const (
 	ConfMapVolumeMountPath = "/mnt/config-map"
 
 	InitSecretVolumeName      = "init-secrets"
-	InitSecretVolumeMountPath = "/var/run/secrets/init"
+	InitSecretVolumeMountPath = "/var/run/secrets/buckets"
 
 	DataVolumeName      = "data"
 	DataVolumeMountPath = "/var/lib/mysql"
@@ -72,7 +72,7 @@ func (c *cluster) getInitContainersSpec() []apiv1.Container {
 			MountPath: ConfMapVolumeMountPath,
 		},
 	}
-	if len(c.cl.Spec.InitBucketSecretName) != 0 {
+	if c.existsSecret(c.cl.Spec.InitBucketSecretName) {
 		initCoVM = append(initCoVM, apiv1.VolumeMount{
 			Name:      InitSecretVolumeName,
 			MountPath: InitSecretVolumeMountPath,
@@ -83,7 +83,7 @@ func (c *cluster) getInitContainersSpec() []apiv1.Container {
 			Name:            "init-mysql",
 			Image:           c.cl.Spec.PodSpec.TitaniumImage,
 			ImagePullPolicy: c.cl.Spec.PodSpec.TitaniumImagePullPolicy,
-			Command:         []string{"db", "config_files"},
+			Args:            []string{"db", "config_files"},
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
 					SecretRef: &apiv1.SecretEnvSource{
@@ -99,7 +99,7 @@ func (c *cluster) getInitContainersSpec() []apiv1.Container {
 			Name:            "clone-mysql",
 			Image:           c.cl.Spec.PodSpec.TitaniumImage,
 			ImagePullPolicy: c.cl.Spec.PodSpec.TitaniumImagePullPolicy,
-			Command:         []string{"db", "clone"},
+			Args:            []string{"db", "clone"},
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
 					SecretRef: &apiv1.SecretEnvSource{
@@ -142,10 +142,9 @@ func (c *cluster) getContainersSpec() []apiv1.Container {
 			VolumeMounts:   getVolumeMounts(),
 		},
 		apiv1.Container{
-			Name:    "titanium",
-			Image:   c.cl.Spec.PodSpec.TitaniumImage,
-			Command: []string{"/bin/sh", "-c"},
-			Args:    []string{"db configure; db serve_backups"},
+			Name:  "titanium",
+			Image: c.cl.Spec.PodSpec.TitaniumImage,
+			Args:  []string{"db configure; db serve_backups"},
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
 					SecretRef: &apiv1.SecretEnvSource{
@@ -224,7 +223,7 @@ func (c *cluster) getVolumes() []apiv1.Volume {
 		c.getDataVolume(),
 	}
 
-	if len(c.cl.Spec.InitBucketSecretName) != 0 {
+	if c.existsSecret(c.cl.Spec.InitBucketSecretName) {
 		volumes = append(volumes, apiv1.Volume{
 			Name: InitSecretVolumeName,
 			VolumeSource: apiv1.VolumeSource{
