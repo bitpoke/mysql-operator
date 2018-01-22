@@ -51,59 +51,6 @@ class ConfigPhase(MysqlNodeContext):
 
         return config
 
-    def configs_for_rclone(self):
-        """
-        Writes config file for rclone:
-        - /var/run/rclone.conf (settings.RCLONE_CONFIG_FILE)
-        """
-        config = self.gs_configs(configparser.ConfigParser())
-        config = self.s3_configs(config)
-        with open(settings.RCLONE_CONFIG_FILE, "w+") as f:
-            config.write(f)
-
-    def gs_configs(self, config):
-        secret_dir = settings.BUCKET_SECRETS_DIR
-        try:
-            with open(f"{secret_dir}/GOOGLE_PROJECT", "r") as f:
-                proj_no = f.read()
-        except FileNotFoundError:
-            proj_no = ''
-
-        try:
-            with open(f"{secret_dir}/GOOGLE_SERVICE_ACCOUNT_JSON_KEY", "r") as f:
-                with open(settings.RCLONE_CONFIG_FILE_JSON, "w+") as c:
-                    c.write(f.read())
-        except FileNotFoundError:
-            pass
-
-        config['gs'] = {
-            'type': 'google cloud storage',
-            'project_number': proj_no,
-            'service_account_file': settings.RCLONE_CONFIG_FILE_JSON,
-        }
-        return config
-
-    def s3_configs(self, config):
-        secret_dir = settings.BUCKET_SECRETS_DIR
-        try:
-            with open(f"{secret_dir}/AWS_ACCESS_KEY_ID", "r") as f:
-                aws_id = f.read()
-        except FileNotFoundError:
-            aws_id = ''
-        try:
-            with open(f"{secret_dir}/AWS_SECRET_KEY", "r") as f:
-                aws_key = f.read()
-        except FileNotFoundError:
-            aws_key = ''
-
-        config['s3'] = {
-            'type': 's3',
-            'access_key_id': aws_id,
-            'secret_access_key': aws_key,
-        }
-
-        return config
-
     def create_config_files(self):
         """
         Writes config file for this node.
@@ -133,8 +80,6 @@ class ConfigPhase(MysqlNodeContext):
         dest = os.path.join(settings.CONFIG_MYSQL, 'client.cnf')
         with open(dest, 'w+') as f:
             config.write(f)
-
-        self.configs_for_rclone()
 
 
 class InitPhase(MysqlNodeContext):

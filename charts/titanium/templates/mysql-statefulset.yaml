@@ -25,7 +25,7 @@ spec:
       initContainers:
       - name: init-mysql
         image: {{ .Values.tools.image }}
-        command: ["db", "config_files"]
+        args: ["db", "config_files"]
         env:
         {{- include "titanium.env" . | nindent 8 }}
         {{- include "titanium.env.rootPassword" . | nindent 8 }}
@@ -37,7 +37,7 @@ spec:
           readOnly: false
       - name: clone-mysql
         image: {{ .Values.tools.image }}
-        command: ["db", "clone"]
+        args: ["db", "clone"]
         env:
         {{- include "titanium.env" . | nindent 8 }}
         {{- include "titanium.env.replication" . | nindent 8 }}
@@ -94,7 +94,6 @@ spec:
         ports:
         - name: xtrabackup
           containerPort: 3307
-        command: ["/bin/sh","-c"]
         args: ["db configure; db serve_backups"]
         env:
         {{- include "titanium.env" . | nindent 8 }}

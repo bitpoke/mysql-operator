@@ -183,3 +183,17 @@ func (c *cluster) getOwnerReferences() []metav1.OwnerReference {
 		c.cl.AsOwnerReference(),
 	}
 }
+
+// This method checks if given secret exists in cluster namespace.
+func (c *cluster) existsSecret(name string) bool {
+	if len(name) == 0 {
+		return false
+	}
+
+	client := c.client.CoreV1().Secrets(c.namespace)
+	if _, err := client.Get(name, metav1.GetOptions{}); err != nil {
+		return false
+	}
+
+	return true
+}
