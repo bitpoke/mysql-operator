@@ -66,7 +66,7 @@ func (c *ClusterSpec) UpdateDefaults() error {
 		}
 	}
 
-	if c.VolumeSpec.PersistenceEnabled {
+	if !c.VolumeSpec.PersistenceEnabled {
 		c.VolumeSpec.PersistenceEnabled = PersistenceEnabled
 	}
 

@@ -61,16 +61,15 @@ func (c *cluster) Sync(ctx context.Context) error {
 
 func (c *cluster) syncHeadlessService() error {
 	expHL := c.createHeadlessService()
-	fmt.Printf("Synced Headless Service ... ")
-	msg := "up-to-date"
 
 	servicesClient := c.client.CoreV1().Services(c.namespace)
 	hlSVC, err := servicesClient.Get(c.getNameForResource(HeadlessSVC), metav1.GetOptions{})
 	if errors.IsNotFound(err) {
-		msg = "created"
-		if _, err = servicesClient.Create(&expHL); err != nil {
-			return err
-		}
+		fmt.Println("HeadlessService ... created")
+		_, err = servicesClient.Create(&expHL)
+		return err
+	} else if err != nil {
+		return err
 	}
 	if !metav1.IsControlledBy(hlSVC, c.cl) {
 		// log a warning to evant recorder...
@@ -79,29 +78,27 @@ func (c *cluster) syncHeadlessService() error {
 
 	// TODO: find a better condition
 	if !reflect.DeepEqual(hlSVC.Spec.Ports, expHL.Spec.Ports) {
-		msg = "updated"
+		fmt.Println("HeadlessService ... updated")
 		expHL.SetResourceVersion(hlSVC.GetResourceVersion())
-		if _, err := servicesClient.Update(&expHL); err != nil {
-			return err
-		}
+		_, err := servicesClient.Update(&expHL)
+		return err
 	}
 
-	fmt.Printf("%s\n", msg)
+	fmt.Println("HeadlessService ... up-to-data")
 	return nil
 }
 
 func (c *cluster) syncConfigEnvSecret() error {
 	expCS := c.createEnvConfigSecret()
-	fmt.Printf("Syncing Env Secret ... ")
-	msg := "up-to-date"
 
 	scrtClient := c.client.CoreV1().Secrets(c.namespace)
 	cfgSct, err := scrtClient.Get(c.getNameForResource(EnvSecret), metav1.GetOptions{})
 	if errors.IsNotFound(err) {
-		msg = "created"
-		if _, err = scrtClient.Create(&expCS); err != nil {
-			return err
-		}
+		fmt.Println("ConfSecret ... created")
+		_, err = scrtClient.Create(&expCS)
+		return err
+	} else if err != nil {
+		return err
 	}
 	if !metav1.IsControlledBy(cfgSct, c.cl) {
 		// log a warning to evant recorder...
@@ -109,73 +106,72 @@ func (c *cluster) syncConfigEnvSecret() error {
 	}
 
 	if !reflect.DeepEqual(cfgSct.Data, expCS.Data) {
-		msg = "updated"
+		fmt.Println("ConfSecret ... updated")
 		expCS.SetResourceVersion(cfgSct.GetResourceVersion())
-		if _, err := scrtClient.Update(&expCS); err != nil {
-			return nil
-		}
+		_, err := scrtClient.Update(&expCS)
+		return err
 	}
 
-	fmt.Printf("%s\n", msg)
+	fmt.Println("ConfSecret ... up-to-date")
 	return nil
 }
 
 func (c *cluster) syncConfigMapFiles() error {
 	expCM := c.createConfigMapFiles()
-	fmt.Printf("Syncing ConfigMap ... ")
-	msg := "up-to-date"
-
 	cmClient := c.client.CoreV1().ConfigMaps(c.namespace)
 	cfgMap, err := cmClient.Get(c.getNameForResource(ConfigMap), metav1.GetOptions{})
+
 	if errors.IsNotFound(err) {
-		if _, err = cmClient.Create(&expCM); err != nil {
-			return nil
-		}
+		fmt.Println("ConfigMap ... created")
+		_, err = cmClient.Create(&expCM)
+		return err
+	} else if err != nil {
+		return err
 	}
+
 	if !metav1.IsControlledBy(cfgMap, c.cl) {
 		// log a warning to evant recorder...
 		return fmt.Errorf("The config map files is not controlled by this resource!")
 	}
 
-	// TODO: fix: Data is the same but not in the same order.
 	if !reflect.DeepEqual(cfgMap.Data, expCM.Data) {
-		msg = "updated"
+		fmt.Println("ConfigMap ... updated")
 		expCM.SetResourceVersion(cfgMap.GetResourceVersion())
-		if _, err := cmClient.Update(&expCM); err != nil {
-			return nil
-		}
+		_, err := cmClient.Update(&expCM)
+		return err
 	}
 
-	fmt.Printf("%s\n", msg)
+	fmt.Println("ConfigMap ... up-to-date")
 	return nil
 }
 
 func (c *cluster) syncStatefulSet() error {
 	expSS := c.createStatefulSet()
-	fmt.Printf("Syncing StatefullSet ... ")
-	msg := "up-to-date"
 
 	sfsClient := c.client.AppsV1beta2().StatefulSets(c.namespace)
 	sfs, err := sfsClient.Get(c.getNameForResource(StatefulSet), metav1.GetOptions{})
 	if errors.IsNotFound(err) {
-		if _, err = sfsClient.Create(&expSS); err != nil {
-			return err
-		}
+		fmt.Println("StatefulSet ... created")
+		_, err = sfsClient.Create(&expSS)
+		return err
+	} else if err != nil {
+		return err
 	}
+
 	if !metav1.IsControlledBy(sfs, c.cl) {
 		// log a warning to evant recorder...
 		return fmt.Errorf("The config map files is not controlled by this resource!")
 	}
 
-	// TODO: add update condition here
-	msg = "updated"
-	expSS.SetResourceVersion(sfs.GetResourceVersion())
-	if _, err = sfsClient.Update(&expSS); err != nil {
+	if !reflect.DeepEqual(sfs.Spec, expSS.Spec) {
+		fmt.Println("StatefulSet ... updated")
+		expSS.SetResourceVersion(sfs.GetResourceVersion())
+		_, err = sfsClient.Update(&expSS)
 		return err
 	}
 
-	fmt.Printf("%s\n", msg)
-	return err
+	fmt.Println("StatefulSet ... up-to-date")
+	return nil
 }
 
 func (c *cluster) getOwnerReferences() []metav1.OwnerReference {

@@ -12,6 +12,9 @@ PACKAGES := $(shell find $(SRCDIRS) -type d)
 GOFILES  := $(addsuffix /*.go,$(PACKAGES))
 GOFILES  := $(wildcard $(GOFILES))
 
+TEST_FILES := $(addsuffix /*_test.go,$(PACKAGES))
+TEST_FILES := $(wildcard $(TEST_FILES))
+
 # A list of all types.go files in pkg/apis
 TYPES_FILES := $(shell find pkg/apis -name types.go)
 HACK_DIR ?= hack
@@ -27,11 +30,13 @@ generate: $(TYPES_FILES)
 bin/%/$(BINARY): $(GOFILES) Makefile
 	GOOS=$* GOARCH=amd64 go build $(GOFLAGS) -v -i -o bin/$*/$(BINARY) $<
 
-build: bin/linux/$(BINARY)
-	docker build -t $(IMAGE):$(VERSION) .
-
-push:
-	docker push $(IMAGE):$(VERSION)
+test: $(TEST_FILES)
+	go test -v \
+	    -race \
+		$$(go list ./... | \
+			grep -v '/vendor/' | \
+			grep -v '/pkg/generated/' \
+		)
 
 clean:
 	rm -rf bin/*
