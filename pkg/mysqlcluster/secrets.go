@@ -2,6 +2,7 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -68,6 +69,8 @@ func getConfigFilesStr(section string, confs ...map[string]string) string {
 			strCnf = append(strCnf, fmt.Sprintf("%s = %s", k, v))
 		}
 	}
+	// sort to be always the same when calling deepEqual
+	sort.Strings(strCnf)
 
 	return fmt.Sprintf("\n[%s]\n%s\n", section, strings.Join(strCnf, "\n"))
 }
