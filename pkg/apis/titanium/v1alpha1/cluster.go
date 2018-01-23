@@ -66,11 +66,7 @@ func (c *ClusterSpec) UpdateDefaults() error {
 		}
 	}
 
-	if !c.VolumeSpec.PersistenceEnabled {
-		c.VolumeSpec.PersistenceEnabled = PersistenceEnabled
-	}
-
-	return nil
+	return c.VolumeSpec.UpdateDefaults()
 }
 
 const (
@@ -85,6 +81,8 @@ const (
 
 	ResourceRequestCPU    = "200m"
 	ResourceRequestMemory = "1Gi"
+
+	ResourceStorage = "8Gi"
 )
 
 func (ps *PodSpec) UpdateDefaults() error {
@@ -112,11 +110,36 @@ func (ps *PodSpec) UpdateDefaults() error {
 		ps.MetricsImagePullPolicy = MetricsImagePullPolicy
 	}
 
+	// TODO: check if are applied or write a test for thoses
 	if len(ps.Resources.Requests) == 0 {
-		ps.Resources.Requests = apiv1.ResourceList{
-			apiv1.ResourceCPU:    resource.MustParse(ResourceRequestCPU),
-			apiv1.ResourceMemory: resource.MustParse(ResourceRequestMemory),
+		ps.Resources = apiv1.ResourceRequirements{
+			Requests: apiv1.ResourceList{
+				apiv1.ResourceCPU:    resource.MustParse(ResourceRequestCPU),
+				apiv1.ResourceMemory: resource.MustParse(ResourceRequestMemory),
+			},
 		}
 	}
+	return nil
+}
+
+func (vs *VolumeSpec) UpdateDefaults() error {
+	if !vs.PersistenceEnabled {
+		vs.PersistenceEnabled = PersistenceEnabled
+	}
+
+	if len(vs.AccessModes) == 0 {
+		vs.AccessModes = []apiv1.PersistentVolumeAccessMode{
+			apiv1.ReadWriteOnce,
+		}
+	}
+
+	if len(vs.Resources.Requests) == 0 {
+		vs.Resources = apiv1.ResourceRequirements{
+			Requests: apiv1.ResourceList{
+				apiv1.ResourceStorage: resource.MustParse(ResourceStorage),
+			},
+		}
+	}
+
 	return nil
 }

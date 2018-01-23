@@ -8,7 +8,6 @@ import (
 	"syscall"
 
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -80,13 +79,11 @@ func main() {
 
 func newControllerContext() *controllerpkg.Context {
 	kubecli := k8sutil.MustNewKubeClient()
-	serviceAccount := getMyPodServiceAccount(kubecli)
 	intcl := getClientSet()
 	sIF := getSharedInformerFactory(intcl)
 
 	return &controllerpkg.Context{
 		Namespace:             opt.Namespace,
-		ServiceAccount:        serviceAccount,
 		KubeCli:               kubecli,
 		KubeExtCli:            k8sutil.MustNewKubeExtClient(),
 		SharedInformerFactory: sIF,
@@ -113,16 +110,6 @@ func getSharedInformerFactory(intcl clientset.Interface) informers.SharedInforme
 		opt.InformersResyncTime, opt.Namespace, nil)
 	return sharedInformerFactory
 
-}
-
-func getMyPodServiceAccount(kubecli kubernetes.Interface) string {
-	var sa string
-	pod, err := kubecli.CoreV1().Pods(opt.Namespace).Get(opt.PodName, metav1.GetOptions{})
-	if err != nil {
-		logrus.Fatalf("fail to get operator pod (%s): %v", opt.PodName, err)
-	}
-	sa = pod.Spec.ServiceAccountName
-	return sa
 }
 
 // SetupSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned

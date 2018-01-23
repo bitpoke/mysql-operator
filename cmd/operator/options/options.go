@@ -3,8 +3,7 @@ package options
 import (
 	"flag"
 	"time"
-
-	"github.com/presslabs/titanium/pkg/util"
+	//	"github.com/presslabs/titanium/pkg/util"
 )
 
 type ControllerOptions struct {
@@ -37,8 +36,8 @@ const (
 func NewControllerOptions() *ControllerOptions {
 	return &ControllerOptions{
 		APIServerHost:               defaultAPIServerHost,
-		Namespace:                   util.GetPodNamespace(),
-		PodName:                     util.GetPodName(),
+		Namespace:                   "default",
+		PodName:                     "pod-name",
 		ClusterResourceNamespace:    defaultClusterResourceNamespace,
 		LeaderElect:                 defaultLeaderElect,
 		LeaderElectionNamespace:     defaultLeaderElectionNamespace,
@@ -53,10 +52,10 @@ func (s *ControllerOptions) AddFlags() {
 	flag.StringVar(&s.APIServerHost, "master", defaultAPIServerHost, ""+
 		"Optional apiserver host address to connect to. If not specified, autoconfiguration "+
 		"will be attempted.")
-	flag.StringVar(&s.Namespace, "namespace", util.GetPodNamespace(), ""+
+	flag.StringVar(&s.Namespace, "namespace", "default", ""+
 		"Optional namespace to monitor resources within. This can be used to limit the scope "+
 		"of cert-manager to a single namespace. If not specified, all namespaces will be watched")
-	flag.StringVar(&s.PodName, "pod-name", util.GetPodName(), ""+
+	flag.StringVar(&s.PodName, "pod-name", "pod-name", ""+
 		"Optional pod name, when running out of cluster.")
 	flag.StringVar(&s.ClusterResourceNamespace, "cluster-resource-namespace", defaultClusterResourceNamespace, ""+
 		"Namespace to store resources owned by cluster scoped resources.")
