@@ -163,11 +163,15 @@ func (c *cluster) syncStatefulSet() error {
 		return fmt.Errorf("The config map files is not controlled by this resource!")
 	}
 
-	if !reflect.DeepEqual(sfs.Spec, expSS.Spec) {
+	if !statefulSetEqual(sfs, &expSS) {
 		fmt.Println("StatefulSet ... updated")
 		expSS.SetResourceVersion(sfs.GetResourceVersion())
 		_, err = sfsClient.Update(&expSS)
 		return err
+	}
+
+	if !reflect.DeepEqual(sfs.Spec, expSS.Spec) {
+		fmt.Println("StatefulSet has changes that can't be applied.")
 	}
 
 	fmt.Println("StatefulSet ... up-to-date")
@@ -191,5 +195,20 @@ func (c *cluster) existsSecret(name string) bool {
 		return false
 	}
 
+	return true
+}
+
+func statefulSetEqual(a, b *v1beta2.StatefulSet) bool {
+	if *a.Spec.Replicas != *b.Spec.Replicas {
+		return false
+	}
+
+	//if !reflect.DeepEqual(a.Spec.Template, b.Spec.Template) {
+	//	return false
+	//}
+
+	//if !reflect.DeepEqual(a.Spec.UpdateStrategy, b.Spec.UpdateStrategy) {
+	//	return false
+	//}
 	return true
 }

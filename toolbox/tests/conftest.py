@@ -2,6 +2,7 @@
 import time
 import tempfile
 import os
+import base64
 from random import choice
 from string import ascii_lowercase
 
@@ -14,25 +15,48 @@ import pymysql
 import backoff
 
 
-TITANIUM_IMAGE = 'gcr.io/pl-infra/titanium-toolbox'
-TITANIUM_IMAGE_TAG = os.getenv('TITANIUM_IMAGE_TAG', 'latest')
+TITANIUM_IMAGE = 'gcr.io/pl-infra/titanium-toolbox:{}'.format(
+    os.getenv('TITANIUM_IMAGE_TAG', 'latest'))
 NAMESPACE = 'titanium-testing'
-CHART_PATH = os.path.join(os.path.dirname(__file__), '../../charts/titanium/')
-INIT_CONFIG = {
-    'gsCredentialsFile': os.getenv('TITANIUM_TEST_GS_CREDENTIALS', os.getenv('GOOGLE_CREDENTIALS', '')),
-    # 'initBucketURI': None,
-    'backupBucket': 'gs:pl-test-mysql-backups',
-    'persistenceDisabled': True,  # for fasts tests
-    'mysql': {
-        'replicas': 2,
-        #'allowEmptyPassword': True,
-        'rootPassword': 'supersecret'
+OPERATOR_EXEC = '../bin/linux/operator'
+
+BUCKET_SECRET_NAME = 'backups-secret-for-gs'
+BUCKET_SECRET_CONFIG = {
+    'apiVersion': 'v1',
+    'kind': 'Secret',
+    'metadata': {
+        'name': BUCKET_SECRET_NAME,
     },
-    'scheduleBackup': None,
-    'tools': {
-        'image': '{}:{}'.format(TITANIUM_IMAGE, TITANIUM_IMAGE_TAG)
+    'type': 'Opaque',
+    'data': {
+        'GCS_PROJECT_ID': base64.b64encode(os.getenv('GOOGLE_PROJECT_ID').encode('utf-8')),
+        'GCS_SERVICE_ACCOUNT_KEY': base64.b64encode(
+            os.getenv('TITANIUM_TEST_GS_CREDENTIALS',
+                      os.getenv('GOOGLE_CREDENTIALS', '')).encode('utf-8')
+        ),
     }
 }
+
+def MYSQL_CLUSTER_CONFIG(name, **spec):
+    return {
+        'apiVersion': 'titanium.presslabs.net/v1alpha1',
+        'kind': 'MysqlCluster',
+        'metadata': {
+            'name': name,
+        },
+        'spec': {
+            'replicas': 2,
+            'mysqlRootPassword': 'supersecret',
+            'backupBucketURI': 'gs:pl-test-mysql-backups/{}/'.format(name),
+            'podSpec':{
+                'titaniumImage': TITANIUM_IMAGE,
+            },
+            'volumeSpec': {
+                'persistenceEnabled': False, # for speed-up test
+            },
+            **spec
+        }
+    }
 config.load_kube_config()
 
 
@@ -50,46 +74,38 @@ def deploy():
 
 
 class Release:
-    def __init__(self, release, namespace=NAMESPACE, values=None):
+    def __init__(self, release, values=None):
         self.release = release
-        self.namespace = namespace
         values = values or {}
 
-        self.values = {
-            **INIT_CONFIG,
-            **values
-        }
-        if 'mysql' in values:
-            self.values['mysql'] = {
-                **INIT_CONFIG['mysql'],
-                **values['mysql']
-            }
-        print('Tools image: ', self.values['tools']['image'])
+        self.values = MYSQL_CLUSTER_CONFIG(release, **values)
 
-        self.mysql_password = self.values['mysql'].get('rootPassword', '')
+        print('Tools image: ', self.values['spec']['podSpec']['titaniumImage'])
+
+        self.mysql_password = self.values['spec'].get('mysqlRootPassword', '')
         self.kubeV1 = client.CoreV1Api()
-        self.no_pods = self.values['mysql']['replicas']
+        self.no_pods = self.values['spec']['replicas']
 
     def apply(self):
         with tempfile.NamedTemporaryFile('w+', suffix='.yaml') as config_file:
             config_file.write(yaml.dump(self.values))
             config_file.flush()
 
-            out = sh.helm.install('-f', config_file.name, '--name', self.release, '--debug',
-                                  '--namespace', self.namespace, CHART_PATH)
+            out = sh.kubectl.apply('-f', config_file.name, '--namespace', NAMESPACE)
             print('\n'.join(out.stdout.decode('utf-8').splitlines()[-25:]))
 
     def delete(self):
-        sh.helm.delete('--purge', self.release, '--timeout', 10, '--no-hooks')
+        sh.kubectl.delete.mysql(self.release, '--namespace', NAMESPACE)
 
     def execute(self, pod, cmd, container='titanium'):
-        return sh.kubectl.exec('--namespace', NAMESPACE, '-it', '{}-titanium-{}'.format(self.release, pod),
+        return sh.kubectl.exec('--namespace', NAMESPACE, '-it',
+                               '{}-titanium-{}'.format(self.release, pod),
                                '-c', container, '--', cmd, _tty_out=False, _tty_in=False)
 
     def pod_forward_ports(self, pod, ports):
         ports = map(str, ports)
         print('Starting port forwarding...')
-        process = sh.kubectl('port-forward', '--namespace', self.namespace,
+        process = sh.kubectl('port-forward', '--namespace', NAMESPACE,
                           '{}-titanium-{}'.format(self.release, pod), ' '.join(ports),
                           _bg=True)
         return process
@@ -107,10 +123,11 @@ class Release:
     def all_logs(self):
         for pod in range(self.no_pods):
             for container in ['init-mysql', 'clone-mysql', 'mysql', 'titanium']:
-                print('\n=== Logs for: {}-titanium-{} - {} ==='.format(self.release, pod, container))
+                print('\n=== Logs for: {}-titanium-{} - {} ==='.format(
+                    self.release, pod, container))
                 print(self.get_logs(pod, container))
 
-    @backoff.on_predicate(backoff.fibo, max_value=10)
+    @backoff.on_predicate(backoff.fibo, max_value=7)
     @backoff.on_exception(backoff.expo, ApiException, max_tries=8)
     def wait_for_pod(self, pod_ordinal, desired_state='Running'):
         pod = self.get_pod_status(pod_ordinal)
@@ -121,7 +138,7 @@ class Release:
     @backoff.on_exception(backoff.expo, ApiException, max_tries=3)
     def get_pod_status(self, pod):
         return self.kubeV1.read_namespaced_pod_status(
-            '{}-titanium-{}'.format(self.release, pod), self.namespace
+            '{}-titanium-{}'.format(self.release, pod), NAMESPACE
         )
 
 
@@ -135,6 +152,14 @@ class Helm:
         release.apply()
         self._releases.append(release)
         return release
+
+    def create_backup_secret(self):
+        with tempfile.NamedTemporaryFile('w+', suffix='.yaml') as config_file:
+            config_file.write(yaml.dump(BUCKET_SECRET_CONFIG))
+            config_file.flush()
+
+            out = sh.kubectl.apply('-f', config_file.name, '--namespace', NAMESPACE)
+            print('\n'.join(out.stdout.decode('utf-8').splitlines()[-25:]))
 
     def print_all_logs(self):
         for release in self._releases:
@@ -170,7 +195,7 @@ class DBFixture:
         self.forward_process = self.release.pod_forward_ports(pod, [3306])
         self._connect_to_mysql(user, password)
 
-    @backoff.on_exception(backoff.expo, pymysql.err.OperationalError, max_tries=10)
+    @backoff.on_exception(backoff.expo, pymysql.err.OperationalError, max_tries=6)
     def _connect_to_mysql(self, user=None, password=None):
         print('Trying to connect to MYSQL...')
         self.conn = pymysql.connect(
@@ -215,6 +240,18 @@ class DBFixture:
         for fixture in cls.fixtures:
             fixture.disconnect()
 
+@pytest.fixture(autouse=True, scope='session')
+def controller():
+    """Starts the titanium operator."""
+    env = {
+        'OUT_OF_KLUSTER': True
+    }
+    controller = sh.Command(OPERATOR_EXEC)
+    k = controller('--namespace', NAMESPACE, _bg=True, _env=env)
+    print('Controlled started.')
+    yield
+    print('Controlled stoped.')
+    k.terminate()
 
 @pytest.fixture(autouse=True, scope='session')
 def helm(request):
@@ -223,6 +260,7 @@ def helm(request):
         deploy()
 
     helm_client = Helm()
+    helm_client.create_backup_secret()
     yield helm_client
 
     if request.session.testsfailed:
