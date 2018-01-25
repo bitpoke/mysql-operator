@@ -203,9 +203,9 @@ func TestPersistenceDisabledEnabled(t *testing.T) {
 	client, mcClient, c := getFakeCluster("test-cluster-2")
 	mc := c.GetMysqlCluster()
 
-	assertEqual(t, mc.Spec.VolumeSpec.PersistenceEnabled, true, "persistenceEnabled default")
+	assertEqual(t, mc.Spec.VolumeSpec.PersistenceDisabled, false, "persistenceEnabled default")
 
-	mc.Spec.VolumeSpec.PersistenceEnabled = false
+	mc.Spec.VolumeSpec.PersistenceDisabled = true
 	mcClient.Titanium().MysqlClusters(DefaultNamespace).Update(mc)
 	c.SyncStatefulSet()
 
@@ -215,16 +215,22 @@ func TestPersistenceDisabledEnabled(t *testing.T) {
 	if sfs.Spec.Template.Spec.Volumes[2].EmptyDir == nil {
 		t.Error("Is not empty dir.")
 	}
+}
 
-	mc.Spec.VolumeSpec.PersistenceEnabled = true
+func TestPersistenceEnabled(t *testing.T) {
+	client, mcClient, c := getFakeCluster("test-cluster-2")
+	mc := c.GetMysqlCluster()
+	mc.Spec.VolumeSpec.PersistenceDisabled = false
+
 	mcClient.Titanium().MysqlClusters(DefaultNamespace).Update(mc)
 	c.SyncStatefulSet()
 
-	sfs, _ = sfC.Get(c.GetNameForResource(StatefulSet), metav1.GetOptions{})
+	sfC := client.AppsV1beta2().StatefulSets(DefaultNamespace)
+	sfs, _ := sfC.Get(c.GetNameForResource(StatefulSet), metav1.GetOptions{})
 	if sfs.Spec.Template.Spec.Volumes[2].PersistentVolumeClaim == nil {
-		t.Error("Is not a PVC.")
+		t.Error("Is not a PVC. And should be.")
 	}
 	if sfs.Spec.Template.Spec.Volumes[2].EmptyDir != nil {
-		t.Error("Is is an empty dir.")
+		t.Error("Is is an empty dir. Should be a PVC")
 	}
 }

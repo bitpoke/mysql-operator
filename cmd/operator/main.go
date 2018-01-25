@@ -44,7 +44,6 @@ func main() {
 
 	ctx := newControllerContext()
 	run := func(_ <-chan struct{}) {
-
 		// build controllers map
 		var controllers = make(map[string]controllerpkg.Interface)
 		for n, fn := range controllerpkg.Known() {

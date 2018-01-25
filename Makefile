@@ -4,7 +4,7 @@ VERSION = v$(DATE)
 GOOS    ?= $(shell go env | grep GOOS | cut -d'"' -f2)
 BINARY  := operator
 
-LDFLAGS := -X github.com/presslabs/titanium/pkg/operator.VERSION=$(VERSION)
+LDFLAGS :=  -X github.com/presslabs/titanium/pkg/operator.VERSION=$(VERSION)
 GOFLAGS := -ldflags "$(LDFLAGS)"
 
 SRCDIRS  := cmd pkg
@@ -28,12 +28,13 @@ generate: $(TYPES_FILES)
 	GOPATH=$(GOPATH) $(HACK_DIR)/update-codegen.sh
 
 bin/%/$(BINARY): $(GOFILES) Makefile
-	GOOS=$* GOARCH=amd64 go build $(GOFLAGS) -v -i -o bin/$*/$(BINARY) $<
+	CGO_ENABLED=0 GOOS=$* GOARCH=amd64 go build $(GOFLAGS) \
+				-i -installsuffix titan -v -o bin/$*/$(BINARY) $<
 
 test: $(TEST_FILES)
-	go test -v \
+	go test -v -installsuffix titan \
 	    -race \
-		$$(go list ./... | \
+			$$(go list ./... | \
 			grep -v '/vendor/' | \
 			grep -v '/pkg/generated/' \
 		)
