@@ -28,4 +28,19 @@ ${GCS_SERVICE_ACCOUNT_JSON_KEY}
 EOF
 
 # exec command
-$@
+case "$1" in
+    files-config)
+        db config_files
+        ;;
+    clone)
+        db clone
+        ;;
+    config-and-serve)
+        db configure; db serve_backups
+        ;;
+    *)
+        echo "Usage: $0 {files-config|clone|config-and-serve}"
+        echo "Now runs your command."
+
+        exec "$@"
+esac

@@ -115,5 +115,5 @@ type PodSpec struct {
 type VolumeSpec struct {
 	apiv1.PersistentVolumeClaimSpec `json:",inline"`
 
-	PersistenceEnabled bool `json:persistenceEnabled,omitempty`
+	PersistenceDisabled bool `json:persistenceDisabled,omitempty`
 }

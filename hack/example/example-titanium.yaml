@@ -6,5 +6,7 @@ spec:
   replicas: 1
   mysqlRootPassword: thisp
   podSpec:
-    titaniumImage: "gcr.io/pl-infra/titanium-toolbox:latest"
+    titaniumImage: "gcr.io/pl-infra/titanium-toolbox:test1"
+  volumeSpec:
+    persistenceDisabled: true
 

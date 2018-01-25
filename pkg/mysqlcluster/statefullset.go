@@ -83,7 +83,7 @@ func (c *cluster) getInitContainersSpec() []apiv1.Container {
 			Name:            "init-mysql",
 			Image:           c.cl.Spec.PodSpec.TitaniumImage,
 			ImagePullPolicy: c.cl.Spec.PodSpec.TitaniumImagePullPolicy,
-			Args:            []string{"db", "config_files"},
+			Args:            []string{"files-config"},
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
 					SecretRef: &apiv1.SecretEnvSource{
@@ -99,7 +99,7 @@ func (c *cluster) getInitContainersSpec() []apiv1.Container {
 			Name:            "clone-mysql",
 			Image:           c.cl.Spec.PodSpec.TitaniumImage,
 			ImagePullPolicy: c.cl.Spec.PodSpec.TitaniumImagePullPolicy,
-			Args:            []string{"db", "clone"},
+			Args:            []string{"clone"},
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
 					SecretRef: &apiv1.SecretEnvSource{
@@ -144,7 +144,7 @@ func (c *cluster) getContainersSpec() []apiv1.Container {
 		apiv1.Container{
 			Name:  "titanium",
 			Image: c.cl.Spec.PodSpec.TitaniumImage,
-			Args:  []string{"db configure; db serve_backups"},
+			Args:  []string{"config-and-serve"},
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
 					SecretRef: &apiv1.SecretEnvSource{
@@ -241,7 +241,7 @@ func (c *cluster) getDataVolume() apiv1.Volume {
 		EmptyDir: &apiv1.EmptyDirVolumeSource{},
 	}
 
-	if c.cl.Spec.VolumeSpec.PersistenceEnabled {
+	if !c.cl.Spec.VolumeSpec.PersistenceDisabled {
 		vs = apiv1.VolumeSource{
 			PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
 				ClaimName: c.getNameForResource(VolumePVC),
@@ -275,7 +275,7 @@ func getVolumeMounts(extra ...apiv1.VolumeMount) []apiv1.VolumeMount {
 }
 
 func (c *cluster) getVolumeClaimTemplates() []apiv1.PersistentVolumeClaim {
-	if !c.cl.Spec.VolumeSpec.PersistenceEnabled {
+	if c.cl.Spec.VolumeSpec.PersistenceDisabled {
 		fmt.Println("Persistence is disabled.")
 		return nil
 	}

@@ -12,7 +12,6 @@ import (
 
 const (
 	InnodbBufferSizePercent = 80
-	PersistenceEnabled      = true
 )
 
 func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
@@ -123,10 +122,6 @@ func (ps *PodSpec) UpdateDefaults() error {
 }
 
 func (vs *VolumeSpec) UpdateDefaults() error {
-	if !vs.PersistenceEnabled {
-		vs.PersistenceEnabled = PersistenceEnabled
-	}
-
 	if len(vs.AccessModes) == 0 {
 		vs.AccessModes = []apiv1.PersistentVolumeAccessMode{
 			apiv1.ReadWriteOnce,
