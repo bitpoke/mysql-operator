@@ -33,6 +33,8 @@ def MYSQL_CLUSTER_CONFIG(name, **spec):
             'replicas': 2,
             'mysqlRootPassword': 'supersecret',
             'backupBucketURI': 'gs:pl-test-mysql-backups/{}/'.format(name),
+            'backupBucketSecretName': BUCKET_SECRET_NAME,
+            'initBucketSecretName': BUCKET_SECRET_NAME,
             'podSpec':{
                 'titaniumImage': TITANIUM_IMAGE,
             },
@@ -60,7 +62,7 @@ def deploy():
 
 class Release:
     def __init__(self, release, values=None):
-        self.release = release
+        self.name = release
         values = values or {}
 
         self.values = MYSQL_CLUSTER_CONFIG(release, **values)
@@ -80,25 +82,29 @@ class Release:
             print('\n'.join(out.stdout.decode('utf-8').splitlines()[-25:]))
 
     def delete(self):
-        sh.kubectl.delete.mysql(self.release, '--namespace', NAMESPACE)
+        sh.kubectl.delete.mysql(self.name, '--namespace', NAMESPACE)
 
     def execute(self, pod, cmd, container='titanium'):
-        return sh.kubectl.exec('--namespace', NAMESPACE, '-it',
-                               POD_NAME_TEMPLATE.format(self.release, pod),
-                               '-c', container, '--', cmd, _tty_out=False, _tty_in=False)
+        try:
+            return sh.kubectl.exec('--namespace', NAMESPACE, '-it',
+                                POD_NAME_TEMPLATE.format(self.name, pod),
+                                '-c', container, '--', cmd, _tty_out=False, _tty_in=False)
+        except sh.ErrorReturnCode as e:
+            print('More info: ', e.stderr)
+            raise
 
     def pod_forward_ports(self, pod, ports):
         ports = map(str, ports)
         print('Starting port forwarding...')
         process = sh.kubectl('port-forward', '--namespace', NAMESPACE,
-                          POD_NAME_TEMPLATE.format(self.release, pod), ' '.join(ports),
+                          POD_NAME_TEMPLATE.format(self.name, pod), ' '.join(ports),
                           _bg=True)
         return process
 
     def get_logs(self, pod, container='mysql'):
         try:
             out = sh.kubectl.logs(
-                '--namespace', NAMESPACE, POD_NAME_TEMPLATE.format(self.release, pod),
+                '--namespace', NAMESPACE, POD_NAME_TEMPLATE.format(self.name, pod),
                 '-c', container
             )
             return out.stdout.decode('utf-8')
@@ -108,15 +114,15 @@ class Release:
     def all_logs(self):
         for pod in range(self.no_pods):
             for container in ['init-mysql', 'clone-mysql', 'mysql', 'titanium']:
-                pod_name = POD_NAME_TEMPLATE.format(self.release, pod)
+                pod_name = POD_NAME_TEMPLATE.format(self.name, pod)
                 print('\n=== Logs for: {} - {} ==='.format(
                     pod_name, container))
                 print(self.get_logs(pod, container))
 
-    @backoff.on_predicate(backoff.fibo, max_value=10)
-    @backoff.on_exception(backoff.expo, ApiException, max_tries=4)
+    @backoff.on_predicate(backoff.fibo, max_value=5)
+    @backoff.on_exception(backoff.expo, ApiException, max_tries=7)
     def wait_for_pod(self, pod_ordinal, desired_state='Running'):
-        print(f'Wait for pod({pod_ordinal})...')
+        print('Wait for pod({})...'.format(pod_ordinal))
         pod = self.get_pod_status(pod_ordinal)
         if pod.status.phase == desired_state:
             return True
@@ -124,9 +130,9 @@ class Release:
 
     @backoff.on_exception(backoff.expo, ApiException, max_tries=3)
     def get_pod_status(self, pod):
-        print(f'Get status pod({pod})')
+        print('Get status pod({})'.format(pod))
         return self.kubeV1.read_namespaced_pod_status(
-            POD_NAME_TEMPLATE.format(self.release, pod), NAMESPACE
+            POD_NAME_TEMPLATE.format(self.name, pod), NAMESPACE
         )
 
 
@@ -159,10 +165,11 @@ class DBFixture:
         self.conn = None
         self.init = False
         self.fixtures.append(self)
+        self.port = 1000 + (abs(hash(self.release.name)) % (10**4))
 
     def __call__(self, release):
         self.disconnect()
-        time.sleep(1)  # wait until process is killed
+        time.sleep(2)  # wait until process is killed
         return DBFixture(release)
 
     def connect_to_pod(self, pod, user=None, password=None):
@@ -172,14 +179,14 @@ class DBFixture:
             self.forward_process.terminate()
             self.init = False
 
-        self.forward_process = self.release.pod_forward_ports(pod, [3306])
+        self.forward_process = self.release.pod_forward_ports(pod, ['{}:3306'.format(self.port)])
         self._connect_to_mysql(user, password)
 
-    @backoff.on_exception(backoff.expo, pymysql.err.OperationalError, max_tries=6)
+    @backoff.on_exception(backoff.expo, pymysql.err.OperationalError, max_tries=8)
     def _connect_to_mysql(self, user=None, password=None):
         print('Trying to connect to MYSQL...')
         self.conn = pymysql.connect(
-            host='127.0.0.1', user=(user or 'root'),
+            host='127.0.0.1', port=self.port, user=(user or 'root'),
             password=(password or self.release.mysql_password)
         )
         self.init = True

@@ -22,10 +22,11 @@ func (c *cluster) createEnvConfigSecret() apiv1.Secret {
 
 func (c *cluster) getConfigSecretEnv() map[string][]byte {
 	configs := map[string]string{
-		"TITANIUM_BACKUP_BUCKET":     c.cl.Spec.BackupBucketURI, // TODO: change env var
 		"TITANIUM_RELEASE_NAME":      c.cl.Name,
 		"TITANIUM_GOVERNING_SERVICE": c.getNameForResource(HeadlessSVC),
+
 		"TITANIUM_INIT_BUCKET_URI":   c.cl.Spec.InitBucketURI,
+		"TITANIUM_BACKUP_BUCKET_URI": c.cl.Spec.BackupBucketURI,
 
 		"TITANIUM_REPLICATION_USER":     c.cl.Spec.MysqlReplicationUser,
 		"TITANIUM_REPLICATION_PASSWORD": c.cl.Spec.MysqlReplicationPassword,

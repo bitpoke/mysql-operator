@@ -60,9 +60,7 @@ def test_backup_on_demand(helm, release, db):
 
     release2 = helm.install({
         'initBucketURI': backup_uri,
-        'mysql': {
-            'replicas': 1
-        }
+        'replicas': 1,
     })
     release2.wait_for_pod(0)
 
@@ -77,18 +75,17 @@ def test_backup_on_demand(helm, release, db):
 def test_user_creation(helm, db):
     db_name, db_user, db_pass = 'xxTestxx', 'xxUserxx', 'xxPaSSxx'
     release = helm.install({
-        'mysql' : {
-            'replicas': 1,
-            'dbName': db_name,
-            'dbUser': db_user,
-            'dbPassword': db_pass
-        }
+        'replicas': 1,
+        'mysqlDatabase': db_name,
+        'mysqlUser': db_user,
+        'mysqlPassword': db_pass
     })
     release.wait_for_pod(0)
 
     db = db(release)
     db.connect_to_pod(0, db_user, db_pass)
     db.use_db(db_name)
+    db.cleanup()
 
 
 def test_gtid_mode_enabled(db, release):
@@ -96,3 +93,4 @@ def test_gtid_mode_enabled(db, release):
     db.connect_to_pod(0)
     out = db.query("SHOW GLOBAL VARIABLES LIKE 'GTID_MODE'")
     assert out[0][1] == 'ON'
+    db.cleanup()

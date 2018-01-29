@@ -55,7 +55,7 @@ type ClusterSpec struct {
 	InitBucketSecretName string `json:initBucketSecretName,omitempty`
 
 	BackupBucketURI        string `json:backupBucketURI,omitempty`
-	BackupBucketSecertName string `json:backupBucketSecretName,omitempty`
+	BackupBucketSecretName string `json:backupBucketSecretName,omitempty`
 
 	BackupSchedule string `json:backupSchedule,omitempty`
 

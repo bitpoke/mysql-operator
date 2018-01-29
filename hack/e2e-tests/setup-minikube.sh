@@ -5,7 +5,7 @@ set -o nounset
 set -o pipefail
 
 # Create a cluster. We do this as root as we are using the 'docker' driver.
-### sudo -E CHANGE_MINIKUBE_NONE_USER=true minikube start --vm-driver=none
+# sudo -E CHANGE_MINIKUBE_NONE_USER=true minikube start --vm-driver=none
 #sudo -E CHANGE_MINIKUBE_NONE_USER=true minikube addons enable ingress
 
 # wait for minikube
@@ -40,7 +40,7 @@ metadata:
 type: Opaque
 data:
   GCS_PROJECT_ID: "$(echo $GOOGLE_PROJECT_ID | base64 -w0 )"
-  GCS_SERVICE_ACCOUNT_KEY: "$(echo $GOOGLE_CREDENTIALS | base64 -w0 )"
+  GCS_SERVICE_ACCOUNT_JSON_KEY: "$(echo ${TITANIUM_TEST_GS_CREDENTIALS:-GOOGLE_CREDENTIALS} | base64 -w0 )"
 
 EOF
 

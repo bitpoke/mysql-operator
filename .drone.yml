@@ -1,5 +1,27 @@
 pipeline:
-  build:
+  build-operator:
+    image: golang
+    commands:
+      - make
+      - make test
+
+  publish-operator:
+    image: plugins/docker
+    mirror: https://mirror.gcr.io
+    registry: gcr.io
+    repo: gcr.io/pl-infra/titanium-operator
+    username: _json_key
+    tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
+    force_tag: true
+    build_args:
+      - release="${DRONE_COMMIT_SHA:0:7}"
+    secrets:
+      - source: GOOGLE_CREDENTIALS
+        target: DOCKER_PASSWORD
+    when:
+      event: push
+
+  publish-toolbox:
     image: plugins/docker
     mirror: https://mirror.gcr.io
     registry: gcr.io
@@ -17,19 +39,29 @@ pipeline:
     when:
       event: push
 
-  test:
+  e2e-tests:
     image: gcr.io/pl-infra/kluster-toolbox:latest
     pull: true
     secrets:
       - GOOGLE_CREDENTIALS
+      - GOOGLE_PROJECT_ID
       - TITANIUM_TEST_GS_CREDENTIALS
     environment:
       - TITANIUM_IMAGE_TAG=${DRONE_COMMIT_SHA:0:7}
-      - PLUGIN_PROJECT=staging-reactor
-      - PLUGIN_ZONE=us-east1-b
-      - PLUGIN_CLUSTER=test
     commands:
-      - /usr/local/bin/setup-credentials-helper.sh
+      - kubectl config set-cluster localkube-image --server=http://minikube:8080
+      - kubectl config set-context localkube-image --cluster=localkube-image
+      - kubectl config use-context localkube-image
+      - ./hack/e2e-tests/setup-minikube.sh
       - cd toolbox
       - pip3 install -r requirements.dev.txt
       - python3 -m pytest -v --capture=no
+
+services:
+  minikube:
+    image: gcr.io/k8s-minikube/localkube-dind-image:v1.8.0
+    privileged: true
+    volumes:
+      - /boot:/boot
+      - /lib/modules:/lib/modules
+      - /root/minikube:/var/lib/docker/aufs
