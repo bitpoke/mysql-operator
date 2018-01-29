@@ -1,11 +1,18 @@
+workspace:
+  base: /go
+  path: src/github.com/presslabs/titanium
+
 pipeline:
   build-operator:
-    image: golang
+    image: golang:1.9
     commands:
+      - go get -u github.com/golang/dep/cmd/dep
+      - dep ensure
       - make
       - make test
 
   publish-operator:
+    group: publish
     image: plugins/docker
     mirror: https://mirror.gcr.io
     registry: gcr.io
@@ -22,6 +29,7 @@ pipeline:
       event: push
 
   publish-toolbox:
+    group: publish
     image: plugins/docker
     mirror: https://mirror.gcr.io
     registry: gcr.io
@@ -48,10 +56,11 @@ pipeline:
       - TITANIUM_TEST_GS_CREDENTIALS
     environment:
       - TITANIUM_IMAGE_TAG=${DRONE_COMMIT_SHA:0:7}
+      - OPERATOR_IMAGE=gcr.io/pl-infra/titanium-operator:${DRONE_COMMIT_SHA:0:7}
     commands:
-      - kubectl config set-cluster localkube-image --server=http://minikube:8080
-      - kubectl config set-context localkube-image --cluster=localkube-image
-      - kubectl config use-context localkube-image
+      - kubectl config set-cluster e2e --server=http://minikube:4321
+      - kubectl config set-context e2e --cluster=e2e
+      - kubectl config use-context e2e
       - ./hack/e2e-tests/setup-minikube.sh
       - cd toolbox
       - pip3 install -r requirements.dev.txt
@@ -59,9 +68,14 @@ pipeline:
 
 services:
   minikube:
-    image: gcr.io/k8s-minikube/localkube-dind-image:v1.8.0
+    image: gcr.io/k8s-minikube/localkube-dind-image:v1.9.0
     privileged: true
     volumes:
       - /boot:/boot
       - /lib/modules:/lib/modules
       - /root/minikube:/var/lib/docker/aufs
+    commands:
+      - mkdir -p /var/log/localkube
+      - touch /var/log/localkube/logs.txt
+      - tail -f /var/log/localkube/logs.txt &
+      - /start.sh
