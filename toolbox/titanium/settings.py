@@ -20,6 +20,7 @@ LOGGING = {
     }
 }
 
+APP_NAME = 'mysql'
 
 # used in init-mysql init container
 CONFIG_MYSQL = os.getenv('TITANIUM_CONFIG_MYSQL_DIR', '/etc/mysql')
@@ -38,9 +39,7 @@ RELEASE_NAME = os.getenv('TITANIUM_RELEASE_NAME')
 
 # https://github.com/ncw/rclone
 INIT_BUCKET_URI = os.getenv('TITANIUM_INIT_BUCKET_URI')
-BACKUP_BUCKET = os.getenv('TITANIUM_BACKUP_BUCKET')
-BACKUP_PREFIX = os.getenv('TITANIUM_BACKUP_PREFIX', RELEASE_NAME)
-
+BACKUP_BUCKET_URI = os.getenv('TITANIUM_BACKUP_BUCKET_URI')
 
 # replication
 MASTER_REPLICATION_USER = os.getenv('TITANIUM_REPLICATION_USER', 'root')

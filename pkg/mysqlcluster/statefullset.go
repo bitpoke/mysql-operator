@@ -62,22 +62,6 @@ func (c *cluster) getPodTempalteSpec() apiv1.PodTemplateSpec {
 }
 
 func (c *cluster) getInitContainersSpec() []apiv1.Container {
-	initCoVM := []apiv1.VolumeMount{
-		apiv1.VolumeMount{
-			Name:      ConfVolumeName,
-			MountPath: ConfVolumeMountPath,
-		},
-		apiv1.VolumeMount{
-			Name:      ConfMapVolumeName,
-			MountPath: ConfMapVolumeMountPath,
-		},
-	}
-	if c.existsSecret(c.cl.Spec.InitBucketSecretName) {
-		initCoVM = append(initCoVM, apiv1.VolumeMount{
-			Name:      InitSecretVolumeName,
-			MountPath: InitSecretVolumeMountPath,
-		})
-	}
 	return []apiv1.Container{
 		apiv1.Container{
 			Name:            "init-mysql",
@@ -93,7 +77,16 @@ func (c *cluster) getInitContainersSpec() []apiv1.Container {
 					},
 				},
 			},
-			VolumeMounts: initCoVM,
+			VolumeMounts: []apiv1.VolumeMount{
+				apiv1.VolumeMount{
+					Name:      ConfVolumeName,
+					MountPath: ConfVolumeMountPath,
+				},
+				apiv1.VolumeMount{
+					Name:      ConfMapVolumeName,
+					MountPath: ConfMapVolumeMountPath,
+				},
+			},
 		},
 		apiv1.Container{
 			Name:            "clone-mysql",
@@ -108,6 +101,7 @@ func (c *cluster) getInitContainersSpec() []apiv1.Container {
 						},
 					},
 				},
+				envFromSecret(c.cl.Spec.InitBucketSecretName),
 			},
 			VolumeMounts: getVolumeMounts(),
 		},
@@ -132,7 +126,6 @@ func (c *cluster) getContainersSpec() []apiv1.Container {
 			Ports: []apiv1.ContainerPort{
 				apiv1.ContainerPort{
 					Name:          MysqlPortName,
-					HostPort:      MysqlPort,
 					ContainerPort: MysqlPort,
 				},
 			},
@@ -153,11 +146,13 @@ func (c *cluster) getContainersSpec() []apiv1.Container {
 						},
 					},
 				},
+				// Allow to take backups from this container.
+				// TODO: remove this
+				envFromSecret(c.cl.Spec.BackupBucketSecretName),
 			},
 			Ports: []apiv1.ContainerPort{
 				apiv1.ContainerPort{
 					Name:          TitaniumXtrabackupPortName,
-					HostPort:      TitaniumXtrabackupPort,
 					ContainerPort: TitaniumXtrabackupPort,
 				},
 			},
@@ -202,7 +197,7 @@ func getReadinessProbe() *apiv1.Probe {
 }
 
 func (c *cluster) getVolumes() []apiv1.Volume {
-	volumes := []apiv1.Volume{
+	return []apiv1.Volume{
 		apiv1.Volume{
 			Name: ConfVolumeName,
 			VolumeSource: apiv1.VolumeSource{
@@ -222,18 +217,6 @@ func (c *cluster) getVolumes() []apiv1.Volume {
 
 		c.getDataVolume(),
 	}
-
-	if c.existsSecret(c.cl.Spec.InitBucketSecretName) {
-		volumes = append(volumes, apiv1.Volume{
-			Name: InitSecretVolumeName,
-			VolumeSource: apiv1.VolumeSource{
-				Secret: &apiv1.SecretVolumeSource{
-					SecretName: c.cl.Spec.InitBucketSecretName,
-				},
-			},
-		})
-	}
-	return volumes
 }
 
 func (c *cluster) getDataVolume() apiv1.Volume {
@@ -288,6 +271,16 @@ func (c *cluster) getVolumeClaimTemplates() []apiv1.PersistentVolumeClaim {
 				OwnerReferences: c.getOwnerReferences(),
 			},
 			Spec: c.cl.Spec.VolumeSpec.PersistentVolumeClaimSpec,
+		},
+	}
+}
+
+func envFromSecret(name string) apiv1.EnvFromSource {
+	return apiv1.EnvFromSource{
+		SecretRef: &apiv1.SecretEnvSource{
+			LocalObjectReference: apiv1.LocalObjectReference{
+				Name: name,
+			},
 		},
 	}
 }

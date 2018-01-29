@@ -19,11 +19,8 @@ class Command(BaseCommand):
 
     def handle(self, current_pod=False):
         logging.info("Starting backup process...")
-        if not settings.BACKUP_BUCKET:
-            logging.error("BACKUP_BUCKET is not configured.")
-            return
-        if not settings.BACKUP_PREFIX:
-            logging.error("TITANIUM_RELEASE_NAME or TITANIUM_BACKUP_PREFIX is not configured.")
+        if not settings.BACKUP_BUCKET_URI:
+            logging.error("BACKUP_BUCKET_URI is not configured.")
             return
 
         self.backup(current_pod)
@@ -31,17 +28,21 @@ class Command(BaseCommand):
     def get_backup_uri(self):
         date = datetime.utcnow().isoformat(timespec='minutes')
         rand_str = ''.join(choice(ascii_uppercase) for i in range(7))
-        return f'{settings.BACKUP_BUCKET}/{settings.BACKUP_PREFIX}/{date}-{rand_str}.xbackup.gz'
+        bucket_uri = settings.BACKUP_BUCKET_URI
+        if bucket_uri.endswith('/'):
+            bucket_uri = bucket_uri[:-1]
+
+        return f'{bucket_uri}/{date}-{rand_str}.xbackup.gz'
 
     def get_source_host(self, use_current_pod):
         """Get the master mysql hostname."""
         if use_current_pod:
             return '127.0.0.1'
 
-        return f'{settings.RELEASE_NAME}-0.{settings.GOVERNING_SERVICE}'
+        return f'{settings.RELEASE_NAME}-{settings.APP_NAME}-0.{settings.GOVERNING_SERVICE}'
 
     def backup(self, use_current_pod):
-        """If BACKUP_BUCKET is set this will push backups to that bucket."""
+        """If BACKUP_BUCKET_URI is set this will push backups to that bucket."""
 
         backup_uri = self.get_backup_uri()
         rclone.rcat(
