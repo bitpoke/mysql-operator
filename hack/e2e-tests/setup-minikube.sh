@@ -31,6 +31,9 @@ EOF
 SECRET_NAME="backups-secret-for-gs"
 echo "Create backup secret ..."
 
+json_key="$(echo ${TITANIUM_TEST_GS_CREDENTIALS} | base64 | awk -v ORS='' '$0' )"
+project_id="$(echo $GOOGLE_PROJECT_ID | base64 | awk -v ORS='' '$0' )"
+
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: Secret
@@ -39,8 +42,8 @@ metadata:
   namespace: ${NAMESPACE}
 type: Opaque
 data:
-  GCS_PROJECT_ID: "$(echo $GOOGLE_PROJECT_ID | base64 -w0 )"
-  GCS_SERVICE_ACCOUNT_JSON_KEY: "$(echo ${TITANIUM_TEST_GS_CREDENTIALS:-GOOGLE_CREDENTIALS} | base64 -w0 )"
+  GCS_PROJECT_ID: "$project_id"
+  GCS_SERVICE_ACCOUNT_JSON_KEY: "$json_key"
 
 EOF
 
@@ -51,7 +54,7 @@ cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
-  name: titanium-controler
+  name: titanium-controller
   namespace: titanium-testing
   labels:
     app: titanium
@@ -72,3 +75,17 @@ spec:
         args: ["-namespace", "titanium-testing"]
 
 EOF
+
+echo "Wait for controller to be up..."
+
+# wait for pod
+while true; do
+    pod="$(kubectl get pods --namespace $NAMESPACE | awk '$1~/titanium-controller/{print $1}')"
+    phase="$(kubectl get pods $pod --namespace $NAMESPACE -o jsonpath='{.status.phase}')"
+    if [ "$phase" == "Running" ]; then
+        break
+    fi
+    echo "Waiting 5s for pod ($pod) to be ready..."
+    sleep 5
+done
+
