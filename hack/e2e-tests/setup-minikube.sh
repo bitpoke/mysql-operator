@@ -49,6 +49,7 @@ EOF
 
 echo "Deploy controller..."
 OPERATOR_IMAGE=${OPERATOR_IMAGE:-"gcr.io/pl-infra/titanium-operator:latest"}
+echo "Using image: $OPERATOR_IMAGE"
 
 cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1beta2

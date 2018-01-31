@@ -57,10 +57,8 @@ pipeline:
     environment:
       - TITANIUM_IMAGE_TAG=${DRONE_COMMIT_SHA:0:7}
       - OPERATOR_IMAGE=gcr.io/pl-infra/titanium-operator:${DRONE_COMMIT_SHA:0:7}
+      - KUBECONFIG=/go/.kube/config
     commands:
-      - kubectl config set-cluster e2e --server=http://minikube:4321
-      - kubectl config set-context e2e --cluster=e2e
-      - kubectl config use-context e2e
       - ./hack/e2e-tests/setup-minikube.sh
       - cd toolbox
       - pip3 install -r requirements.dev.txt
@@ -68,14 +66,5 @@ pipeline:
 
 services:
   minikube:
-    image: gcr.io/k8s-minikube/localkube-dind-image:v1.9.0
+    image: gcr.io/pl-infra/drone-minikube:v1.9.0
     privileged: true
-    volumes:
-      - /boot:/boot
-      - /lib/modules:/lib/modules
-      - /root/minikube:/var/lib/docker/aufs
-    commands:
-      - mkdir -p /var/log/localkube
-      - touch /var/log/localkube/logs.txt
-      - tail -f /var/log/localkube/logs.txt &
-      - /start.sh
