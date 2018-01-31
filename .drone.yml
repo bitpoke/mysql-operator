@@ -68,3 +68,6 @@ services:
   minikube:
     image: gcr.io/pl-infra/drone-minikube:v1.9.0
     privileged: true
+    secrets:
+      - GOOGLE_CREDENTIALS
+

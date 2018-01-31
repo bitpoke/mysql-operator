@@ -80,13 +80,14 @@ EOF
 echo "Wait for controller to be up..."
 
 # wait for pod
-while true; do
+j=0
+while [ $j -le 100 ]; do
     pod="$(kubectl get pods --namespace $NAMESPACE | awk '$1~/titanium-controller/{print $1}')"
     phase="$(kubectl get pods $pod --namespace $NAMESPACE -o jsonpath='{.status.phase}')"
     if [ "$phase" == "Running" ]; then
         break
     fi
-    echo "Waiting 5s for pod ($pod) to be ready..."
-    sleep 5
+    echo "Waiting 3s for pod ($pod) to be ready..."
+    sleep 3
+    j=$(( j + 1 ))
 done
-
