@@ -81,13 +81,25 @@ echo "Wait for controller to be up..."
 
 # wait for pod
 j=0
-while [ $j -le 100 ]; do
+while [ $j -le 50 ]; do
     pod="$(kubectl get pods --namespace $NAMESPACE | awk '$1~/titanium-controller/{print $1}')"
     phase="$(kubectl get pods $pod --namespace $NAMESPACE -o jsonpath='{.status.phase}')"
     if [ "$phase" == "Running" ]; then
         break
     fi
-    echo "Waiting 3s for pod ($pod) to be ready..."
-    sleep 3
+    echo "Waiting 2s for pod ($pod) to be ready..."
+    sleep 2
+    j=$(( j + 1 ))
+done
+
+
+j=0
+while [ $j -le 20 ]; do
+    kubectl get mysql &> /dev/null
+    if [ $? -ne 1 ]; then
+        break
+    fi
+    echo "Wait 2s for mysql resource to be ready..."
+    sleep 2
     j=$(( j + 1 ))
 done
