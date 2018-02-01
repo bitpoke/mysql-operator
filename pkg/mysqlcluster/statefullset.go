@@ -44,10 +44,9 @@ func (c *cluster) createStatefulSet() v1beta2.StatefulSet {
 func (c *cluster) getPodTempalteSpec() apiv1.PodTemplateSpec {
 	return apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.getNameForResource(SSPod),
-			Labels:          c.getLabels(c.cl.Spec.PodSpec.Labels),
-			OwnerReferences: c.getOwnerReferences(),
-			Annotations:     c.cl.Spec.PodSpec.Annotations,
+			Name:        c.getNameForResource(SSPod),
+			Labels:      c.getLabels(c.cl.Spec.PodSpec.Labels),
+			Annotations: c.cl.Spec.PodSpec.Annotations,
 		},
 		Spec: apiv1.PodSpec{
 			InitContainers: c.getInitContainersSpec(),
