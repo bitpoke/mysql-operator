@@ -77,6 +77,7 @@ spec:
 
 EOF
 
+set +e
 echo "Wait for controller to be up..."
 
 # wait for pod
@@ -93,13 +94,15 @@ while [ $j -le 50 ]; do
 done
 
 
+echo "Wait for CRD to be ready..."
+
 j=0
 while [ $j -le 20 ]; do
-    kubectl get mysql &> /dev/null
-    if [ $? -ne 1 ]; then
+    myCrd="$(kubectl get crd -o go-template='{{ range .items }}{{ .metadata.name }}{{ "\n" }}{{end}}' | grep mysqlclusters)"
+    if [ "$myCrd" != "" ]; then
         break
     fi
-    echo "Wait 2s for mysql resource to be ready..."
+    echo "Wait 2s for CRD to be ready..."
     sleep 2
     j=$(( j + 1 ))
 done

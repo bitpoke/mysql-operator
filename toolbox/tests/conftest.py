@@ -165,7 +165,11 @@ class DBFixture:
         self.conn = None
         self.init = False
         self.fixtures.append(self)
-        self.port = 1000 + (abs(hash(self.release.name)) % (10**4))
+        self._port = 2000 + (abs(hash(self.release.name)) % (10**4))
+        self.connected_with_pod = -1
+
+    def get_port(self):
+        return self._port + self.connected_with_pod
 
     def __call__(self, release):
         self.disconnect()
@@ -174,41 +178,54 @@ class DBFixture:
 
     def connect_to_pod(self, pod, user=None, password=None):
         print('Connect to pod {} ...'.format(pod))
-        if self.init:
-            self.conn.close()
-            self.forward_process.terminate()
-            self.init = False
+        self.disconnect()
+        self.connected_with_pod = pod
+        try:
+            self.forward_process = self.release.pod_forward_ports(pod, ['{}:3306'.format(self.get_port())])
+            self._connect_to_mysql(user, password)
+            self.init = True
+        except pymysql.err.OperationalError:
+            self._stop_port_forward()
+            raise
 
-        self.forward_process = self.release.pod_forward_ports(pod, ['{}:3306'.format(self.port)])
-        self._connect_to_mysql(user, password)
-
-    @backoff.on_exception(backoff.expo, pymysql.err.OperationalError, max_tries=8)
+    @backoff.on_exception(backoff.expo, pymysql.err.OperationalError, max_tries=9)
     def _connect_to_mysql(self, user=None, password=None):
-        print('Trying to connect to MYSQL...')
+        print('Trying to connect to MYSQL port {}...'.format(self.get_port()))
         self.conn = pymysql.connect(
-            host='127.0.0.1', port=self.port, user=(user or 'root'),
+            host='127.0.0.1', port=self.get_port(), user=(user or 'root'),
             password=(password or self.release.mysql_password)
         )
-        self.init = True
 
     def disconnect(self):
         if not self.init:
             return
-        try:
-            self.conn.close()
-        except pymysql.err.Error:
-            pass
+
+        self._close_connection()
+        self._stop_port_forward()
+
+        self.connected_with_pod = -1
+        self.init = False
+
+    def _stop_port_forward(self):
+        print('Port forward stoped ({}:3306)'.format(self.get_port()))
         try:
             self.forward_process.terminate()
         except ProcessLookupError:
             pass
 
-        self.init = False
+    def _close_connection(self):
+        print('Close connection to pod {}'.format(self.connected_with_pod))
+
+        try:
+            self.conn.close()
+        except pymysql.err.Error:
+            pass
 
     def create_db(self, name):
         self.query('CREATE DATABASE {};'.format(name))
         self.conn.select_db(name)
 
+    @backoff.on_exception(backoff.expo, pymysql.err.InternalError, max_tries=4)
     def use_db(self, name):
         self.conn.select_db(name)
 
@@ -227,19 +244,6 @@ class DBFixture:
         for fixture in cls.fixtures:
             fixture.disconnect()
 
-# TODO: delete this!
-@pytest.fixture(scope='session')
-def controller():
-    """Starts the titanium operator."""
-    env = {
-        'OUT_OF_KLUSTER': True
-    }
-    controller = sh.Command(OPERATOR_EXEC)
-    k = controller('--namespace', NAMESPACE, _bg=True, _env=env)
-    print('Controlled started.')
-    yield
-    print('Controlled stoped.')
-    k.terminate()
 
 @pytest.fixture(autouse=True, scope='session')
 def helm(request):
