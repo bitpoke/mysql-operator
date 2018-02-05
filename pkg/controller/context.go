@@ -6,6 +6,7 @@ import (
 
 	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
 	informers "github.com/presslabs/titanium/pkg/generated/informers/externalversions"
+	"github.com/presslabs/titanium/pkg/util/options"
 )
 
 //  https://github.com/jetstack/cert-manager/blob/master/pkg/controller/context.go
@@ -21,4 +22,6 @@ type Context struct {
 	MCClient clientset.Interface
 
 	SharedInformerFactory informers.SharedInformerFactory
+
+	Opt *options.Options
 }

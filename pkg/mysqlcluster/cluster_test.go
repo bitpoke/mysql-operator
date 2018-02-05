@@ -12,6 +12,7 @@ import (
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	fakeClientSet "github.com/presslabs/titanium/pkg/generated/clientset/versioned/fake"
+	"github.com/presslabs/titanium/pkg/util/options"
 )
 
 // The following function are helpers for accessing private members of cluster
@@ -50,16 +51,29 @@ func newFakeCluster(name string) *api.MysqlCluster {
 			Name: name,
 		},
 		Spec: api.ClusterSpec{
-			Replicas:          2,
-			MysqlRootPassword: "secure",
+			ReadReplicas: 1,
 		},
 	}
+}
+
+func newFakeOption() *options.Options {
+	opt := options.NewOptions()
+	opt.Validate()
+	return opt
+}
+
+var (
+	opt *options.Options
+)
+
+func init() {
+	opt = newFakeOption()
 }
 
 func getFakeCluster(name string) (*fake.Clientset, *fakeClientSet.Clientset, *cluster) {
 	clientSet := fakeClientSet.NewSimpleClientset()
 	clusterFake := newFakeCluster(name)
-	if err := clusterFake.UpdateDefaults(); err != nil {
+	if err := clusterFake.UpdateDefaults(opt); err != nil {
 		panic(err)
 	}
 
@@ -111,9 +125,9 @@ func TestSyncClusterCreation(t *testing.T) {
 	sfs, _ := sfC.Get(c.GetNameForResource(StatefulSet), metav1.GetOptions{})
 
 	mc := c.GetMysqlCluster()
-	assertEqual(t, *sfs.Spec.Replicas, mc.Spec.Replicas, "")
+	assertEqual(t, *sfs.Spec.Replicas, *mc.Spec.GetReplicas(), "")
 
-	assertEqual(t, sfs.Spec.Template.Spec.Containers[0].Image, mc.Spec.PodSpec.Image, "")
+	assertEqual(t, sfs.Spec.Template.Spec.Containers[0].Image, mc.Spec.PodSpec.GetMysqlImage(), "")
 }
 
 func TestSyncClusterIfExistsNoUpdate(t *testing.T) {
@@ -149,11 +163,12 @@ func TestSyncClusterIfExistsNoUpdate(t *testing.T) {
 }
 
 func TestSyncClusterIfExistsNeedsUpdate(t *testing.T) {
-	client, mcClient, c := getFakeCluster("test-cluster")
+	client, mcClient, c := getFakeCluster("test-cluster-nu")
 	ctx := context.TODO()
 	c.Sync(ctx)
 	mc := c.GetMysqlCluster()
-	mc.Spec.Replicas = 4
+	mc.Spec.ReadReplicas = 4
+	mc.Spec.UpdateDefaults(opt)
 
 	mcClient.Titanium().MysqlClusters(DefaultNamespace).Update(mc)
 
@@ -181,6 +196,7 @@ func TestSyncClusterIfExistsNeedsUpdate(t *testing.T) {
 		acts := client.Actions()
 		if len(acts) != len(tup.acts) {
 			t.Errorf("Different number of actions. Failed at: %s\n", rName)
+			t.Errorf("Exp: %v, Actual: %v", tup.acts, acts)
 			return
 		}
 
@@ -196,7 +212,7 @@ func TestSyncClusterIfExistsNeedsUpdate(t *testing.T) {
 	sfC := client.AppsV1beta2().StatefulSets(DefaultNamespace)
 	sfs, _ := sfC.Get(c.GetNameForResource(StatefulSet), metav1.GetOptions{})
 
-	assertEqual(t, *sfs.Spec.Replicas, mc.Spec.Replicas, "")
+	assertEqual(t, *sfs.Spec.Replicas, *mc.Spec.GetReplicas(), "")
 }
 
 func TestPersistenceDisabledEnabled(t *testing.T) {

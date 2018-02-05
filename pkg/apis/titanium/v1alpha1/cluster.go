@@ -1,18 +1,24 @@
 package v1alpha1
 
 import (
-	"fmt"
-
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/presslabs/titanium/pkg/util"
+	"github.com/presslabs/titanium/pkg/util/options"
 )
 
 const (
 	InnodbBufferSizePercent = 80
 )
+
+var (
+	opt *options.Options
+)
+
+func init() {
+	opt = options.GetOptions()
+}
 
 func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
 	trueVar := true
@@ -25,88 +31,58 @@ func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
 	}
 }
 
-func (c *MysqlCluster) UpdateDefaults() error {
-	return c.Spec.UpdateDefaults()
+func (c *MysqlCluster) UpdateDefaults(opt *options.Options) error {
+	return c.Spec.UpdateDefaults(opt)
 }
 
-func (c *ClusterSpec) UpdateDefaults() error {
-	if len(c.MysqlRootPassword) == 0 {
-		return fmt.Errorf("mysqlRootPassword is requred!")
+func (c *ClusterSpec) UpdateDefaults(opt *options.Options) error {
+	if len(c.MysqlVersion) == 0 {
+		c.MysqlVersion = opt.MysqlImageTag
 	}
 
-	if len(c.MysqlReplicationUser) == 0 || len(c.MysqlReplicationPassword) == 0 {
-		c.MysqlReplicationUser = util.RandomString(8)
-		c.MysqlReplicationPassword = util.RandomString(12)
-	}
-
-	if len(c.MysqlUser) > 0 {
-		if len(c.MysqlPassword) == 0 {
-			return fmt.Errorf("mysqlPassword is required if mysqlUser is set.")
-		}
-		if len(c.MysqlDatabase) == 0 {
-			return fmt.Errorf("mysqlDatabase is required if mysqlUser is set.")
-		}
-	}
-
-	if err := c.PodSpec.UpdateDefaults(); err != nil {
+	if err := c.PodSpec.UpdateDefaults(opt); err != nil {
 		return err
 	}
 
 	// set innodb-buffer-pool-size as 80% of requested memory
-	if _, ok := c.MysqlConfig["innodb-buffer-pool-size"]; !ok {
+	if _, ok := c.MysqlConf["innodb-buffer-pool-size"]; !ok {
 		if mem := c.PodSpec.Resources.Requests.Memory(); mem != nil {
 			val := (InnodbBufferSizePercent * mem.Value()) / 100 // val is 80% of requested memory
 			res := resource.NewQuantity(val, resource.DecimalSI)
-			if len(c.MysqlConfig) == 0 {
-				c.MysqlConfig = make(MysqlConfig)
+			if len(c.MysqlConf) == 0 {
+				c.MysqlConf = make(MysqlConf)
 			}
 			// TODO: make it human readable
-			c.MysqlConfig["innodb-buffer-pool-size"] = res.String()
+			c.MysqlConf["innodb-buffer-pool-size"] = res.String()
 		}
 	}
 
 	return c.VolumeSpec.UpdateDefaults()
 }
 
+func (c *ClusterSpec) GetReplicas() *int32 {
+	rep := c.ReadReplicas + 1
+	return &rep
+}
+
+func (c *ClusterSpec) GetTitaniumImage() string {
+	return opt.TitaniumImage
+}
+
+func (c *ClusterSpec) GetMysqlImage() string {
+	return opt.MysqlImage + ":" + c.MysqlVersion
+}
+
 const (
-	MysqlImage      = "percona:5.7"
-	ImagePullPolicy = apiv1.PullIfNotPresent
-
-	TitaniumImage           = "gcr.io/pl-infra/titanium-toolbox:latest"
-	TitaniumImagePullPolicy = apiv1.PullIfNotPresent
-
-	MetricsImage           = ""
-	MetricsImagePullPolicy = apiv1.PullIfNotPresent
-
 	ResourceRequestCPU    = "200m"
 	ResourceRequestMemory = "1Gi"
 
 	ResourceStorage = "8Gi"
 )
 
-func (ps *PodSpec) UpdateDefaults() error {
-	if len(ps.Image) == 0 {
-		ps.Image = MysqlImage
-	}
-
+func (ps *PodSpec) UpdateDefaults(opt *options.Options) error {
 	if len(ps.ImagePullPolicy) == 0 {
-		ps.ImagePullPolicy = ImagePullPolicy
-	}
-
-	if len(ps.TitaniumImage) == 0 {
-		ps.TitaniumImage = TitaniumImage
-	}
-
-	if len(ps.TitaniumImagePullPolicy) == 0 {
-		ps.TitaniumImagePullPolicy = TitaniumImagePullPolicy
-	}
-
-	if len(ps.MetricsImage) == 0 {
-		ps.MetricsImage = MetricsImage
-	}
-
-	if len(ps.MetricsImagePullPolicy) == 0 {
-		ps.MetricsImagePullPolicy = MetricsImagePullPolicy
+		ps.ImagePullPolicy = opt.ImagePullPolicy
 	}
 
 	// TODO: check if are applied or write a test for thoses

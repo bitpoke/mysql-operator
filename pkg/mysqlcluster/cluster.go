@@ -13,6 +13,7 @@ import (
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
+	"github.com/presslabs/titanium/pkg/util/options"
 )
 
 type Interface interface {
@@ -20,7 +21,8 @@ type Interface interface {
 }
 
 type cluster struct {
-	cl *api.MysqlCluster
+	cl  *api.MysqlCluster
+	opt options.Options
 
 	namespace string
 
@@ -45,16 +47,19 @@ func New(cl *api.MysqlCluster, klient kubernetes.Interface,
 
 func (c *cluster) Sync(ctx context.Context) error {
 	if err := c.syncHeadlessService(); err != nil {
-		return err
+		return fmt.Errorf("headless service failed: %s", err)
 	}
 	if err := c.syncConfigEnvSecret(); err != nil {
-		return err
+		return fmt.Errorf("config secert failed: %s", err)
 	}
 	if err := c.syncConfigMapFiles(); err != nil {
-		return err
+		return fmt.Errorf("config map failed: %s", err)
+	}
+	if err := c.syncDbCredentialsSecret(); err != nil {
+		return fmt.Errorf("db-credentials failed: %s", err)
 	}
 	if err := c.syncStatefulSet(); err != nil {
-		return err
+		return fmt.Errorf("statefulset failed: %s", err)
 	}
 	return nil
 }
@@ -142,6 +147,29 @@ func (c *cluster) syncConfigMapFiles() error {
 	}
 
 	fmt.Println("ConfigMap ... up-to-date")
+	return nil
+}
+
+func (c *cluster) syncDbCredentialsSecret() error {
+	scrtClient := c.client.CoreV1().Secrets(c.namespace)
+	dbSct, err := scrtClient.Get(c.cl.Spec.SecretName, metav1.GetOptions{})
+	if errors.IsNotFound(err) {
+		fmt.Println("db-credentials ... create")
+		expDbS := c.createDbCredentialSecret()
+		_, err = scrtClient.Create(expDbS)
+		return err
+	} else if err != nil {
+		return err
+	}
+
+	s := c.updateDbCredentialSecret(dbSct)
+	if !reflect.DeepEqual(dbSct.Data, s.Data) {
+		fmt.Println("Db-credentials ... update")
+		s.SetResourceVersion(dbSct.GetResourceVersion())
+		_, err := scrtClient.Update(s)
+		return err
+	}
+	fmt.Println("db-credentials ... up-to-date")
 	return nil
 }
 

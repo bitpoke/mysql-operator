@@ -3,10 +3,7 @@ kind: MysqlCluster
 metadata:
   name: example-foo
 spec:
-  replicas: 1
-  mysqlRootPassword: thisp
-  podSpec:
-    titaniumImage: "gcr.io/pl-infra/titanium-toolbox:test1"
+  readReplicas: 1
   volumeSpec:
     persistenceDisabled: true
 

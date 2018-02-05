@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"sync"
@@ -18,6 +19,7 @@ import (
 	informers "github.com/presslabs/titanium/pkg/generated/informers/externalversions"
 	"github.com/presslabs/titanium/pkg/util"
 	"github.com/presslabs/titanium/pkg/util/k8sutil"
+	goptions "github.com/presslabs/titanium/pkg/util/options"
 
 	// Add here all controllers
 	_ "github.com/presslabs/titanium/pkg/controller/clustercontroller"
@@ -25,6 +27,7 @@ import (
 
 var (
 	opt                  *options.ControllerOptions
+	gOpt                 *goptions.Options
 	onlyOneSignalHandler = make(chan struct{})
 	shutdownSignals      = []os.Signal{os.Interrupt, syscall.SIGTERM}
 )
@@ -32,14 +35,24 @@ var (
 func init() {
 	opt = options.NewControllerOptions()
 	opt.AddFlags()
+
+	gOpt = goptions.GetOptions()
+	gOpt.AddFlags()
+
 	flag.Parse()
 	err := opt.Validate()
 	if err != nil {
 		logrus.Fatalf("Config validation error: %v", err)
 	}
+
+	err = gOpt.Validate()
+	if err != nil {
+		logrus.Fatalf("Global Config validation error: %v", err)
+	}
 }
 
 func main() {
+	logrus.Infof("Start")
 	stopCh := setupSignalHandler()
 
 	ctx := newControllerContext()
@@ -87,6 +100,7 @@ func newControllerContext() *controllerpkg.Context {
 		KubeExtCli:            k8sutil.MustNewKubeExtClient(),
 		SharedInformerFactory: sIF,
 		MCClient:              intcl,
+		Opt:                   gOpt,
 	}
 }
 
@@ -123,6 +137,7 @@ func setupSignalHandler() (stopCh <-chan struct{}) {
 	go func() {
 		<-c
 		close(stop)
+		fmt.Println("Press C-c again to exit...")
 		<-c
 		os.Exit(1) // second signal. Exit directly.
 	}()
