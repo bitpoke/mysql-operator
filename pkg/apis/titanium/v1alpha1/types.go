@@ -39,32 +39,53 @@ type MysqlClusterList struct {
 }
 
 type ClusterSpec struct {
-	Replicas   int32  `json:"replicas"`
-	SecretName string `json:secretName`
+	// The number of slaves pods. This updates replicas filed
+	// Defaults to 0
+	// +optional
+	ReadReplicas int32 `json:"readReplicas"`
+	// The secret name that contains connection information to initialize database, like
+	// USER, PASSWORD, ROOT_PASSWORD and so on
+	// This secret will be updated with DB_CONNECT_URL and some more configs.
+	// Can be specified partially
+	// Defaults is <name>-db-credentials (with random values)
+	// +optional
+	SecretName string `json:"secretName"`
 
-	MysqlRootPassword string `json:mysqlRootPassword`
+	// Represents the percona image tag.
+	// Defaults to 5.7
+	// +optional
+	MysqlVersion string `json:"mysqlVersion"`
 
-	MysqlReplicationUser     string `json:mysqlReplicationUser,omitempty`
-	MysqlReplicationPassword string `json:mysqlReplicationPassword,omitempty`
-
-	MysqlUser     string `json:mysqlUser,omitempty`
-	MysqlPassword string `json:mysqlPassword,omitempty`
-	MysqlDatabase string `json:mysqlDatabase,omitempty`
-
+	// A bucket URI that contains a xtrabackup to initialize the mysql database.
+	// +optional
 	InitBucketURI        string `json:initBucketURI,omitempty`
 	InitBucketSecretName string `json:initBucketSecretName,omitempty`
 
+	// A bucket URI to save backups.
+	// +optional
 	BackupBucketURI        string `json:backupBucketURI,omitempty`
 	BackupBucketSecretName string `json:backupBucketSecretName,omitempty`
 
+	// Specify under crontab format interval to take backups
+	// leave it empty to deactivate the backup process
+	// Defaults to ""
+	// +optional
 	BackupSchedule string `json:backupSchedule,omitempty`
 
-	PodSpec     PodSpec     `json:podSpec,omitempty`
-	MysqlConfig MysqlConfig `json:mysqlConfig,omitempty`
-	VolumeSpec  VolumeSpec  `json:volumeSpec,omitempty`
+	// A map[string]string that will be passed to my.cnf file.
+	// +optional
+	MysqlConf MysqlConf `json:mysqlConf,omitempty`
+
+	// Pod extra specification
+	// +optional
+	PodSpec PodSpec `json:podSpec,omitempty`
+
+	// PVC extra specifiaction
+	// +optional
+	VolumeSpec VolumeSpec `json:volumeSpec,omitempty`
 }
 
-type MysqlConfig map[string]string
+type MysqlConf map[string]string
 
 type ClusterStatus struct {
 	Conditions []ClusterCondition `json:conditions`
@@ -97,13 +118,8 @@ const (
 )
 
 type PodSpec struct {
-	Image                   string                       `json:image,omitempty`
-	ImagePullPolicy         apiv1.PullPolicy             `json:imagePullPolicy,omitempty`
-	TitaniumImage           string                       `json:titaniumImage,omitempty`
-	TitaniumImagePullPolicy apiv1.PullPolicy             `json:titaniumImagePullPolicy,omitempty`
-	MetricsImage            string                       `json:metricsImage,omitempty`
-	MetricsImagePullPolicy  apiv1.PullPolicy             `json:metricsImagePullPolicy,omitempty`
-	ImagePullSecrets        []apiv1.LocalObjectReference `json:imagePullSecrets,omitempty`
+	ImagePullPolicy  apiv1.PullPolicy             `json:imagePullPolicy,omitempty`
+	ImagePullSecrets []apiv1.LocalObjectReference `json:imagePullSecrets,omitempty`
 
 	Labels       map[string]string          `json:labels`
 	Annotations  map[string]string          `json:annotations`

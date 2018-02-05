@@ -21,6 +21,7 @@ import (
 	mclisters "github.com/presslabs/titanium/pkg/generated/listers/titanium/v1alpha1"
 	"github.com/presslabs/titanium/pkg/util"
 	"github.com/presslabs/titanium/pkg/util/k8sutil"
+	"github.com/presslabs/titanium/pkg/util/options"
 )
 
 const (
@@ -47,6 +48,8 @@ type Controller struct {
 
 	queue    workqueue.RateLimitingInterface
 	workerWg sync.WaitGroup
+
+	opt *options.Options
 }
 
 func New(mysqlClusterInformer mcinformers.MysqlClusterInformer,
@@ -55,6 +58,7 @@ func New(mysqlClusterInformer mcinformers.MysqlClusterInformer,
 	kubeExtCli apiextensionsclient.Interface,
 	createCRD bool,
 	mcclient clientset.Interface,
+	opt *options.Options,
 ) *Controller {
 	ctrl := &Controller{
 		logger:     logrus.WithField("pkg", "controller"),
@@ -63,6 +67,7 @@ func New(mysqlClusterInformer mcinformers.MysqlClusterInformer,
 		KubeExtCli: kubeExtCli,
 		CreateCRD:  createCRD,
 		mcclient:   mcclient,
+		opt:        opt,
 
 		//clusters: make(map[string]*cluster.Cluster),
 	}
@@ -139,7 +144,7 @@ func (c *Controller) work(stopCh <-chan struct{}) {
 		}(obj)
 
 		if err != nil {
-			c.logger.Error("%s controller: Re-queuing item %q due to error processing: %s",
+			c.logger.Errorf("%s controller: Re-queuing item %q due to error processing: %s",
 				ControllerName, key, err.Error(),
 			)
 			c.queue.AddRateLimited(obj)
@@ -198,6 +203,7 @@ func init() {
 			ctx.KubeExtCli,
 			ctx.CreateCRD,
 			ctx.MCClient,
+			ctx.Opt,
 		).Start
 	})
 }

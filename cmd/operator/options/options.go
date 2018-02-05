@@ -3,7 +3,6 @@ package options
 import (
 	"flag"
 	"time"
-	//	"github.com/presslabs/titanium/pkg/util"
 )
 
 type ControllerOptions struct {
@@ -23,7 +22,6 @@ type ControllerOptions struct {
 }
 
 const (
-	defaultAPIServerHost            = ""
 	defaultClusterResourceNamespace = "kube-system"
 
 	defaultLeaderElect                 = true
@@ -35,7 +33,6 @@ const (
 
 func NewControllerOptions() *ControllerOptions {
 	return &ControllerOptions{
-		APIServerHost:               defaultAPIServerHost,
 		Namespace:                   "default",
 		PodName:                     "pod-name",
 		ClusterResourceNamespace:    defaultClusterResourceNamespace,
@@ -49,20 +46,21 @@ func NewControllerOptions() *ControllerOptions {
 }
 
 func (s *ControllerOptions) AddFlags() {
-	flag.StringVar(&s.APIServerHost, "master", defaultAPIServerHost, ""+
-		"Optional apiserver host address to connect to. If not specified, autoconfiguration "+
-		"will be attempted.")
 	flag.StringVar(&s.Namespace, "namespace", "default", ""+
 		"Optional namespace to monitor resources within. This can be used to limit the scope "+
 		"of cert-manager to a single namespace. If not specified, all namespaces will be watched")
+
 	flag.StringVar(&s.PodName, "pod-name", "pod-name", ""+
 		"Optional pod name, when running out of cluster.")
-	flag.StringVar(&s.ClusterResourceNamespace, "cluster-resource-namespace", defaultClusterResourceNamespace, ""+
+
+	flag.StringVar(&s.ClusterResourceNamespace, "resource-namespace",
+		defaultClusterResourceNamespace,
 		"Namespace to store resources owned by cluster scoped resources.")
 
 	flag.BoolVar(&s.LeaderElect, "leader-elect", true, ""+
 		"If true, cert-manager will perform leader election between instances to ensure no more "+
 		"than one instance of cert-manager operates at a time")
+
 }
 
 // here can be done some custom validation if needed.

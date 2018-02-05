@@ -52,10 +52,16 @@ const (
 	EnvSecret   ResourceName = "env-config"
 	VolumePVC   ResourceName = "mysql-data"
 	SSPod       ResourceName = "pod"
+	DbSecret    ResourceName = "db-credentials"
 )
 
 func (c *cluster) getNameForResource(name ResourceName) string {
 	return fmt.Sprintf("%s-%s", c.cl.Name, name)
+}
+
+func (c *cluster) getPorHostName(p int) string {
+	pod := fmt.Sprintf("%s-%d", c.getNameForResource(StatefulSet), p)
+	return fmt.Sprintf("%s.%s", pod, c.getNameForResource(HeadlessSVC))
 }
 
 func (c *cluster) getLabels(extra map[string]string) map[string]string {

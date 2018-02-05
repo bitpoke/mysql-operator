@@ -30,7 +30,7 @@ func (c *cluster) createStatefulSet() v1beta2.StatefulSet {
 			OwnerReferences: c.getOwnerReferences(),
 		},
 		Spec: v1beta2.StatefulSetSpec{
-			Replicas: &c.cl.Spec.Replicas,
+			Replicas: c.cl.Spec.GetReplicas(),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: c.getLabels(map[string]string{}),
 			},
@@ -44,7 +44,7 @@ func (c *cluster) createStatefulSet() v1beta2.StatefulSet {
 func (c *cluster) getPodTempalteSpec() apiv1.PodTemplateSpec {
 	return apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        c.getNameForResource(SSPod),
+			//Name:        c.getNameForResource(SSPod),
 			Labels:      c.getLabels(c.cl.Spec.PodSpec.Labels),
 			Annotations: c.cl.Spec.PodSpec.Annotations,
 		},
@@ -64,8 +64,8 @@ func (c *cluster) getInitContainersSpec() []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
 			Name:            "init-mysql",
-			Image:           c.cl.Spec.PodSpec.TitaniumImage,
-			ImagePullPolicy: c.cl.Spec.PodSpec.TitaniumImagePullPolicy,
+			Image:           c.cl.Spec.GetTitaniumImage(),
+			ImagePullPolicy: c.cl.Spec.PodSpec.ImagePullPolicy,
 			Args:            []string{"files-config"},
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
@@ -89,8 +89,8 @@ func (c *cluster) getInitContainersSpec() []apiv1.Container {
 		},
 		apiv1.Container{
 			Name:            "clone-mysql",
-			Image:           c.cl.Spec.PodSpec.TitaniumImage,
-			ImagePullPolicy: c.cl.Spec.PodSpec.TitaniumImagePullPolicy,
+			Image:           c.cl.Spec.GetTitaniumImage(),
+			ImagePullPolicy: c.cl.Spec.PodSpec.ImagePullPolicy,
 			Args:            []string{"clone"},
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
@@ -111,7 +111,7 @@ func (c *cluster) getContainersSpec() []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
 			Name:            "mysql",
-			Image:           c.cl.Spec.PodSpec.Image,
+			Image:           c.cl.Spec.GetMysqlImage(),
 			ImagePullPolicy: c.cl.Spec.PodSpec.ImagePullPolicy,
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
@@ -135,7 +135,7 @@ func (c *cluster) getContainersSpec() []apiv1.Container {
 		},
 		apiv1.Container{
 			Name:  "titanium",
-			Image: c.cl.Spec.PodSpec.TitaniumImage,
+			Image: c.cl.Spec.GetTitaniumImage(),
 			Args:  []string{"config-and-serve"},
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
