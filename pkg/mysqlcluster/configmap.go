@@ -9,18 +9,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *cluster) createConfigMapFiles() apiv1.ConfigMap {
+func (f *cFactory) createConfigMapFiles() apiv1.ConfigMap {
 	return apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.getNameForResource(ConfigMap),
-			Labels:          c.getLabels(map[string]string{}),
-			OwnerReferences: c.getOwnerReferences(),
+			Name:            f.getNameForResource(ConfigMap),
+			Labels:          f.getLabels(map[string]string{}),
+			OwnerReferences: f.getOwnerReferences(),
 		},
 		Data: map[string]string{
 			"master.cnf": getConfigFilesStr("mysqld", MysqlMasterConfigs,
-				MysqlMasterSlaveConfigs, c.cl.Spec.MysqlConf),
+				MysqlMasterSlaveConfigs, f.cl.Spec.MysqlConf),
 			"slave.cnf": getConfigFilesStr("mysqld", MysqlSlaveConfigs,
-				MysqlMasterSlaveConfigs, c.cl.Spec.MysqlConf),
+				MysqlMasterSlaveConfigs, f.cl.Spec.MysqlConf),
 		},
 	}
 }

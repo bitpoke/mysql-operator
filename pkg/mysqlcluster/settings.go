@@ -55,19 +55,19 @@ const (
 	DbSecret    ResourceName = "db-credentials"
 )
 
-func (c *cluster) getNameForResource(name ResourceName) string {
-	return fmt.Sprintf("%s-%s", c.cl.Name, name)
+func (f *cFactory) getNameForResource(name ResourceName) string {
+	return fmt.Sprintf("%s-%s", f.cl.Name, name)
 }
 
-func (c *cluster) getPorHostName(p int) string {
-	pod := fmt.Sprintf("%s-%d", c.getNameForResource(StatefulSet), p)
-	return fmt.Sprintf("%s.%s", pod, c.getNameForResource(HeadlessSVC))
+func (f *cFactory) getPorHostName(p int) string {
+	pod := fmt.Sprintf("%s-%d", f.getNameForResource(StatefulSet), p)
+	return fmt.Sprintf("%s.%s", pod, f.getNameForResource(HeadlessSVC))
 }
 
-func (c *cluster) getLabels(extra map[string]string) map[string]string {
+func (f *cFactory) getLabels(extra map[string]string) map[string]string {
 	lables := map[string]string{
 		"app":              AppName,
-		"titanium_cluster": c.cl.Name,
+		"titanium_cluster": f.cl.Name,
 	}
 	for k, v := range extra {
 		lables[k] = v
@@ -77,7 +77,7 @@ func (c *cluster) getLabels(extra map[string]string) map[string]string {
 
 // can be a utitilit function
 // can be removed!
-func (c *cluster) getResourceRequirements(requests, limits map[string]string) apiv1.ResourceRequirements {
+func (c *cFactory) getResourceRequirements(requests, limits map[string]string) apiv1.ResourceRequirements {
 	reqResourceList := make(apiv1.ResourceList)
 	for k, v := range requests {
 		res := apiv1.ResourceName(k)

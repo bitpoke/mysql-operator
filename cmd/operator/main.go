@@ -1,14 +1,14 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 
-	"github.com/sirupsen/logrus"
+	"github.com/golang/glog"
+	"github.com/spf13/pflag"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -19,6 +19,7 @@ import (
 	informers "github.com/presslabs/titanium/pkg/generated/informers/externalversions"
 	"github.com/presslabs/titanium/pkg/util"
 	"github.com/presslabs/titanium/pkg/util/k8sutil"
+	"github.com/presslabs/titanium/pkg/util/logs"
 	goptions "github.com/presslabs/titanium/pkg/util/options"
 
 	// Add here all controllers
@@ -33,26 +34,26 @@ var (
 )
 
 func init() {
+	logs.InitLogs()
 	opt = options.NewControllerOptions()
 	opt.AddFlags()
 
 	gOpt = goptions.GetOptions()
 	gOpt.AddFlags()
 
-	flag.Parse()
+	pflag.Parse()
 	err := opt.Validate()
 	if err != nil {
-		logrus.Fatalf("Config validation error: %v", err)
+		glog.Fatalf("Config validation error: %v", err)
 	}
 
 	err = gOpt.Validate()
 	if err != nil {
-		logrus.Fatalf("Global Config validation error: %v", err)
+		glog.Fatalf("Global Config validation error: %v", err)
 	}
 }
 
 func main() {
-	logrus.Infof("Start")
 	stopCh := setupSignalHandler()
 
 	ctx := newControllerContext()
@@ -60,7 +61,7 @@ func main() {
 		// build controllers map
 		var controllers = make(map[string]controllerpkg.Interface)
 		for n, fn := range controllerpkg.Known() {
-			logrus.Infof("Register controller: %s", n)
+			glog.V(2).Infof("Register controller: %s", n)
 			controllers[n] = fn(ctx)
 		}
 
@@ -70,20 +71,21 @@ func main() {
 			go func(n string, cRoutine controllerpkg.Interface) {
 				defer wg.Done()
 
-				logrus.Infof("Starting controller: %s", n)
+				glog.V(2).Infof("Starting controller: %s", n)
 				err := cRoutine(2, stopCh)
 
 				if err != nil {
-					logrus.Fatalf("error running %s controller: %s", n, err.Error())
+					glog.Fatalf("error running %s controller: %s", n, err.Error())
 				}
 			}(n, cRoutine)
 		}
 		ctx.SharedInformerFactory.Start(stopCh)
 		//ctx.KubeSharedInformerFactory.Start(stopCh)
 		wg.Wait() // wait for controllers to finish
-		logrus.Fatalf("Control loops exited")
+		glog.Fatalf("Control loops exited")
 	}
 
+	glog.V(2).Infof("Start leading election.")
 	startLeadingElection(run)
 
 	panic("unreachable")
@@ -107,12 +109,12 @@ func newControllerContext() *controllerpkg.Context {
 func getClientSet() clientset.Interface {
 	kubeCfg, err := k8sutil.ClusterConfig()
 	if err != nil {
-		logrus.Fatalf("fail to get clientset: %v", err)
+		glog.Fatalf("fail to get clientset: %v", err)
 	}
 
 	intcl, err := clientset.NewForConfig(kubeCfg)
 	if err != nil {
-		logrus.Fatalf("fail to get clientset: %v", err)
+		glog.Fatalf("fail to get clientset: %v", err)
 	}
 	return intcl
 }
@@ -156,7 +158,7 @@ func startLeadingElection(run func(<-chan struct{})) {
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: run,
 			OnStoppedLeading: func() {
-				logrus.Fatalf("Leader election lost")
+				glog.Fatalf("Leader election lost")
 			},
 		},
 	})
@@ -172,7 +174,7 @@ func getResourceLock(kubecli kubernetes.Interface) resourcelock.Interface {
 			EventRecorder: util.CreateEventRecorder(kubecli, opt.PodName, opt.Namespace),
 		})
 	if err != nil {
-		logrus.Fatalf("error creating lock: %v", err)
+		glog.Fatalf("error creating lock: %v", err)
 	}
 	return rl
 }

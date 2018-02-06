@@ -32,7 +32,7 @@ bin/%/$(BINARY): $(GOFILES) Makefile
 				-i -installsuffix titan -v -o bin/$*/$(BINARY) $<
 
 test: $(TEST_FILES)
-	go test -v -installsuffix titan \
+	go test -v -installsuffix titan_test \
 	    -race \
 			$$(go list ./... | \
 			grep -v '/vendor/' | \

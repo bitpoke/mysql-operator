@@ -9,37 +9,25 @@ import (
 	"github.com/presslabs/titanium/pkg/util"
 )
 
-func (c *cluster) createEnvConfigSecret() apiv1.Secret {
+func (f *cFactory) createEnvConfigSecret() apiv1.Secret {
 	return apiv1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.getNameForResource(EnvSecret),
-			Labels:          c.getLabels(map[string]string{}),
-			OwnerReferences: c.getOwnerReferences(),
+			Name:            f.getNameForResource(EnvSecret),
+			Labels:          f.getLabels(map[string]string{}),
+			OwnerReferences: f.getOwnerReferences(),
 		},
-		Data: c.getConfigSecretEnv(),
+		Data: f.getConfigSecretEnv(),
 	}
 }
 
-func (c *cluster) getConfigSecretEnv() map[string][]byte {
+func (f *cFactory) getConfigSecretEnv() map[string][]byte {
 	configs := map[string]string{
-		"TITANIUM_RELEASE_NAME":      c.cl.Name,
-		"TITANIUM_GOVERNING_SERVICE": c.getNameForResource(HeadlessSVC),
+		"TITANIUM_RELEASE_NAME":      f.cl.Name,
+		"TITANIUM_GOVERNING_SERVICE": f.getNameForResource(HeadlessSVC),
 
-		"TITANIUM_INIT_BUCKET_URI":   c.cl.Spec.InitBucketURI,
-		"TITANIUM_BACKUP_BUCKET_URI": c.cl.Spec.BackupBucketURI,
-
-		//		"TITANIUM_REPLICATION_USER":     c.cl.Spec.MysqlReplicationUser,
-		//		"TITANIUM_REPLICATION_PASSWORD": c.cl.Spec.MysqlReplicationPassword,
-
-		//		"MYSQL_ROOT_PASSWORD": c.cl.Spec.MysqlRootPassword,
+		"TITANIUM_INIT_BUCKET_URI":   f.cl.Spec.InitBucketURI,
+		"TITANIUM_BACKUP_BUCKET_URI": f.cl.Spec.BackupBucketURI,
 	}
-
-	//	if len(c.cl.Spec.MysqlUser) != 0 {
-	//		configs["MYSQL_USER"] = c.cl.Spec.MysqlUser
-	//		configs["MYSQL_PASSWORD"] = c.cl.Spec.MysqlPassword
-	//		configs["MYSQL_DATABASE"] = c.cl.Spec.MysqlDatabase
-	//	}
-
 	fConf := make(map[string][]byte)
 	for k, v := range configs {
 		fConf[k] = []byte(v)
@@ -47,17 +35,28 @@ func (c *cluster) getConfigSecretEnv() map[string][]byte {
 	return fConf
 }
 
-func (c *cluster) createDbCredentialSecret() *apiv1.Secret {
-	s := &apiv1.Secret{
+func (f *cFactory) createDbCredentialSecret(name string) *apiv1.Secret {
+	labels := f.getLabels(map[string]string{})
+	ownerRs := f.getOwnerReferences()
+	scrtClient := f.client.CoreV1().Secrets(f.namespace)
+	s, err := scrtClient.Get(name, metav1.GetOptions{})
+	if err == nil {
+		// if the secret exists then add to it owner reference, and default
+		// labels
+		labels = f.getLabels(s.Labels)
+	}
+
+	newS := &apiv1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.getNameForResource(DbSecret),
-			Labels:          c.getLabels(map[string]string{}),
-			OwnerReferences: c.getOwnerReferences(),
+			Name:            name,
+			Labels:          labels,
+			OwnerReferences: ownerRs,
+			Namespace:       f.namespace,
 		},
 		Data: map[string][]byte{},
 	}
 
-	return c.updateDbCredentialSecret(s)
+	return f.updateDbCredentialSecret(newS)
 }
 
 // The length of the new generated strings.
@@ -73,25 +72,25 @@ type dbCreds struct {
 	DbConnectUrl string
 }
 
-func (c *dbCreds) SetDefaults(host string) {
-	if len(c.User) == 0 {
-		c.User = util.RandomString(rStrLen)
+func (db *dbCreds) SetDefaults(host string) {
+	if len(db.User) == 0 {
+		db.User = util.RandomString(rStrLen)
 	}
-	if len(c.Password) == 0 {
-		c.Password = util.RandomString(rStrLen)
+	if len(db.Password) == 0 {
+		db.Password = util.RandomString(rStrLen)
 	}
-	if len(c.Database) == 0 {
-		c.Database = util.RandomString(rStrLen)
+	if len(db.Database) == 0 {
+		db.Database = util.RandomString(rStrLen)
 	}
-	if len(c.ReplicaUser) == 0 {
-		c.ReplicaUser = util.RandomString(rStrLen)
+	if len(db.ReplicaUser) == 0 {
+		db.ReplicaUser = util.RandomString(rStrLen)
 	}
-	if len(c.ReplicaPass) == 0 {
-		c.ReplicaPass = util.RandomString(rStrLen)
+	if len(db.ReplicaPass) == 0 {
+		db.ReplicaPass = util.RandomString(rStrLen)
 	}
-	c.DbConnectUrl = fmt.Sprintf(
+	db.DbConnectUrl = fmt.Sprintf(
 		"mysql://%s:%s@%s/%s",
-		c.User, c.Password, host, c.Database,
+		db.User, db.Password, host, db.Database,
 	)
 }
 
@@ -118,21 +117,21 @@ func newCredsFrom(d map[string][]byte) dbCreds {
 	return c
 }
 
-func (c *dbCreds) ToData() map[string][]byte {
+func (db *dbCreds) ToData() map[string][]byte {
 	return map[string][]byte{
-		"USER":                 []byte(c.User),
-		"PASSWORD":             []byte(c.Password),
-		"DATABASE":             []byte(c.Database),
-		"ROOT_PASSWORD":        []byte(c.RootPassword),
-		"REPLICATION_USER":     []byte(c.ReplicaUser),
-		"REPLICATION_PASSWORD": []byte(c.ReplicaPass),
-		"DB_CONNECT_URL":       []byte(c.DbConnectUrl),
+		"USER":                 []byte(db.User),
+		"PASSWORD":             []byte(db.Password),
+		"DATABASE":             []byte(db.Database),
+		"ROOT_PASSWORD":        []byte(db.RootPassword),
+		"REPLICATION_USER":     []byte(db.ReplicaUser),
+		"REPLICATION_PASSWORD": []byte(db.ReplicaPass),
+		"DB_CONNECT_URL":       []byte(db.DbConnectUrl),
 	}
 }
 
-func (c *cluster) updateDbCredentialSecret(s *apiv1.Secret) *apiv1.Secret {
+func (f *cFactory) updateDbCredentialSecret(s *apiv1.Secret) *apiv1.Secret {
 	creds := newCredsFrom(s.Data)
-	creds.SetDefaults(c.getPorHostName(0))
+	creds.SetDefaults(f.getPorHostName(0))
 	s.Data = creds.ToData()
 	return s
 }
