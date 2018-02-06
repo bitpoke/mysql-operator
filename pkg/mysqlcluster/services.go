@@ -5,12 +5,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *cluster) createHeadlessService() apiv1.Service {
+func (f *cFactory) createHeadlessService() apiv1.Service {
 	return apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.getNameForResource(HeadlessSVC),
-			Labels:          c.getLabels(map[string]string{}),
-			OwnerReferences: c.getOwnerReferences(),
+			Name:            f.getNameForResource(HeadlessSVC),
+			Labels:          f.getLabels(map[string]string{}),
+			OwnerReferences: f.getOwnerReferences(),
 		},
 		Spec: apiv1.ServiceSpec{
 			Ports: []apiv1.ServicePort{apiv1.ServicePort{
@@ -19,7 +19,7 @@ func (c *cluster) createHeadlessService() apiv1.Service {
 				TargetPort: TargetPort,
 				Protocol:   "TCP",
 			}},
-			Selector:  c.getLabels(map[string]string{}),
+			Selector:  f.getLabels(map[string]string{}),
 			ClusterIP: "None",
 		},
 	}

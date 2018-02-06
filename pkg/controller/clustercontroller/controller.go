@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/golang/glog"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -32,8 +32,6 @@ const (
 )
 
 type Controller struct {
-	logger *logrus.Entry
-
 	Namespace      string
 	ServiceAccount string
 
@@ -61,7 +59,6 @@ func New(mysqlClusterInformer mcinformers.MysqlClusterInformer,
 	opt *options.Options,
 ) *Controller {
 	ctrl := &Controller{
-		logger:     logrus.WithField("pkg", "controller"),
 		Namespace:  namespace,
 		KubeCli:    kubecli,
 		KubeExtCli: kubeExtCli,
@@ -84,7 +81,7 @@ func New(mysqlClusterInformer mcinformers.MysqlClusterInformer,
 }
 
 func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
-	c.logger.Info("Starting controller ...")
+	glog.V(2).Info("Starting controller ...")
 
 	if !c.CreateCRD {
 		err := c.createCRDIfNotExists()
@@ -102,17 +99,17 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 		go wait.Until(func() { c.work(stopCh) }, workerPeriodTime, stopCh)
 	}
 	<-stopCh
-	c.logger.Info("Shutting down controller.")
+	glog.V(2).Info("Shutting down controller.")
 	c.queue.ShutDown()
-	c.logger.Debug("Wait for workers to exit...")
+	glog.V(2).Info("Wait for workers to exit...")
 	c.workerWg.Wait()
-	c.logger.Debug("Workers exited.")
+	glog.V(2).Info("Workers exited.")
 	return nil
 }
 
 func (c *Controller) work(stopCh <-chan struct{}) {
 	defer c.workerWg.Done()
-	c.logger.Info("Starting worker.")
+	glog.V(2).Info("Starting worker.")
 	for {
 		obj, shutdown := c.queue.Get()
 		if shutdown {
@@ -132,7 +129,7 @@ func (c *Controller) work(stopCh <-chan struct{}) {
 			ctx = util.ContextWithStopCh(ctx, stopCh)
 			defer cancel() // TODO: is safe?
 
-			c.logger.Info(fmt.Sprintf("[%s controller]: syncing item '%s'", ControllerName, key))
+			glog.V(2).Info(fmt.Sprintf("[%s controller]: syncing item '%s'", ControllerName, key))
 
 			// process items from queue
 			if err := c.processNextWorkItem(ctx, key); err != nil {
@@ -144,7 +141,7 @@ func (c *Controller) work(stopCh <-chan struct{}) {
 		}(obj)
 
 		if err != nil {
-			c.logger.Errorf("%s controller: Re-queuing item %q due to error processing: %s",
+			glog.Errorf("%s controller: Re-queuing item %q due to error processing: %s",
 				ControllerName, key, err.Error(),
 			)
 			c.queue.AddRateLimited(obj)
@@ -165,7 +162,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context, key string) error 
 	if err != nil {
 		if k8sutil.IsKubernetesResourceNotFoundError(err) {
 			runtime.HandleError(fmt.Errorf("issuer %q in work queue no longer exists", key))
-			c.logger.Error("Error not found: ", err)
+			glog.Errorf("resource not found: %s", err)
 			// TODO: fix deletion
 			return nil
 		}
@@ -177,7 +174,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context, key string) error 
 }
 
 func (c *Controller) createCRDIfNotExists() error {
-	c.logger.Info("Creating CRD...")
+	glog.V(2).Info("Creating CRD...")
 
 	err := k8sutil.CreateCRD(
 		c.KubeExtCli,
@@ -187,7 +184,7 @@ func (c *Controller) createCRDIfNotExists() error {
 		"mysql",
 	)
 	if err != nil {
-		c.logger.Error("Faild to create CRD: %v", err)
+		glog.Errorf("Faild to create CRD: %v", err)
 		return err
 	}
 	return k8sutil.WaitCRDReady(c.KubeExtCli, api.MysqlClusterCRDName)

@@ -1,8 +1,9 @@
 package options
 
 import (
-	"flag"
 	"time"
+
+	flag "github.com/spf13/pflag"
 )
 
 type ControllerOptions struct {
@@ -22,8 +23,6 @@ type ControllerOptions struct {
 }
 
 const (
-	defaultClusterResourceNamespace = "kube-system"
-
 	defaultLeaderElect                 = true
 	defaultLeaderElectionNamespace     = "kube-system"
 	defaultLeaderElectionLeaseDuration = 15 * time.Second
@@ -35,7 +34,6 @@ func NewControllerOptions() *ControllerOptions {
 	return &ControllerOptions{
 		Namespace:                   "default",
 		PodName:                     "pod-name",
-		ClusterResourceNamespace:    defaultClusterResourceNamespace,
 		LeaderElect:                 defaultLeaderElect,
 		LeaderElectionNamespace:     defaultLeaderElectionNamespace,
 		LeaderElectionLeaseDuration: defaultLeaderElectionLeaseDuration,
@@ -47,19 +45,14 @@ func NewControllerOptions() *ControllerOptions {
 
 func (s *ControllerOptions) AddFlags() {
 	flag.StringVar(&s.Namespace, "namespace", "default", ""+
-		"Optional namespace to monitor resources within. This can be used to limit the scope "+
-		"of cert-manager to a single namespace. If not specified, all namespaces will be watched")
+		"Optional namespace to monitor resources within.")
 
 	flag.StringVar(&s.PodName, "pod-name", "pod-name", ""+
 		"Optional pod name, when running out of cluster.")
 
-	flag.StringVar(&s.ClusterResourceNamespace, "resource-namespace",
-		defaultClusterResourceNamespace,
-		"Namespace to store resources owned by cluster scoped resources.")
-
 	flag.BoolVar(&s.LeaderElect, "leader-elect", true, ""+
-		"If true, cert-manager will perform leader election between instances to ensure no more "+
-		"than one instance of cert-manager operates at a time")
+		"If true, operator will perform leader election between instances to ensure no more "+
+		"than one instance operates at a time")
 
 }
 

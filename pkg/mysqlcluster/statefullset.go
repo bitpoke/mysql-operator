@@ -22,56 +22,56 @@ const (
 	DataVolumeMountPath = "/var/lib/mysql"
 )
 
-func (c *cluster) createStatefulSet() v1beta2.StatefulSet {
+func (f *cFactory) createStatefulSet() v1beta2.StatefulSet {
 	return v1beta2.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.getNameForResource(StatefulSet),
-			Labels:          c.getLabels(map[string]string{}),
-			OwnerReferences: c.getOwnerReferences(),
+			Name:            f.getNameForResource(StatefulSet),
+			Labels:          f.getLabels(map[string]string{}),
+			OwnerReferences: f.getOwnerReferences(),
 		},
 		Spec: v1beta2.StatefulSetSpec{
-			Replicas: c.cl.Spec.GetReplicas(),
+			Replicas: f.cl.Spec.GetReplicas(),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: c.getLabels(map[string]string{}),
+				MatchLabels: f.getLabels(map[string]string{}),
 			},
-			ServiceName:          c.getNameForResource(HeadlessSVC),
-			Template:             c.getPodTempalteSpec(),
-			VolumeClaimTemplates: c.getVolumeClaimTemplates(),
+			ServiceName:          f.getNameForResource(HeadlessSVC),
+			Template:             f.getPodTempalteSpec(),
+			VolumeClaimTemplates: f.getVolumeClaimTemplates(),
 		},
 	}
 }
 
-func (c *cluster) getPodTempalteSpec() apiv1.PodTemplateSpec {
+func (f *cFactory) getPodTempalteSpec() apiv1.PodTemplateSpec {
 	return apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			//Name:        c.getNameForResource(SSPod),
-			Labels:      c.getLabels(c.cl.Spec.PodSpec.Labels),
-			Annotations: c.cl.Spec.PodSpec.Annotations,
+			//Name:        f.getNameForResource(SSPod),
+			Labels:      f.getLabels(f.cl.Spec.PodSpec.Labels),
+			Annotations: f.cl.Spec.PodSpec.Annotations,
 		},
 		Spec: apiv1.PodSpec{
-			InitContainers: c.getInitContainersSpec(),
-			Containers:     c.getContainersSpec(),
-			Volumes:        c.getVolumes(),
+			InitContainers: f.getInitContainersSpec(),
+			Containers:     f.getContainersSpec(),
+			Volumes:        f.getVolumes(),
 
-			Affinity:         &c.cl.Spec.PodSpec.Affinity,
-			NodeSelector:     c.cl.Spec.PodSpec.NodeSelector,
-			ImagePullSecrets: c.cl.Spec.PodSpec.ImagePullSecrets,
+			Affinity:         &f.cl.Spec.PodSpec.Affinity,
+			NodeSelector:     f.cl.Spec.PodSpec.NodeSelector,
+			ImagePullSecrets: f.cl.Spec.PodSpec.ImagePullSecrets,
 		},
 	}
 }
 
-func (c *cluster) getInitContainersSpec() []apiv1.Container {
+func (f *cFactory) getInitContainersSpec() []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
 			Name:            "init-mysql",
-			Image:           c.cl.Spec.GetTitaniumImage(),
-			ImagePullPolicy: c.cl.Spec.PodSpec.ImagePullPolicy,
+			Image:           f.cl.Spec.GetTitaniumImage(),
+			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
 			Args:            []string{"files-config"},
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
 					SecretRef: &apiv1.SecretEnvSource{
 						LocalObjectReference: apiv1.LocalObjectReference{
-							Name: c.getNameForResource(EnvSecret),
+							Name: f.getNameForResource(EnvSecret),
 						},
 					},
 				},
@@ -89,35 +89,35 @@ func (c *cluster) getInitContainersSpec() []apiv1.Container {
 		},
 		apiv1.Container{
 			Name:            "clone-mysql",
-			Image:           c.cl.Spec.GetTitaniumImage(),
-			ImagePullPolicy: c.cl.Spec.PodSpec.ImagePullPolicy,
+			Image:           f.cl.Spec.GetTitaniumImage(),
+			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
 			Args:            []string{"clone"},
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
 					SecretRef: &apiv1.SecretEnvSource{
 						LocalObjectReference: apiv1.LocalObjectReference{
-							Name: c.getNameForResource(EnvSecret),
+							Name: f.getNameForResource(EnvSecret),
 						},
 					},
 				},
-				envFromSecret(c.cl.Spec.InitBucketSecretName),
+				envFromSecret(f.cl.Spec.InitBucketSecretName),
 			},
 			VolumeMounts: getVolumeMounts(),
 		},
 	}
 }
 
-func (c *cluster) getContainersSpec() []apiv1.Container {
+func (f *cFactory) getContainersSpec() []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
 			Name:            "mysql",
-			Image:           c.cl.Spec.GetMysqlImage(),
-			ImagePullPolicy: c.cl.Spec.PodSpec.ImagePullPolicy,
+			Image:           f.cl.Spec.GetMysqlImage(),
+			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
 					SecretRef: &apiv1.SecretEnvSource{
 						LocalObjectReference: apiv1.LocalObjectReference{
-							Name: c.getNameForResource(EnvSecret),
+							Name: f.getNameForResource(EnvSecret),
 						},
 					},
 				},
@@ -128,26 +128,26 @@ func (c *cluster) getContainersSpec() []apiv1.Container {
 					ContainerPort: MysqlPort,
 				},
 			},
-			Resources:      c.cl.Spec.PodSpec.Resources,
+			Resources:      f.cl.Spec.PodSpec.Resources,
 			LivenessProbe:  getLivenessProbe(),
 			ReadinessProbe: getReadinessProbe(),
 			VolumeMounts:   getVolumeMounts(),
 		},
 		apiv1.Container{
 			Name:  "titanium",
-			Image: c.cl.Spec.GetTitaniumImage(),
+			Image: f.cl.Spec.GetTitaniumImage(),
 			Args:  []string{"config-and-serve"},
 			EnvFrom: []apiv1.EnvFromSource{
 				apiv1.EnvFromSource{
 					SecretRef: &apiv1.SecretEnvSource{
 						LocalObjectReference: apiv1.LocalObjectReference{
-							Name: c.getNameForResource(EnvSecret),
+							Name: f.getNameForResource(EnvSecret),
 						},
 					},
 				},
 				// Allow to take backups from this container.
 				// TODO: remove this
-				envFromSecret(c.cl.Spec.BackupBucketSecretName),
+				envFromSecret(f.cl.Spec.BackupBucketSecretName),
 			},
 			Ports: []apiv1.ContainerPort{
 				apiv1.ContainerPort{
@@ -195,7 +195,7 @@ func getReadinessProbe() *apiv1.Probe {
 	}
 }
 
-func (c *cluster) getVolumes() []apiv1.Volume {
+func (f *cFactory) getVolumes() []apiv1.Volume {
 	return []apiv1.Volume{
 		apiv1.Volume{
 			Name: ConfVolumeName,
@@ -208,25 +208,25 @@ func (c *cluster) getVolumes() []apiv1.Volume {
 			VolumeSource: apiv1.VolumeSource{
 				ConfigMap: &apiv1.ConfigMapVolumeSource{
 					LocalObjectReference: apiv1.LocalObjectReference{
-						Name: c.getNameForResource(ConfigMap),
+						Name: f.getNameForResource(ConfigMap),
 					},
 				},
 			},
 		},
 
-		c.getDataVolume(),
+		f.getDataVolume(),
 	}
 }
 
-func (c *cluster) getDataVolume() apiv1.Volume {
+func (f *cFactory) getDataVolume() apiv1.Volume {
 	vs := apiv1.VolumeSource{
 		EmptyDir: &apiv1.EmptyDirVolumeSource{},
 	}
 
-	if !c.cl.Spec.VolumeSpec.PersistenceDisabled {
+	if !f.cl.Spec.VolumeSpec.PersistenceDisabled {
 		vs = apiv1.VolumeSource{
 			PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-				ClaimName: c.getNameForResource(VolumePVC),
+				ClaimName: f.getNameForResource(VolumePVC),
 			},
 		}
 	}
@@ -256,8 +256,8 @@ func getVolumeMounts(extra ...apiv1.VolumeMount) []apiv1.VolumeMount {
 	return common
 }
 
-func (c *cluster) getVolumeClaimTemplates() []apiv1.PersistentVolumeClaim {
-	if c.cl.Spec.VolumeSpec.PersistenceDisabled {
+func (f *cFactory) getVolumeClaimTemplates() []apiv1.PersistentVolumeClaim {
+	if f.cl.Spec.VolumeSpec.PersistenceDisabled {
 		fmt.Println("Persistence is disabled.")
 		return nil
 	}
@@ -265,11 +265,11 @@ func (c *cluster) getVolumeClaimTemplates() []apiv1.PersistentVolumeClaim {
 	return []apiv1.PersistentVolumeClaim{
 		apiv1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            c.getNameForResource(VolumePVC),
-				Labels:          c.getLabels(map[string]string{}),
-				OwnerReferences: c.getOwnerReferences(),
+				Name:            f.getNameForResource(VolumePVC),
+				Labels:          f.getLabels(map[string]string{}),
+				OwnerReferences: f.getOwnerReferences(),
 			},
-			Spec: c.cl.Spec.VolumeSpec.PersistentVolumeClaimSpec,
+			Spec: f.cl.Spec.VolumeSpec.PersistentVolumeClaimSpec,
 		},
 	}
 }

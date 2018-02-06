@@ -1,10 +1,10 @@
 package options
 
 import (
-	"flag"
 	"strings"
 	"sync"
 
+	"github.com/spf13/pflag"
 	"k8s.io/api/core/v1"
 )
 
@@ -28,12 +28,12 @@ const (
 )
 
 func (o *Options) AddFlags() {
-	flag.StringVar(&o.mysqlImage, "mysql-image", defaultMysqlImage,
+	pflag.StringVar(&o.mysqlImage, "mysql-image", defaultMysqlImage,
 		"The mysql image. Default to "+defaultMysqlImage)
-	flag.StringVar(&o.TitaniumImage, "titanium-image", defaultTitaniumImage,
+	pflag.StringVar(&o.TitaniumImage, "titanium-image", defaultTitaniumImage,
 		"The image that instrumentate mysql. Default to "+defaultTitaniumImage)
 
-	flag.StringVar(&o.ImagePullSecretName, "pull-secret", "",
+	pflag.StringVar(&o.ImagePullSecretName, "pull-secret", "",
 		"The secret name for used as pull secret. Default none.")
 
 }

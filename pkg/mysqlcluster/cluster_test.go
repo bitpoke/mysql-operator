@@ -17,28 +17,28 @@ import (
 
 // The following function are helpers for accessing private members of cluster
 
-func (c *cluster) SyncHeadlessService() error {
-	return c.syncHeadlessService()
+func (f *cFactory) SyncHeadlessService() error {
+	return f.syncHeadlessService()
 }
 
-func (c *cluster) SyncConfigEnvSecret() error {
-	return c.syncConfigEnvSecret()
+func (f *cFactory) SyncConfigEnvSecret() error {
+	return f.syncConfigEnvSecret()
 }
 
-func (c *cluster) SyncConfigMapFiles() error {
-	return c.syncConfigMapFiles()
+func (f *cFactory) SyncConfigMapFiles() error {
+	return f.syncConfigMapFiles()
 }
 
-func (c *cluster) SyncStatefulSet() error {
-	return c.syncStatefulSet()
+func (f *cFactory) SyncStatefulSet() error {
+	return f.syncStatefulSet()
 }
 
-func (c *cluster) GetMysqlCluster() *api.MysqlCluster {
-	return c.cl
+func (f *cFactory) GetMysqlCluster() *api.MysqlCluster {
+	return f.cl
 }
 
-func (c *cluster) GetNameForResource(name ResourceName) string {
-	return c.getNameForResource(name)
+func (f *cFactory) GetNameForResource(name ResourceName) string {
+	return f.getNameForResource(name)
 }
 
 const (
@@ -57,7 +57,7 @@ func newFakeCluster(name string) *api.MysqlCluster {
 }
 
 func newFakeOption() *options.Options {
-	opt := options.NewOptions()
+	opt := options.GetOptions()
 	opt.Validate()
 	return opt
 }
@@ -70,7 +70,7 @@ func init() {
 	opt = newFakeOption()
 }
 
-func getFakeCluster(name string) (*fake.Clientset, *fakeClientSet.Clientset, *cluster) {
+func getFakeFactory(name string) (*fake.Clientset, *fakeClientSet.Clientset, *cFactory) {
 	clientSet := fakeClientSet.NewSimpleClientset()
 	clusterFake := newFakeCluster(name)
 	if err := clusterFake.UpdateDefaults(opt); err != nil {
@@ -79,7 +79,7 @@ func getFakeCluster(name string) (*fake.Clientset, *fakeClientSet.Clientset, *cl
 
 	k8sClient := fake.NewSimpleClientset()
 
-	return k8sClient, clientSet, &cluster{
+	return k8sClient, clientSet, &cFactory{
 		cl:        clusterFake,
 		client:    k8sClient,
 		cmclient:  clientSet,
@@ -94,13 +94,13 @@ func assertEqual(t *testing.T, left, right interface{}, msg string) {
 }
 
 func TestSyncClusterCreation(t *testing.T) {
-	client, _, c := getFakeCluster("test-cluster")
+	client, _, f := getFakeFactory("test-cluster")
 
 	tests := map[string]interface{}{
-		"services":     func() error { return c.SyncHeadlessService() },
-		"secrets":      func() error { return c.SyncConfigEnvSecret() },
-		"configmaps":   func() error { return c.SyncConfigMapFiles() },
-		"statefulsets": func() error { return c.SyncStatefulSet() },
+		"services":     func() error { return f.SyncHeadlessService() },
+		"secrets":      func() error { return f.SyncConfigEnvSecret() },
+		"configmaps":   func() error { return f.SyncConfigMapFiles() },
+		"statefulsets": func() error { return f.SyncStatefulSet() },
 	}
 
 	for rName, syncF := range tests {
@@ -122,25 +122,25 @@ func TestSyncClusterCreation(t *testing.T) {
 		client.ClearActions()
 	}
 	sfC := client.AppsV1beta2().StatefulSets(DefaultNamespace)
-	sfs, _ := sfC.Get(c.GetNameForResource(StatefulSet), metav1.GetOptions{})
+	sfs, _ := sfC.Get(f.GetNameForResource(StatefulSet), metav1.GetOptions{})
 
-	mc := c.GetMysqlCluster()
+	mc := f.GetMysqlCluster()
 	assertEqual(t, *sfs.Spec.Replicas, *mc.Spec.GetReplicas(), "")
 
-	assertEqual(t, sfs.Spec.Template.Spec.Containers[0].Image, mc.Spec.PodSpec.GetMysqlImage(), "")
+	assertEqual(t, sfs.Spec.Template.Spec.Containers[0].Image, mc.Spec.GetMysqlImage(), "")
 }
 
 func TestSyncClusterIfExistsNoUpdate(t *testing.T) {
-	client, _, c := getFakeCluster("test-cluster")
+	client, _, f := getFakeFactory("test-cluster")
 	ctx := context.TODO()
-	c.Sync(ctx)
+	f.Sync(ctx)
 	client.ClearActions()
 
 	tests := map[string]interface{}{
-		"services":     func() error { return c.SyncHeadlessService() },
-		"secrets":      func() error { return c.SyncConfigEnvSecret() },
-		"configmaps":   func() error { return c.SyncConfigMapFiles() },
-		"statefulsets": func() error { return c.SyncStatefulSet() },
+		"services":     func() error { return f.SyncHeadlessService() },
+		"secrets":      func() error { return f.SyncConfigEnvSecret() },
+		"configmaps":   func() error { return f.SyncConfigMapFiles() },
+		"statefulsets": func() error { return f.SyncStatefulSet() },
 	}
 
 	for rName, syncF := range tests {
@@ -163,10 +163,10 @@ func TestSyncClusterIfExistsNoUpdate(t *testing.T) {
 }
 
 func TestSyncClusterIfExistsNeedsUpdate(t *testing.T) {
-	client, mcClient, c := getFakeCluster("test-cluster-nu")
+	client, mcClient, f := getFakeFactory("test-cluster-nu")
 	ctx := context.TODO()
-	c.Sync(ctx)
-	mc := c.GetMysqlCluster()
+	f.Sync(ctx)
+	mc := f.GetMysqlCluster()
 	mc.Spec.ReadReplicas = 4
 	mc.Spec.UpdateDefaults(opt)
 
@@ -178,11 +178,11 @@ func TestSyncClusterIfExistsNeedsUpdate(t *testing.T) {
 		acts []string
 	}
 	tests := map[string]tuple{
-		"services":   tuple{func() error { return c.SyncHeadlessService() }, []string{"get"}},
-		"secrets":    tuple{func() error { return c.SyncConfigEnvSecret() }, []string{"get"}},
-		"configmaps": tuple{func() error { return c.SyncConfigMapFiles() }, []string{"get"}},
+		"services":   tuple{func() error { return f.SyncHeadlessService() }, []string{"get"}},
+		"secrets":    tuple{func() error { return f.SyncConfigEnvSecret() }, []string{"get"}},
+		"configmaps": tuple{func() error { return f.SyncConfigMapFiles() }, []string{"get"}},
 		"statefulsets": tuple{
-			func() error { return c.SyncStatefulSet() },
+			func() error { return f.SyncStatefulSet() },
 			[]string{"get", "update"},
 		},
 	}
@@ -210,23 +210,23 @@ func TestSyncClusterIfExistsNeedsUpdate(t *testing.T) {
 	}
 
 	sfC := client.AppsV1beta2().StatefulSets(DefaultNamespace)
-	sfs, _ := sfC.Get(c.GetNameForResource(StatefulSet), metav1.GetOptions{})
+	sfs, _ := sfC.Get(f.GetNameForResource(StatefulSet), metav1.GetOptions{})
 
 	assertEqual(t, *sfs.Spec.Replicas, *mc.Spec.GetReplicas(), "")
 }
 
 func TestPersistenceDisabledEnabled(t *testing.T) {
-	client, mcClient, c := getFakeCluster("test-cluster-2")
-	mc := c.GetMysqlCluster()
+	client, mcClient, f := getFakeFactory("test-cluster-2")
+	mc := f.GetMysqlCluster()
 
 	assertEqual(t, mc.Spec.VolumeSpec.PersistenceDisabled, false, "persistenceEnabled default")
 
 	mc.Spec.VolumeSpec.PersistenceDisabled = true
 	mcClient.Titanium().MysqlClusters(DefaultNamespace).Update(mc)
-	c.SyncStatefulSet()
+	f.SyncStatefulSet()
 
 	sfC := client.AppsV1beta2().StatefulSets(DefaultNamespace)
-	sfs, _ := sfC.Get(c.GetNameForResource(StatefulSet), metav1.GetOptions{})
+	sfs, _ := sfC.Get(f.GetNameForResource(StatefulSet), metav1.GetOptions{})
 
 	if sfs.Spec.Template.Spec.Volumes[2].EmptyDir == nil {
 		t.Error("Is not empty dir.")
@@ -234,15 +234,15 @@ func TestPersistenceDisabledEnabled(t *testing.T) {
 }
 
 func TestPersistenceEnabled(t *testing.T) {
-	client, mcClient, c := getFakeCluster("test-cluster-2")
-	mc := c.GetMysqlCluster()
+	client, mcClient, f := getFakeFactory("test-cluster-2")
+	mc := f.GetMysqlCluster()
 	mc.Spec.VolumeSpec.PersistenceDisabled = false
 
 	mcClient.Titanium().MysqlClusters(DefaultNamespace).Update(mc)
-	c.SyncStatefulSet()
+	f.SyncStatefulSet()
 
 	sfC := client.AppsV1beta2().StatefulSets(DefaultNamespace)
-	sfs, _ := sfC.Get(c.GetNameForResource(StatefulSet), metav1.GetOptions{})
+	sfs, _ := sfC.Get(f.GetNameForResource(StatefulSet), metav1.GetOptions{})
 	if sfs.Spec.Template.Spec.Volumes[2].PersistentVolumeClaim == nil {
 		t.Error("Is not a PVC. And should be.")
 	}

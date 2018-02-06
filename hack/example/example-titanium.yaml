@@ -4,6 +4,7 @@ metadata:
   name: example-foo
 spec:
   readReplicas: 1
+  secretName: the-secret
   volumeSpec:
     persistenceDisabled: true
 
