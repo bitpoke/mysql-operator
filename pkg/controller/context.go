@@ -1,27 +1,30 @@
 package controller
 
 import (
-	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/record"
 
 	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
 	informers "github.com/presslabs/titanium/pkg/generated/informers/externalversions"
-	"github.com/presslabs/titanium/pkg/util/options"
 )
 
-//  https://github.com/jetstack/cert-manager/blob/master/pkg/controller/context.go
 type Context struct {
-	Namespace      string
-	ServiceAccount string
+	// KubeClient is a Kubernetes clientset
+	KubeClient kubernetes.Interface
+	// Client is a oxygen clientset
+	Client clientset.Interface
+	// Recorder to record events to
+	Recorder record.EventRecorder
 
-	KubeCli    kubernetes.Interface
-	KubeExtCli apiextensionsclient.Interface
-
-	CreateCRD bool
-
-	MCClient clientset.Interface
-
+	// KubeSharedInformerFactory can be used to obtain shared
+	// SharedIndexInformer instances for Kubernetes types
+	KubeSharedInformerFactory kubeinformers.SharedInformerFactory
+	// SharedInformerFactory can be used to obtain shared SharedIndexInformer
+	// instances
 	SharedInformerFactory informers.SharedInformerFactory
 
-	Opt *options.Options
+	// Namespace is a namespace to operate within. This should be used when
+	// constructing SharedIndexInformers for the informer factory.
+	Namespace string
 }

@@ -27,13 +27,13 @@ const (
 	defaultImagePullPolicy = v1.PullIfNotPresent
 )
 
-func (o *Options) AddFlags() {
-	pflag.StringVar(&o.mysqlImage, "mysql-image", defaultMysqlImage,
+func (o *Options) AddFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&o.mysqlImage, "mysql-image", defaultMysqlImage,
 		"The mysql image. Default to "+defaultMysqlImage)
-	pflag.StringVar(&o.TitaniumImage, "titanium-image", defaultTitaniumImage,
+	fs.StringVar(&o.TitaniumImage, "titanium-image", defaultTitaniumImage,
 		"The image that instrumentate mysql. Default to "+defaultTitaniumImage)
 
-	pflag.StringVar(&o.ImagePullSecretName, "pull-secret", "",
+	fs.StringVar(&o.ImagePullSecretName, "pull-secret", "",
 		"The secret name for used as pull secret. Default none.")
 
 }

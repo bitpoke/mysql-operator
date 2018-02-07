@@ -8,14 +8,16 @@ import (
 	"github.com/golang/glog"
 	"github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	mccluster "github.com/presslabs/titanium/pkg/mysqlcluster"
+	"github.com/presslabs/titanium/pkg/util/options"
 )
 
 // Sync for add and update.
 func (c *Controller) Sync(ctx context.Context, cluster *v1alpha1.MysqlCluster, ns string) error {
 	glog.Infof("sync cluster: %s", cluster.Name)
 	copyCluster := cluster.DeepCopy()
+	opt := options.GetOptions()
 
-	if err := copyCluster.UpdateDefaults(c.opt); err != nil {
+	if err := copyCluster.UpdateDefaults(opt); err != nil {
 		return fmt.Errorf("failed to set defaults for cluster: %s", err)
 	}
 
