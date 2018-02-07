@@ -88,6 +88,9 @@ func (db *dbCreds) SetDefaults(host string) {
 	if len(db.ReplicaPass) == 0 {
 		db.ReplicaPass = util.RandomString(rStrLen)
 	}
+	if len(db.RootPassword) == 0 {
+		db.RootPassword = util.RandomString(rStrLen)
+	}
 	db.DbConnectUrl = fmt.Sprintf(
 		"mysql://%s:%s@%s/%s",
 		db.User, db.Password, host, db.Database,

@@ -2,7 +2,7 @@ DATE    = $(shell date +%Y%m%d%H%M)
 IMAGE   ?= presslabs/titanium
 VERSION = v$(DATE)
 GOOS    ?= $(shell go env | grep GOOS | cut -d'"' -f2)
-BINARY  := operator
+BINARY  := titanium
 
 LDFLAGS :=  -X github.com/presslabs/titanium/pkg/operator.VERSION=$(VERSION)
 GOFLAGS := -ldflags "$(LDFLAGS)"
