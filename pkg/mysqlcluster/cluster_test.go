@@ -52,6 +52,7 @@ func newFakeCluster(name string) *api.MysqlCluster {
 		},
 		Spec: api.ClusterSpec{
 			ReadReplicas: 1,
+			SecretName:   "the-db-secret",
 		},
 	}
 }

@@ -49,10 +49,11 @@ const (
 	HeadlessSVC ResourceName = "headless"
 	StatefulSet ResourceName = "mysql"
 	ConfigMap   ResourceName = "config-files"
-	EnvSecret   ResourceName = "env-config"
 	VolumePVC   ResourceName = "mysql-data"
 	SSPod       ResourceName = "pod"
-	DbSecret    ResourceName = "db-credentials"
+
+	EnvSecret     ResourceName = "env-config"
+	UtilitySecret ResourceName = "utility"
 )
 
 func (f *cFactory) getNameForResource(name ResourceName) string {

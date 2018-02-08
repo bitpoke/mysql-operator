@@ -22,7 +22,7 @@ type Options struct {
 
 const (
 	defaultMysqlImage    = "percona:5.7"
-	defaultTitaniumImage = "gcr.io/pl-infra/titanium-operator:latest"
+	defaultTitaniumImage = "gcr.io/pl-infra/titanium-toolbox:latest"
 
 	defaultImagePullPolicy = v1.PullIfNotPresent
 )
