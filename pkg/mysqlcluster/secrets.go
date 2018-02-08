@@ -2,6 +2,7 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"time"
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +61,7 @@ func (f *cFactory) createDbCredentialSecret(name string) *apiv1.Secret {
 }
 
 // The length of the new generated strings.
-const rStrLen = 16
+const rStrLen = 18
 
 type dbCreds struct {
 	User         string
@@ -137,4 +138,28 @@ func (f *cFactory) updateDbCredentialSecret(s *apiv1.Secret) *apiv1.Secret {
 	creds.SetDefaults(f.getPorHostName(0))
 	s.Data = creds.ToData()
 	return s
+}
+
+func (f *cFactory) createUtilitySecret() *apiv1.Secret {
+	configs := map[string]string{
+		"TITANIUM_UTILITY_USER":     util.RandomString(rStrLen),
+		"TITANIUM_UTILITY_PASSWORD": util.RandomString(rStrLen),
+	}
+	fConf := make(map[string][]byte)
+	for k, v := range configs {
+		fConf[k] = []byte(v)
+	}
+
+	return &apiv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            f.getNameForResource(UtilitySecret),
+			Labels:          f.getLabels(map[string]string{}),
+			OwnerReferences: f.getOwnerReferences(),
+			Namespace:       f.namespace,
+			Annotations: map[string]string{
+				"last_updated": time.Now().String(),
+			},
+		},
+		Data: fConf,
+	}
 }

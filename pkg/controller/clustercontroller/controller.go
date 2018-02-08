@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -19,7 +20,6 @@ import (
 	mcinformers "github.com/presslabs/titanium/pkg/generated/informers/externalversions/titanium/v1alpha1"
 	mclisters "github.com/presslabs/titanium/pkg/generated/listers/titanium/v1alpha1"
 	"github.com/presslabs/titanium/pkg/util"
-	"github.com/presslabs/titanium/pkg/util/k8sutil"
 )
 
 const (
@@ -144,7 +144,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context, key string) error 
 	mysqlCluster, err := c.clusterLister.MysqlClusters(namespace).Get(name)
 
 	if err != nil {
-		if k8sutil.IsKubernetesResourceNotFoundError(err) {
+		if k8errors.IsNotFound(err) {
 			runtime.HandleError(fmt.Errorf("issuer %q in work queue no longer exists", key))
 			glog.Errorf("resource not found: %s", err)
 			// TODO: fix deletion

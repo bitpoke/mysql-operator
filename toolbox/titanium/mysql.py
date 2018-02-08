@@ -39,6 +39,10 @@ class ConfigPhase(MysqlNodeContext):
     def configuration_mysqld(self, config):
         config['mysqld']['server-id'] = str(self.server_id)
         config['mysqld']['datadir'] = settings.MYSQL_DATA_DIR
+        config['mysqld']['utility_user'] = '{}@%'.format(settings.UTILITY_USER)
+        config['mysqld']['utility_user_password'] = settings.UTILITY_PASSWORD
+        config['mysqld']['utility_user_schema_access'] = settings.UTILITY_SCHEMA_ACCESS
+        config['mysqld']['utility_user_privileges'] = settings.UTILITY_PRIVILEGES
 
         return config
 
@@ -46,8 +50,9 @@ class ConfigPhase(MysqlNodeContext):
         config['client'] = {}
         config['client']['host'] = settings.MYSQL_HOST
         config['client']['port'] = settings.MYSQL_PORT
-        if settings.MYSQL_ROOT_PASSWORD:
-            config['client']['password'] = settings.MYSQL_ROOT_PASSWORD
+        if settings.UTILITY_USER:
+            config['client']['user'] = settings.UTILITY_USER
+            config['client']['password'] = settings.UTILITY_PASSWORD
 
         return config
 
@@ -66,7 +71,7 @@ class ConfigPhase(MysqlNodeContext):
         src_config_file_name = 'master.cnf' if self.is_master() else 'slave.cnf'
         src = os.path.join(settings.CONFIG_MAP_DIR, src_config_file_name)
 
-        config = configparser.ConfigParser()
+        config = configparser.ConfigParser(interpolation=None)
         config.read(src)
         config = self.configuration_mysqld(config)
 
@@ -74,7 +79,7 @@ class ConfigPhase(MysqlNodeContext):
         with open(dest, 'w+') as f:
             config.write(f)
 
-        config = configparser.ConfigParser()
+        config = configparser.ConfigParser(interpolation=None)
         config = self.configuration_mysql_client(config)
 
         dest = os.path.join(settings.CONFIG_MYSQL, 'client.cnf')

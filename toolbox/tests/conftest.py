@@ -38,9 +38,6 @@ def MYSQL_CLUSTER_CONFIG(name, **spec):
             'podSpec':{
                 'titaniumImage': TITANIUM_IMAGE,
             },
-            'volumeSpec': {
-                'persistenceDisabled': True, # for speeding up the test
-            },
             **spec
         }
     }

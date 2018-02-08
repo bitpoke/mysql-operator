@@ -1,10 +1,10 @@
 apiVersion: titanium.presslabs.net/v1alpha1
 kind: MysqlCluster
 metadata:
-  name: example-foo
+  name: foo
 spec:
   readReplicas: 1
   secretName: the-secret
-  volumeSpec:
-    persistenceDisabled: true
+#  volumeSpec:
+#    persistenceDisabled: true
 

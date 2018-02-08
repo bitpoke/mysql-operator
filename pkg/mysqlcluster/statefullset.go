@@ -60,22 +60,21 @@ func (f *cFactory) getPodTempalteSpec() apiv1.PodTemplateSpec {
 	}
 }
 
+const (
+	ContainerInitName     = "init-mysql"
+	ContainerCloneName    = "clone-mysql"
+	ContainerTitaniumName = "titanium"
+	ContainerMysqlName    = "mysql"
+)
+
 func (f *cFactory) getInitContainersSpec() []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
-			Name:            "init-mysql",
+			Name:            ContainerInitName,
 			Image:           f.cl.Spec.GetTitaniumImage(),
 			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
 			Args:            []string{"files-config"},
-			EnvFrom: []apiv1.EnvFromSource{
-				apiv1.EnvFromSource{
-					SecretRef: &apiv1.SecretEnvSource{
-						LocalObjectReference: apiv1.LocalObjectReference{
-							Name: f.getNameForResource(EnvSecret),
-						},
-					},
-				},
-			},
+			EnvFrom:         f.getEnvSourcesFor(ContainerInitName),
 			VolumeMounts: []apiv1.VolumeMount{
 				apiv1.VolumeMount{
 					Name:      ConfVolumeName,
@@ -88,21 +87,12 @@ func (f *cFactory) getInitContainersSpec() []apiv1.Container {
 			},
 		},
 		apiv1.Container{
-			Name:            "clone-mysql",
+			Name:            ContainerCloneName,
 			Image:           f.cl.Spec.GetTitaniumImage(),
 			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
 			Args:            []string{"clone"},
-			EnvFrom: []apiv1.EnvFromSource{
-				apiv1.EnvFromSource{
-					SecretRef: &apiv1.SecretEnvSource{
-						LocalObjectReference: apiv1.LocalObjectReference{
-							Name: f.getNameForResource(EnvSecret),
-						},
-					},
-				},
-				envFromSecret(f.cl.Spec.InitBucketSecretName),
-			},
-			VolumeMounts: getVolumeMounts(),
+			EnvFrom:         f.getEnvSourcesFor(ContainerCloneName),
+			VolumeMounts:    getVolumeMounts(),
 		},
 	}
 }
@@ -110,18 +100,10 @@ func (f *cFactory) getInitContainersSpec() []apiv1.Container {
 func (f *cFactory) getContainersSpec() []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
-			Name:            "mysql",
+			Name:            ContainerMysqlName,
 			Image:           f.cl.Spec.GetMysqlImage(),
 			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
-			EnvFrom: []apiv1.EnvFromSource{
-				apiv1.EnvFromSource{
-					SecretRef: &apiv1.SecretEnvSource{
-						LocalObjectReference: apiv1.LocalObjectReference{
-							Name: f.getNameForResource(EnvSecret),
-						},
-					},
-				},
-			},
+			EnvFrom:         f.getEnvSourcesFor(ContainerMysqlName),
 			Ports: []apiv1.ContainerPort{
 				apiv1.ContainerPort{
 					Name:          MysqlPortName,
@@ -134,21 +116,10 @@ func (f *cFactory) getContainersSpec() []apiv1.Container {
 			VolumeMounts:   getVolumeMounts(),
 		},
 		apiv1.Container{
-			Name:  "titanium",
-			Image: f.cl.Spec.GetTitaniumImage(),
-			Args:  []string{"config-and-serve"},
-			EnvFrom: []apiv1.EnvFromSource{
-				apiv1.EnvFromSource{
-					SecretRef: &apiv1.SecretEnvSource{
-						LocalObjectReference: apiv1.LocalObjectReference{
-							Name: f.getNameForResource(EnvSecret),
-						},
-					},
-				},
-				// Allow to take backups from this container.
-				// TODO: remove this
-				envFromSecret(f.cl.Spec.BackupBucketSecretName),
-			},
+			Name:    ContainerTitaniumName,
+			Image:   f.cl.Spec.GetTitaniumImage(),
+			Args:    []string{"config-and-serve"},
+			EnvFrom: f.getEnvSourcesFor(ContainerTitaniumName),
 			Ports: []apiv1.ContainerPort{
 				apiv1.ContainerPort{
 					Name:          TitaniumXtrabackupPortName,
@@ -282,4 +253,72 @@ func envFromSecret(name string) apiv1.EnvFromSource {
 			},
 		},
 	}
+}
+
+func (f *cFactory) getEnvSourcesFor(name string) []apiv1.EnvFromSource {
+	ss := []apiv1.EnvFromSource{
+		apiv1.EnvFromSource{
+			SecretRef: &apiv1.SecretEnvSource{
+				LocalObjectReference: apiv1.LocalObjectReference{
+					Name: f.getNameForResource(EnvSecret),
+				},
+			},
+		},
+	}
+	switch name {
+	case ContainerTitaniumName:
+		ss = append(ss, apiv1.EnvFromSource{
+			Prefix: "MYSQL_",
+			SecretRef: &apiv1.SecretEnvSource{
+				LocalObjectReference: apiv1.LocalObjectReference{
+					Name: f.cl.Spec.SecretName,
+				},
+			},
+		})
+		if len(f.cl.Spec.InitBucketSecretName) != 0 {
+			ss = append(ss, apiv1.EnvFromSource{
+				SecretRef: &apiv1.SecretEnvSource{
+					LocalObjectReference: apiv1.LocalObjectReference{
+						Name: f.cl.Spec.BackupBucketSecretName,
+					},
+				},
+			})
+		}
+	case ContainerInitName:
+		ss = append(ss, apiv1.EnvFromSource{
+			SecretRef: &apiv1.SecretEnvSource{
+				LocalObjectReference: apiv1.LocalObjectReference{
+					Name: f.getNameForResource(UtilitySecret),
+				},
+			},
+		})
+	case ContainerCloneName:
+		ss = append(ss, apiv1.EnvFromSource{
+			Prefix: "MYSQL_",
+			SecretRef: &apiv1.SecretEnvSource{
+				LocalObjectReference: apiv1.LocalObjectReference{
+					Name: f.cl.Spec.SecretName,
+				},
+			},
+		})
+		if len(f.cl.Spec.BackupBucketSecretName) != 0 {
+			ss = append(ss, apiv1.EnvFromSource{
+				SecretRef: &apiv1.SecretEnvSource{
+					LocalObjectReference: apiv1.LocalObjectReference{
+						Name: f.cl.Spec.InitBucketSecretName,
+					},
+				},
+			})
+		}
+	case ContainerMysqlName:
+		ss = append(ss, apiv1.EnvFromSource{
+			Prefix: "MYSQL_",
+			SecretRef: &apiv1.SecretEnvSource{
+				LocalObjectReference: apiv1.LocalObjectReference{
+					Name: f.cl.Spec.SecretName,
+				},
+			},
+		})
+	}
+	return ss
 }

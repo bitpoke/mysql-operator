@@ -95,9 +95,10 @@ type ClusterCondition struct {
 	// type of cluster condition, values in (\"Ready\")
 	Type ClusterConditionType `json:type`
 	// Status of the condition, one of (\"True\", \"False\", \"Unknown\")
-	Status ConditionStatus `json:status`
+	Status apiv1.ConditionStatus `json:status`
 
 	// optional TODO: detail each member.
+	// are optional
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
 	Reason             string      `json:"reason"`
 	Message            string      `json:"message"`
@@ -106,15 +107,10 @@ type ClusterCondition struct {
 type ClusterConditionType string
 
 const (
-	ClusterConditionReady ClusterConditionType = "Ready"
-)
+	ClusterConditionReady        ClusterConditionType = "Ready"
+	ClusterConditionInitDefaults ClusterConditionType = "InitDefaults"
 
-type ConditionStatus string
-
-const (
-	ConditionTrue    ConditionStatus = "True"
-	ConditionFalse   ConditionStatus = "False"
-	ConditionUnknown ConditionStatus = "Unknown"
+	ClusterConditionConfig ClusterConditionType = "ConfigReady"
 )
 
 type PodSpec struct {
