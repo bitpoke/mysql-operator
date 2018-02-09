@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	InnodbBufferSizePercent = 80
+	innodbBufferSizePercent = 80
 )
 
 var (
@@ -20,6 +20,7 @@ func init() {
 	opt = options.GetOptions()
 }
 
+// AsOwnerReference returns the MysqlCluster owner references.
 func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
 	trueVar := true
 	return metav1.OwnerReference{
@@ -31,10 +32,13 @@ func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
 	}
 }
 
+// UpdateDefaults sets the defaults for Spec and Status
 func (c *MysqlCluster) UpdateDefaults(opt *options.Options) error {
+	// TODO: add status defaults
 	return c.Spec.UpdateDefaults(opt)
 }
 
+// UpdateDefaults updates Spec defaults
 func (c *ClusterSpec) UpdateDefaults(opt *options.Options) error {
 	if len(c.MysqlVersion) == 0 {
 		c.MysqlVersion = opt.MysqlImageTag
@@ -47,7 +51,7 @@ func (c *ClusterSpec) UpdateDefaults(opt *options.Options) error {
 	// set innodb-buffer-pool-size as 80% of requested memory
 	if _, ok := c.MysqlConf["innodb-buffer-pool-size"]; !ok {
 		if mem := c.PodSpec.Resources.Requests.Memory(); mem != nil {
-			val := (InnodbBufferSizePercent * mem.Value()) / 100 // val is 80% of requested memory
+			val := (innodbBufferSizePercent * mem.Value()) / 100 // val is 80% of requested memory
 			res := resource.NewQuantity(val, resource.DecimalSI)
 			if len(c.MysqlConf) == 0 {
 				c.MysqlConf = make(MysqlConf)
@@ -60,26 +64,30 @@ func (c *ClusterSpec) UpdateDefaults(opt *options.Options) error {
 	return c.VolumeSpec.UpdateDefaults()
 }
 
+// GetReplicas returns the replicas for statefulset, which is (Spec.ReadReplicas + 1)
 func (c *ClusterSpec) GetReplicas() *int32 {
 	rep := c.ReadReplicas + 1
 	return &rep
 }
 
+// GetTitaniumImage return titanium image from options
 func (c *ClusterSpec) GetTitaniumImage() string {
 	return opt.TitaniumImage
 }
 
+// GetMysqlImage returns mysql image, composed from oprions and  Spec.MysqlVersion
 func (c *ClusterSpec) GetMysqlImage() string {
 	return opt.MysqlImage + ":" + c.MysqlVersion
 }
 
 const (
-	ResourceRequestCPU    = "200m"
-	ResourceRequestMemory = "1Gi"
+	resourceRequestCPU    = "200m"
+	resourceRequestMemory = "1Gi"
 
-	ResourceStorage = "8Gi"
+	resourceStorage = "8Gi"
 )
 
+// UpdateDefaults for PodSpec
 func (ps *PodSpec) UpdateDefaults(opt *options.Options) error {
 	if len(ps.ImagePullPolicy) == 0 {
 		ps.ImagePullPolicy = opt.ImagePullPolicy
@@ -89,14 +97,15 @@ func (ps *PodSpec) UpdateDefaults(opt *options.Options) error {
 	if len(ps.Resources.Requests) == 0 {
 		ps.Resources = apiv1.ResourceRequirements{
 			Requests: apiv1.ResourceList{
-				apiv1.ResourceCPU:    resource.MustParse(ResourceRequestCPU),
-				apiv1.ResourceMemory: resource.MustParse(ResourceRequestMemory),
+				apiv1.ResourceCPU:    resource.MustParse(resourceRequestCPU),
+				apiv1.ResourceMemory: resource.MustParse(resourceRequestMemory),
 			},
 		}
 	}
 	return nil
 }
 
+// UpdateDefaults for VolumeSpec
 func (vs *VolumeSpec) UpdateDefaults() error {
 	if len(vs.AccessModes) == 0 {
 		vs.AccessModes = []apiv1.PersistentVolumeAccessMode{
@@ -107,7 +116,7 @@ func (vs *VolumeSpec) UpdateDefaults() error {
 	if len(vs.Resources.Requests) == 0 {
 		vs.Resources = apiv1.ResourceRequirements{
 			Requests: apiv1.ResourceList{
-				apiv1.ResourceStorage: resource.MustParse(ResourceStorage),
+				apiv1.ResourceStorage: resource.MustParse(resourceStorage),
 			},
 		}
 	}

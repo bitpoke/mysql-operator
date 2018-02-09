@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
@@ -18,7 +19,9 @@ import (
 	"github.com/presslabs/titanium/pkg/util/options"
 )
 
+// Interface is for cluster Factory
 type Interface interface {
+	// Sync is the method that tries to sync the cluster.
 	Sync(ctx context.Context) error
 }
 
@@ -32,19 +35,23 @@ type cFactory struct {
 	client   kubernetes.Interface
 	cmclient clientset.Interface
 
+	rec record.EventRecorder
+
 	hlService      apiv1.Service
 	statefulSet    v1beta2.StatefulSet
 	configSecret   apiv1.Secret
 	configMapFiles apiv1.ConfigMap
 }
 
+// New creates a new cluster factory
 func New(cl *api.MysqlCluster, klient kubernetes.Interface,
-	cmclient clientset.Interface, ns string) Interface {
+	cmclient clientset.Interface, ns string, rec record.EventRecorder) Interface {
 	return &cFactory{
 		cl:        cl,
 		client:    klient,
 		cmclient:  cmclient,
 		namespace: ns,
+		rec:       rec,
 	}
 }
 
@@ -60,58 +67,64 @@ const (
 func (f *cFactory) Sync(ctx context.Context) error {
 	if len(f.cl.Spec.SecretName) == 0 {
 		err := fmt.Errorf("the Spec.SecretName is empty")
-		f.updateState(api.ClusterConditionConfig, statusFaild, err)
+		f.rec.Eventf(f.cl, api.EventWarning, api.EventReasonDbSecretFaild,
+			"faild to sync db-credentials secret: %s", err)
 		return err
 	}
 
-	s, err := f.syncDbCredentialsSecret()
-	f.updateState(api.ClusterConditionConfig, s, err)
-	if err != nil {
+	if err := f.syncDbCredentialsSecret(); err != nil {
+		f.rec.Eventf(f.cl, api.EventWarning, api.EventReasonDbSecretFaild,
+			"faild to sync db-credentials secret: %s", err)
 		return fmt.Errorf("db-credentials failed: %s", err)
 	}
-	s, err = f.syncUtilitySecret()
-	f.updateState(api.ClusterConditionConfig, s, err)
-	if err != nil {
+	f.rec.Eventf(f.cl, api.EventNormal, api.EventReasonDbSecretUpdated,
+		"db credentials secret was updated")
+
+	if err := f.syncUtilitySecret(); err != nil {
+		f.rec.Eventf(f.cl, api.EventWarning, api.EventReasonUtilitySecretFaild,
+			"faild to sync utility secret: %s", err)
 		return fmt.Errorf("utility-secret failed: %s", err)
 	}
-	s, err = f.syncConfigEnvSecret()
-	f.updateState(api.ClusterConditionConfig, s, err)
-	if err != nil {
+	f.rec.Eventf(f.cl, api.EventNormal, api.EventReasonUtilitySecretUpdated,
+		"utility secret was updated")
+
+	if err := f.syncConfigEnvSecret(); err != nil {
+		f.rec.Eventf(f.cl, api.EventWarning, api.EventReasonEnvSecretFaild,
+			"faild to sync config env secret: %s", err)
 		return fmt.Errorf("config secert failed: %s", err)
 	}
-	s, err = f.syncConfigMapFiles()
-	f.updateState(api.ClusterConditionConfig, s, err)
-	if err != nil {
+	f.rec.Eventf(f.cl, api.EventNormal, api.EventReasonEnvSecretUpdated,
+		"config env secret was updated")
+
+	if err := f.syncConfigMapFiles(); err != nil {
+		f.rec.Eventf(f.cl, api.EventWarning, api.EventReasonConfigMapFaild,
+			"faild to sync mysql config map: %s", err)
 		return fmt.Errorf("config map failed: %s", err)
 	}
-	s, err = f.syncHeadlessService()
-	f.updateState(api.ClusterConditionReady, s, err)
-	if err != nil {
+	f.rec.Eventf(f.cl, api.EventNormal, api.EventReasonConfigMapUpdated,
+		"config map was updated")
+
+	if err := f.syncHeadlessService(); err != nil {
+		f.rec.Eventf(f.cl, api.EventWarning, api.EventReasonServiceFaild,
+			"faild to sync headless service: %s", err)
 		return fmt.Errorf("headless service failed: %s", err)
 	}
-	s, err = f.syncStatefulSet()
-	f.updateState(api.ClusterConditionReady, s, err)
-	if err != nil {
+	f.rec.Eventf(f.cl, api.EventNormal, api.EventReasonServiceUpdated,
+		"headless service was updated")
+
+	if err := f.syncStatefulSet(); err != nil {
+		f.rec.Eventf(f.cl, api.EventWarning, api.EventReasonSFSFaild,
+			"faild to sync statefulset: %s", err)
 		return fmt.Errorf("statefulset failed: %s", err)
 	}
+	f.rec.Eventf(f.cl, api.EventNormal, api.EventReasonSFSUpdated,
+		"statefulset was updated")
 	return nil
 }
 
-func (f *cFactory) updateState(condType api.ClusterConditionType,
-	s string, err error) {
-	switch s {
-	case statusCreated, statusUpdated, statusUpToDate, statusOk:
-		f.cl.UpdateStatusCondition(condType, apiv1.ConditionTrue, "sync", "")
-	case statusFaild:
-		f.cl.UpdateStatusCondition(condType, apiv1.ConditionFalse, "sync", err.Error())
-	default:
-		fmt.Println("herherhehrehr")
-	}
-}
-
-func (f *cFactory) syncHeadlessService() (state string, err error) {
+func (f *cFactory) syncHeadlessService() error {
 	expHL := f.createHeadlessService()
-	state = statusUpToDate
+	state := statusUpToDate
 	defer func() {
 		glog.V(2).Infof("headless service...(%s)", state)
 	}()
@@ -121,15 +134,14 @@ func (f *cFactory) syncHeadlessService() (state string, err error) {
 	if errors.IsNotFound(err) {
 		state = statusCreated
 		_, err = servicesClient.Create(&expHL)
-		return
+		return err
 	} else if err != nil {
-		return
+		return err
 	}
 	if !metav1.IsControlledBy(hlSVC, f.cl) {
 		// log a warning to evant recorder...
 		state = statusFaild
-		err = fmt.Errorf("The service is not controlled by this resource!")
-		return
+		return fmt.Errorf("the selected resource not controlled by me")
 	}
 
 	// TODO: find a better condition
@@ -137,15 +149,15 @@ func (f *cFactory) syncHeadlessService() (state string, err error) {
 		state = statusUpdated
 		expHL.SetResourceVersion(hlSVC.GetResourceVersion())
 		_, err = servicesClient.Update(&expHL)
-		return
+		return err
 	}
 
-	return
+	return nil
 }
 
-func (f *cFactory) syncConfigEnvSecret() (state string, err error) {
+func (f *cFactory) syncConfigEnvSecret() error {
 	expCS := f.createEnvConfigSecret()
-	state = statusUpToDate
+	state := statusUpToDate
 	defer func() {
 		glog.V(2).Infof("secret config env...(%s)", state)
 	}()
@@ -155,29 +167,28 @@ func (f *cFactory) syncConfigEnvSecret() (state string, err error) {
 	if errors.IsNotFound(err) {
 		state = statusCreated
 		_, err = scrtClient.Create(&expCS)
-		return
+		return err
 	} else if err != nil {
-		return
+		return err
 	}
 	if !metav1.IsControlledBy(cfgSct, f.cl) {
 		// log a warning to evant recorder...
-		err = fmt.Errorf("The config env map is not controlled by this resource!")
-		return
+		return fmt.Errorf("the selected resource not controlled by me")
 	}
 
 	if !reflect.DeepEqual(cfgSct.Data, expCS.Data) {
 		state = statusUpdated
 		expCS.SetResourceVersion(cfgSct.GetResourceVersion())
 		_, err = scrtClient.Update(&expCS)
-		return
+		return err
 	}
 
-	return
+	return nil
 }
 
-func (f *cFactory) syncConfigMapFiles() (state string, err error) {
+func (f *cFactory) syncConfigMapFiles() error {
 	expCM := f.createConfigMapFiles()
-	state = statusUpToDate
+	state := statusUpToDate
 	defer func() {
 		glog.V(2).Infof("config map...(%s)", state)
 	}()
@@ -187,46 +198,44 @@ func (f *cFactory) syncConfigMapFiles() (state string, err error) {
 	if errors.IsNotFound(err) {
 		state = statusCreated
 		_, err = cmClient.Create(&expCM)
-		return
+		return err
 	} else if err != nil {
-		return
+		return err
 	}
 
 	if !metav1.IsControlledBy(cfgMap, f.cl) {
 		state = statusSkip
 		// log a warning to evant recorder...
-		err = fmt.Errorf("The config map files is not controlled by this resource!")
-		return
+		return fmt.Errorf("the selected resource not controlled by me")
 	}
 
 	if !reflect.DeepEqual(cfgMap.Data, expCM.Data) {
 		state = statusUpdated
 		expCM.SetResourceVersion(cfgMap.GetResourceVersion())
 		_, err = cmClient.Update(&expCM)
-		return
+		return err
 	}
 
-	return
+	return err
 }
 
-func (f *cFactory) syncDbCredentialsSecret() (state string, err error) {
-	state = statusOk
+func (f *cFactory) syncDbCredentialsSecret() error {
+	state := statusOk
 	defer func() {
 		glog.V(2).Infof("db credentials...(%s)", state)
 	}()
 	expSec := f.createDbCredentialSecret(f.cl.Spec.SecretName)
-	if _, err = kube.EnsureSecretKeys(f.client, expSec, true); err != nil {
+	if _, err := kube.EnsureSecretKeys(f.client, expSec, true); err != nil {
 		state = statusFaild
-		err = fmt.Errorf("fail to ensure secret: %s", err)
-		return
+		return fmt.Errorf("fail to ensure secret: %s", err)
 	}
 
-	return
+	return nil
 }
 
-func (f *cFactory) syncStatefulSet() (state string, err error) {
+func (f *cFactory) syncStatefulSet() error {
 	expSS := f.createStatefulSet()
-	state = statusUpToDate
+	state := statusUpToDate
 	defer func() {
 		glog.V(2).Infof("statefulset...(%s)", state)
 	}()
@@ -236,24 +245,23 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 	if errors.IsNotFound(err) {
 		state = statusCreated
 		_, err = sfsClient.Create(&expSS)
-		return
+		return err
 	} else if err != nil {
 		state = statusFaild
-		return
+		return err
 	}
 
 	if !metav1.IsControlledBy(sfs, f.cl) {
 		// log a warning to evant recorder...
 		state = statusFaild
-		err = fmt.Errorf("The config map files is not controlled by this resource!")
-		return
+		return fmt.Errorf("the selected resource not controlled by me")
 	}
 
 	if !statefulSetEqual(sfs, &expSS) {
 		state = statusUpdated
 		expSS.SetResourceVersion(sfs.GetResourceVersion())
 		_, err = sfsClient.Update(&expSS)
-		return
+		return err
 	}
 
 	if !reflect.DeepEqual(sfs.Spec, expSS.Spec) {
@@ -261,22 +269,21 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 		glog.V(2).Infof("statefulSet has changes that can't be applied")
 	}
 
-	return
+	return nil
 }
 
-func (f *cFactory) syncUtilitySecret() (state string, err error) {
+func (f *cFactory) syncUtilitySecret() error {
 	expS := f.createUtilitySecret()
-	state = statusOk
+	state := statusOk
 	defer func() {
 		glog.V(2).Infof("utility secret...(%s)", state)
 	}()
 
-	if _, err = kube.EnsureSecretKeys(f.client, expS, true); err != nil {
+	if _, err := kube.EnsureSecretKeys(f.client, expS, true); err != nil {
 		state = statusFaild
-		err = fmt.Errorf("fail to ensure secret: %s", err)
-		return
+		return fmt.Errorf("fail to ensure secret: %s", err)
 	}
-	return
+	return nil
 
 }
 

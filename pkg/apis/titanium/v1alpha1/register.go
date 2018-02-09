@@ -7,16 +7,21 @@ import (
 )
 
 const (
-	MysqlClusterCRDKind   = "MysqlCluster"
+	// MysqlClusterCRDKind is the kind of the crd that will be created.
+	MysqlClusterCRDKind = "MysqlCluster"
+	// MysqlClusterCRDPlural is the plural for mysqlcluster
 	MysqlClusterCRDPlural = "mysqlclusters"
 	groupName             = "titanium.presslabs.net"
 )
 
 var (
+	// SchemeBuilder the scheme builder
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
-	AddToScheme   = SchemeBuilder.AddToScheme
-
-	SchemeGroupVersion  = schema.GroupVersion{Group: groupName, Version: "v1alpha1"}
+	// AddToScheme function
+	AddToScheme = SchemeBuilder.AddToScheme
+	// SchemeGroupVersion ..
+	SchemeGroupVersion = schema.GroupVersion{Group: groupName, Version: "v1alpha1"}
+	// MysqlClusterCRDName the crd name
 	MysqlClusterCRDName = MysqlClusterCRDPlural + "." + groupName
 )
 
