@@ -9,6 +9,7 @@ import (
 	informers "github.com/presslabs/titanium/pkg/generated/informers/externalversions"
 )
 
+// Context contains the info that controller needs in order to run
 type Context struct {
 	// KubeClient is a Kubernetes clientset
 	KubeClient kubernetes.Interface

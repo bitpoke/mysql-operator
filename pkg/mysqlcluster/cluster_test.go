@@ -7,8 +7,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-	//k8sTest "k8s.io/client-go/testing"
-	//clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
+	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	fakeClientSet "github.com/presslabs/titanium/pkg/generated/clientset/versioned/fake"
@@ -71,7 +70,8 @@ func init() {
 	opt = newFakeOption()
 }
 
-func getFakeFactory(name string) (*fake.Clientset, *fakeClientSet.Clientset, *cFactory) {
+func getFakeFactory(name string) (*fake.Clientset, *fakeClientSet.Clientset,
+	*record.FakeRecorder, *cFactory) {
 	clientSet := fakeClientSet.NewSimpleClientset()
 	clusterFake := newFakeCluster(name)
 	if err := clusterFake.UpdateDefaults(opt); err != nil {
@@ -79,12 +79,14 @@ func getFakeFactory(name string) (*fake.Clientset, *fakeClientSet.Clientset, *cF
 	}
 
 	k8sClient := fake.NewSimpleClientset()
+	rec := record.NewFakeRecorder(100)
 
-	return k8sClient, clientSet, &cFactory{
+	return k8sClient, clientSet, rec, &cFactory{
 		cl:        clusterFake,
 		client:    k8sClient,
 		cmclient:  clientSet,
 		namespace: DefaultNamespace,
+		rec:       rec,
 	}
 }
 
@@ -95,7 +97,7 @@ func assertEqual(t *testing.T, left, right interface{}, msg string) {
 }
 
 func TestSyncClusterCreation(t *testing.T) {
-	client, _, f := getFakeFactory("test-cluster")
+	client, _, _, f := getFakeFactory("test-cluster")
 
 	tests := map[string]interface{}{
 		"services":     func() error { return f.SyncHeadlessService() },
@@ -132,7 +134,7 @@ func TestSyncClusterCreation(t *testing.T) {
 }
 
 func TestSyncClusterIfExistsNoUpdate(t *testing.T) {
-	client, _, f := getFakeFactory("test-cluster")
+	client, _, _, f := getFakeFactory("test-cluster")
 	ctx := context.TODO()
 	f.Sync(ctx)
 	client.ClearActions()
@@ -164,7 +166,7 @@ func TestSyncClusterIfExistsNoUpdate(t *testing.T) {
 }
 
 func TestSyncClusterIfExistsNeedsUpdate(t *testing.T) {
-	client, mcClient, f := getFakeFactory("test-cluster-nu")
+	client, mcClient, _, f := getFakeFactory("test-cluster-nu")
 	ctx := context.TODO()
 	f.Sync(ctx)
 	mc := f.GetMysqlCluster()
@@ -217,7 +219,7 @@ func TestSyncClusterIfExistsNeedsUpdate(t *testing.T) {
 }
 
 func TestPersistenceDisabledEnabled(t *testing.T) {
-	client, mcClient, f := getFakeFactory("test-cluster-2")
+	client, mcClient, _, f := getFakeFactory("test-cluster-2")
 	mc := f.GetMysqlCluster()
 
 	assertEqual(t, mc.Spec.VolumeSpec.PersistenceDisabled, false, "persistenceEnabled default")
@@ -235,7 +237,7 @@ func TestPersistenceDisabledEnabled(t *testing.T) {
 }
 
 func TestPersistenceEnabled(t *testing.T) {
-	client, mcClient, f := getFakeFactory("test-cluster-2")
+	client, mcClient, _, f := getFakeFactory("test-cluster-2")
 	mc := f.GetMysqlCluster()
 	mc.Spec.VolumeSpec.PersistenceDisabled = false
 

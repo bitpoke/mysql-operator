@@ -102,7 +102,7 @@ func RunTitaniumController(opts *options.TitaniumControllerOptions, stopCh <-cha
 				defer wg.Done()
 				glog.V(2).Infof("Starting %s controller", n)
 
-				err := fn(5, stopCh)
+				err := fn(opts.NoWorkers, stopCh)
 
 				if err != nil {
 					glog.Fatalf("error running %s controller: %s", n, err.Error())

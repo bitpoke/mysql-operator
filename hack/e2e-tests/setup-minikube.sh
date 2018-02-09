@@ -95,6 +95,19 @@ done
 
 
 echo "Create CRD ..."
-kubectl apply -f ../deploy/titanium-rbac.yaml
+path=$(dirname $0)
 
-sleep 1
+kubectl apply -f ${path}/../deploy/titanium-rbac.yaml
+
+echo "Wait for CRD to be ready..."
+
+j=0
+while [ $j -le 20 ]; do
+    myCrd="$(kubectl get crd -o go-template='{{ range .items }}{{ .metadata.name }}{{ "\n" }}{{end}}' | grep mysqlclusters)"
+    if [ "$myCrd" != "" ]; then
+        break
+    fi
+    echo "Wait 2s for CRD to be ready..."
+    sleep 2
+    j=$(( j + 1 ))
+done

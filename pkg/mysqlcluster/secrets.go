@@ -70,7 +70,7 @@ type dbCreds struct {
 	RootPassword string
 	ReplicaUser  string
 	ReplicaPass  string
-	DbConnectUrl string
+	DbConnectURL string
 }
 
 func (db *dbCreds) SetDefaults(host string) {
@@ -92,7 +92,7 @@ func (db *dbCreds) SetDefaults(host string) {
 	if len(db.RootPassword) == 0 {
 		db.RootPassword = util.RandomString(rStrLen)
 	}
-	db.DbConnectUrl = fmt.Sprintf(
+	db.DbConnectURL = fmt.Sprintf(
 		"mysql://%s:%s@%s/%s",
 		db.User, db.Password, host, db.Database,
 	)
@@ -129,7 +129,7 @@ func (db *dbCreds) ToData() map[string][]byte {
 		"ROOT_PASSWORD":        []byte(db.RootPassword),
 		"REPLICATION_USER":     []byte(db.ReplicaUser),
 		"REPLICATION_PASSWORD": []byte(db.ReplicaPass),
-		"DB_CONNECT_URL":       []byte(db.DbConnectUrl),
+		"DB_CONNECT_URL":       []byte(db.DbConnectURL),
 	}
 }
 

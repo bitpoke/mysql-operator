@@ -26,9 +26,11 @@ const (
 	initRetryWaitTime = 30 * time.Second
 	workerPeriodTime  = 1 * time.Second
 
+	// ControllerName is the name of this controller
 	ControllerName = "mysqlclusterController"
 )
 
+// Controller structure
 type Controller struct {
 	Namespace string
 
@@ -36,11 +38,13 @@ type Controller struct {
 	clusterInformerSync cache.InformerSynced
 	clusterLister       mclisters.MysqlClusterLister
 	mcclient            clientset.Interface
+	recorder            record.EventRecorder
 
 	queue    workqueue.RateLimitingInterface
 	workerWg sync.WaitGroup
 }
 
+// New returns a new controller
 func New(
 	// kubernetes client
 	kubecli kubernetes.Interface,
@@ -58,6 +62,7 @@ func New(
 		Namespace: namespace,
 		KubeCli:   kubecli,
 		mcclient:  mcclient,
+		recorder:  eventRecorder,
 	}
 
 	ctrl.queue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "mysqlcluster")
@@ -71,11 +76,12 @@ func New(
 
 }
 
+// Start method start workers.
 func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 	glog.V(2).Info("Starting controller ...")
 
 	if !cache.WaitForCacheSync(stopCh, c.clusterInformerSync) {
-		return fmt.Errorf("error waiting for informer cache to sync.")
+		return fmt.Errorf("error waiting for informer cache to sync")
 	}
 
 	for i := 0; i < workers; i++ {

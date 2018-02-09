@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	KeyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
+	keyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
 )
 
 // QueuingEventHandler is an implementation of cache.ResourceEventHandler that
@@ -18,8 +18,9 @@ type QueuingEventHandler struct {
 	Queue workqueue.RateLimitingInterface
 }
 
+// Enqueue puts object to queue
 func (q *QueuingEventHandler) Enqueue(obj interface{}) {
-	key, err := KeyFunc(obj)
+	key, err := keyFunc(obj)
 	if err != nil {
 		runtime.HandleError(err)
 		return
@@ -27,10 +28,12 @@ func (q *QueuingEventHandler) Enqueue(obj interface{}) {
 	q.Queue.Add(key)
 }
 
+// OnAdd is the method that enqueue obj
 func (q *QueuingEventHandler) OnAdd(obj interface{}) {
 	q.Enqueue(obj)
 }
 
+// OnUpdate enqueue new object
 func (q *QueuingEventHandler) OnUpdate(old, new interface{}) {
 	if reflect.DeepEqual(old, new) {
 		return
@@ -38,6 +41,7 @@ func (q *QueuingEventHandler) OnUpdate(old, new interface{}) {
 	q.Enqueue(new)
 }
 
+// OnDelete enqueue the deleted object
 func (q *QueuingEventHandler) OnDelete(obj interface{}) {
 	tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 	if ok {
@@ -53,14 +57,17 @@ type BlockingEventHandler struct {
 	WorkFunc func(obj interface{})
 }
 
+// Enqueue runs WorkFunc on obj
 func (b *BlockingEventHandler) Enqueue(obj interface{}) {
 	b.WorkFunc(obj)
 }
 
+// OnAdd enqueue obj
 func (b *BlockingEventHandler) OnAdd(obj interface{}) {
 	b.WorkFunc(obj)
 }
 
+// OnUpdate enqueue new object
 func (b *BlockingEventHandler) OnUpdate(old, new interface{}) {
 	if reflect.DeepEqual(old, new) {
 		return
@@ -68,6 +75,7 @@ func (b *BlockingEventHandler) OnUpdate(old, new interface{}) {
 	b.WorkFunc(new)
 }
 
+// OnDelete enqueue deleted obj
 func (b *BlockingEventHandler) OnDelete(obj interface{}) {
 	tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 	if ok {

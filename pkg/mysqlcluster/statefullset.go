@@ -9,17 +9,14 @@ import (
 )
 
 const (
-	ConfVolumeName      = "conf"
-	ConfVolumeMountPath = "/etc/mysql"
+	confVolumeName      = "conf"
+	confVolumeMountPath = "/etc/mysql"
 
-	ConfMapVolumeName      = "config-map"
-	ConfMapVolumeMountPath = "/mnt/config-map"
+	confMapVolumeName      = "config-map"
+	confMapVolumeMountPath = "/mnt/config-map"
 
-	InitSecretVolumeName      = "init-secrets"
-	InitSecretVolumeMountPath = "/var/run/secrets/buckets"
-
-	DataVolumeName      = "data"
-	DataVolumeMountPath = "/var/lib/mysql"
+	dataVolumeName      = "data"
+	dataVolumeMountPath = "/var/lib/mysql"
 )
 
 func (f *cFactory) createStatefulSet() v1beta2.StatefulSet {
@@ -61,37 +58,37 @@ func (f *cFactory) getPodTempalteSpec() apiv1.PodTemplateSpec {
 }
 
 const (
-	ContainerInitName     = "init-mysql"
-	ContainerCloneName    = "clone-mysql"
-	ContainerTitaniumName = "titanium"
-	ContainerMysqlName    = "mysql"
+	containerInitName     = "init-mysql"
+	containerCloneName    = "clone-mysql"
+	containerTitaniumName = "titanium"
+	containerMysqlName    = "mysql"
 )
 
 func (f *cFactory) getInitContainersSpec() []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
-			Name:            ContainerInitName,
+			Name:            containerInitName,
 			Image:           f.cl.Spec.GetTitaniumImage(),
 			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
 			Args:            []string{"files-config"},
-			EnvFrom:         f.getEnvSourcesFor(ContainerInitName),
+			EnvFrom:         f.getEnvSourcesFor(containerInitName),
 			VolumeMounts: []apiv1.VolumeMount{
 				apiv1.VolumeMount{
-					Name:      ConfVolumeName,
-					MountPath: ConfVolumeMountPath,
+					Name:      confVolumeName,
+					MountPath: confVolumeMountPath,
 				},
 				apiv1.VolumeMount{
-					Name:      ConfMapVolumeName,
-					MountPath: ConfMapVolumeMountPath,
+					Name:      confMapVolumeName,
+					MountPath: confMapVolumeMountPath,
 				},
 			},
 		},
 		apiv1.Container{
-			Name:            ContainerCloneName,
+			Name:            containerCloneName,
 			Image:           f.cl.Spec.GetTitaniumImage(),
 			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
 			Args:            []string{"clone"},
-			EnvFrom:         f.getEnvSourcesFor(ContainerCloneName),
+			EnvFrom:         f.getEnvSourcesFor(containerCloneName),
 			VolumeMounts:    getVolumeMounts(),
 		},
 	}
@@ -100,10 +97,10 @@ func (f *cFactory) getInitContainersSpec() []apiv1.Container {
 func (f *cFactory) getContainersSpec() []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
-			Name:            ContainerMysqlName,
+			Name:            containerMysqlName,
 			Image:           f.cl.Spec.GetMysqlImage(),
 			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
-			EnvFrom:         f.getEnvSourcesFor(ContainerMysqlName),
+			EnvFrom:         f.getEnvSourcesFor(containerMysqlName),
 			Ports: []apiv1.ContainerPort{
 				apiv1.ContainerPort{
 					Name:          MysqlPortName,
@@ -116,10 +113,10 @@ func (f *cFactory) getContainersSpec() []apiv1.Container {
 			VolumeMounts:   getVolumeMounts(),
 		},
 		apiv1.Container{
-			Name:    ContainerTitaniumName,
+			Name:    containerTitaniumName,
 			Image:   f.cl.Spec.GetTitaniumImage(),
 			Args:    []string{"config-and-serve"},
-			EnvFrom: f.getEnvSourcesFor(ContainerTitaniumName),
+			EnvFrom: f.getEnvSourcesFor(containerTitaniumName),
 			Ports: []apiv1.ContainerPort{
 				apiv1.ContainerPort{
 					Name:          TitaniumXtrabackupPortName,
@@ -169,13 +166,13 @@ func getReadinessProbe() *apiv1.Probe {
 func (f *cFactory) getVolumes() []apiv1.Volume {
 	return []apiv1.Volume{
 		apiv1.Volume{
-			Name: ConfVolumeName,
+			Name: confVolumeName,
 			VolumeSource: apiv1.VolumeSource{
 				EmptyDir: &apiv1.EmptyDirVolumeSource{},
 			},
 		},
 		apiv1.Volume{
-			Name: ConfMapVolumeName,
+			Name: confMapVolumeName,
 			VolumeSource: apiv1.VolumeSource{
 				ConfigMap: &apiv1.ConfigMapVolumeSource{
 					LocalObjectReference: apiv1.LocalObjectReference{
@@ -203,7 +200,7 @@ func (f *cFactory) getDataVolume() apiv1.Volume {
 	}
 
 	return apiv1.Volume{
-		Name:         DataVolumeName,
+		Name:         dataVolumeName,
 		VolumeSource: vs,
 	}
 }
@@ -211,12 +208,12 @@ func (f *cFactory) getDataVolume() apiv1.Volume {
 func getVolumeMounts(extra ...apiv1.VolumeMount) []apiv1.VolumeMount {
 	common := []apiv1.VolumeMount{
 		apiv1.VolumeMount{
-			Name:      ConfVolumeName,
-			MountPath: ConfVolumeMountPath,
+			Name:      confVolumeName,
+			MountPath: confVolumeMountPath,
 		},
 		apiv1.VolumeMount{
-			Name:      DataVolumeName,
-			MountPath: DataVolumeMountPath,
+			Name:      dataVolumeName,
+			MountPath: dataVolumeMountPath,
 		},
 	}
 
@@ -266,7 +263,7 @@ func (f *cFactory) getEnvSourcesFor(name string) []apiv1.EnvFromSource {
 		},
 	}
 	switch name {
-	case ContainerTitaniumName:
+	case containerTitaniumName:
 		ss = append(ss, apiv1.EnvFromSource{
 			Prefix: "MYSQL_",
 			SecretRef: &apiv1.SecretEnvSource{
@@ -284,7 +281,7 @@ func (f *cFactory) getEnvSourcesFor(name string) []apiv1.EnvFromSource {
 				},
 			})
 		}
-	case ContainerInitName:
+	case containerInitName:
 		ss = append(ss, apiv1.EnvFromSource{
 			SecretRef: &apiv1.SecretEnvSource{
 				LocalObjectReference: apiv1.LocalObjectReference{
@@ -292,7 +289,7 @@ func (f *cFactory) getEnvSourcesFor(name string) []apiv1.EnvFromSource {
 				},
 			},
 		})
-	case ContainerCloneName:
+	case containerCloneName:
 		ss = append(ss, apiv1.EnvFromSource{
 			Prefix: "MYSQL_",
 			SecretRef: &apiv1.SecretEnvSource{
@@ -310,7 +307,7 @@ func (f *cFactory) getEnvSourcesFor(name string) []apiv1.EnvFromSource {
 				},
 			})
 		}
-	case ContainerMysqlName:
+	case containerMysqlName:
 		ss = append(ss, apiv1.EnvFromSource{
 			Prefix: "MYSQL_",
 			SecretRef: &apiv1.SecretEnvSource{
