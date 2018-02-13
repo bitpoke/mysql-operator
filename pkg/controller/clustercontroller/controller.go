@@ -42,6 +42,8 @@ type Controller struct {
 
 	queue    workqueue.RateLimitingInterface
 	workerWg sync.WaitGroup
+
+	clustersOnce map[string]sync.Once
 }
 
 // New returns a new controller
@@ -65,13 +67,16 @@ func New(
 		recorder:  eventRecorder,
 	}
 
-	ctrl.queue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "mysqlcluster")
+	ctrl.queue = workqueue.NewNamedRateLimitingQueue(
+		workqueue.DefaultControllerRateLimiter(), "mysqlcluster")
 
 	// add handlers.
-	mysqlClusterInformer.Informer().AddEventHandler(&controllerpkg.QueuingEventHandler{Queue: ctrl.queue})
+	mysqlClusterInformer.Informer().AddEventHandler(
+		&controllerpkg.QueuingEventHandler{Queue: ctrl.queue})
+
 	ctrl.clusterInformerSync = mysqlClusterInformer.Informer().HasSynced
 	ctrl.clusterLister = mysqlClusterInformer.Lister()
-
+	ctrl.clustersOnce = make(map[string]sync.Once)
 	return ctrl
 
 }
@@ -100,6 +105,11 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 func (c *Controller) work(stopCh <-chan struct{}) {
 	defer c.workerWg.Done()
 	glog.V(2).Info("Starting worker.")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	ctx = util.ContextWithStopCh(ctx, stopCh)
+	defer cancel() // TODO: is safe?
+
 	for {
 		obj, shutdown := c.queue.Get()
 		if shutdown {
@@ -114,11 +124,6 @@ func (c *Controller) work(stopCh <-chan struct{}) {
 			if key, ok = obj.(string); !ok {
 				return nil
 			}
-
-			ctx, cancel := context.WithCancel(context.Background())
-			ctx = util.ContextWithStopCh(ctx, stopCh)
-			defer cancel() // TODO: is safe?
-
 			glog.V(2).Info(fmt.Sprintf("[%s controller]: syncing item '%s'", ControllerName, key))
 
 			// process items from queue
