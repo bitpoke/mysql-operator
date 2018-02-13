@@ -58,6 +58,7 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster, ns str
 		c.clustersOnce[cluster.Name] = once
 	}
 	func(name, ns string) {
+		// for every cluster start once a go rutine that recouncile the cluster in a loop
 		go once.Do(func() {
 			for {
 				select {
