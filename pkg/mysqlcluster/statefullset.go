@@ -3,7 +3,7 @@ package mysqlcluster
 import (
 	"fmt"
 
-	"k8s.io/api/apps/v1beta2"
+	"k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -19,14 +19,14 @@ const (
 	dataVolumeMountPath = "/var/lib/mysql"
 )
 
-func (f *cFactory) createStatefulSet() v1beta2.StatefulSet {
-	return v1beta2.StatefulSet{
+func (f *cFactory) createStatefulSet() v1.StatefulSet {
+	return v1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            f.getNameForResource(StatefulSet),
 			Labels:          f.getLabels(map[string]string{}),
 			OwnerReferences: f.getOwnerReferences(),
 		},
-		Spec: v1beta2.StatefulSetSpec{
+		Spec: v1.StatefulSetSpec{
 			Replicas: f.cl.Spec.GetReplicas(),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: f.getLabels(map[string]string{}),

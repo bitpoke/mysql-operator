@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -57,6 +58,7 @@ func SetupSignalHandler() (stopCh <-chan struct{}) {
 	go func() {
 		<-c
 		close(stop)
+		fmt.Println("Press C-c again to exit.")
 		<-c
 		os.Exit(1) // second signal. Exit directly.
 	}()
