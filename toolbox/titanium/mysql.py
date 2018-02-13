@@ -3,6 +3,7 @@ import time
 import logging
 import os.path
 import configparser
+import shutil
 
 import sh
 from sh.contrib import rclone  # pylint: disable=import-error
@@ -15,6 +16,9 @@ class MysqlNodeContext:
     This class contains all the logic for configuring and exposing backup
     of a mysql pod.
     """
+
+    CHECK_CONFIG_FILE = '/etc/mysql/initbeat'
+    CHECK_CLONE_FILE = '/etc/mysql/clonebeat'
 
     def __init__(self):
         self.hostname = utils.hostname()
@@ -31,6 +35,26 @@ class MysqlNodeContext:
 
     def exists_data(self):
         return os.path.exists(os.path.join(settings.MYSQL_DATA_DIR, 'mysql'))
+
+    def done_config(self):
+        """Creates an empty file that marks config phase was done successfully."""
+        f = open(self.CHECK_CONFIG_FILE, 'w+')
+        f.close()
+
+    def check_config(self):
+        if not os.path.exists(self.CHECK_CONFIG_FILE):
+            shutil.rmtree(settings.CONFIG_DIR)
+            raise RuntimeError('Config phase does not completed successfully. Abort.')
+
+    def done_clone(self):
+        """Creates an empty file that marks clone phase was done successfully."""
+        f = open(self.CHECK_CLONE_FILE, 'w+')
+        f.close()
+
+    def check_clone(self):
+        if not os.path.exists(self.CHECK_CLONE_FILE):
+            shutil.rmtree(settings.MYSQL_DATA_DIR)
+            raise RuntimeError('Clone phase does not completed successfully. Abort.')
 
 
 class ConfigPhase(MysqlNodeContext):
@@ -86,6 +110,8 @@ class ConfigPhase(MysqlNodeContext):
         with open(dest, 'w+') as f:
             config.write(f)
 
+        self.done_config()
+
 
 class InitPhase(MysqlNodeContext):
     """Runs in init container: clone-mysql."""
@@ -93,13 +119,16 @@ class InitPhase(MysqlNodeContext):
     def clone(self):
         """Clone data from source."""
 
+        self.check_config()
         # Skip the clone if data already exists,
         # this may happen when pods restarts
         if self.exists_data():
+            self.done_clone()
             return
 
         if self.is_master():
             if not settings.INIT_BUCKET_URI:
+                self.done_clone()
                 return
             # if is a master node and INIT_BUCKET_URI is set then clone for storage.
             self.get_data_from_storages(settings.INIT_BUCKET_URI)
@@ -111,6 +140,8 @@ class InitPhase(MysqlNodeContext):
             f'--user={settings.MASTER_REPLICATION_USER}',
             f'--password={settings.MASTER_REPLICATION_PASSWORD}'
         )
+
+        self.done_clone()
 
     def get_data_from_source_node(self):
         """
@@ -182,6 +213,7 @@ class RunningPhase(MysqlNodeContext):
         ))
 
     def configure(self):
+        self.check_clone()
         self.wait_until_ready()
 
         if self.is_master():
