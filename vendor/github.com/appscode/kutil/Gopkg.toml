@@ -1,0 +1,83 @@
+
+# Gopkg.toml example
+#
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[constraint]]
+#   name = "github.com/user/project2"
+#   branch = "dev"
+#   source = "github.com/myfork/project2"
+#
+# [[override]]
+#  name = "github.com/x/y"
+#  version = "2.4.0"
+
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/appscode/go"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/appscode/mergo"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/golang/glog"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/google/go-cmp"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/yudai/gojsondiff"
+
+[[constraint]]
+  name = "github.com/json-iterator/go"
+  version = "v1.0.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/hashicorp/go-version"
+  source = "https://github.com/appscode/go-version.git"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/spf13/afero"
+
+[[constraint]]
+  name = "github.com/fsnotify/fsnotify"
+  version = "v1.4.7"
+
+[[override]]
+  name = "k8s.io/api"
+  version = "kubernetes-1.9.0"
+
+[[override]]
+  name = "k8s.io/apiextensions-apiserver"
+  version = "kubernetes-1.9.0"
+
+[[override]]
+  name = "k8s.io/apimachinery"
+  version = "kubernetes-1.9.0"
+
+[[override]]
+  name = "k8s.io/client-go"
+  version = "v6.0.0"
+
+[[override]]
+  branch = "release-branch.go1.9"
+  name = "golang.org/x/net"
+
+[prune]
+  unused-packages = true
+  go-tests = true
