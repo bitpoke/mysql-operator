@@ -77,12 +77,6 @@ func (f *cFactory) getComponents() []component {
 			erUpdated: api.EventReasonDbSecretUpdated,
 		},
 		component{
-			name:      f.getNameForResource(UtilitySecret),
-			syncFn:    f.syncUtilitySecret,
-			erFaild:   api.EventReasonUtilitySecretFaild,
-			erUpdated: api.EventReasonUtilitySecretUpdated,
-		},
-		component{
 			name:      f.getNameForResource(EnvSecret),
 			syncFn:    f.syncConfigEnvSecret,
 			erFaild:   api.EventReasonEnvSecretFaild,
@@ -287,19 +281,6 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 			apiv1.ConditionFalse, "statefulset not ready", "Cluster is not ready.")
 	}
 	return
-}
-
-func (f *cFactory) syncUtilitySecret() (state string, err error) {
-	expS := f.createUtilitySecret()
-	state = statusOk
-
-	if _, err = kube.EnsureSecretKeys(f.client, expS, true); err != nil {
-		state = statusFaild
-		err = fmt.Errorf("fail to ensure secret: %s", err)
-		return
-	}
-	return
-
 }
 
 func (f *cFactory) getOwnerReferences(ors ...[]metav1.OwnerReference) []metav1.OwnerReference {

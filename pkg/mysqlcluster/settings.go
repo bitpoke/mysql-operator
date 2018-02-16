@@ -59,6 +59,10 @@ const (
 	EnvSecret ResourceName = "env-config"
 	// UtilitySecret is the alias for utility secret
 	UtilitySecret ResourceName = "utility"
+	// MasterService for connecting to master
+	MasterService = "master-mysql"
+	// Master Deployment resource name
+	MasterDeployment = "master"
 )
 
 func (f *cFactory) getNameForResource(name ResourceName) string {

@@ -2,7 +2,6 @@ package mysqlcluster
 
 import (
 	"fmt"
-	"time"
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,8 +67,6 @@ type dbCreds struct {
 	Password     string
 	Database     string
 	RootPassword string
-	ReplicaUser  string
-	ReplicaPass  string
 	DbConnectURL string
 }
 
@@ -82,12 +79,6 @@ func (db *dbCreds) SetDefaults(host string) {
 	}
 	if len(db.Database) == 0 {
 		db.Database = util.RandomString(rStrLen)
-	}
-	if len(db.ReplicaUser) == 0 {
-		db.ReplicaUser = util.RandomString(rStrLen)
-	}
-	if len(db.ReplicaPass) == 0 {
-		db.ReplicaPass = util.RandomString(rStrLen)
 	}
 	if len(db.RootPassword) == 0 {
 		db.RootPassword = util.RandomString(rStrLen)
@@ -112,24 +103,16 @@ func newCredsFrom(d map[string][]byte) dbCreds {
 	if v, ok := d["ROOT_PASSWORD"]; ok {
 		c.RootPassword = string(v)
 	}
-	if v, ok := d["REPLICATION_USER"]; ok {
-		c.ReplicaUser = string(v)
-	}
-	if v, ok := d["REPLICATION_PASSWORD"]; ok {
-		c.ReplicaPass = string(v)
-	}
 	return c
 }
 
 func (db *dbCreds) ToData() map[string][]byte {
 	return map[string][]byte{
-		"USER":                 []byte(db.User),
-		"PASSWORD":             []byte(db.Password),
-		"DATABASE":             []byte(db.Database),
-		"ROOT_PASSWORD":        []byte(db.RootPassword),
-		"REPLICATION_USER":     []byte(db.ReplicaUser),
-		"REPLICATION_PASSWORD": []byte(db.ReplicaPass),
-		"DB_CONNECT_URL":       []byte(db.DbConnectURL),
+		"USER":           []byte(db.User),
+		"PASSWORD":       []byte(db.Password),
+		"DATABASE":       []byte(db.Database),
+		"ROOT_PASSWORD":  []byte(db.RootPassword),
+		"DB_CONNECT_URL": []byte(db.DbConnectURL),
 	}
 }
 
@@ -138,28 +121,4 @@ func (f *cFactory) updateDbCredentialSecret(s *apiv1.Secret) *apiv1.Secret {
 	creds.SetDefaults(f.getPorHostName(0))
 	s.Data = creds.ToData()
 	return s
-}
-
-func (f *cFactory) createUtilitySecret() *apiv1.Secret {
-	configs := map[string]string{
-		"TITANIUM_UTILITY_USER":     util.RandomString(rStrLen),
-		"TITANIUM_UTILITY_PASSWORD": util.RandomString(rStrLen),
-	}
-	fConf := make(map[string][]byte)
-	for k, v := range configs {
-		fConf[k] = []byte(v)
-	}
-
-	return &apiv1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            f.getNameForResource(UtilitySecret),
-			Labels:          f.getLabels(map[string]string{}),
-			OwnerReferences: f.getOwnerReferences(),
-			Namespace:       f.namespace,
-			Annotations: map[string]string{
-				"last_updated": time.Now().String(),
-			},
-		},
-		Data: fConf,
-	}
 }

@@ -1,0 +1,29 @@
+package: github.com/appscode/go
+import:
+- package: github.com/beevik/ntp
+  version: v0.1.1
+- package: github.com/cenkalti/backoff
+  version: v1.1.0
+- package: github.com/codeskyblue/go-sh
+  version: master
+- package: github.com/facebookgo/stack
+- package: github.com/flosch/pongo2
+  version: master
+- package: github.com/ghodss/yaml
+  version: v1.0.0
+- package: github.com/golang/glog
+- package: github.com/golang/protobuf
+- package: github.com/google/go-querystring
+- package: github.com/google/uuid
+- package: github.com/mikespook/golib
+- package: github.com/spf13/cobra
+- package: github.com/spf13/pflag
+  version: v1.0.0
+- package: golang.org/x/crypto
+- package: github.com/json-iterator/go
+  version: 1.0.0
+- package: github.com/fsnotify/fsnotify
+  version: v1.4.7
+testImport:
+- package: github.com/stretchr/testify
+  version: v1.1.4

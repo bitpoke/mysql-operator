@@ -128,41 +128,6 @@ func (f *cFactory) getContainersSpec() []apiv1.Container {
 	}
 }
 
-func getLivenessProbe() *apiv1.Probe {
-	return &apiv1.Probe{
-		InitialDelaySeconds: 30,
-		TimeoutSeconds:      5,
-		PeriodSeconds:       10,
-		Handler: apiv1.Handler{
-			Exec: &apiv1.ExecAction{
-				Command: []string{
-					"mysqladmin",
-					"--defaults-file=/etc/mysql/client.cnf",
-					"ping",
-				},
-			},
-		},
-	}
-}
-
-func getReadinessProbe() *apiv1.Probe {
-	return &apiv1.Probe{
-		InitialDelaySeconds: 5,
-		TimeoutSeconds:      5,
-		PeriodSeconds:       10,
-		Handler: apiv1.Handler{
-			Exec: &apiv1.ExecAction{
-				Command: []string{
-					"mysql",
-					"--defaults-file=/etc/mysql/client.cnf",
-					"-e",
-					"SELECT 1",
-				},
-			},
-		},
-	}
-}
-
 func (f *cFactory) getVolumes() []apiv1.Volume {
 	return []apiv1.Volume{
 		apiv1.Volume{
