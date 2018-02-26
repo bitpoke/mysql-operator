@@ -65,9 +65,8 @@ func (c *ClusterSpec) UpdateDefaults(opt *options.Options) error {
 }
 
 // GetReplicas returns the replicas for statefulset, which is (Spec.ReadReplicas + 1)
-func (c *ClusterSpec) GetReplicas() *int32 {
-	rep := c.ReadReplicas + 1
-	return &rep
+func (c *ClusterSpec) GetReplicas() int32 {
+	return c.ReadReplicas + 1
 }
 
 // GetTitaniumImage return titanium image from options

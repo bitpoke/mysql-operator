@@ -2,6 +2,7 @@ package mysqlcluster
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -16,19 +17,19 @@ import (
 
 // The following function are helpers for accessing private members of cluster
 
-func (f *cFactory) SyncHeadlessService() error {
+func (f *cFactory) SyncHeadlessService() (string, error) {
 	return f.syncHeadlessService()
 }
 
-func (f *cFactory) SyncConfigEnvSecret() error {
+func (f *cFactory) SyncConfigEnvSecret() (string, error) {
 	return f.syncConfigEnvSecret()
 }
 
-func (f *cFactory) SyncConfigMapFiles() error {
+func (f *cFactory) SyncConfigMapFiles() (string, error) {
 	return f.syncConfigMapFiles()
 }
 
-func (f *cFactory) SyncStatefulSet() error {
+func (f *cFactory) SyncStatefulSet() (string, error) {
 	return f.syncStatefulSet()
 }
 
@@ -100,15 +101,15 @@ func TestSyncClusterCreation(t *testing.T) {
 	client, _, _, f := getFakeFactory("test-cluster")
 
 	tests := map[string]interface{}{
-		"services":     func() error { return f.SyncHeadlessService() },
-		"secrets":      func() error { return f.SyncConfigEnvSecret() },
-		"configmaps":   func() error { return f.SyncConfigMapFiles() },
-		"statefulsets": func() error { return f.SyncStatefulSet() },
+		"services":     func() (string, error) { return f.SyncHeadlessService() },
+		"secrets":      func() (string, error) { return f.SyncConfigEnvSecret() },
+		"configmaps":   func() (string, error) { return f.SyncConfigMapFiles() },
+		"statefulsets": func() (string, error) { return f.SyncStatefulSet() },
 	}
 
 	for rName, syncF := range tests {
 		// call the sync handler
-		if err := syncF.(func() error)(); err != nil {
+		if _, err := syncF.(func() (string, error))(); err != nil {
 			t.Error("Can't sync cluster.")
 		}
 		acts := client.Actions()
@@ -128,7 +129,8 @@ func TestSyncClusterCreation(t *testing.T) {
 	sfs, _ := sfC.Get(f.GetNameForResource(StatefulSet), metav1.GetOptions{})
 
 	mc := f.GetMysqlCluster()
-	assertEqual(t, *sfs.Spec.Replicas, *mc.Spec.GetReplicas(), "")
+	fmt.Println(sfs.Spec.Replicas)
+	assertEqual(t, *sfs.Spec.Replicas, mc.Spec.ReadReplicas, "")
 
 	assertEqual(t, sfs.Spec.Template.Spec.Containers[0].Image, mc.Spec.GetMysqlImage(), "")
 }
@@ -140,15 +142,15 @@ func TestSyncClusterIfExistsNoUpdate(t *testing.T) {
 	client.ClearActions()
 
 	tests := map[string]interface{}{
-		"services":     func() error { return f.SyncHeadlessService() },
-		"secrets":      func() error { return f.SyncConfigEnvSecret() },
-		"configmaps":   func() error { return f.SyncConfigMapFiles() },
-		"statefulsets": func() error { return f.SyncStatefulSet() },
+		"services":     func() (string, error) { return f.SyncHeadlessService() },
+		"secrets":      func() (string, error) { return f.SyncConfigEnvSecret() },
+		"configmaps":   func() (string, error) { return f.SyncConfigMapFiles() },
+		"statefulsets": func() (string, error) { return f.SyncStatefulSet() },
 	}
 
 	for rName, syncF := range tests {
 		// call the sync handler
-		if err := syncF.(func() error)(); err != nil {
+		if _, err := syncF.(func() (string, error))(); err != nil {
 			t.Error("Can't sync cluster.")
 		}
 
@@ -177,22 +179,25 @@ func TestSyncClusterIfExistsNeedsUpdate(t *testing.T) {
 
 	client.ClearActions()
 	type tuple struct {
-		f    func() error
+		f    func() (string, error)
 		acts []string
 	}
 	tests := map[string]tuple{
-		"services":   tuple{func() error { return f.SyncHeadlessService() }, []string{"get"}},
-		"secrets":    tuple{func() error { return f.SyncConfigEnvSecret() }, []string{"get"}},
-		"configmaps": tuple{func() error { return f.SyncConfigMapFiles() }, []string{"get"}},
+		"services": tuple{
+			func() (string, error) { return f.SyncHeadlessService() }, []string{"get"}},
+		"secrets": tuple{
+			func() (string, error) { return f.SyncConfigEnvSecret() }, []string{"get"}},
+		"configmaps": tuple{
+			func() (string, error) { return f.SyncConfigMapFiles() }, []string{"get"}},
 		"statefulsets": tuple{
-			func() error { return f.SyncStatefulSet() },
+			func() (string, error) { return f.SyncStatefulSet() },
 			[]string{"get", "update"},
 		},
 	}
 
 	for rName, tup := range tests {
 		// call the sync handler
-		if err := tup.f(); err != nil {
+		if _, err := tup.f(); err != nil {
 			t.Error("Can't sync cluster.")
 		}
 
@@ -215,7 +220,7 @@ func TestSyncClusterIfExistsNeedsUpdate(t *testing.T) {
 	sfC := client.AppsV1beta2().StatefulSets(DefaultNamespace)
 	sfs, _ := sfC.Get(f.GetNameForResource(StatefulSet), metav1.GetOptions{})
 
-	assertEqual(t, *sfs.Spec.Replicas, *mc.Spec.GetReplicas(), "")
+	assertEqual(t, *sfs.Spec.Replicas, mc.Spec.ReadReplicas, "")
 }
 
 func TestPersistenceDisabledEnabled(t *testing.T) {
