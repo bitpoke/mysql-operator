@@ -27,7 +27,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/presslabs/titanium/cmd/toolbox/appclone"
+	"github.com/presslabs/titanium/cmd/toolbox/appconf"
 	"github.com/presslabs/titanium/cmd/toolbox/appinit"
+	tb "github.com/presslabs/titanium/cmd/toolbox/util"
 	"github.com/presslabs/titanium/pkg/util/logs"
 )
 
@@ -37,7 +39,7 @@ func main() {
 	stopCh := SetupSignalHandler()
 
 	cmd := &cobra.Command{
-		Use:   "titanium-toolbox",
+		Use:   "toolbox",
 		Short: fmt.Sprintf("Titanium operator toolbox."),
 		Long: `
 titanium-toolbox: helper for config pods`,
@@ -46,18 +48,18 @@ titanium-toolbox: helper for config pods`,
 		},
 	}
 
-	initCmd := &cobra.Command{
+	confCmd := &cobra.Command{
 		Use:   "init-configs",
 		Short: "Init subcommand, for init files.",
 		Run: func(cmd *cobra.Command, args []string) {
-			err := appinit.RunInitCommand(stopCh)
+			err := appconf.RunConfigCommand(stopCh)
 			if err != nil {
 				glog.Fatalf("Init command failed with error: %s .", err)
 			}
 
 		},
 	}
-	cmd.AddCommand(initCmd)
+	cmd.AddCommand(confCmd)
 
 	cloneCmd := &cobra.Command{
 		Use:   "clone",
@@ -71,7 +73,31 @@ titanium-toolbox: helper for config pods`,
 	}
 	cmd.AddCommand(cloneCmd)
 
-	cmd.Flags().AddGoFlagSet(flag.CommandLine)
+	initCmd := &cobra.Command{
+		Use:   "init-mysql",
+		Short: "Configs mysql replication, crete replication users.",
+		Run: func(cmd *cobra.Command, args []string) {
+			err := appinit.RunInitCommand(stopCh)
+			if err != nil {
+				glog.Fatalf("Init mysql command failed with error: %s .", err)
+			}
+		},
+	}
+	cmd.AddCommand(initCmd)
+
+	serveCmd := &cobra.Command{
+		Use:   "serve-backups",
+		Short: fmt.Sprintf("Expose xtra-backups on port %s.", tb.BackupPort),
+		Run: func(cmd *cobra.Command, args []string) {
+			err := appinit.RunInitCommand(stopCh)
+			if err != nil {
+				glog.Fatalf("Init mysql command failed with error: %s .", err)
+			}
+		},
+	}
+	cmd.AddCommand(serveCmd)
+
+	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 	flag.CommandLine.Parse([]string{})
 	if err := cmd.Execute(); err != nil {
 		glog.Fatal(err)

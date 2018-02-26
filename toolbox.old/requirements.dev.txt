@@ -1,6 +1,0 @@
-pytest==3.2.5
-pyyaml==3.12
-backoff==1.4.3
-sh==1.12.13
-PyMySQL==0.7.11
-kubernetes==4.0.0

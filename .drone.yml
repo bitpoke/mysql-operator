@@ -35,7 +35,6 @@ pipeline:
     registry: gcr.io
     repo: gcr.io/pl-infra/titanium-toolbox
     dockerfile: toolbox/Dockerfile
-    context: toolbox/
     username: _json_key
     tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
     force_tag: true
