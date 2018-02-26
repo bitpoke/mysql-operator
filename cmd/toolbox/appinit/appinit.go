@@ -17,56 +17,85 @@ limitations under the License.
 package appinit
 
 import (
+	"bytes"
 	"fmt"
-	"strconv"
+	"os/exec"
+	"strings"
 
-	"github.com/go-ini/ini"
 	"github.com/golang/glog"
-
 	tb "github.com/presslabs/titanium/cmd/toolbox/util"
-	"github.com/presslabs/titanium/pkg/util"
 )
 
 const (
-	MountConf = "/mnt/conf"
-	ConfDir   = "/etc/mysql"
-
-	rStrLen = 18
+	// timeOut represents the number of tries to check mysql to be ready.
+	timeOut = 20
+	// connRetry represents the number of tries to connect to master server
+	connRetry = 10
 )
 
-// RunInitCommand generates my.cnf file.
-// With server-id, utility-user, and utility-user-password.
 func RunInitCommand(stopCh <-chan struct{}) error {
-	role := tb.NodeRole()
-	glog.Infof("Configuring server: %s as %s", tb.GetHostname(), role)
+	glog.Infof("Starting initialization...")
 
-	cfg, err := ini.Load(MountConf + "/server-cnf")
-	if err != nil {
-		return fmt.Errorf("failed to load configs, err: %s", err)
+	glog.V(2).Info("Wait for mysql to be ready.")
+
+	for i := 0; i < timeOut; i++ {
+		if _, err := runQuery("SELECT 1"); err != nil {
+			continue
+		}
+	}
+	glog.V(2).Info("Mysql is ready.")
+
+	if tb.NodeRole() == "master" {
+		// master configs
+		query := fmt.Sprintf(
+			"GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, "+
+				"REPLICATION SLAVE, ON *.* TO '%s'@'%%' IDENTIFIED BY '%s'",
+			tb.GetReplUser(), tb.GetReplPass())
+
+		if _, err := runQuery(query); err != nil {
+			return fmt.Errorf("failed to configure master node, err: %s", err)
+		}
+	} else {
+		// slave node
+		query := fmt.Sprintf(
+			"CHANGE MASTER TO MASTER_AUTO_POSITION=1,"+
+				"MASTER_HOST='%s',"+
+				"MASTER_USER='%s',"+
+				"MASTER_PASSWORD='%s',"+
+				"MASTER_CONNECT_RETRY='%s'",
+			tb.GetMasterService(), tb.GetReplUser(), tb.GetReplPass(), connRetry)
+
+		if _, err := runQuery(query); err != nil {
+			return fmt.Errorf("failed to configure slave node, err: %s", err)
+		}
 	}
 
-	mysqld, err := cfg.GetSection("mysqld")
-	if err != nil {
-		return fmt.Errorf("failed to load configs, err: %s", err)
-	}
-
-	uName := util.RandomString(rStrLen)
-	uPass := util.RandomString(rStrLen)
-
-	mysqld.NewKey("server-id", strconv.Itoa(tb.GetServerId()))
-	mysqld.NewKey("utility-user", uName)
-	mysqld.NewKey("utility-user-password", uPass)
-
-	client, err := cfg.GetSection("client")
-	if err != nil {
-		return fmt.Errorf("failed to load configs, err: %s", err)
-	}
-	client.NewKey("user", uName)
-	client.NewKey("password", uPass)
-
-	err = cfg.SaveTo(ConfDir + "/my.cnf")
-	if err != nil {
-		return fmt.Errorf("failed to save configs, err: %s", err)
-	}
 	return nil
+}
+
+func runQuery(q string) (string, error) {
+	mysql := exec.Command("mysql")
+
+	// write query through pipe to mysql
+	rq := strings.NewReader(q)
+	mysql.Stdin = rq
+
+	out, err := mysql.StdoutPipe()
+	if err != nil {
+		return "", err
+	}
+	defer out.Close()
+
+	if err := mysql.Run(); err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(out); err != nil {
+		return "", err
+	}
+
+	glog.V(3).Infof("Mysql output for query %s is: %s", q, buf.String())
+
+	return buf.String(), nil
 }

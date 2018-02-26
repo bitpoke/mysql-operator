@@ -30,13 +30,16 @@ EOF
 # exec command
 case "$1" in
     files-config)
-        db config_files
+        shift 1
+        toolbox "$@" init-configs
         ;;
     clone)
-        db clone
+        shift 1
+        toolbox "$@" clone
         ;;
     config-and-serve)
-        db configure; db serve_backups
+        shift 1
+        toolbox "$@" init-mysql; toolbox "$@" serve-backups
         ;;
     *)
         echo "Usage: $0 {files-config|clone|config-and-serve}"
