@@ -27,7 +27,7 @@ func (f *cFactory) createStatefulSet() v1.StatefulSet {
 			OwnerReferences: f.getOwnerReferences(),
 		},
 		Spec: v1.StatefulSetSpec{
-			Replicas: f.cl.Spec.GetReplicas(),
+			Replicas: &f.cl.Spec.ReadReplicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: f.getLabels(map[string]string{}),
 			},
