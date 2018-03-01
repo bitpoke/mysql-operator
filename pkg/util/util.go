@@ -3,7 +3,9 @@ package util
 import (
 	"crypto/rand"
 	"encoding/base64"
+	mrand "math/rand"
 	"os"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
@@ -14,6 +16,10 @@ import (
 
 	"github.com/presslabs/titanium/pkg/util/constants"
 )
+
+func init() {
+	mrand.Seed(time.Now().UnixNano())
+}
 
 func GetPodNamespace() string {
 	ns := os.Getenv(constants.EnvOperatorPodNamespace)
@@ -54,4 +60,14 @@ func RandomString(length int) string {
 		panic(err)
 	}
 	return base64.StdEncoding.EncodeToString(buf)
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func RandStringUser(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[mrand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }

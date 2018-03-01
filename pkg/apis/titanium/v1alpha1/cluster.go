@@ -64,11 +64,6 @@ func (c *ClusterSpec) UpdateDefaults(opt *options.Options) error {
 	return c.VolumeSpec.UpdateDefaults()
 }
 
-// GetReplicas returns the replicas for statefulset, which is (Spec.ReadReplicas + 1)
-func (c *ClusterSpec) GetReplicas() int32 {
-	return c.ReadReplicas + 1
-}
-
 // GetTitaniumImage return titanium image from options
 func (c *ClusterSpec) GetTitaniumImage() string {
 	return opt.TitaniumImage

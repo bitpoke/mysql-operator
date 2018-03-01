@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	tb "github.com/presslabs/titanium/cmd/toolbox/util"
@@ -28,7 +29,7 @@ import (
 
 const (
 	// timeOut represents the number of tries to check mysql to be ready.
-	timeOut = 20
+	timeOut = 60
 	// connRetry represents the number of tries to connect to master server
 	connRetry = 10
 )
@@ -39,9 +40,14 @@ func RunInitCommand(stopCh <-chan struct{}) error {
 	glog.V(2).Info("Wait for mysql to be ready.")
 
 	for i := 0; i < timeOut; i++ {
-		if _, err := runQuery("SELECT 1"); err != nil {
-			continue
+		time.Sleep(1 * time.Second)
+		if _, err := runQuery("SELECT 1"); err == nil {
+			break
 		}
+	}
+	if _, err := runQuery("SELECT 1"); err != nil {
+		glog.V(2).Info("Mysql is not ready.")
+		return err
 	}
 	glog.V(2).Info("Mysql is ready.")
 
@@ -49,7 +55,7 @@ func RunInitCommand(stopCh <-chan struct{}) error {
 		// master configs
 		query := fmt.Sprintf(
 			"GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, "+
-				"REPLICATION SLAVE, ON *.* TO '%s'@'%%' IDENTIFIED BY '%s'",
+				"REPLICATION SLAVE ON *.* TO '%s'@'%%' IDENTIFIED BY '%s'",
 			tb.GetReplUser(), tb.GetReplPass())
 
 		if _, err := runQuery(query); err != nil {
@@ -62,8 +68,8 @@ func RunInitCommand(stopCh <-chan struct{}) error {
 				"MASTER_HOST='%s',"+
 				"MASTER_USER='%s',"+
 				"MASTER_PASSWORD='%s',"+
-				"MASTER_CONNECT_RETRY='%s'",
-			tb.GetMasterService(), tb.GetReplUser(), tb.GetReplPass(), connRetry)
+				"MASTER_CONNECT_RETRY=%d",
+			tb.GetMasterHost(), tb.GetReplUser(), tb.GetReplPass(), connRetry)
 
 		if _, err := runQuery(query); err != nil {
 			return fmt.Errorf("failed to configure slave node, err: %s", err)
@@ -74,28 +80,27 @@ func RunInitCommand(stopCh <-chan struct{}) error {
 }
 
 func runQuery(q string) (string, error) {
-	mysql := exec.Command("mysql")
+	glog.V(3).Infof("QUERY: %s", q)
+
+	mysql := exec.Command("mysql",
+		fmt.Sprintf("--defaults-file=%s/%s", tb.ConfigDir, "client.cnf"),
+	)
 
 	// write query through pipe to mysql
 	rq := strings.NewReader(q)
 	mysql.Stdin = rq
-
-	out, err := mysql.StdoutPipe()
-	if err != nil {
-		return "", err
-	}
-	defer out.Close()
+	var bufOUT, bufERR bytes.Buffer
+	mysql.Stdout = &bufOUT
+	mysql.Stderr = &bufERR
 
 	if err := mysql.Run(); err != nil {
+		glog.Errorf("Failed to run query, err: %s", err)
+		glog.V(2).Infof("Mysql STDOUT: %s, STDERR: %s", bufOUT.String(), bufERR.String())
 		return "", err
 	}
 
-	var buf bytes.Buffer
-	if _, err := buf.ReadFrom(out); err != nil {
-		return "", err
-	}
+	glog.V(2).Infof("Mysql STDOUT: %s, STDERR: %s", bufOUT.String(), bufERR.String())
+	glog.V(3).Infof("Mysql output for query %s is: %s", q, bufOUT.String())
 
-	glog.V(3).Infof("Mysql output for query %s is: %s", q, buf.String())
-
-	return buf.String(), nil
+	return bufOUT.String(), nil
 }

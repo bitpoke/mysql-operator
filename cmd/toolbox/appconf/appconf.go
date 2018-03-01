@@ -28,9 +28,6 @@ import (
 )
 
 const (
-	MountConf = "/mnt/conf"
-	ConfDir   = "/etc/mysql"
-
 	rStrLen = 18
 )
 
@@ -40,7 +37,11 @@ func RunConfigCommand(stopCh <-chan struct{}) error {
 	role := tb.NodeRole()
 	glog.Infof("Configuring server: %s as %s", tb.GetHostname(), role)
 
-	cfg, err := ini.Load(MountConf + "/server-cnf")
+	cfgFileName := tb.MountConfigDir + "/server-master-cnf"
+	if role == "slave" {
+		cfgFileName = tb.MountConfigDir + "/server-slave-cnf"
+	}
+	cfg, err := ini.Load(cfgFileName)
 	if err != nil {
 		return fmt.Errorf("failed to load configs, err: %s", err)
 	}
@@ -50,23 +51,33 @@ func RunConfigCommand(stopCh <-chan struct{}) error {
 		return fmt.Errorf("failed to load configs, err: %s", err)
 	}
 
-	uName := util.RandomString(rStrLen)
+	uName := fmt.Sprintf("%s@%%", tb.UtilityUser)
 	uPass := util.RandomString(rStrLen)
 
 	mysqld.NewKey("server-id", strconv.Itoa(tb.GetServerId()))
 	mysqld.NewKey("utility-user", uName)
 	mysqld.NewKey("utility-user-password", uPass)
 
-	client, err := cfg.GetSection("client")
-	if err != nil {
-		return fmt.Errorf("failed to load configs, err: %s", err)
-	}
-	client.NewKey("user", uName)
-	client.NewKey("password", uPass)
-
-	err = cfg.SaveTo(ConfDir + "/my.cnf")
+	err = cfg.SaveTo(tb.ConfigDir + "/my.cnf")
 	if err != nil {
 		return fmt.Errorf("failed to save configs, err: %s", err)
 	}
+
+	cfg = ini.Empty()
+	// create file /etc/mysql/client.cnf
+	client, err := cfg.NewSection("client")
+	if err != nil {
+		return fmt.Errorf("failed to load configs, err: %s", err)
+	}
+	client.NewKey("host", "127.0.0.1")
+	client.NewKey("port", tb.MysqlPort)
+	client.NewKey("user", tb.UtilityUser)
+	client.NewKey("password", uPass)
+
+	err = cfg.SaveTo(tb.ConfigDir + "/client.cnf")
+	if err != nil {
+		return fmt.Errorf("failed to save configs, err: %s", err)
+	}
+
 	return nil
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/presslabs/titanium/cmd/toolbox/appclone"
 	"github.com/presslabs/titanium/cmd/toolbox/appconf"
 	"github.com/presslabs/titanium/cmd/toolbox/appinit"
+	"github.com/presslabs/titanium/cmd/toolbox/appservebackup"
 	tb "github.com/presslabs/titanium/cmd/toolbox/util"
 	"github.com/presslabs/titanium/pkg/util/logs"
 )
@@ -89,7 +90,7 @@ titanium-toolbox: helper for config pods`,
 		Use:   "serve-backups",
 		Short: fmt.Sprintf("Expose xtra-backups on port %s.", tb.BackupPort),
 		Run: func(cmd *cobra.Command, args []string) {
-			err := appinit.RunInitCommand(stopCh)
+			err := appservebackup.RunServeBackupCommand(stopCh)
 			if err != nil {
 				glog.Fatalf("Init mysql command failed with error: %s .", err)
 			}
