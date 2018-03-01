@@ -18,6 +18,8 @@ const (
 	TitaniumXtrabackupPortName = "xtrabackup"
 	// TitaniumXtrabackupPort is the port on which we serve backups
 	TitaniumXtrabackupPort = 3307
+
+	rStrLen = 18
 )
 
 var (
@@ -26,9 +28,12 @@ var (
 
 	// MysqlMasterSlaveConfigs contains configs for both master and slave
 	MysqlMasterSlaveConfigs = map[string]string{
-		"default-storage-engine":   "InnoDB",
-		"gtid-mode":                "on",
-		"enforce-gtid-consistency": "on",
+		"default-storage-engine":     "InnoDB",
+		"gtid-mode":                  "on",
+		"enforce-gtid-consistency":   "on",
+		"utility-user-schema-access": "mysql",
+		// TODO: least privileges principle
+		"utility-user-privileges": "SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,GRANT,ALTER,SHOW DATABASES,SUPER,CREATE USER,PROCESS,RELOAD,LOCK TABLES,REPLICATION CLIENT,REPLICATION SLAVE",
 	}
 	// MysqlMasterConfigs represents configs specific to master
 	MysqlMasterConfigs = map[string]string{
@@ -57,19 +62,13 @@ const (
 	VolumePVC ResourceName = "mysql-data"
 	// EnvSecret is the alias for secret that contains env variables
 	EnvSecret ResourceName = "env-config"
-	// UtilitySecret is the alias for utility secret
-	UtilitySecret ResourceName = "utility"
-	// MasterService for connecting to master
-	MasterService = "master-mysql"
-	// Master Deployment resource name
-	MasterDeployment = "master"
 )
 
 func (f *cFactory) getNameForResource(name ResourceName) string {
 	return fmt.Sprintf("%s-%s", f.cl.Name, name)
 }
 
-func (f *cFactory) getPorHostName(p int) string {
+func (f *cFactory) getPodHostName(p int) string {
 	pod := fmt.Sprintf("%s-%d", f.getNameForResource(StatefulSet), p)
 	return fmt.Sprintf("%s.%s", pod, f.getNameForResource(HeadlessSVC))
 }

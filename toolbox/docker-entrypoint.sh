@@ -27,19 +27,22 @@ cat <<EOF > /tmp/google-credentials.json
 ${GCS_SERVICE_ACCOUNT_JSON_KEY}
 EOF
 
+VERBOSE="-v 3"
+#VERBOSE="-v 3"
+
 # exec command
 case "$1" in
     files-config)
         shift 1
-        toolbox "$@" init-configs
+        toolbox  $VERBOSE "$@" init-configs
         ;;
     clone)
         shift 1
-        toolbox "$@" clone
+        toolbox $VERBOSE "$@" clone
         ;;
     config-and-serve)
         shift 1
-        toolbox "$@" init-mysql; toolbox "$@" serve-backups
+        toolbox $VERBOSE "$@" init-mysql; toolbox $VERBOSE "$@" serve-backups
         ;;
     *)
         echo "Usage: $0 {files-config|clone|config-and-serve}"

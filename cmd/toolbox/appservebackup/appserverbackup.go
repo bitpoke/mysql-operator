@@ -35,5 +35,5 @@ func RunServeBackupCommand(stopCh <-chan struct{}) error {
 	ncat := exec.Command("ncat", "--listen", "--keep-open", "--send-only", "--max-conns=1",
 		tb.BackupPort, "-c", strings.Join(xtrabackup_cmd, " "))
 
-	return ncat.Start()
+	return ncat.Run()
 }

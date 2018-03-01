@@ -3,19 +3,15 @@ package mysqlcluster
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/golang/glog"
 	"k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
-	"github.com/presslabs/titanium/pkg/util/kube"
 	"github.com/presslabs/titanium/pkg/util/options"
 )
 
@@ -78,13 +74,13 @@ func (f *cFactory) getComponents() []component {
 		},
 		component{
 			name:      f.getNameForResource(EnvSecret),
-			syncFn:    f.syncConfigEnvSecret,
+			syncFn:    f.syncEnvSecret,
 			erFaild:   api.EventReasonEnvSecretFaild,
 			erUpdated: api.EventReasonEnvSecretUpdated,
 		},
 		component{
 			name:      f.getNameForResource(ConfigMap),
-			syncFn:    f.syncConfigMapFiles,
+			syncFn:    f.syncConfigMysqlMap,
 			erFaild:   api.EventReasonConfigMapFaild,
 			erUpdated: api.EventReasonConfigMapUpdated,
 		},
@@ -104,12 +100,6 @@ func (f *cFactory) getComponents() []component {
 }
 
 func (f *cFactory) Sync(ctx context.Context) error {
-	if len(f.cl.Spec.SecretName) == 0 {
-		err := fmt.Errorf("the Spec.SecretName is empty")
-		f.rec.Eventf(f.cl, api.EventWarning, api.EventReasonDbSecretFaild,
-			"faild to sync db-credentials secret: %s", err)
-		return err
-	}
 
 	for _, comp := range f.getComponents() {
 		state, err := comp.syncFn()
@@ -126,161 +116,6 @@ func (f *cFactory) Sync(ctx context.Context) error {
 		}
 	}
 	return nil
-}
-
-func (f *cFactory) syncHeadlessService() (state string, err error) {
-	expHL := f.createHeadlessService()
-	state = statusUpToDate
-
-	servicesClient := f.client.CoreV1().Services(f.namespace)
-	hlSVC, err := servicesClient.Get(f.getNameForResource(HeadlessSVC), metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		state = statusCreated
-		_, err = servicesClient.Create(&expHL)
-		return
-	} else if err != nil {
-		return
-	}
-	if !metav1.IsControlledBy(hlSVC, f.cl) {
-		// log a warning to evant recorder...
-		state = statusFaild
-		err = fmt.Errorf("the selected resource not controlled by me")
-		return
-	}
-
-	// TODO: find a better condition
-	if !reflect.DeepEqual(hlSVC.Spec.Ports, expHL.Spec.Ports) {
-		state = statusUpdated
-		expHL.SetResourceVersion(hlSVC.GetResourceVersion())
-		_, err = servicesClient.Update(&expHL)
-		return
-	}
-
-	return
-}
-
-func (f *cFactory) syncConfigEnvSecret() (state string, err error) {
-	expCS := f.createEnvConfigSecret()
-	state = statusUpToDate
-
-	scrtClient := f.client.CoreV1().Secrets(f.namespace)
-	cfgSct, err := scrtClient.Get(f.getNameForResource(EnvSecret), metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		state = statusCreated
-		_, err = scrtClient.Create(&expCS)
-		return
-	} else if err != nil {
-		state = statusFaild
-		return
-	}
-	if !metav1.IsControlledBy(cfgSct, f.cl) {
-		// log a warning to evant recorder...
-		state = statusFaild
-		err = fmt.Errorf("the selected resource not controlled by me")
-	}
-
-	if !reflect.DeepEqual(cfgSct.Data, expCS.Data) {
-		state = statusUpdated
-		expCS.SetResourceVersion(cfgSct.GetResourceVersion())
-		_, err = scrtClient.Update(&expCS)
-		return
-	}
-
-	return
-}
-
-func (f *cFactory) syncConfigMapFiles() (state string, err error) {
-	expCM := f.createConfigMapFiles()
-	state = statusUpToDate
-
-	cmClient := f.client.CoreV1().ConfigMaps(f.namespace)
-	cfgMap, err := cmClient.Get(f.getNameForResource(ConfigMap), metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		state = statusCreated
-		_, err = cmClient.Create(&expCM)
-		return
-	} else if err != nil {
-		state = statusFaild
-		return
-	}
-
-	if !metav1.IsControlledBy(cfgMap, f.cl) {
-		state = statusSkip
-		err = fmt.Errorf("the selected resource not controlled by me")
-		return
-	}
-
-	if !reflect.DeepEqual(cfgMap.Data, expCM.Data) {
-		state = statusUpdated
-		expCM.SetResourceVersion(cfgMap.GetResourceVersion())
-		_, err = cmClient.Update(&expCM)
-		return
-	}
-
-	return
-}
-
-func (f *cFactory) syncDbCredentialsSecret() (state string, err error) {
-	state = statusOk
-
-	expSec := f.createDbCredentialSecret(f.cl.Spec.SecretName)
-	if _, err = kube.EnsureSecretKeys(f.client, expSec, true); err != nil {
-		state = statusFaild
-		err = fmt.Errorf("fail to ensure secret: %s", err)
-		return
-	}
-
-	return
-}
-
-func (f *cFactory) syncStatefulSet() (state string, err error) {
-	expSS := f.createStatefulSet()
-	state = statusUpToDate
-
-	sfsClient := f.client.AppsV1().StatefulSets(f.namespace)
-	sfs, err := sfsClient.Get(f.getNameForResource(StatefulSet), metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		state = statusCreated
-		_, err = sfsClient.Create(&expSS)
-		return
-	} else if err != nil {
-		state = statusFaild
-		return
-	}
-
-	if !metav1.IsControlledBy(sfs, f.cl) {
-		// log a warning to evant recorder...
-		state = statusFaild
-		err = fmt.Errorf("the selected resource not controlled by me")
-		return
-	}
-
-	if !statefulSetEqual(sfs, &expSS) {
-		state = statusUpdated
-		expSS.SetResourceVersion(sfs.GetResourceVersion())
-		_, err = sfsClient.Update(&expSS)
-		return
-	}
-
-	if !reflect.DeepEqual(sfs.Spec, expSS.Spec) {
-		state = statusSkip
-		glog.V(2).Infof("statefulSet has changes that can't be applied")
-	}
-
-	sfs, err = sfsClient.Get(f.getNameForResource(StatefulSet), metav1.GetOptions{})
-	if err != nil {
-		state = statusFaild
-		err = fmt.Errorf("error getting second time statefulset: %s", err)
-		return
-	}
-	if sfs.Status.ReadyReplicas == sfs.Status.Replicas {
-		f.cl.UpdateStatusCondition(api.ClusterConditionReady,
-			apiv1.ConditionTrue, "statefulset ready", "Cluster is ready.")
-	} else {
-		f.cl.UpdateStatusCondition(api.ClusterConditionReady,
-			apiv1.ConditionFalse, "statefulset not ready", "Cluster is not ready.")
-	}
-	return
 }
 
 func (f *cFactory) getOwnerReferences(ors ...[]metav1.OwnerReference) []metav1.OwnerReference {

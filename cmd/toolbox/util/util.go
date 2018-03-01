@@ -12,7 +12,26 @@ import (
 )
 
 var (
+	// BackupPort is the port on which xtrabackup expose backups, 3306
 	BackupPort = strconv.Itoa(mysqlcluster.TitaniumXtrabackupPort)
+
+	// MysqlPort represents port on wich mysql works
+	MysqlPort = strconv.Itoa(mysqlcluster.MysqlPort)
+
+	// ConfigDir is the mysql configs path, /etc/mysql
+	ConfigDir = mysqlcluster.ConfVolumeMountPath
+
+	// MountConfigDir is the mounted configs that needs processing
+	MountConfigDir = mysqlcluster.ConfMapVolumeMountPath
+
+	// DataDir is the mysql data. /var/lib/mysql
+	DataDir = mysqlcluster.DataVolumeMountPath
+
+	// CheckDataFile represent the check file that marks cloning complete
+	CheckDataFile = ConfigDir + "/titanium_chk"
+
+	// UtilityUser is the name of the percona utility user.
+	UtilityUser = "utility"
 )
 
 func GetHostname() string {
@@ -20,6 +39,12 @@ func GetHostname() string {
 }
 
 func NodeRole() string {
+	// TODO: interogate ORC
+	if getOrdinal() == 0 {
+		return "master"
+	}
+
+	// TODO: remove this ...
 	if strings.Contains(GetHostname(), "master") {
 		return "master"
 	} else {
@@ -43,23 +68,14 @@ func getOrdinal() int {
 }
 
 func GetServerId() int {
-	o := getOrdinal()
-
-	var id int
-	if NodeRole() == "master" {
-		id = o
-	} else {
-		id = o + 100
-	}
-
-	return id
+	return getOrdinal()
 }
 
 // GetHostFor returns the host for given server id
 func GetHostFor(id int) string {
 	base := strings.Split(GetHostname(), "-")
 	govSVC := os.Getenv("TITANIUM_HEADLESS_SERVICE")
-	return fmt.Sprintf("%s-%d.%s", base, id, govSVC)
+	return fmt.Sprintf("%s-%d.%s", strings.Join(base[:len(base)-1], "-"), id, govSVC)
 }
 
 // GetReplUser returns the replication user name from env variable
@@ -95,13 +111,9 @@ func GetInitBucket() string {
 	return uri
 }
 
-// GetMasterService returns the master service name from env variable
+// GetMasterHost returns the master service name from env variable
 // MASTER_SERVICE_NAME
-func GetMasterService() string {
-	s := os.Getenv("MASTER_SERVICE_NAME")
-	if len(s) == 0 {
-		glog.Warning("MASTER_SERVICE_NAME is not set!")
-	}
-
-	return s
+func GetMasterHost() string {
+	// TODO: interogate ORC for master
+	return GetHostFor(0)
 }

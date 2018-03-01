@@ -16,45 +16,59 @@ import (
 func RunCloneCommand(stopCh <-chan struct{}) error {
 	glog.Infof("Cloning into node %s", tb.GetHostname())
 
+	// skip cloning if data exists.
+	if _, err := os.Stat(tb.CheckDataFile); !os.IsNotExist(err) {
+		glog.Info("Data exists, Skip clonging.")
+		return nil
+	}
+
 	if tb.GetServerId() == 0 {
 		// cloning for the first master
-		err := cloneFromBucket()
+		initBucket := tb.GetInitBucket()
+		if len(initBucket) == 0 {
+			glog.Info("Skip cloning init bucket uri is not set.")
+			return nil
+		}
+		err := cloneFromBucket(initBucket)
 		if err != nil {
 			return fmt.Errorf("failed to clone from bucket, err: %s", err)
 		}
 	} else {
-		// clonging for slaves or comasters
-
-		var sourceHost string
-		if tb.GetServerId() <= 100 {
-			sourceHost = tb.GetMasterService()
-			if len(sourceHost) == 0 {
-				return fmt.Errorf("failed to clone on the first node from slaves because " +
-					" MASTER_SERVICE_NAME env var is not seted")
-			}
-		} else {
-			sourceHost = tb.GetHostFor(tb.GetServerId() - 1)
-		}
+		// clonging from prior node
+		sourceHost := tb.GetHostFor(tb.GetServerId() - 1)
 		err := cloneFromSource(sourceHost)
 		if err != nil {
 			return fmt.Errorf("faild to clone from %s, err: %s", sourceHost, err)
 		}
 	}
 
-	return xtrabackupPreperData()
+	// prepare backup
+	if err := xtrabackupPreperData(); err != nil {
+		return err
+	}
+
+	// create check file.
+	if _, err := os.Create(tb.CheckDataFile); err != nil {
+		glog.Fatalf("Failed to create check file: %s, err: %s", tb.CheckDataFile, err)
+		return err
+	}
+
+	return nil
 }
 
 const (
-	mysqlDataDir     = "/var/lib/mysql"
-	rcloneConfigFile = "/etc/mysql/rclone.conf"
+	// rcloneConfigFile represents the path to the file that contains rclon
+	// configs. This path should be the same as defined in docker entrypoint
+	// script from toolbox/docker-entrypoint.sh. /etc/rclone.conf
+	rcloneConfigFile = "/etc/rclone.conf"
 )
 
-func cloneFromBucket() error {
+func cloneFromBucket(initBucket string) error {
+
 	if _, err := os.Stat(rcloneConfigFile); os.IsNotExist(err) {
 		glog.Fatalf("Rclone config file does not exists. err: %s", err)
 		return err
 	}
-	initBucket := tb.GetInitBucket()
 	// rclone --config={conf file} cat {bucket uri}
 	// writes to stdout the content of the bucket uri
 	rclone := exec.Command("rclone",
@@ -66,7 +80,7 @@ func cloneFromBucket() error {
 	// xbstream -x -C {mysql data target dir}
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
-	xbstream := exec.Command("xbstream", "-x", "-C", mysqlDataDir)
+	xbstream := exec.Command("xbstream", "-x", "-C", tb.DataDir)
 
 	var err error
 	// rclone | gzip | xbstream
@@ -117,7 +131,7 @@ func cloneFromSource(host string) error {
 	// xbstream -x -C {mysql data target dir}
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
-	xbstream := exec.Command("xbstream", "-x", "-C", mysqlDataDir)
+	xbstream := exec.Command("xbstream", "-x", "-C", tb.DataDir)
 
 	var err error
 	if xbstream.Stdin, err = ncat.StdoutPipe(); err != nil {
@@ -146,8 +160,10 @@ func cloneFromSource(host string) error {
 func xtrabackupPreperData() error {
 	replUser := tb.GetReplUser()
 	replPass := tb.GetReplPass()
+
+	// TODO: remove user and password for here, not needed.
 	xtbkCmd := exec.Command("xtrabackup", "--prepare",
-		fmt.Sprintf("--target-dir=%s", mysqlDataDir),
+		fmt.Sprintf("--target-dir=%s", tb.DataDir),
 		fmt.Sprintf("--user=%s", replUser), fmt.Sprintf("--password=%s", replPass))
 
 	return xtbkCmd.Run()

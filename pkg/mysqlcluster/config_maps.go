@@ -17,6 +17,7 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 		Labels: f.getLabels(map[string]string{
 			"generated": "true"}),
 		OwnerReferences: f.getOwnerReferences(),
+		Namespace:       f.namespace,
 	}
 
 	_, act, err := kcore.CreateOrPatchConfigMap(f.client, meta,
@@ -45,26 +46,21 @@ func (f *cFactory) getConfigMapData() (map[string]string, error) {
 	}
 	return map[string]string{
 		"server-master-cnf": master,
-		"server-salve-cnf":  slave,
+		"server-slave-cnf":  slave,
 	}, nil
 }
 
 func (f *cFactory) getMysqlConfigs(extraMysqld map[string]string) (string, error) {
 	cfg := ini.Empty()
 	s := cfg.Section("mysqld")
-	for k, v := range MysqlMasterSlaveConfigs {
+
+	for k, v := range extraMysqld {
 		if _, err := s.NewKey(k, v); err != nil {
 			return "", err
 		}
 	}
 
-	client_conf := map[string]string{
-		"host": "127.0.0.1",
-		"port": string(MysqlPort),
-	}
-
-	s = cfg.Section("client")
-	for k, v := range client_conf {
+	for k, v := range MysqlMasterSlaveConfigs {
 		if _, err := s.NewKey(k, v); err != nil {
 			return "", err
 		}

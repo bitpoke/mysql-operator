@@ -2,7 +2,6 @@ package mysqlcluster
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -39,6 +38,10 @@ func (f *cFactory) GetMysqlCluster() *api.MysqlCluster {
 
 func (f *cFactory) GetNameForResource(name ResourceName) string {
 	return f.getNameForResource(name)
+}
+
+func (f *cFactory) GetComponents() []component {
+	return f.getComponents()
 }
 
 const (
@@ -98,163 +101,11 @@ func assertEqual(t *testing.T, left, right interface{}, msg string) {
 }
 
 func TestSyncClusterCreation(t *testing.T) {
-	client, _, _, f := getFakeFactory("test-cluster")
+	_, _, _, f := getFakeFactory("test-cluster-create")
 
-	tests := map[string]interface{}{
-		"services":     func() (string, error) { return f.SyncHeadlessService() },
-		"secrets":      func() (string, error) { return f.SyncConfigEnvSecret() },
-		"configmaps":   func() (string, error) { return f.SyncConfigMapFiles() },
-		"statefulsets": func() (string, error) { return f.SyncStatefulSet() },
-	}
-
-	for rName, syncF := range tests {
-		// call the sync handler
-		if _, err := syncF.(func() (string, error))(); err != nil {
-			t.Error("Can't sync cluster.")
-		}
-		acts := client.Actions()
-		if len(acts) != 2 {
-			t.Error("Different number of actions.")
-			return
-		}
-		assertEqual(t, acts[0].GetVerb(), "get", "Not a get action.")
-		assertEqual(t, acts[0].GetResource().Resource, rName, "Not the right resource.")
-		assertEqual(t, acts[1].GetVerb(), "create", "Not a create action.")
-		assertEqual(t, acts[1].GetResource().Resource, rName, "Not the right resource.")
-
-		// clear actions
-		client.ClearActions()
-	}
-	sfC := client.AppsV1beta2().StatefulSets(DefaultNamespace)
-	sfs, _ := sfC.Get(f.GetNameForResource(StatefulSet), metav1.GetOptions{})
-
-	mc := f.GetMysqlCluster()
-	fmt.Println(sfs.Spec.Replicas)
-	assertEqual(t, *sfs.Spec.Replicas, mc.Spec.ReadReplicas, "")
-
-	assertEqual(t, sfs.Spec.Template.Spec.Containers[0].Image, mc.Spec.GetMysqlImage(), "")
-}
-
-func TestSyncClusterIfExistsNoUpdate(t *testing.T) {
-	client, _, _, f := getFakeFactory("test-cluster")
 	ctx := context.TODO()
-	f.Sync(ctx)
-	client.ClearActions()
-
-	tests := map[string]interface{}{
-		"services":     func() (string, error) { return f.SyncHeadlessService() },
-		"secrets":      func() (string, error) { return f.SyncConfigEnvSecret() },
-		"configmaps":   func() (string, error) { return f.SyncConfigMapFiles() },
-		"statefulsets": func() (string, error) { return f.SyncStatefulSet() },
-	}
-
-	for rName, syncF := range tests {
-		// call the sync handler
-		if _, err := syncF.(func() (string, error))(); err != nil {
-			t.Error("Can't sync cluster.")
-		}
-
-		acts := client.Actions()
-		if len(acts) != 1 {
-			t.Errorf("Different number of actions. Failed at: %s\n", rName)
-			return
-		}
-		assertEqual(t, acts[0].GetVerb(), "get", "Not a get action.")
-		assertEqual(t, acts[0].GetResource().Resource, rName, "Not the right resource.")
-
-		// clear actions
-		client.ClearActions()
-	}
-}
-
-func TestSyncClusterIfExistsNeedsUpdate(t *testing.T) {
-	client, mcClient, _, f := getFakeFactory("test-cluster-nu")
-	ctx := context.TODO()
-	f.Sync(ctx)
-	mc := f.GetMysqlCluster()
-	mc.Spec.ReadReplicas = 4
-	mc.Spec.UpdateDefaults(opt)
-
-	mcClient.Titanium().MysqlClusters(DefaultNamespace).Update(mc)
-
-	client.ClearActions()
-	type tuple struct {
-		f    func() (string, error)
-		acts []string
-	}
-	tests := map[string]tuple{
-		"services": tuple{
-			func() (string, error) { return f.SyncHeadlessService() }, []string{"get"}},
-		"secrets": tuple{
-			func() (string, error) { return f.SyncConfigEnvSecret() }, []string{"get"}},
-		"configmaps": tuple{
-			func() (string, error) { return f.SyncConfigMapFiles() }, []string{"get"}},
-		"statefulsets": tuple{
-			func() (string, error) { return f.SyncStatefulSet() },
-			[]string{"get", "update"},
-		},
-	}
-
-	for rName, tup := range tests {
-		// call the sync handler
-		if _, err := tup.f(); err != nil {
-			t.Error("Can't sync cluster.")
-		}
-
-		acts := client.Actions()
-		if len(acts) != len(tup.acts) {
-			t.Errorf("Different number of actions. Failed at: %s\n", rName)
-			t.Errorf("Exp: %v, Actual: %v", tup.acts, acts)
-			return
-		}
-
-		for i, aName := range tup.acts {
-			assertEqual(t, acts[i].GetVerb(), aName, "Not a get action.")
-		}
-		assertEqual(t, acts[0].GetResource().Resource, rName, "Not the right resource.")
-
-		// clear actions
-		client.ClearActions()
-	}
-
-	sfC := client.AppsV1beta2().StatefulSets(DefaultNamespace)
-	sfs, _ := sfC.Get(f.GetNameForResource(StatefulSet), metav1.GetOptions{})
-
-	assertEqual(t, *sfs.Spec.Replicas, mc.Spec.ReadReplicas, "")
-}
-
-func TestPersistenceDisabledEnabled(t *testing.T) {
-	client, mcClient, _, f := getFakeFactory("test-cluster-2")
-	mc := f.GetMysqlCluster()
-
-	assertEqual(t, mc.Spec.VolumeSpec.PersistenceDisabled, false, "persistenceEnabled default")
-
-	mc.Spec.VolumeSpec.PersistenceDisabled = true
-	mcClient.Titanium().MysqlClusters(DefaultNamespace).Update(mc)
-	f.SyncStatefulSet()
-
-	sfC := client.AppsV1beta2().StatefulSets(DefaultNamespace)
-	sfs, _ := sfC.Get(f.GetNameForResource(StatefulSet), metav1.GetOptions{})
-
-	if sfs.Spec.Template.Spec.Volumes[2].EmptyDir == nil {
-		t.Error("Is not empty dir.")
-	}
-}
-
-func TestPersistenceEnabled(t *testing.T) {
-	client, mcClient, _, f := getFakeFactory("test-cluster-2")
-	mc := f.GetMysqlCluster()
-	mc.Spec.VolumeSpec.PersistenceDisabled = false
-
-	mcClient.Titanium().MysqlClusters(DefaultNamespace).Update(mc)
-	f.SyncStatefulSet()
-
-	sfC := client.AppsV1beta2().StatefulSets(DefaultNamespace)
-	sfs, _ := sfC.Get(f.GetNameForResource(StatefulSet), metav1.GetOptions{})
-	if sfs.Spec.Template.Spec.Volumes[2].PersistentVolumeClaim == nil {
-		t.Error("Is not a PVC. And should be.")
-	}
-	if sfs.Spec.Template.Spec.Volumes[2].EmptyDir != nil {
-		t.Error("Is is an empty dir. Should be a PVC")
+	if err := f.Sync(ctx); err != nil {
+		t.Fail()
+		return
 	}
 }
