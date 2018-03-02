@@ -1,0 +1,54 @@
+{{ $fullname := include "fullname" . }}
+{{ $replicas := int .Values.orc.replicas }}
+apiVerison: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "fullname" . }}-configs
+  labels:
+    app: {{ template "name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  orchestrator.conf.json.tpl: |
+    {
+      "Debug": false,
+      "ListenAddress": ":3000",
+
+      "BackendDB": "sqlite",
+      "SQLite3DataFile": "/var/lib/orchestrator/orc.db",
+
+      "MySQLTopologyCredentialsConfigFile": "/orchestrator/conf/orc-topology.cnf",
+
+      "InstancePollSeconds": 5,
+      "DiscoverByShowSlaveHosts": false,
+
+      "HostnameResolveMethod": "none",
+      "MySQLHostnameResolveMethod": "@@hostname",
+
+      "RemoveTextFromHostnameDisplay": ".presslabs.net:3306",
+
+      "DetectClusterDomainQuery": "SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(@@hostname, '.', 1), '-', 1)",
+      "DetectClusterAliasQuery": "SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(@@hostname, '.', 1), '-', 1)",
+      "DetectInstanceAliasQuery": "SELECT SUBSTRING_INDEX(@@hostname, '.', 1)",
+
+      "SlaveLagQuery": "SELECT TIMESTAMPDIFF(SECOND,ts,NOW()) as drift FROM tools.heartbeat WHERE server_id <> @@server_id ORDER BY drift ASC LIMIT 1"
+
+      {{- /*Raft configuration*/ -}}
+      {{- if .Values.orc.raftEnabled -}},
+      "RaftEnabled": true,
+      "RaftDataDir": "/var/lib/orchestrator",
+      "RaftBind": "<% .Env.HOSTNAME %>.{{ template "fullname" . }}-headless",
+      "DefaultRaftPort": {{ .Values.orc.raftPort }},
+      "RaftNodes": [
+      {{ range $i := until $replicas }}
+        "{{ $fullname }}-orc-{{$i}}.{{ $fullname }}-headless"{{ if lt $i (sub $replicas 1) }},{{ end }}
+      {{ end }}
+      ]
+      {{ end }}
+    }
+  orc-topology.cnf.tpl: |
+    [client]
+    user = <% .Env.ORC_TOPOLOGY_USER %>
+    password = <% .Env.ORC_TOPOLOGY_PASSWORD %>
+
