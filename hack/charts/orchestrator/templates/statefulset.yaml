@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ template "fullname" . }}-orc
+  labels:
+    app: {{ template "name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.orc.replicas }}
+  serviceName: {{ template "fullname" . }}-headless
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: {{ template "name" . }}
+      release: {{ .Release.Name }}
+      role: orchestrator
+  template:
+    metadata:
+      labels:
+        app: {{ template "name" . }}
+        release: {{ .Release.Name }}
+        role: orchestrator
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          # strongly prefer to stay away from other orchestrators
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: {{ template "name" . }}
+                  release: {{ .Release.Name }}
+                  role: orchestrator
+
+      {{- if .Values.orc.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.orc.nodeSelector | indent 8 | printf "\n%s" }}
+      {{- end }}
+      {{- if .Values.orc.tolerations }}
+      tolerations:
+        {{- toYaml .Values.orc.tolerations | indent 8 | printf "\n%s" }}
+      {{- end }}
+      containers:
+        - name: orc
+          image: {{ .Values.orc.image }}
+          imagePullPolicy: {{ .Values.orc.imagePullPolicy }}
+          ports:
+            - containerPort: 3000
+              name: web
+              protocol: TCP
+            - containerPort: {{ .Values.orc.raftPort }}
+              name: raft
+              protocol: TCP
+          envFrom:
+            - prefix: ORC_
+              secretRef:
+                name: {{ .Release.Name }}-topology-secret
+          volumeMounts:
+            - name: {{ template "name" . }}-data
+              mountPath: /var/lib/orchestrator/
+            - name: configs-tpl
+              mountPath: /conf-tpl/
+          livenessProbe:
+            timeoutSeconds: 10
+            initialDelaySeconds: 200
+            httpGet:
+              path: /api/lb-check
+              port: 3000
+          readinessProbe:
+            timeoutSeconds: 10
+            httpGet:
+              path: /api/leader-check
+              port: 3000
+          resources:
+          {{- toYaml .Values.orc.resources | indent 12 | printf "\n%s" }}
+      volumes:
+        - name: configs-tpl
+          configMap:
+            name: {{ template "fullname" . }}-configs
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ template "name" . }}-data
+        release: {{ .Release.Name }}
+        role: orchestrator
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: {{ .Values.orc.storage }}

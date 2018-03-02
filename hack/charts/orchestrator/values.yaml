@@ -1,0 +1,16 @@
+
+# Orchestrator related configs
+orc:
+  replicas: 3
+  image: orchestrator:latest
+  imagePullPolicy: IfNotPresent
+
+  storage: 1Gi
+  nodeSelector:
+  toleration:
+
+  configs:
+    pollSeconds: 5
+
+  raftEnabled: true
+  raftPort: 10008
