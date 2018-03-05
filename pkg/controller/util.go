@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	keyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
+	// KeyFunc
+	KeyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
 )
 
 // QueuingEventHandler is an implementation of cache.ResourceEventHandler that
@@ -20,7 +21,7 @@ type QueuingEventHandler struct {
 
 // Enqueue puts object to queue
 func (q *QueuingEventHandler) Enqueue(obj interface{}) {
-	key, err := keyFunc(obj)
+	key, err := KeyFunc(obj)
 	if err != nil {
 		runtime.HandleError(err)
 		return

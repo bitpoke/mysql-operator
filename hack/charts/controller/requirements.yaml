@@ -1,0 +1,5 @@
+dependencies:
+  - name: orc
+    version: 0.1.0
+    repository: file://../orchestrator
+    condition: orc.enabled

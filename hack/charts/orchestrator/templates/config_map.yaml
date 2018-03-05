@@ -24,7 +24,7 @@ data:
       "DiscoverByShowSlaveHosts": false,
 
       "HostnameResolveMethod": "none",
-      "MySQLHostnameResolveMethod": "@@hostname",
+      "MySQLHostnameResolveMethod": "@@report_host",
 
       "RemoveTextFromHostnameDisplay": ".presslabs.net:3306",
 

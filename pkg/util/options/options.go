@@ -18,6 +18,9 @@ type Options struct {
 
 	ImagePullSecretName string
 	ImagePullPolicy     v1.PullPolicy
+
+	OrchestratorUri                string
+	OrchestratorTopologySecretName string
 }
 
 const (
@@ -25,16 +28,21 @@ const (
 	defaultTitaniumImage = "gcr.io/pl-infra/titanium-toolbox:latest"
 
 	defaultImagePullPolicy = v1.PullIfNotPresent
+	orcURI                 = ""
+	orcSCRT                = ""
 )
 
 func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.mysqlImage, "mysql-image", defaultMysqlImage,
 		"The mysql image. Default to "+defaultMysqlImage)
-	fs.StringVar(&o.TitaniumImage, "titanium-image", defaultTitaniumImage,
+	fs.StringVar(&o.TitaniumImage, "titanium-toolbox-image", defaultTitaniumImage,
 		"The image that instrumentate mysql. Default to "+defaultTitaniumImage)
-
 	fs.StringVar(&o.ImagePullSecretName, "pull-secret", "",
 		"The secret name for used as pull secret. Default none.")
+	fs.StringVar(&o.OrchestratorUri, "orchestrator-uri", orcURI,
+		"The orchestrator uri. Default ''(empty string) ")
+	fs.StringVar(&o.OrchestratorTopologySecretName, "orchestrator-secret", orcURI,
+		"The orchestrator topology secret name. Default ''(empty string) ")
 
 }
 

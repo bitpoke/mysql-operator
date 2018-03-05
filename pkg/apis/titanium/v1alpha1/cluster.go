@@ -25,7 +25,7 @@ func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
 	trueVar := true
 	return metav1.OwnerReference{
 		APIVersion: SchemeGroupVersion.String(),
-		Kind:       MysqlClusterCRDKind,
+		Kind:       MysqlClusterKind,
 		Name:       c.Name,
 		UID:        c.UID,
 		Controller: &trueVar,
@@ -34,7 +34,9 @@ func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
 
 // UpdateDefaults sets the defaults for Spec and Status
 func (c *MysqlCluster) UpdateDefaults(opt *options.Options) error {
-	// TODO: add status defaults
+	c.UpdateStatusCondition(ClusterConditionReady,
+		apiv1.ConditionUnknown, "not initialized", "setting defaults")
+
 	return c.Spec.UpdateDefaults(opt)
 }
 
@@ -67,6 +69,17 @@ func (c *ClusterSpec) UpdateDefaults(opt *options.Options) error {
 // GetTitaniumImage return titanium image from options
 func (c *ClusterSpec) GetTitaniumImage() string {
 	return opt.TitaniumImage
+}
+
+// GetOrcUri return the orchestrator uri
+func (c *ClusterSpec) GetOrcUri() string {
+	return opt.OrchestratorUri
+}
+
+// GetOrcTopologySecret return the name of the secret that contains the
+// credentaials for orc to connect to mysql nodes.
+func (c *ClusterSpec) GetOrcTopologySecret() string {
+	return opt.OrchestratorTopologySecretName
 }
 
 // GetMysqlImage returns mysql image, composed from oprions and  Spec.MysqlVersion

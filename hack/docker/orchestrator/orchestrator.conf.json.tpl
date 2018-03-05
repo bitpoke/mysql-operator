@@ -11,7 +11,7 @@
   "DiscoverByShowSlaveHosts": <% default .Env.ORC_DISCOVERY_BY_SHOW_SLAVE_HOSTS "false" %>,
 
   "HostnameResolveMethod": "none",
-  "MySQLHostnameResolveMethod": "@@hostname",
+  "MySQLHostnameResolveMethod": "@@report_host",
 
   "RemoveTextFromHostnameDisplay": ".presslabs.net:3306",
 

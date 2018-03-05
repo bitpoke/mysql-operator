@@ -19,6 +19,9 @@ const (
 	// TitaniumXtrabackupPort is the port on which we serve backups
 	TitaniumXtrabackupPort = 3307
 
+	// OrcTopologyDir path where orc conf secret is mounted
+	OrcTopologyDir = "/var/run/orc-topology"
+
 	rStrLen = 18
 )
 

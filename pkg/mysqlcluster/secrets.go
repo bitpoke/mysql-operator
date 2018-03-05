@@ -42,6 +42,7 @@ func (f *cFactory) getEnvSecretData(data map[string][]byte) map[string][]byte {
 		"TITANIUM_HEADLESS_SERVICE":  f.getNameForResource(HeadlessSVC),
 		"TITANIUM_INIT_BUCKET_URI":   f.cl.Spec.InitBucketURI,
 		"TITANIUM_BACKUP_BUCKET_URI": f.cl.Spec.BackupBucketURI,
+		"TITANIUM_ORC_URI":           f.cl.Spec.GetOrcUri(),
 	}
 	fConf := make(map[string][]byte)
 	for k, v := range configs {

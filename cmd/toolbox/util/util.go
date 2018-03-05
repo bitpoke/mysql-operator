@@ -1,8 +1,11 @@
 package util
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -32,6 +35,10 @@ var (
 
 	// UtilityUser is the name of the percona utility user.
 	UtilityUser = "utility"
+
+	// OrcTopologyDir contains the path where the secret with orc credentails is
+	// mounted.
+	OrcTopologyDir = mysqlcluster.OrcTopologyDir
 )
 
 func GetHostname() string {
@@ -68,14 +75,14 @@ func getOrdinal() int {
 }
 
 func GetServerId() int {
-	return getOrdinal()
+	return 100 + getOrdinal()
 }
 
 // GetHostFor returns the host for given server id
 func GetHostFor(id int) string {
 	base := strings.Split(GetHostname(), "-")
 	govSVC := os.Getenv("TITANIUM_HEADLESS_SERVICE")
-	return fmt.Sprintf("%s-%d.%s", strings.Join(base[:len(base)-1], "-"), id, govSVC)
+	return fmt.Sprintf("%s-%d.%s", strings.Join(base[:len(base)-1], "-"), id-100, govSVC)
 }
 
 // GetReplUser returns the replication user name from env variable
@@ -115,5 +122,78 @@ func GetInitBucket() string {
 // MASTER_SERVICE_NAME
 func GetMasterHost() string {
 	// TODO: interogate ORC for master
-	return GetHostFor(0)
+	return GetHostFor(100)
+}
+
+// GetOrcTopologyUser returns the orchestrator topology user. It is readed from
+// /var/run/orc-topology/TOPOLOGY_USER
+func GetOrcUser() string {
+	return readFileContent(OrcTopologyDir + "/TOPOLOGY_USER")
+}
+
+// GetOrcTopologyPass returns the orchestrator topology user. It is readed from
+// /var/run/orc-topology/TOPOLOGY_PASSWORD
+func GetOrcPass() string {
+	return readFileContent(OrcTopologyDir + "/TOPOLOGY_PASSWORD")
+}
+
+func readFileContent(fileName string) string {
+	f, err := os.Open(fileName)
+	if err != nil {
+		glog.Warningf("%s is not set, or can't be readed, see err: %s", fileName, err)
+		return ""
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	if !scanner.Scan() {
+		glog.Warningf("can't scan file: %s", fileName)
+		return ""
+	}
+
+	return scanner.Text()
+}
+
+func UpdateOrcUserPass() error {
+	glog.V(2).Info("Creating orchestrator user and password...")
+	query := fmt.Sprintf(
+		"GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* "+
+			"TO '%s'@'%%' IDENTIFIED BY '%s'", GetOrcUser(), GetOrcPass(),
+	)
+	if _, err := RunQuery(query); err != nil {
+		return fmt.Errorf("failed to create orc user, err: %s", err)
+	}
+
+	query = fmt.Sprintf("GRANT SELECT ON meta.* TO '%s'@'%%'", GetOrcUser())
+	if _, err := RunQuery(query); err != nil {
+		return fmt.Errorf("failed to configure orc user, err: %s", err)
+	}
+	glog.V(2).Info("Orchestrator user configured!")
+
+	return nil
+}
+
+func RunQuery(q string) (string, error) {
+	glog.V(3).Infof("QUERY: %s", q)
+
+	mysql := exec.Command("mysql",
+		fmt.Sprintf("--defaults-file=%s/%s", ConfigDir, "client.cnf"),
+	)
+
+	// write query through pipe to mysql
+	rq := strings.NewReader(q)
+	mysql.Stdin = rq
+	var bufOUT, bufERR bytes.Buffer
+	mysql.Stdout = &bufOUT
+	mysql.Stderr = &bufERR
+
+	if err := mysql.Run(); err != nil {
+		glog.Errorf("Failed to run query, err: %s", err)
+		glog.V(2).Infof("Mysql STDOUT: %s, STDERR: %s", bufOUT.String(), bufERR.String())
+		return "", err
+	}
+
+	glog.V(2).Infof("Mysql STDOUT: %s, STDERR: %s", bufOUT.String(), bufERR.String())
+	glog.V(3).Infof("Mysql output for query %s is: %s", q, bufOUT.String())
+
+	return bufOUT.String(), nil
 }

@@ -4,19 +4,16 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"sync"
-	"time"
 
 	"github.com/golang/glog"
-	apiv1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/runtime"
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
+	controllerpkg "github.com/presslabs/titanium/pkg/controller"
 	mccluster "github.com/presslabs/titanium/pkg/mysqlcluster"
 	"github.com/presslabs/titanium/pkg/util/options"
-)
-
-const (
-	reconcileInterval = 10
 )
 
 // Sync for add and update.
@@ -26,6 +23,7 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster, ns str
 	opt := options.GetOptions()
 
 	if err := copyCluster.UpdateDefaults(opt); err != nil {
+		// TODO: ...
 		c.recorder.Event(copyCluster, api.EventWarning, api.EventReasonInitDefaultsFaild,
 			"faild to set defauls")
 		return fmt.Errorf("failed to set defaults for cluster: %s", err)
@@ -34,8 +32,6 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster, ns str
 	if !reflect.DeepEqual(cluster.Spec, copyCluster.Spec) {
 		// updating defaults
 		glog.V(2).Infof("now just update defaults for %s", cluster.Name)
-		copyCluster.UpdateStatusCondition(api.ClusterConditionReady,
-			apiv1.ConditionUnknown, "not initialized", "setting defaults")
 		c.recorder.Event(copyCluster, api.EventNormal, api.EventReasonInitDefaults,
 			"defaults seted")
 		_, err := c.mcclient.Titanium().MysqlClusters(ns).Update(copyCluster)
@@ -52,43 +48,33 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster, ns str
 		return err
 	}
 
-	once, ok := c.clustersOnce[cluster.Name]
-	if !ok {
-		once = sync.Once{}
-		c.clustersOnce[cluster.Name] = once
-	}
-	func(name, ns string) {
-		// for every cluster start once a go rutine that recouncile the cluster in a loop
-		go once.Do(func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(5 * time.Second):
-					c.recouncileCluster(ctx, name, ns)
-				}
-			}
-		})
-	}(cluster.Name, cluster.Namespace)
-
 	return nil
 }
 
-func (c *Controller) recouncileCluster(ctx context.Context, name, ns string) error {
-	cluster, err := c.clusterLister.MysqlClusters(ns).Get(name)
+func (c *Controller) subresourceUpdated(obj interface{}) {
+	var objectMeta *metav1.ObjectMeta
+	var err error
+
+	switch typedObject := obj.(type) {
+	case *appsv1.StatefulSet:
+		objectMeta = &typedObject.ObjectMeta
+	}
+
+	if objectMeta == nil {
+		runtime.HandleError(fmt.Errorf("Cannot get ObjectMeta for object %#v", obj))
+		return
+	}
+
+	cluster, err := c.instanceForOwnerReference(objectMeta)
 	if err != nil {
-		return err
-	}
-	copyCluster := cluster.DeepCopy()
-
-	cl := mccluster.New(copyCluster, c.KubeCli, c.mcclient, copyCluster.Namespace, c.recorder)
-	if err := cl.Sync(ctx); err != nil {
-		return fmt.Errorf("failed to set-up the cluster: %s", err)
+		runtime.HandleError(fmt.Errorf("cannot get cluster for ObjectMeta, err: %s", err))
+		return
 	}
 
-	if _, err := c.mcclient.Titanium().MysqlClusters(ns).Update(copyCluster); err != nil {
-		return err
+	key, err := controllerpkg.KeyFunc(cluster)
+	if err != nil {
+		runtime.HandleError(err)
+		return
 	}
-
-	return nil
+	c.queue.Add(key)
 }

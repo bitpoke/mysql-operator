@@ -58,6 +58,9 @@ func RunConfigCommand(stopCh <-chan struct{}) error {
 	mysqld.NewKey("utility-user", uName)
 	mysqld.NewKey("utility-user-password", uPass)
 
+	hostname := tb.GetHostFor(tb.GetServerId())
+	mysqld.NewKey("report-host", hostname)
+
 	err = cfg.SaveTo(tb.ConfigDir + "/my.cnf")
 	if err != nil {
 		return fmt.Errorf("failed to save configs, err: %s", err)
