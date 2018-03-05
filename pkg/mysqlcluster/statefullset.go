@@ -118,6 +118,14 @@ func (f *cFactory) getInitContainersSpec() []core.Container {
 }
 
 func (f *cFactory) getContainersSpec() []core.Container {
+	titaniumVolumeMounts := getVolumeMounts()
+	if len(f.cl.Spec.GetOrcTopologySecret()) != 0 {
+		titaniumVolumeMounts = getVolumeMounts(core.VolumeMount{
+			Name:      "orc-topology-secret",
+			MountPath: OrcTopologyDir,
+		})
+
+	}
 	return []core.Container{
 		core.Container{
 			Name:            containerMysqlName,
@@ -136,17 +144,18 @@ func (f *cFactory) getContainersSpec() []core.Container {
 			VolumeMounts:   getVolumeMounts(),
 		},
 		core.Container{
-			Name:    containerTitaniumName,
-			Image:   f.cl.Spec.GetTitaniumImage(),
-			Args:    []string{"config-and-serve"},
-			EnvFrom: f.getEnvSourcesFor(containerTitaniumName),
+			Name:            containerTitaniumName,
+			Image:           f.cl.Spec.GetTitaniumImage(),
+			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
+			Args:            []string{"config-and-serve"},
+			EnvFrom:         f.getEnvSourcesFor(containerTitaniumName),
 			Ports: []core.ContainerPort{
 				core.ContainerPort{
 					Name:          TitaniumXtrabackupPortName,
 					ContainerPort: TitaniumXtrabackupPort,
 				},
 			},
-			VolumeMounts: getVolumeMounts(),
+			VolumeMounts: titaniumVolumeMounts,
 		},
 	}
 }
@@ -185,10 +194,23 @@ func (f *cFactory) getVolumes() []core.Volume {
 		}
 	}
 
-	return append(volumes, core.Volume{
+	volumes = append(volumes, core.Volume{
 		Name:         dataVolumeName,
 		VolumeSource: vs,
 	})
+
+	if len(f.cl.Spec.GetOrcTopologySecret()) != 0 {
+		volumes = append(volumes, core.Volume{
+			Name: "orc-topology-secret",
+			VolumeSource: core.VolumeSource{
+				Secret: &core.SecretVolumeSource{
+					SecretName: f.cl.Spec.GetOrcTopologySecret(),
+				},
+			},
+		})
+	}
+
+	return volumes
 }
 
 func getVolumeMounts(extra ...core.VolumeMount) []core.VolumeMount {

@@ -17,10 +17,7 @@ limitations under the License.
 package appinit
 
 import (
-	"bytes"
 	"fmt"
-	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -41,11 +38,11 @@ func RunInitCommand(stopCh <-chan struct{}) error {
 
 	for i := 0; i < timeOut; i++ {
 		time.Sleep(1 * time.Second)
-		if _, err := runQuery("SELECT 1"); err == nil {
+		if _, err := tb.RunQuery("SELECT 1"); err == nil {
 			break
 		}
 	}
-	if _, err := runQuery("SELECT 1"); err != nil {
+	if _, err := tb.RunQuery("SELECT 1"); err != nil {
 		glog.V(2).Info("Mysql is not ready.")
 		return err
 	}
@@ -58,9 +55,16 @@ func RunInitCommand(stopCh <-chan struct{}) error {
 				"REPLICATION SLAVE ON *.* TO '%s'@'%%' IDENTIFIED BY '%s'",
 			tb.GetReplUser(), tb.GetReplPass())
 
-		if _, err := runQuery(query); err != nil {
+		if _, err := tb.RunQuery(query); err != nil {
 			return fmt.Errorf("failed to configure master node, err: %s", err)
 		}
+
+		if len(tb.GetOrcUser()) > 0 {
+			if err := tb.UpdateOrcUserPass(); err != nil {
+				return err
+			}
+		}
+
 	} else {
 		// slave node
 		query := fmt.Sprintf(
@@ -71,36 +75,10 @@ func RunInitCommand(stopCh <-chan struct{}) error {
 				"MASTER_CONNECT_RETRY=%d",
 			tb.GetMasterHost(), tb.GetReplUser(), tb.GetReplPass(), connRetry)
 
-		if _, err := runQuery(query); err != nil {
+		if _, err := tb.RunQuery(query); err != nil {
 			return fmt.Errorf("failed to configure slave node, err: %s", err)
 		}
 	}
 
 	return nil
-}
-
-func runQuery(q string) (string, error) {
-	glog.V(3).Infof("QUERY: %s", q)
-
-	mysql := exec.Command("mysql",
-		fmt.Sprintf("--defaults-file=%s/%s", tb.ConfigDir, "client.cnf"),
-	)
-
-	// write query through pipe to mysql
-	rq := strings.NewReader(q)
-	mysql.Stdin = rq
-	var bufOUT, bufERR bytes.Buffer
-	mysql.Stdout = &bufOUT
-	mysql.Stderr = &bufERR
-
-	if err := mysql.Run(); err != nil {
-		glog.Errorf("Failed to run query, err: %s", err)
-		glog.V(2).Infof("Mysql STDOUT: %s, STDERR: %s", bufOUT.String(), bufERR.String())
-		return "", err
-	}
-
-	glog.V(2).Infof("Mysql STDOUT: %s, STDERR: %s", bufOUT.String(), bufERR.String())
-	glog.V(3).Infof("Mysql output for query %s is: %s", q, bufOUT.String())
-
-	return bufOUT.String(), nil
 }

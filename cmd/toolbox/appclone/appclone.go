@@ -22,7 +22,7 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		return nil
 	}
 
-	if tb.GetServerId() == 0 {
+	if tb.GetServerId() == 100 {
 		// cloning for the first master
 		initBucket := tb.GetInitBucket()
 		if len(initBucket) == 0 {

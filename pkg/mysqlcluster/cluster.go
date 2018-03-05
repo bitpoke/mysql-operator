@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
@@ -100,7 +99,6 @@ func (f *cFactory) getComponents() []component {
 }
 
 func (f *cFactory) Sync(ctx context.Context) error {
-
 	for _, comp := range f.getComponents() {
 		state, err := comp.syncFn()
 		if err != nil {
@@ -128,11 +126,4 @@ func (f *cFactory) getOwnerReferences(ors ...[]metav1.OwnerReference) []metav1.O
 		}
 	}
 	return rs
-}
-
-func statefulSetEqual(a, b *v1.StatefulSet) bool {
-	if *a.Spec.Replicas != *b.Spec.Replicas {
-		return false
-	}
-	return true
 }

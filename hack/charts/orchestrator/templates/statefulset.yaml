@@ -70,10 +70,11 @@ spec:
             httpGet:
               path: /api/lb-check
               port: 3000
+          # https://github.com/github/orchestrator/blob/master/docs/raft.md#proxy-healthy-raft-nodes
           readinessProbe:
             timeoutSeconds: 10
             httpGet:
-              path: /api/leader-check
+              path: /api/raft-health
               port: 3000
           resources:
           {{- toYaml .Values.orc.resources | indent 12 | printf "\n%s" }}

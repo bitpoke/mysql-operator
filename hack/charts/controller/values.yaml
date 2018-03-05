@@ -1,0 +1,17 @@
+---
+image: titanium-controller:latest
+imagePullPolicy: IfNotPresent
+replicas: 1
+
+nodeSelector:
+tolerations:
+
+conf:
+  mysql-image: percona:5.7
+  titanium-toolbox-image: titanium-toolbox:latest
+  # pull-secret: name
+  v: 3
+
+
+orc:
+  enabled: true

@@ -230,6 +230,12 @@
   version = "v2.0.1"
 
 [[projects]]
+  name = "github.com/radovskyb/watcher"
+  packages = ["."]
+  revision = "6145e1439b9de93806925353403f91d2abbad8a5"
+  version = "v1.0.2"
+
+[[projects]]
   name = "github.com/sergi/go-diff"
   packages = ["diffmatchpatch"]
   revision = "1744e2970ca51c86172c8190fadad617561ed6e7"
@@ -617,6 +623,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bbad65ca65609312a22719ed68a2b86150e4a9d4978fb11119f4d69cd85fa7d7"
+  inputs-digest = "64c58b9479e476c509d8a1628f7d0626bb8183bdc5d4f0e43e9ac3f1ec073753"
   solver-name = "gps-cdcl"
   solver-version = 1

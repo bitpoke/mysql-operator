@@ -10,7 +10,9 @@ import (
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	appsinformers "k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/kubernetes"
+	appslisters "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -34,16 +36,16 @@ const (
 type Controller struct {
 	Namespace string
 
-	KubeCli             kubernetes.Interface
-	clusterInformerSync cache.InformerSynced
-	clusterLister       mclisters.MysqlClusterLister
-	mcclient            clientset.Interface
-	recorder            record.EventRecorder
+	KubeCli  kubernetes.Interface
+	mcclient clientset.Interface
+	recorder record.EventRecorder
 
-	queue    workqueue.RateLimitingInterface
-	workerWg sync.WaitGroup
+	statefulSetLister appslisters.StatefulSetLister
+	clusterLister     mclisters.MysqlClusterLister
 
-	clustersOnce map[string]sync.Once
+	queue       workqueue.RateLimitingInterface
+	workerWg    sync.WaitGroup
+	syncedFuncs []cache.InformerSynced
 }
 
 // New returns a new controller
@@ -58,6 +60,8 @@ func New(
 	eventRecorder record.EventRecorder,
 	// the namespace
 	namespace string,
+	// sfs informer
+	statefulSetInformer appsinformers.StatefulSetInformer,
 
 ) *Controller {
 	ctrl := &Controller{
@@ -67,25 +71,29 @@ func New(
 		recorder:  eventRecorder,
 	}
 
+	// MysqlCluster
 	ctrl.queue = workqueue.NewNamedRateLimitingQueue(
 		workqueue.DefaultControllerRateLimiter(), "mysqlcluster")
-
-	// add handlers.
 	mysqlClusterInformer.Informer().AddEventHandler(
 		&controllerpkg.QueuingEventHandler{Queue: ctrl.queue})
-
-	ctrl.clusterInformerSync = mysqlClusterInformer.Informer().HasSynced
 	ctrl.clusterLister = mysqlClusterInformer.Lister()
-	ctrl.clustersOnce = make(map[string]sync.Once)
+	ctrl.syncedFuncs = append(ctrl.syncedFuncs, mysqlClusterInformer.Informer().HasSynced)
+
+	// StatefulSet
+	statefulSetInformer.Informer().AddEventHandler(
+		&controllerpkg.BlockingEventHandler{WorkFunc: ctrl.subresourceUpdated})
+	ctrl.statefulSetLister = statefulSetInformer.Lister()
+	ctrl.syncedFuncs = append(ctrl.syncedFuncs, statefulSetInformer.Informer().HasSynced)
+
 	return ctrl
 
 }
 
 // Start method start workers.
 func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
-	glog.V(2).Info("Starting controller ...")
+	glog.Info("Starting controller ...")
 
-	if !cache.WaitForCacheSync(stopCh, c.clusterInformerSync) {
+	if !cache.WaitForCacheSync(stopCh, c.syncedFuncs...) {
 		return fmt.Errorf("error waiting for informer cache to sync")
 	}
 
@@ -176,6 +184,7 @@ func init() {
 			ctx.SharedInformerFactory.Titanium().V1alpha1().MysqlClusters(),
 			ctx.Recorder,
 			ctx.Namespace,
+			ctx.KubeSharedInformerFactory.Apps().V1().StatefulSets(),
 		).Start
 	})
 }

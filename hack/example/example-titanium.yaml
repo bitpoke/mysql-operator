@@ -3,7 +3,7 @@ kind: MysqlCluster
 metadata:
   name: foo
 spec:
-  readReplicas: 1
+  readReplicas: 2
   secretName: the-secret
   volumeSpec:
     persistenceDisabled: true

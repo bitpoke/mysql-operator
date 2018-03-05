@@ -7,11 +7,11 @@ import (
 )
 
 const (
-	// MysqlClusterCRDKind is the kind of the crd that will be created.
-	MysqlClusterCRDKind = "MysqlCluster"
+	// MysqlClusterKind is the kind of the crd that will be created.
+	MysqlClusterKind = "MysqlCluster"
 	// MysqlClusterCRDPlural is the plural for mysqlcluster
-	MysqlClusterCRDPlural = "mysqlclusters"
-	groupName             = "titanium.presslabs.net"
+	MysqlClusterPlural = "mysqlclusters"
+	groupName          = "titanium.presslabs.net"
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 	// SchemeGroupVersion ..
 	SchemeGroupVersion = schema.GroupVersion{Group: groupName, Version: "v1alpha1"}
 	// MysqlClusterCRDName the crd name
-	MysqlClusterCRDName = MysqlClusterCRDPlural + "." + groupName
+	MysqlClusterCRDName = MysqlClusterPlural + "." + groupName
 )
 
 // Resource gets an MysqlCluster GroupResource for a specified resource
