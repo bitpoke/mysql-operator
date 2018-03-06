@@ -12,6 +12,7 @@ import (
 	"github.com/golang/glog"
 
 	"github.com/presslabs/titanium/pkg/mysqlcluster"
+	orc "github.com/presslabs/titanium/pkg/util/orchestrator"
 )
 
 var (
@@ -45,18 +46,19 @@ func GetHostname() string {
 	return os.Getenv("HOSTNAME")
 }
 
-func NodeRole() string {
-	// TODO: interogate ORC
-	if getOrdinal() == 0 {
-		return "master"
-	}
+func GetClusterName() string {
+	hn := GetHostname()
+	l := strings.Split(hn, "-")
 
-	// TODO: remove this ...
-	if strings.Contains(GetHostname(), "master") {
+	return l[0]
+}
+
+func NodeRole() string {
+	if GetMasterHost() == GetHostFor(GetServerId()) {
 		return "master"
-	} else {
-		return "slave"
 	}
+	return "slave"
+
 }
 
 func getOrdinal() int {
@@ -118,11 +120,23 @@ func GetInitBucket() string {
 	return uri
 }
 
-// GetMasterHost returns the master service name from env variable
-// MASTER_SERVICE_NAME
+// GetMasterHost returns the master host
 func GetMasterHost() string {
-	// TODO: interogate ORC for master
-	return GetHostFor(100)
+	orcUri := getOrcUri()
+	if len(orcUri) == 0 {
+		glog.Warning("Orchestrator is not used!")
+		return GetHostFor(100)
+	}
+
+	client := orc.NewFromUri(orcUri)
+	host, _, err := client.Master(GetClusterName())
+	if err != nil {
+		glog.Errorf("Failed to connect to orc for finding master, err: %s."+
+			" Fallback to determine master by its id.", err)
+		return GetHostFor(100)
+	}
+
+	return host
 }
 
 // GetOrcTopologyUser returns the orchestrator topology user. It is readed from
@@ -196,4 +210,13 @@ func RunQuery(q string) (string, error) {
 	glog.V(3).Infof("Mysql output for query %s is: %s", q, bufOUT.String())
 
 	return bufOUT.String(), nil
+}
+
+func getOrcUri() string {
+	uri := os.Getenv("TITANIUM_ORC_URI")
+	if len(uri) == 0 {
+		glog.Warning("TIANIUM_ORC_URI is not set!")
+	}
+
+	return uri
 }

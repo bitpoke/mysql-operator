@@ -27,7 +27,7 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		initBucket := tb.GetInitBucket()
 		if len(initBucket) == 0 {
 			glog.Info("Skip cloning init bucket uri is not set.")
-			return nil
+			return createCheckFile()
 		}
 		err := cloneFromBucket(initBucket)
 		if err != nil {
@@ -47,11 +47,7 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		return err
 	}
 
-	// create check file.
-	if _, err := os.Create(tb.CheckDataFile); err != nil {
-		glog.Fatalf("Failed to create check file: %s, err: %s", tb.CheckDataFile, err)
-		return err
-	}
+	createCheckFile()
 
 	return nil
 }
@@ -62,6 +58,15 @@ const (
 	// script from toolbox/docker-entrypoint.sh. /etc/rclone.conf
 	rcloneConfigFile = "/etc/rclone.conf"
 )
+
+func createCheckFile() error {
+	// create check file.
+	if _, err := os.Create(tb.CheckDataFile); err != nil {
+		glog.Fatalf("Failed to create check file: %s, err: %s", tb.CheckDataFile, err)
+		return err
+	}
+	return nil
+}
 
 func cloneFromBucket(initBucket string) error {
 

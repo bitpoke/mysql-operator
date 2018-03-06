@@ -26,13 +26,19 @@ data:
       "HostnameResolveMethod": "none",
       "MySQLHostnameResolveMethod": "@@report_host",
 
-      "RemoveTextFromHostnameDisplay": ".presslabs.net:3306",
+      "RemoveTextFromHostnameDisplay": "-headless:3306",
 
       "DetectClusterDomainQuery": "SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(@@hostname, '.', 1), '-', 1)",
       "DetectClusterAliasQuery": "SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(@@hostname, '.', 1), '-', 1)",
       "DetectInstanceAliasQuery": "SELECT SUBSTRING_INDEX(@@hostname, '.', 1)",
 
-      "SlaveLagQuery": "SELECT TIMESTAMPDIFF(SECOND,ts,NOW()) as drift FROM tools.heartbeat WHERE server_id <> @@server_id ORDER BY drift ASC LIMIT 1"
+      "SlaveLagQuery": "SELECT TIMESTAMPDIFF(SECOND,ts,NOW()) as drift FROM tools.heartbeat WHERE server_id <> @@server_id ORDER BY drift ASC LIMIT 1",
+
+      "PromotionIgnoreHostnameFilters": ["backup"],
+      "RecoverMasterClusterFilters": [".*"],
+      "RecoverIntermediateMasterClusterFilters": [".*"],
+
+      "ApplyMySQLPromotionAfterMasterFailover": true
 
       {{- /*Raft configuration*/ -}}
       {{- if .Values.orc.raftEnabled -}},
