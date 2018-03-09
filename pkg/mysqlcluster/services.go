@@ -17,16 +17,16 @@ func (f *cFactory) syncHeadlessService() (state string, err error) {
 
 	_, act, err := kcore.CreateOrPatchService(f.client, meta,
 		func(in *core.Service) *core.Service {
-			in.Spec = core.ServiceSpec{
-				Ports: []core.ServicePort{core.ServicePort{
-					Name:       "mysql",
-					Port:       MysqlPort,
-					TargetPort: TargetPort,
-					Protocol:   "TCP",
-				}},
-				Selector:  f.getLabels(map[string]string{}),
-				ClusterIP: "None",
+			in.Spec.ClusterIP = "None"
+			in.Spec.Selector = f.getLabels(map[string]string{})
+			if len(in.Spec.Ports) == 0 {
+				in.Spec.Ports = make([]core.ServicePort, 1)
 			}
+			in.Spec.Ports[0].Name = "mysql"
+			in.Spec.Ports[0].Port = MysqlPort
+			in.Spec.Ports[0].TargetPort = TargetPort
+			in.Spec.Ports[0].Protocol = "TCP"
+
 			return in
 		})
 

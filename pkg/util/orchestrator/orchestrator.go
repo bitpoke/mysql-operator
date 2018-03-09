@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/golang/glog"
 )
 
 type Orchestrator interface {
 	Discover(host string, port int) error
 	Forget(host string, port int) error
 
-	Master(clusterHint string) (string, int, error)
+	Master(clusterHint string) (*Instance, error)
 }
 
 type orchestrator struct {
@@ -40,55 +42,66 @@ func (o *orchestrator) Forget(host string, port int) error {
 	return nil
 }
 
-func (o *orchestrator) Master(clusterHint string) (string, int, error) {
-	port := 3306
-	inst, err := o.makeGetInstance(fmt.Sprintf("master/%s", clusterHint))
-	if err != nil {
-		return "", port, err
-	}
-	return inst.Key.Hostname, inst.Key.Port, nil
+func (o *orchestrator) Master(clusterHint string) (*Instance, error) {
+	return o.makeGetInstance(fmt.Sprintf("master/%s", clusterHint))
 }
 
 func (o *orchestrator) makeGetInstance(path string) (*Instance, error) {
 	uri := fmt.Sprintf("%s/%s", o.connectUri, path)
+	glog.V(2).Infof("Orc request on: %s", uri)
+
 	resp, err := http.Get(uri)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("http get error: %s", err)
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("http error code: %s", resp.Status)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("io read error: %s", err)
 	}
 
 	var inst Instance
-	err = json.Unmarshal(body, &inst)
-	return &inst, err
+	if err = json.Unmarshal(body, &inst); err != nil {
+		glog.V(3).Infof("Unmarshal data is: %s", string(body))
+		return nil, fmt.Errorf("unmarshal error: %s", err)
+	}
+
+	return &inst, nil
 }
 
 type APIResponse struct {
 	Code    string
 	Message string
-	Details string
+	// Detials json.RawMessage
 }
 
 func (o *orchestrator) makeGetAPIResponse(path string) error {
-
 	uri := fmt.Sprintf("%s/%s", o.connectUri, path)
+	glog.V(2).Infof("Orc request on: %s", uri)
+
 	resp, err := http.Get(uri)
 	if err != nil {
-		return nil
+		return fmt.Errorf("http get failed: %s", err)
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("http error code: %s", resp.Status)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil
+		return fmt.Errorf("io read failed: %s", err)
 	}
 
 	var apiObj APIResponse
 	err = json.Unmarshal(body, &apiObj)
 	if err != nil {
-		return err
+		glog.V(3).Infof("Unmarshal data is: %s", string(body))
+		return fmt.Errorf("unmarshal error: %s", err)
 	}
 
 	switch apiObj.Code {

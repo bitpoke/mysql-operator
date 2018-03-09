@@ -28,16 +28,6 @@ type NullInt64 struct {
 	Valid bool // Valid is true if Int64 is not NULL
 }
 
-type CandidatePromotionRule string
-
-const (
-	MustPromoteRule      CandidatePromotionRule = "must"
-	PreferPromoteRule                           = "prefer"
-	NeutralPromoteRule                          = "neutral"
-	PreferNotPromoteRule                        = "prefer_not"
-	MustNotPromoteRule                          = "must_not"
-)
-
 type Instance struct {
 	Key                    InstanceKey
 	InstanceAlias          string
@@ -75,7 +65,6 @@ type Instance struct {
 	GtidPurged             string
 
 	SlaveLagSeconds                 NullInt64
-	SlaveHosts                      InstanceKeyMap
 	ClusterName                     string
 	SuggestedClusterAlias           string
 	DataCenter                      string
@@ -94,20 +83,6 @@ type Instance struct {
 	IsRecentlyChecked    bool
 	SecondsSinceLastSeen NullInt64
 	CountMySQLSnapshots  int
-
-	// Careful. IsCandidate and PromotionRule are used together
-	// and probably need to be merged. IsCandidate's value may
-	// be picked up from daabase_candidate_instance's value when
-	// reading an instance from the db.
-	IsCandidate          bool
-	PromotionRule        CandidatePromotionRule
-	IsDowntimed          bool
-	DowntimeReason       string
-	DowntimeOwner        string
-	DowntimeEndTimestamp string
-	ElapsedDowntime      time.Duration
-	UnresolvedHostname   string
-	AllowTLS             bool
 
 	LastDiscoveryLatency time.Duration
 }

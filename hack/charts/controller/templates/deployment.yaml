@@ -35,7 +35,7 @@ spec:
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           args:
             {{- if .Values.orc.enabled }}
-            - --orchestrator-uri=http://{{ .Release.Name }}-orc/
+            - --orchestrator-uri=http://{{ .Release.Name }}-orc/api
             - --orchestrator-secret={{ .Release.Name }}-topology-secret
             {{- end }}
             {{- range $key, $value := .Values.conf }}

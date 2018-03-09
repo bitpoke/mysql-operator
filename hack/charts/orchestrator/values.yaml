@@ -14,3 +14,5 @@ orc:
 
   raftEnabled: true
   raftPort: 10008
+  topologyUser: orchestrator
+  topologyPass: orchestratorPass

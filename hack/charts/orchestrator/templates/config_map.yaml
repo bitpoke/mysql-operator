@@ -38,6 +38,8 @@ data:
       "RecoverMasterClusterFilters": [".*"],
       "RecoverIntermediateMasterClusterFilters": [".*"],
 
+      "UnseenInstanceForgetHours": 1,
+
       "ApplyMySQLPromotionAfterMasterFailover": true
 
       {{- /*Raft configuration*/ -}}

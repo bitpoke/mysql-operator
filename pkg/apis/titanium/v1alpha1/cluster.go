@@ -34,9 +34,6 @@ func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
 
 // UpdateDefaults sets the defaults for Spec and Status
 func (c *MysqlCluster) UpdateDefaults(opt *options.Options) error {
-	c.UpdateStatusCondition(ClusterConditionReady,
-		apiv1.ConditionUnknown, "not initialized", "setting defaults")
-
 	return c.Spec.UpdateDefaults(opt)
 }
 

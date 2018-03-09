@@ -4,11 +4,13 @@ import (
 	"fmt"
 
 	kapps "github.com/appscode/kutil/apps/v1"
+	"github.com/golang/glog"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
+	orc "github.com/presslabs/titanium/pkg/util/orchestrator"
 )
 
 const (
@@ -18,7 +20,6 @@ const (
 	confMapVolumeName      = "config-map"
 	ConfMapVolumeMountPath = "/mnt/conf"
 
-	dataVolumeName      = "data"
 	DataVolumeMountPath = "/var/lib/mysql"
 )
 
@@ -41,15 +42,40 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 					core.ConditionFalse, "statefulset not ready", "Cluster is not ready.")
 			}
 
-			in.Spec = apps.StatefulSetSpec{
-				Replicas: &f.cl.Spec.ReadReplicas,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: f.getLabels(map[string]string{}),
-				},
-				ServiceName:          f.getNameForResource(HeadlessSVC),
-				Template:             f.getPodTempalteSpec(),
-				VolumeClaimTemplates: f.getVolumeClaimTemplates(),
+			if len(f.cl.Spec.GetOrcUri()) != 0 {
+				// try to discover ready nodes into orchestrator
+				// this is a sync discovery
+				client := orc.NewFromUri(f.cl.Spec.GetOrcUri())
+				for i := 0; i < int(in.Status.ReadyReplicas); i++ {
+					host := f.getHostForReplica(i)
+					if err := client.Discover(host, MysqlPort); err != nil {
+						glog.Infof("Failed to register into orchestrator host: %s", host)
+					}
+				}
 			}
+
+			in.Spec.Replicas = &f.cl.Spec.Replicas
+			in.Spec.Selector = &metav1.LabelSelector{
+				MatchLabels: f.getLabels(map[string]string{}),
+			}
+			in.Spec.ServiceName = f.getNameForResource(HeadlessSVC)
+			in.Spec.Template = f.ensureTemplate(in.Spec.Template)
+			if len(in.Spec.VolumeClaimTemplates) == 0 {
+				in.Spec.VolumeClaimTemplates = f.getVolumeClaimTemplates()
+			}
+
+			//if in.Spec.Replicas != f.cl.Spec.Replicas {
+			//	glog.V(3).Infof("SFS update replicas from %d to %d.", in.Spec.Replicas,
+			//		f.cl.Spec.Replicas)
+			//	in.Spec.Replicas = &f.cl.Spec.Replicas
+			//}
+			//if !reflect.DeepEqual(in.Spec.Selector.MatchLabels, f.getLabels(map[string]string{})) {
+			//	glog.V(3).Infof("SFS update labels to: %s", f.getLabels(map[string]string{}))
+			//	in.Spec.Selector = &metav1.LabelSelector{
+			//		MatchLabels: f.getLabels(map[string]string{}),
+			//	}
+			//}
+
 			return in
 		})
 
@@ -59,25 +85,31 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 	}
 
 	state = getStatusFromKVerb(act)
+	glog.V(3).Infof("SFS synced state: %s", state)
 	return
 }
 
-func (f *cFactory) getPodTempalteSpec() core.PodTemplateSpec {
-	return core.PodTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:      f.getLabels(f.cl.Spec.PodSpec.Labels),
-			Annotations: f.cl.Spec.PodSpec.Annotations,
-		},
-		Spec: core.PodSpec{
-			InitContainers: f.getInitContainersSpec(),
-			Containers:     f.getContainersSpec(),
-			Volumes:        f.getVolumes(),
+func (f *cFactory) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec {
+	in.ObjectMeta.Labels = f.getLabels(f.cl.Spec.PodSpec.Labels)
+	in.ObjectMeta.Annotations = f.cl.Spec.PodSpec.Annotations
 
-			Affinity:         &f.cl.Spec.PodSpec.Affinity,
-			NodeSelector:     f.cl.Spec.PodSpec.NodeSelector,
-			ImagePullSecrets: f.cl.Spec.PodSpec.ImagePullSecrets,
-		},
+	// TODO: make ensure containers functions
+	if len(in.Spec.InitContainers) == 0 {
+		in.Spec.InitContainers = f.getInitContainersSpec()
 	}
+
+	if len(in.Spec.Containers) == 0 {
+		in.Spec.Containers = f.getContainersSpec()
+	}
+
+	if len(in.Spec.Volumes) == 0 {
+		in.Spec.Volumes = f.getVolumes()
+	}
+	in.Spec.Affinity = &f.cl.Spec.PodSpec.Affinity
+	in.Spec.NodeSelector = f.cl.Spec.PodSpec.NodeSelector
+	in.Spec.ImagePullSecrets = f.cl.Spec.PodSpec.ImagePullSecrets
+
+	return in
 }
 
 const (
@@ -112,21 +144,42 @@ func (f *cFactory) getInitContainersSpec() []core.Container {
 			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
 			Args:            []string{"clone"},
 			EnvFrom:         f.getEnvSourcesFor(containerCloneName),
-			VolumeMounts:    getVolumeMounts(),
+			VolumeMounts: []core.VolumeMount{
+				core.VolumeMount{
+					Name:      confVolumeName,
+					MountPath: ConfVolumeMountPath,
+				},
+				core.VolumeMount{
+					Name:      f.getNameForResource(VolumePVC),
+					MountPath: DataVolumeMountPath,
+				},
+			},
 		},
 	}
 }
 
 func (f *cFactory) getContainersSpec() []core.Container {
-	titaniumVolumeMounts := getVolumeMounts()
+	commonVolumeMounts := []core.VolumeMount{
+		core.VolumeMount{
+			Name:      confVolumeName,
+			MountPath: ConfVolumeMountPath,
+		},
+		core.VolumeMount{
+			Name:      f.getNameForResource(VolumePVC),
+			MountPath: DataVolumeMountPath,
+		},
+	}
+
+	titaniumVolumeMounts := commonVolumeMounts
 	if len(f.cl.Spec.GetOrcTopologySecret()) != 0 {
-		titaniumVolumeMounts = getVolumeMounts(core.VolumeMount{
+		titaniumVolumeMounts = append(commonVolumeMounts, core.VolumeMount{
 			Name:      "orc-topology-secret",
 			MountPath: OrcTopologyDir,
 		})
 
 	}
 	return []core.Container{
+		// MYSQL container
 		core.Container{
 			Name:            containerMysqlName,
 			Image:           f.cl.Spec.GetMysqlImage(),
@@ -138,11 +191,13 @@ func (f *cFactory) getContainersSpec() []core.Container {
 					ContainerPort: MysqlPort,
 				},
 			},
+			// Command:        []string{"mysqld"},
 			Resources:      f.cl.Spec.PodSpec.Resources,
 			LivenessProbe:  getLivenessProbe(),
 			ReadinessProbe: getReadinessProbe(),
-			VolumeMounts:   getVolumeMounts(),
+			VolumeMounts:   commonVolumeMounts,
 		},
+		// TITANIUM container where runs toolbox
 		core.Container{
 			Name:            containerTitaniumName,
 			Image:           f.cl.Spec.GetTitaniumImage(),
@@ -180,25 +235,15 @@ func (f *cFactory) getVolumes() []core.Volume {
 				},
 			},
 		},
-	}
-
-	// data volume mount: /var/lib/mysql
-	vs := core.VolumeSource{
-		EmptyDir: &core.EmptyDirVolumeSource{},
-	}
-	if !f.cl.Spec.VolumeSpec.PersistenceDisabled {
-		vs = core.VolumeSource{
-			PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
-				ClaimName: f.getNameForResource(VolumePVC),
+		core.Volume{
+			Name: f.getNameForResource(VolumePVC),
+			VolumeSource: core.VolumeSource{
+				PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
+					ClaimName: f.getNameForResource(VolumePVC),
+				},
 			},
-		}
+		},
 	}
-
-	volumes = append(volumes, core.Volume{
-		Name:         dataVolumeName,
-		VolumeSource: vs,
-	})
-
 	if len(f.cl.Spec.GetOrcTopologySecret()) != 0 {
 		volumes = append(volumes, core.Volume{
 			Name: "orc-topology-secret",
@@ -213,31 +258,7 @@ func (f *cFactory) getVolumes() []core.Volume {
 	return volumes
 }
 
-func getVolumeMounts(extra ...core.VolumeMount) []core.VolumeMount {
-	common := []core.VolumeMount{
-		core.VolumeMount{
-			Name:      confVolumeName,
-			MountPath: ConfVolumeMountPath,
-		},
-		core.VolumeMount{
-			Name:      dataVolumeName,
-			MountPath: DataVolumeMountPath,
-		},
-	}
-
-	for _, vm := range extra {
-		common = append(common, vm)
-	}
-
-	return common
-}
-
 func (f *cFactory) getVolumeClaimTemplates() []core.PersistentVolumeClaim {
-	if f.cl.Spec.VolumeSpec.PersistenceDisabled {
-		fmt.Println("Persistence is disabled.")
-		return nil
-	}
-
 	return []core.PersistentVolumeClaim{
 		core.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
@@ -284,4 +305,9 @@ func envFromSecret(name string) core.EnvFromSource {
 			},
 		},
 	}
+}
+
+func (f *cFactory) getHostForReplica(no int) string {
+	return fmt.Sprintf("%s-%d.%s", f.getNameForResource(StatefulSet), no,
+		f.getNameForResource(HeadlessSVC))
 }

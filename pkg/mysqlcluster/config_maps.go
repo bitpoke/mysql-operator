@@ -22,9 +22,18 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 
 	_, act, err := kcore.CreateOrPatchConfigMap(f.client, meta,
 		func(in *core.ConfigMap) *core.ConfigMap {
+			if key := in.ObjectMeta.Annotations["config_version"]; key == ConfigVersion {
+				glog.V(2).Infof("Skip updating configs, it's up to date: %s",
+					in.ObjectMeta.Annotations["config_version"])
+				return in
+			}
+			in.ObjectMeta.Annotations = map[string]string{
+				"config_version": ConfigVersion,
+			}
 			data, err := f.getConfigMapData()
 			if err != nil {
 				glog.Errorf("Fail to create mysql configs. err: %s", err)
+				return in
 			}
 			in.Data = data
 			return in
@@ -35,7 +44,6 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 }
 
 func (f *cFactory) getConfigMapData() (map[string]string, error) {
-
 	master, err := f.getMysqlConfigs(MysqlMasterConfigs)
 	if err != nil {
 		return nil, err

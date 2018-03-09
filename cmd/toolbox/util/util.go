@@ -32,7 +32,7 @@ var (
 	DataDir = mysqlcluster.DataVolumeMountPath
 
 	// CheckDataFile represent the check file that marks cloning complete
-	CheckDataFile = ConfigDir + "/titanium_chk"
+	CheckDataFile = DataDir + "/titanium_chk"
 
 	// UtilityUser is the name of the percona utility user.
 	UtilityUser = "utility"
@@ -40,6 +40,8 @@ var (
 	// OrcTopologyDir contains the path where the secret with orc credentails is
 	// mounted.
 	OrcTopologyDir = mysqlcluster.OrcTopologyDir
+
+	NameOfStatefulSet = mysqlcluster.StatefulSet
 )
 
 func GetHostname() string {
@@ -82,9 +84,9 @@ func GetServerId() int {
 
 // GetHostFor returns the host for given server id
 func GetHostFor(id int) string {
-	base := strings.Split(GetHostname(), "-")
+	base := fmt.Sprintf("%s-%s", GetClusterName(), NameOfStatefulSet)
 	govSVC := os.Getenv("TITANIUM_HEADLESS_SERVICE")
-	return fmt.Sprintf("%s-%d.%s", strings.Join(base[:len(base)-1], "-"), id-100, govSVC)
+	return fmt.Sprintf("%s-%d.%s", base, id-100, govSVC)
 }
 
 // GetReplUser returns the replication user name from env variable
@@ -129,14 +131,14 @@ func GetMasterHost() string {
 	}
 
 	client := orc.NewFromUri(orcUri)
-	host, _, err := client.Master(GetClusterName())
+	inst, err := client.Master(GetClusterName())
 	if err != nil {
 		glog.Errorf("Failed to connect to orc for finding master, err: %s."+
 			" Fallback to determine master by its id.", err)
 		return GetHostFor(100)
 	}
 
-	return host
+	return inst.Key.Hostname
 }
 
 // GetOrcTopologyUser returns the orchestrator topology user. It is readed from
@@ -168,18 +170,16 @@ func readFileContent(fileName string) string {
 }
 
 func UpdateOrcUserPass() error {
-	glog.V(2).Info("Creating orchestrator user and password...")
-	query := fmt.Sprintf(
-		"GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* "+
-			"TO '%s'@'%%' IDENTIFIED BY '%s'", GetOrcUser(), GetOrcPass(),
-	)
-	if _, err := RunQuery(query); err != nil {
-		return fmt.Errorf("failed to create orc user, err: %s", err)
-	}
+	glog.V(2).Info("Creating orchestrator user, password and privileges...")
+	query := fmt.Sprintf(`
+    SET @@SESSION.SQL_LOG_BIN = 0;
+    GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO '%[1]s'@'%%' IDENTIFIED BY '%[2]s';
+    GRANT SELECT ON meta.* TO '%[1]s'@'%%';
+    GRANT SELECT ON mysql.slave_master_info TO '%[1]s'@'%%';
+    `, GetOrcUser(), GetOrcPass())
 
-	query = fmt.Sprintf("GRANT SELECT ON meta.* TO '%s'@'%%'", GetOrcUser())
 	if _, err := RunQuery(query); err != nil {
-		return fmt.Errorf("failed to configure orc user, err: %s", err)
+		return fmt.Errorf("failed to configure orchestrator (user/pass/access), err: %s", err)
 	}
 	glog.V(2).Info("Orchestrator user configured!")
 

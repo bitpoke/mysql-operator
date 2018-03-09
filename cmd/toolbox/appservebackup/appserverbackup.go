@@ -20,10 +20,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/golang/glog"
-	"github.com/radovskyb/watcher"
 
 	tb "github.com/presslabs/titanium/cmd/toolbox/util"
 )
@@ -31,16 +29,6 @@ import (
 // RunServerBackupCommand watch for orchestrator topology creds for change and
 // serve backups.
 func RunServeBackupCommand(stopCh <-chan struct{}) error {
-
-	if tb.NodeRole() == "master" && len(tb.GetOrcUser()) > 0 {
-		glog.Info("Watch for orc creds if changes.")
-		w, err := syncOrcUserPass(stopCh)
-		if err != nil {
-			return fmt.Errorf(
-				"fail to set watcher for orchestrator topology changes, err: %s", err)
-		}
-		defer w.Close()
-	}
 
 	glog.Infof("Serve backups command.")
 
@@ -52,47 +40,4 @@ func RunServeBackupCommand(stopCh <-chan struct{}) error {
 		tb.BackupPort, "-c", strings.Join(xtrabackup_cmd, " "))
 
 	return ncat.Run()
-}
-
-func syncOrcUserPass(stopCh <-chan struct{}) (*watcher.Watcher, error) {
-	w := watcher.New()
-	w.SetMaxEvents(1)
-	w.FilterOps(watcher.Write)
-
-	go func() {
-		for {
-			select {
-			case <-w.Event:
-				glog.Info("topology creds changed, syncing..")
-				if err := tb.UpdateOrcUserPass(); err != nil {
-					glog.Errorf("Failed to update orc user and pass with err: %s", err)
-				}
-			case err := <-w.Error:
-				glog.V(2).Info("Got error when watching orc topology creds, err: %s", err)
-
-			case <-stopCh:
-				return
-
-			case <-w.Closed:
-				return
-			}
-		}
-	}()
-
-	if err := w.Add(tb.OrcTopologyDir + "/TOPOLOGY_PASSWORD"); err != nil {
-		return nil, err
-	}
-
-	if err := w.Add(tb.OrcTopologyDir + "/TOPOLOGY_USER"); err != nil {
-		return nil, err
-	}
-
-	go func() {
-		if err := w.Start(time.Second * 5); err != nil {
-			glog.Errorf("faild to start watcher, err: %s", err)
-		}
-	}()
-
-	return w, nil
-
 }

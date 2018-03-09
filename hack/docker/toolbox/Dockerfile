@@ -4,8 +4,8 @@ RUN apt-get update && apt-get install -y \
     wget curl alien unzip mysql-client
 
 # https://www.percona.com/doc/percona-xtrabackup/LATEST/installation/apt_repo.html
-ADD https://repo.percona.com/apt/percona-release_0.1-5.stretch_all.deb /tmp/
-RUN dpkg -i /tmp/percona-release_0.1-5.stretch_all.deb \
+RUN wget https://repo.percona.com/apt/percona-release_0.1-5.stretch_all.deb -P /tmp/ \
+    && dpkg -i /tmp/percona-release_0.1-5.stretch_all.deb \
     && rm /tmp/percona-release_0.1-5.stretch_all.deb
 
 RUN apt-get update && apt-get install -y \
@@ -22,7 +22,7 @@ RUN wget https://nmap.org/dist/ncat-7.60-1.x86_64.rpm \
 
 WORKDIR /app
 
-COPY ./toolbox/docker-entrypoint.sh /app/
+COPY ./hack/docker/toolbox/docker-entrypoint.sh /app/
 COPY ./bin/linux/toolbox /usr/bin/
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

@@ -42,7 +42,7 @@ type ClusterSpec struct {
 	// The number of slaves pods. This updates replicas filed
 	// Defaults to 0
 	// +optional
-	ReadReplicas int32 `json:"readReplicas"`
+	Replicas int32 `json:"replicas"`
 	// The secret name that contains connection information to initialize database, like
 	// USER, PASSWORD, ROOT_PASSWORD and so on
 	// This secret will be updated with DB_CONNECT_URL and some more configs.
@@ -82,7 +82,7 @@ type ClusterSpec struct {
 
 	// PVC extra specifiaction
 	// +optional
-	VolumeSpec VolumeSpec `json:volumeSpec,omitempty`
+	VolumeSpec `json:volumeSpec,omitempty`
 }
 
 type MysqlConf map[string]string
@@ -126,6 +126,4 @@ type PodSpec struct {
 
 type VolumeSpec struct {
 	apiv1.PersistentVolumeClaimSpec `json:",inline"`
-
-	PersistenceDisabled bool `json:persistenceDisabled,omitempty`
 }

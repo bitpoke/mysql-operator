@@ -23,6 +23,10 @@ const (
 	OrcTopologyDir = "/var/run/orc-topology"
 
 	rStrLen = 18
+
+	// ConfigVersion is the mysql config that needs to be updated if configs
+	// change
+	ConfigVersion = "2018-03-09:12:39"
 )
 
 var (
@@ -31,24 +35,32 @@ var (
 
 	// MysqlMasterSlaveConfigs contains configs for both master and slave
 	MysqlMasterSlaveConfigs = map[string]string{
-		"default-storage-engine":     "InnoDB",
-		"gtid-mode":                  "on",
-		"enforce-gtid-consistency":   "on",
+		"log-bin":           "/var/lib/mysql/mysql-bin",
+		"log-slave-updates": "on",
+
+		"read-only":        "on",
+		"skip-slave-start": "on",
+
+		// Crash safe
+		"relay-log-info-repository": "TABLE",
+		"relay-log-recovery":        "on",
+
+		// https://github.com/github/orchestrator/issues/323#issuecomment-338451838
+		"master_info_repository": "TABLE",
+
+		"default-storage-engine":   "InnoDB",
+		"gtid-mode":                "on",
+		"enforce-gtid-consistency": "on",
+
+		// Utility user configs
 		"utility-user-schema-access": "mysql",
 		// TODO: least privileges principle
 		"utility-user-privileges": "SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,GRANT,ALTER,SHOW DATABASES,SUPER,CREATE USER,PROCESS,RELOAD,LOCK TABLES,REPLICATION CLIENT,REPLICATION SLAVE",
 	}
 	// MysqlMasterConfigs represents configs specific to master
-	MysqlMasterConfigs = map[string]string{
-		"log-bin": "/var/lib/mysql/mysql-bin",
-	}
+	MysqlMasterConfigs = map[string]string{}
 	// MysqlSlaveConfigs represents configs specific to slave
-	MysqlSlaveConfigs = map[string]string{
-		"super-read-only": "on",
-		// Crash safe
-		"relay-log-info-repository": "TABLE",
-		"relay-log-recovery":        "on",
-	}
+	MysqlSlaveConfigs = map[string]string{}
 )
 
 // ResourceName is the type for aliasing resources that will be created.

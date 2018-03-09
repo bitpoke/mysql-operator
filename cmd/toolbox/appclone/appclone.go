@@ -22,12 +22,12 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		return nil
 	}
 
-	if tb.GetServerId() == 100 {
-		// cloning for the first master
+	if tb.NodeRole() == "master" {
 		initBucket := tb.GetInitBucket()
 		if len(initBucket) == 0 {
 			glog.Info("Skip cloning init bucket uri is not set.")
-			return createCheckFile()
+			// let mysqld initialize data dir
+			return nil
 		}
 		err := cloneFromBucket(initBucket)
 		if err != nil {
@@ -47,9 +47,7 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		return err
 	}
 
-	createCheckFile()
-
-	return nil
+	return createCheckFile()
 }
 
 const (
@@ -102,33 +100,34 @@ func cloneFromBucket(initBucket string) error {
 	defer io.Copy(os.Stdout, &out)
 
 	if err := rclone.Start(); err != nil {
-		return err
+		return fmt.Errorf("rclone start error: %s", err)
 	}
 
 	if err := gzip.Start(); err != nil {
-		return err
+		return fmt.Errorf("gzip start error: %s", err)
 	}
 
 	if err := xbstream.Start(); err != nil {
-		return err
+		return fmt.Errorf("xbstream start error: %s", err)
 	}
 
 	if err := rclone.Wait(); err != nil {
-		return err
+		return fmt.Errorf("rclone wait error: %s", err)
 	}
 
 	if err := gzip.Wait(); err != nil {
-		return err
+		return fmt.Errorf("gzip wait error: %s", err)
 	}
 
 	if err := xbstream.Wait(); err != nil {
-		return err
+		return fmt.Errorf("xbstream wait error: %s", err)
 	}
 
 	return nil
 }
 
 func cloneFromSource(host string) error {
+	glog.Infof("Cloning from node: %s", host)
 	// ncat --recv-only {host} {port}
 	// connects to host and get data from there
 	ncat := exec.Command("ncat", "--recv-only", host, tb.BackupPort)
@@ -140,23 +139,23 @@ func cloneFromSource(host string) error {
 
 	var err error
 	if xbstream.Stdin, err = ncat.StdoutPipe(); err != nil {
-		return err
+		return fmt.Errorf("set pipe, error: %s", err)
 	}
 
 	if err := ncat.Start(); err != nil {
-		return err
+		return fmt.Errorf("ncat start error: %s", err)
 	}
 
 	if err := xbstream.Start(); err != nil {
-		return err
+		return fmt.Errorf("xbstream start error: %s", err)
 	}
 
 	if err := ncat.Wait(); err != nil {
-		return err
+		return fmt.Errorf("ncat wait error: %s", err)
 	}
 
 	if err := xbstream.Wait(); err != nil {
-		return err
+		return fmt.Errorf("xbstream wait error: %s", err)
 	}
 
 	return nil
