@@ -42,7 +42,7 @@ case "$1" in
         ;;
     config-and-serve)
         shift 1
-        toolbox $VERBOSE "$@" init-mysql; toolbox $VERBOSE "$@" serve-backups
+        toolbox $VERBOSE "$@" run
         ;;
     *)
         echo "Usage: $0 {files-config|clone|config-and-serve}"

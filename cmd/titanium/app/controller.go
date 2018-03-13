@@ -17,8 +17,10 @@ limitations under the License.
 package app
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -84,11 +86,14 @@ management of multiple mysql clusters.`,
 
 // RunTitaniumController starts the titanium reconcile loops
 func RunTitaniumController(opts *options.TitaniumControllerOptions, stopCh <-chan struct{}) {
+	glog.Info("Start controller...")
 	ctx, kubeCfg, err := buildControllerContext(opts)
-
 	if err != nil {
 		glog.Fatalf(err.Error())
 	}
+
+	// start probing http server
+	httpServer(stopCh, opts.ProbeAddr)
 
 	run := func(_ <-chan struct{}) {
 		var wg sync.WaitGroup
@@ -212,4 +217,30 @@ func startLeaderElection(opts *options.TitaniumControllerOptions, leaderElection
 			},
 		},
 	})
+}
+
+func httpServer(stop <-chan struct{}, addr string) {
+	mux := http.NewServeMux()
+
+	// Add health endpoint
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("OK"))
+	})
+
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
+	// Shutdown gracefully the http server
+	go func() {
+		<-stop // wait for stop signal
+		if err := srv.Shutdown(context.Background()); err != nil {
+			glog.Errorf("Failed to stop probe server, err: %s", err)
+		}
+	}()
+
+	go func() {
+		glog.Fatal(srv.ListenAndServe())
+	}()
 }

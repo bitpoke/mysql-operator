@@ -31,8 +31,10 @@ var (
 	// DataDir is the mysql data. /var/lib/mysql
 	DataDir = mysqlcluster.DataVolumeMountPath
 
-	// CheckDataFile represent the check file that marks cloning complete
-	CheckDataFile = DataDir + "/titanium_chk"
+	// ToolsDbName is the name of the tools table
+	ToolsDbName = "tools"
+	// ToolsTableName is the name of the init table
+	ToolsInitTableName = "init"
 
 	// UtilityUser is the name of the percona utility user.
 	UtilityUser = "utility"
@@ -42,6 +44,9 @@ var (
 	OrcTopologyDir = mysqlcluster.OrcTopologyDir
 
 	NameOfStatefulSet = mysqlcluster.StatefulSet
+
+	TitaniumProbePath = mysqlcluster.TitaniumProbePath
+	TitaniumProbePort = mysqlcluster.TitaniumProbePort
 )
 
 func GetHostname() string {

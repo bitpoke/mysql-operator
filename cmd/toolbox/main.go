@@ -28,9 +28,7 @@ import (
 
 	"github.com/presslabs/titanium/cmd/toolbox/appclone"
 	"github.com/presslabs/titanium/cmd/toolbox/appconf"
-	"github.com/presslabs/titanium/cmd/toolbox/appinit"
-	"github.com/presslabs/titanium/cmd/toolbox/appservebackup"
-	tb "github.com/presslabs/titanium/cmd/toolbox/util"
+	"github.com/presslabs/titanium/cmd/toolbox/apptitanium"
 	"github.com/presslabs/titanium/pkg/util/logs"
 )
 
@@ -38,6 +36,8 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 	stopCh := SetupSignalHandler()
+
+	glog.Info("START!")
 
 	cmd := &cobra.Command{
 		Use:   "toolbox",
@@ -74,29 +74,17 @@ titanium-toolbox: helper for config pods`,
 	}
 	cmd.AddCommand(cloneCmd)
 
-	initCmd := &cobra.Command{
-		Use:   "init-mysql",
-		Short: "Configs mysql replication, crete replication users.",
+	titaniumCmd := &cobra.Command{
+		Use:   "run",
+		Short: "Configs mysql users, replication, and serve backups.",
 		Run: func(cmd *cobra.Command, args []string) {
-			err := appinit.RunInitCommand(stopCh)
+			err := apptitanium.RunRunCommand(stopCh)
 			if err != nil {
-				glog.Fatalf("Init mysql command failed with error: %s .", err)
+				glog.Fatalf("Run command failed with error: %s .", err)
 			}
 		},
 	}
-	cmd.AddCommand(initCmd)
-
-	serveCmd := &cobra.Command{
-		Use:   "serve-backups",
-		Short: fmt.Sprintf("Expose xtra-backups on port %s.", tb.BackupPort),
-		Run: func(cmd *cobra.Command, args []string) {
-			err := appservebackup.RunServeBackupCommand(stopCh)
-			if err != nil {
-				glog.Fatalf("Init mysql command failed with error: %s .", err)
-			}
-		},
-	}
-	cmd.AddCommand(serveCmd)
+	cmd.AddCommand(titaniumCmd)
 
 	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 	flag.CommandLine.Parse([]string{})

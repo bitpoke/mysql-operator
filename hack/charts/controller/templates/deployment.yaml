@@ -41,5 +41,8 @@ spec:
             {{- range $key, $value := .Values.conf }}
             - --{{ $key }}={{ $value }}
             {{- end }}
-
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
       

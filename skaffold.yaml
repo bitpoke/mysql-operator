@@ -3,15 +3,16 @@ kind: Config
 build:
   tagPolicy: sha256
   artifacts:
-  - imageName: orchestrator
-    workspace: hack/docker/orchestrator
+  #- imageName: orchestrator
+  #  workspace: hack/docker/orchestrator
   - imageName: titanium-toolbox
     dockerfilePath: hack/docker/toolbox/Dockerfile
     workspace: .
   - imageName: titanium-controller
     dockerfilePath: Dockerfile
     workspace: .
-  local: {}
+  local:
+    skipPush: true
 deploy:
   helm:
     releases:
@@ -19,4 +20,5 @@ deploy:
       chartPath: hack/charts/controller
       values:
         image: titanium-controller
+        #orc.orc.image: orchestrator
         conf.titanium-toolbox-image: titanium-toolbox

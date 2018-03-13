@@ -1,4 +1,4 @@
 apiVersion: v1
 description: A Helm chart for deploying titanium controller a mysql k8s operator.
 name: controller
-version: 0.1.1
+version: 0.1.2

@@ -17,8 +17,11 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 	glog.Infof("Cloning into node %s", tb.GetHostname())
 
 	// skip cloning if data exists.
-	if _, err := os.Stat(tb.CheckDataFile); !os.IsNotExist(err) {
-		glog.Info("Data exists, Skip clonging.")
+	init, err := checkIfWasInit()
+	if err != nil {
+		return fmt.Errorf("failed to read init file: %s", err)
+	} else if init {
+		glog.Info("Data exists and is initialized. Skip clonging.")
 		return nil
 	}
 
@@ -47,7 +50,7 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		return err
 	}
 
-	return createCheckFile()
+	return nil
 }
 
 const (
@@ -56,15 +59,6 @@ const (
 	// script from toolbox/docker-entrypoint.sh. /etc/rclone.conf
 	rcloneConfigFile = "/etc/rclone.conf"
 )
-
-func createCheckFile() error {
-	// create check file.
-	if _, err := os.Create(tb.CheckDataFile); err != nil {
-		glog.Fatalf("Failed to create check file: %s, err: %s", tb.CheckDataFile, err)
-		return err
-	}
-	return nil
-}
 
 func cloneFromBucket(initBucket string) error {
 
@@ -171,4 +165,18 @@ func xtrabackupPreperData() error {
 		fmt.Sprintf("--user=%s", replUser), fmt.Sprintf("--password=%s", replPass))
 
 	return xtbkCmd.Run()
+}
+
+func checkIfWasInit() (bool, error) {
+	_, err := os.Open(fmt.Sprintf("%s/%s/%s.CSV", tb.DataDir, tb.ToolsDbName,
+		tb.ToolsInitTableName))
+
+	if os.IsNotExist(err) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	// maybe check csv init data and log it
+
+	return true, nil
 }

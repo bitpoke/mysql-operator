@@ -37,6 +37,8 @@ type TitaniumControllerOptions struct {
 
 	// The number of workers
 	NoWorkers int
+
+	ProbeAddr string
 }
 
 const (
@@ -50,6 +52,7 @@ const (
 	defaultLeaderElectionRetryPeriod   = 2 * time.Second
 
 	defaultNoWorkers = 5
+	defaultProbeAddr = ":80"
 )
 
 func NewTitaniumControllerOptions() *TitaniumControllerOptions {
@@ -63,6 +66,7 @@ func NewTitaniumControllerOptions() *TitaniumControllerOptions {
 		LeaderElectionRetryPeriod:   defaultLeaderElectionRetryPeriod,
 
 		NoWorkers: defaultNoWorkers,
+		ProbeAddr: defaultProbeAddr,
 	}
 }
 
@@ -99,6 +103,9 @@ func (s *TitaniumControllerOptions) AddFlags(fs *pflag.FlagSet) {
 
 	fs.IntVar(&s.NoWorkers, "workers", defaultNoWorkers, "The number of workers that"+
 		" process events.")
+
+	fs.StringVar(&s.ProbeAddr, "probe-addr", defaultProbeAddr,
+		"The address for probing. Default :80")
 }
 
 func (o *TitaniumControllerOptions) Validate() error {

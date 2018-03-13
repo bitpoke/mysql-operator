@@ -12,6 +12,7 @@ import (
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
 	"github.com/presslabs/titanium/pkg/util/options"
+	orc "github.com/presslabs/titanium/pkg/util/orchestrator"
 )
 
 // Interface is for cluster Factory
@@ -111,6 +112,18 @@ func (f *cFactory) Sync(ctx context.Context) error {
 		switch state {
 		case statusCreated, statusUpdated:
 			f.rec.Event(f.cl, api.EventNormal, comp.erUpdated, "")
+		}
+	}
+
+	// Register nodes in orchestrator
+	if len(f.cl.Spec.GetOrcUri()) != 0 {
+		// try to discover ready nodes into orchestrator
+		client := orc.NewFromUri(f.cl.Spec.GetOrcUri())
+		for i := 0; i < int(f.cl.Status.ReadyNodes); i++ {
+			host := f.getHostForReplica(i)
+			if err := client.Discover(host, MysqlPort); err != nil {
+				glog.Infof("Failed to register into orchestrator host: %s", host)
+			}
 		}
 	}
 	return nil

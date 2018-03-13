@@ -2,42 +2,33 @@ package mysqlcluster
 
 import (
 	"github.com/appscode/kutil"
-	"k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 )
 
-func getLivenessProbe() *v1.Probe {
-	return &v1.Probe{
-		InitialDelaySeconds: 30,
-		TimeoutSeconds:      5,
-		PeriodSeconds:       10,
-		Handler: v1.Handler{
-			Exec: &v1.ExecAction{
-				Command: []string{
-					"mysqladmin",
-					"--defaults-file=/etc/mysql/client.cnf",
-					"ping",
-				},
-			},
-		},
+func ensureProbe(in *core.Probe, ids, ts, ps int32, handler core.Handler) *core.Probe {
+	if in == nil {
+		in = &core.Probe{}
 	}
+	in.InitialDelaySeconds = ids
+	in.TimeoutSeconds = ts
+	in.PeriodSeconds = ps
+	if handler.Exec != nil {
+		in.Handler.Exec = handler.Exec
+	}
+	if handler.HTTPGet != nil {
+		in.Handler.HTTPGet = handler.HTTPGet
+	}
+	if handler.TCPSocket != nil {
+		in.Handler.TCPSocket = handler.TCPSocket
+	}
+	return in
 }
 
-func getReadinessProbe() *v1.Probe {
-	return &v1.Probe{
-		InitialDelaySeconds: 5,
-		TimeoutSeconds:      5,
-		PeriodSeconds:       10,
-		Handler: v1.Handler{
-			Exec: &v1.ExecAction{
-				Command: []string{
-					"mysql",
-					"--defaults-file=/etc/mysql/client.cnf",
-					"-e",
-					"SELECT 1",
-				},
-			},
-		},
+func ensureContainerPorts(in []core.ContainerPort, ports ...core.ContainerPort) []core.ContainerPort {
+	if len(in) == 0 {
+		return ports
 	}
+	return in
 }
 
 func getStatusFromKVerb(verb kutil.VerbType) string {

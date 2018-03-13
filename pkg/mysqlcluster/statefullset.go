@@ -8,9 +8,9 @@ import (
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
-	orc "github.com/presslabs/titanium/pkg/util/orchestrator"
 )
 
 const (
@@ -42,39 +42,18 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 					core.ConditionFalse, "statefulset not ready", "Cluster is not ready.")
 			}
 
-			if len(f.cl.Spec.GetOrcUri()) != 0 {
-				// try to discover ready nodes into orchestrator
-				// this is a sync discovery
-				client := orc.NewFromUri(f.cl.Spec.GetOrcUri())
-				for i := 0; i < int(in.Status.ReadyReplicas); i++ {
-					host := f.getHostForReplica(i)
-					if err := client.Discover(host, MysqlPort); err != nil {
-						glog.Infof("Failed to register into orchestrator host: %s", host)
-					}
-				}
-			}
+			f.cl.Status.ReadyNodes = int(in.Status.ReadyReplicas)
 
 			in.Spec.Replicas = &f.cl.Spec.Replicas
 			in.Spec.Selector = &metav1.LabelSelector{
 				MatchLabels: f.getLabels(map[string]string{}),
 			}
+
 			in.Spec.ServiceName = f.getNameForResource(HeadlessSVC)
 			in.Spec.Template = f.ensureTemplate(in.Spec.Template)
 			if len(in.Spec.VolumeClaimTemplates) == 0 {
 				in.Spec.VolumeClaimTemplates = f.getVolumeClaimTemplates()
 			}
-
-			//if in.Spec.Replicas != f.cl.Spec.Replicas {
-			//	glog.V(3).Infof("SFS update replicas from %d to %d.", in.Spec.Replicas,
-			//		f.cl.Spec.Replicas)
-			//	in.Spec.Replicas = &f.cl.Spec.Replicas
-			//}
-			//if !reflect.DeepEqual(in.Spec.Selector.MatchLabels, f.getLabels(map[string]string{})) {
-			//	glog.V(3).Infof("SFS update labels to: %s", f.getLabels(map[string]string{}))
-			//	in.Spec.Selector = &metav1.LabelSelector{
-			//		MatchLabels: f.getLabels(map[string]string{}),
-			//	}
-			//}
 
 			return in
 		})
@@ -93,15 +72,10 @@ func (f *cFactory) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec 
 	in.ObjectMeta.Labels = f.getLabels(f.cl.Spec.PodSpec.Labels)
 	in.ObjectMeta.Annotations = f.cl.Spec.PodSpec.Annotations
 
-	// TODO: make ensure containers functions
-	if len(in.Spec.InitContainers) == 0 {
-		in.Spec.InitContainers = f.getInitContainersSpec()
-	}
+	in.Spec.InitContainers = f.ensureInitContainersSpec(in.Spec.InitContainers)
+	in.Spec.Containers = f.ensureContainersSpec(in.Spec.Containers)
 
-	if len(in.Spec.Containers) == 0 {
-		in.Spec.Containers = f.getContainersSpec()
-	}
-
+	// TODO
 	if len(in.Spec.Volumes) == 0 {
 		in.Spec.Volumes = f.getVolumes()
 	}
@@ -119,100 +93,93 @@ const (
 	containerMysqlName    = "mysql"
 )
 
-func (f *cFactory) getInitContainersSpec() []core.Container {
-	return []core.Container{
-		core.Container{
-			Name:            containerInitName,
-			Image:           f.cl.Spec.GetTitaniumImage(),
-			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
-			Args:            []string{"files-config"},
-			EnvFrom:         f.getEnvSourcesFor(containerInitName),
-			VolumeMounts: []core.VolumeMount{
-				core.VolumeMount{
-					Name:      confVolumeName,
-					MountPath: ConfVolumeMountPath,
-				},
-				core.VolumeMount{
-					Name:      confMapVolumeName,
-					MountPath: ConfMapVolumeMountPath,
-				},
-			},
-		},
-		core.Container{
-			Name:            containerCloneName,
-			Image:           f.cl.Spec.GetTitaniumImage(),
-			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
-			Args:            []string{"clone"},
-			EnvFrom:         f.getEnvSourcesFor(containerCloneName),
-			VolumeMounts: []core.VolumeMount{
-				core.VolumeMount{
-					Name:      confVolumeName,
-					MountPath: ConfVolumeMountPath,
-				},
-				core.VolumeMount{
-					Name:      f.getNameForResource(VolumePVC),
-					MountPath: DataVolumeMountPath,
-				},
-			},
-		},
-	}
+func (f *cFactory) ensureContainer(in core.Container, name, image string, args []string) core.Container {
+	in.Name = name
+	in.Image = image
+	in.ImagePullPolicy = f.cl.Spec.PodSpec.ImagePullPolicy
+	in.Args = args
+	in.EnvFrom = f.getEnvSourcesFor(name)
+	in.VolumeMounts = f.getVolumeMountsFor(name)
+
+	return in
 }
 
-func (f *cFactory) getContainersSpec() []core.Container {
-	commonVolumeMounts := []core.VolumeMount{
-		core.VolumeMount{
-			Name:      confVolumeName,
-			MountPath: ConfVolumeMountPath,
-		},
-		core.VolumeMount{
-			Name:      f.getNameForResource(VolumePVC),
-			MountPath: DataVolumeMountPath,
-		},
+func (f *cFactory) ensureInitContainersSpec(in []core.Container) []core.Container {
+	if len(in) == 0 {
+		in = make([]core.Container, 2)
 	}
 
-	titaniumVolumeMounts := commonVolumeMounts
-	if len(f.cl.Spec.GetOrcTopologySecret()) != 0 {
-		titaniumVolumeMounts = append(commonVolumeMounts, core.VolumeMount{
-			Name:      "orc-topology-secret",
-			MountPath: OrcTopologyDir,
-		})
+	// init container for configs
+	in[0] = f.ensureContainer(in[0], containerInitName,
+		f.cl.Spec.GetTitaniumImage(),
+		[]string{"files-config"},
+	)
 
+	// clone container
+	in[1] = f.ensureContainer(in[1], containerCloneName,
+		f.cl.Spec.GetTitaniumImage(),
+		[]string{"clone"},
+	)
+
+	return in
+}
+
+func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
+	if len(in) == 0 {
+		in = make([]core.Container, 2)
 	}
-	return []core.Container{
-		// MYSQL container
-		core.Container{
-			Name:            containerMysqlName,
-			Image:           f.cl.Spec.GetMysqlImage(),
-			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
-			EnvFrom:         f.getEnvSourcesFor(containerMysqlName),
-			Ports: []core.ContainerPort{
-				core.ContainerPort{
-					Name:          MysqlPortName,
-					ContainerPort: MysqlPort,
-				},
+
+	// MYSQL container
+	mysql := f.ensureContainer(in[0], containerMysqlName,
+		f.cl.Spec.GetMysqlImage(),
+		[]string{},
+	)
+	mysql.Ports = ensureContainerPorts(mysql.Ports, core.ContainerPort{
+		Name:          MysqlPortName,
+		ContainerPort: MysqlPort,
+	})
+	mysql.Resources = f.cl.Spec.PodSpec.Resources
+	mysql.LivenessProbe = ensureProbe(mysql.LivenessProbe, 30, 5, 10, core.Handler{
+		Exec: &core.ExecAction{
+			Command: []string{
+				"mysqladmin",
+				"--defaults-file=/etc/mysql/client.cnf",
+				"ping",
 			},
-			// Command:        []string{"mysqld"},
-			Resources:      f.cl.Spec.PodSpec.Resources,
-			LivenessProbe:  getLivenessProbe(),
-			ReadinessProbe: getReadinessProbe(),
-			VolumeMounts:   commonVolumeMounts,
 		},
-		// TITANIUM container where runs toolbox
-		core.Container{
-			Name:            containerTitaniumName,
-			Image:           f.cl.Spec.GetTitaniumImage(),
-			ImagePullPolicy: f.cl.Spec.PodSpec.ImagePullPolicy,
-			Args:            []string{"config-and-serve"},
-			EnvFrom:         f.getEnvSourcesFor(containerTitaniumName),
-			Ports: []core.ContainerPort{
-				core.ContainerPort{
-					Name:          TitaniumXtrabackupPortName,
-					ContainerPort: TitaniumXtrabackupPort,
-				},
+	})
+
+	mysql.ReadinessProbe = ensureProbe(mysql.ReadinessProbe, 5, 5, 10, core.Handler{
+		Exec: &core.ExecAction{
+			Command: []string{
+				"mysql",
+				"--defaults-file=/etc/mysql/client.cnf",
+				"-e",
+				"SELECT 1",
 			},
-			VolumeMounts: titaniumVolumeMounts,
 		},
-	}
+	})
+	in[0] = mysql
+
+	titanium := f.ensureContainer(in[1], containerTitaniumName,
+		f.cl.Spec.GetTitaniumImage(),
+		[]string{"config-and-serve"},
+	)
+	titanium.Ports = ensureContainerPorts(titanium.Ports, core.ContainerPort{
+		Name:          TitaniumXtrabackupPortName,
+		ContainerPort: TitaniumXtrabackupPort,
+	})
+
+	// TITANIUM container
+	titanium.ReadinessProbe = ensureProbe(titanium.ReadinessProbe, 5, 5, 10, core.Handler{
+		HTTPGet: &core.HTTPGetAction{
+			Path: TitaniumProbePath,
+			Port: intstr.FromInt(TitaniumProbePort),
+		},
+	})
+	in[1] = titanium
+
+	return in
 }
 
 func (f *cFactory) getVolumes() []core.Volume {
@@ -295,6 +262,50 @@ func (f *cFactory) getEnvSourcesFor(name string) []core.EnvFromSource {
 		})
 	}
 	return ss
+}
+
+func (f *cFactory) getVolumeMountsFor(name string) []core.VolumeMount {
+	commonVolumeMounts := []core.VolumeMount{
+		core.VolumeMount{
+			Name:      confVolumeName,
+			MountPath: ConfVolumeMountPath,
+		},
+		core.VolumeMount{
+			Name:      f.getNameForResource(VolumePVC),
+			MountPath: DataVolumeMountPath,
+		},
+	}
+
+	titaniumVolumeMounts := commonVolumeMounts
+	if len(f.cl.Spec.GetOrcTopologySecret()) != 0 {
+		titaniumVolumeMounts = append(commonVolumeMounts, core.VolumeMount{
+			Name:      "orc-topology-secret",
+			MountPath: OrcTopologyDir,
+		})
+	}
+	switch name {
+	case containerInitName:
+		return []core.VolumeMount{
+			core.VolumeMount{
+				Name:      confVolumeName,
+				MountPath: ConfVolumeMountPath,
+			},
+			core.VolumeMount{
+				Name:      confMapVolumeName,
+				MountPath: ConfMapVolumeMountPath,
+			},
+		}
+
+	case containerCloneName:
+		return commonVolumeMounts
+
+	case containerMysqlName:
+		return commonVolumeMounts
+
+	case containerTitaniumName:
+		return titaniumVolumeMounts
+	}
+	return nil
 }
 
 func envFromSecret(name string) core.EnvFromSource {

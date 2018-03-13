@@ -88,6 +88,9 @@ type ClusterSpec struct {
 type MysqlConf map[string]string
 
 type ClusterStatus struct {
+	// ReadyNodes represents number of the nodes that are in ready state
+	ReadyNodes int
+	// Conditions contains the list of the cluster conditions fulfilled
 	Conditions []ClusterCondition `json:conditions`
 }
 

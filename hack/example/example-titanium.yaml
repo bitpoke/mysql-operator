@@ -3,7 +3,7 @@ kind: MysqlCluster
 metadata:
   name: foo
 spec:
-  replicas: 3
+  replicas: 2
   secretName: the-secret
   volumeSpec:
     accessModes: [ "ReadWriteOnce" ]

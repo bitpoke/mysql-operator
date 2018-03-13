@@ -27,6 +27,9 @@ const (
 	// ConfigVersion is the mysql config that needs to be updated if configs
 	// change
 	ConfigVersion = "2018-03-09:12:39"
+
+	TitaniumProbePath = "/health"
+	TitaniumProbePort = 8001
 )
 
 var (
