@@ -15,4 +15,6 @@ limitations under the License.
 */
 package v1alpha1
 
+type MysqlBackupExpansion interface{}
+
 type MysqlClusterExpansion interface{}

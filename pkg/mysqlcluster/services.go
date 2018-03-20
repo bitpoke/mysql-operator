@@ -4,12 +4,14 @@ import (
 	kcore "github.com/appscode/kutil/core/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 )
 
 func (f *cFactory) syncHeadlessService() (state string, err error) {
 	state = statusUpToDate
 	meta := metav1.ObjectMeta{
-		Name:            f.getNameForResource(HeadlessSVC),
+		Name:            f.cl.GetNameForResource(api.HeadlessSVC),
 		Labels:          f.getLabels(map[string]string{}),
 		OwnerReferences: f.getOwnerReferences(),
 		Namespace:       f.namespace,

@@ -7,7 +7,7 @@ cat <<EOF > /etc/rclone.conf
 type = s3
 env_auth = false
 access_key_id = ${AWS_ACCESS_KEY_ID}
-secret_access_key = ${AWS_ACCESS_KEY_ID}
+secret_access_key = ${AWS_SECRET_KEY}
 region = ${AWS_REGION:-"us-east-1"}
 acl = ${AWS_ACL}
 storage_class = ${AWS_STORAGE_CLASS}
@@ -20,6 +20,11 @@ object_acl = ${GCS_OBJECT_ACL}
 bucket_acl = ${GCS_BUCKET_ACL}
 location =  ${GCS_LOCATION}
 storage_class = ${GCS_STORAGE_CLASS:-"MULTI_REGIONAL"}
+
+[http]
+type = http
+url = ${HTTP_URL}
+
 EOF
 
 echo "Create google-credentials.json file."
@@ -34,15 +39,19 @@ VERBOSE="-v 3"
 case "$1" in
     files-config)
         shift 1
-        toolbox  $VERBOSE "$@" init-configs
+        toolbox  $VERBOSE init-configs "$@"
         ;;
     clone)
         shift 1
-        toolbox $VERBOSE "$@" clone
+        toolbox $VERBOSE clone "$@"
         ;;
     config-and-serve)
         shift 1
-        toolbox $VERBOSE "$@" run
+        toolbox $VERBOSE run "$@"
+        ;;
+    take-backup-to)
+        shift 1
+        toolbox $VERBOSE take-backup-to "$@"
         ;;
     *)
         echo "Usage: $0 {files-config|clone|config-and-serve}"

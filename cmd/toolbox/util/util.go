@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/glog"
 
+	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	"github.com/presslabs/titanium/pkg/mysqlcluster"
 	orc "github.com/presslabs/titanium/pkg/util/orchestrator"
 )
@@ -37,16 +38,23 @@ var (
 	ToolsInitTableName = "init"
 
 	// UtilityUser is the name of the percona utility user.
-	UtilityUser = "utility"
+	UtilityUser = "sys_titanium"
 
 	// OrcTopologyDir contains the path where the secret with orc credentails is
 	// mounted.
 	OrcTopologyDir = mysqlcluster.OrcTopologyDir
 
-	NameOfStatefulSet = mysqlcluster.StatefulSet
+	NameOfStatefulSet = api.StatefulSet
 
 	TitaniumProbePath = mysqlcluster.TitaniumProbePath
 	TitaniumProbePort = mysqlcluster.TitaniumProbePort
+)
+
+const (
+	// rcloneConfigFile represents the path to the file that contains rclon
+	// configs. This path should be the same as defined in docker entrypoint
+	// script from toolbox/docker-entrypoint.sh. /etc/rclone.conf
+	RcloneConfigFile = "/etc/rclone.conf"
 )
 
 func GetHostname() string {

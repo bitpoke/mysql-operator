@@ -8,12 +8,14 @@ import (
 	"github.com/golang/glog"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 )
 
 func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 
 	meta := metav1.ObjectMeta{
-		Name: f.getNameForResource(ConfigMap),
+		Name: f.cl.GetNameForResource(api.ConfigMap),
 		Labels: f.getLabels(map[string]string{
 			"generated": "true"}),
 		OwnerReferences: f.getOwnerReferences(),
@@ -44,11 +46,11 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 }
 
 func (f *cFactory) getConfigMapData() (map[string]string, error) {
-	master, err := f.getMysqlConfigs(MysqlMasterConfigs)
+	master, err := f.getMysqlConfigs(MysqlMasterConfigs, f.cl.Spec.MysqlConf)
 	if err != nil {
 		return nil, err
 	}
-	slave, err := f.getMysqlConfigs(MysqlSlaveConfigs)
+	slave, err := f.getMysqlConfigs(MysqlSlaveConfigs, f.cl.Spec.MysqlConf)
 	if err != nil {
 		return nil, err
 	}
@@ -58,13 +60,15 @@ func (f *cFactory) getConfigMapData() (map[string]string, error) {
 	}, nil
 }
 
-func (f *cFactory) getMysqlConfigs(extraMysqld map[string]string) (string, error) {
+func (f *cFactory) getMysqlConfigs(extraMysqld ...map[string]string) (string, error) {
 	cfg := ini.Empty()
 	s := cfg.Section("mysqld")
 
-	for k, v := range extraMysqld {
-		if _, err := s.NewKey(k, v); err != nil {
-			return "", err
+	for _, extra := range extraMysqld {
+		for k, v := range extra {
+			if _, err := s.NewKey(k, v); err != nil {
+				return "", err
+			}
 		}
 	}
 

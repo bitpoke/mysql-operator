@@ -36,10 +36,6 @@ func (f *cFactory) GetMysqlCluster() *api.MysqlCluster {
 	return f.cl
 }
 
-func (f *cFactory) GetNameForResource(name ResourceName) string {
-	return f.getNameForResource(name)
-}
-
 func (f *cFactory) GetComponents() []component {
 	return f.getComponents()
 }

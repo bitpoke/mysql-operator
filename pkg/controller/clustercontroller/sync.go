@@ -13,7 +13,7 @@ import (
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	controllerpkg "github.com/presslabs/titanium/pkg/controller"
-	mccluster "github.com/presslabs/titanium/pkg/mysqlcluster"
+	mcfactory "github.com/presslabs/titanium/pkg/mysqlcluster"
 	"github.com/presslabs/titanium/pkg/util/options"
 )
 
@@ -42,7 +42,7 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster, ns str
 	}
 
 	// create a cluster factory and sync it.
-	clusterFactory := mccluster.New(copyCluster, c.KubeCli, c.mcclient, ns, c.recorder)
+	clusterFactory := mcfactory.New(copyCluster, c.KubeCli, c.mcclient, ns, c.recorder)
 	if err := clusterFactory.Sync(ctx); err != nil {
 		return fmt.Errorf("failed to set-up the cluster: %s", err)
 	}

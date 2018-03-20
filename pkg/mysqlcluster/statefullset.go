@@ -26,7 +26,7 @@ const (
 func (f *cFactory) syncStatefulSet() (state string, err error) {
 	state = statusUpToDate
 	meta := metav1.ObjectMeta{
-		Name:            f.getNameForResource(StatefulSet),
+		Name:            f.cl.GetNameForResource(api.StatefulSet),
 		Labels:          f.getLabels(map[string]string{}),
 		OwnerReferences: f.getOwnerReferences(),
 		Namespace:       f.namespace,
@@ -49,7 +49,7 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 				MatchLabels: f.getLabels(map[string]string{}),
 			}
 
-			in.Spec.ServiceName = f.getNameForResource(HeadlessSVC)
+			in.Spec.ServiceName = f.cl.GetNameForResource(api.HeadlessSVC)
 			in.Spec.Template = f.ensureTemplate(in.Spec.Template)
 			if len(in.Spec.VolumeClaimTemplates) == 0 {
 				in.Spec.VolumeClaimTemplates = f.getVolumeClaimTemplates()
@@ -197,16 +197,16 @@ func (f *cFactory) getVolumes() []core.Volume {
 			VolumeSource: core.VolumeSource{
 				ConfigMap: &core.ConfigMapVolumeSource{
 					LocalObjectReference: core.LocalObjectReference{
-						Name: f.getNameForResource(ConfigMap),
+						Name: f.cl.GetNameForResource(api.ConfigMap),
 					},
 				},
 			},
 		},
 		core.Volume{
-			Name: f.getNameForResource(VolumePVC),
+			Name: f.cl.GetNameForResource(api.VolumePVC),
 			VolumeSource: core.VolumeSource{
 				PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
-					ClaimName: f.getNameForResource(VolumePVC),
+					ClaimName: f.cl.GetNameForResource(api.VolumePVC),
 				},
 			},
 		},
@@ -229,7 +229,7 @@ func (f *cFactory) getVolumeClaimTemplates() []core.PersistentVolumeClaim {
 	return []core.PersistentVolumeClaim{
 		core.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            f.getNameForResource(VolumePVC),
+				Name:            f.cl.GetNameForResource(api.VolumePVC),
 				Labels:          f.getLabels(map[string]string{}),
 				OwnerReferences: f.getOwnerReferences(),
 			},
@@ -240,15 +240,15 @@ func (f *cFactory) getVolumeClaimTemplates() []core.PersistentVolumeClaim {
 
 func (f *cFactory) getEnvSourcesFor(name string) []core.EnvFromSource {
 	ss := []core.EnvFromSource{
-		envFromSecret(f.getNameForResource(EnvSecret)),
+		envFromSecret(f.cl.GetNameForResource(api.EnvSecret)),
 	}
 	switch name {
 	case containerTitaniumName:
-		if len(f.cl.Spec.InitBucketSecretName) != 0 {
-			ss = append(ss, envFromSecret(f.cl.Spec.BackupBucketSecretName))
-		}
+		//		if len(f.cl.Spec.BackupBucketSecretName) != 0 {
+		//			ss = append(ss, envFromSecret(f.cl.Spec.BackupBucketSecretName))
+		//		}
 	case containerCloneName:
-		if len(f.cl.Spec.BackupBucketSecretName) != 0 {
+		if len(f.cl.Spec.InitBucketSecretName) != 0 {
 			ss = append(ss, envFromSecret(f.cl.Spec.InitBucketSecretName))
 		}
 	case containerMysqlName:
@@ -271,7 +271,7 @@ func (f *cFactory) getVolumeMountsFor(name string) []core.VolumeMount {
 			MountPath: ConfVolumeMountPath,
 		},
 		core.VolumeMount{
-			Name:      f.getNameForResource(VolumePVC),
+			Name:      f.cl.GetNameForResource(api.VolumePVC),
 			MountPath: DataVolumeMountPath,
 		},
 	}
@@ -319,6 +319,6 @@ func envFromSecret(name string) core.EnvFromSource {
 }
 
 func (f *cFactory) getHostForReplica(no int) string {
-	return fmt.Sprintf("%s-%d.%s", f.getNameForResource(StatefulSet), no,
-		f.getNameForResource(HeadlessSVC))
+	return fmt.Sprintf("%s-%d.%s", f.cl.GetNameForResource(api.StatefulSet), no,
+		f.cl.GetNameForResource(api.HeadlessSVC))
 }

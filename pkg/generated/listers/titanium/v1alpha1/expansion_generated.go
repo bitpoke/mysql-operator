@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1alpha1
 
+// MysqlBackupListerExpansion allows custom methods to be added to
+// MysqlBackupLister.
+type MysqlBackupListerExpansion interface{}
+
+// MysqlBackupNamespaceListerExpansion allows custom methods to be added to
+// MysqlBackupNamespaceLister.
+type MysqlBackupNamespaceListerExpansion interface{}
+
 // MysqlClusterListerExpansion allows custom methods to be added to
 // MysqlClusterLister.
 type MysqlClusterListerExpansion interface{}

@@ -5,13 +5,14 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	"github.com/presslabs/titanium/pkg/util"
 )
 
 func (f *cFactory) syncEnvSecret() (state string, err error) {
 
 	meta := metav1.ObjectMeta{
-		Name: f.getNameForResource(EnvSecret),
+		Name: f.cl.GetNameForResource(api.EnvSecret),
 		Labels: f.getLabels(map[string]string{
 			"generated": "true"}),
 		OwnerReferences: f.getOwnerReferences(),
@@ -39,10 +40,9 @@ func (f *cFactory) getEnvSecretData(data map[string][]byte) map[string][]byte {
 	}
 
 	configs := map[string]string{
-		"TITANIUM_HEADLESS_SERVICE":  f.getNameForResource(HeadlessSVC),
-		"TITANIUM_INIT_BUCKET_URI":   f.cl.Spec.InitBucketURI,
-		"TITANIUM_BACKUP_BUCKET_URI": f.cl.Spec.BackupBucketURI,
-		"TITANIUM_ORC_URI":           f.cl.Spec.GetOrcUri(),
+		"TITANIUM_HEADLESS_SERVICE": f.cl.GetNameForResource(api.HeadlessSVC),
+		"TITANIUM_INIT_BUCKET_URI":  f.cl.Spec.InitBucketURI,
+		"TITANIUM_ORC_URI":          f.cl.Spec.GetOrcUri(),
 	}
 	fConf := make(map[string][]byte)
 	for k, v := range configs {

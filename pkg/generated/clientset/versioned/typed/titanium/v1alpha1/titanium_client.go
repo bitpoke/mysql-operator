@@ -24,12 +24,17 @@ import (
 
 type TitaniumV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	MysqlBackupsGetter
 	MysqlClustersGetter
 }
 
 // TitaniumV1alpha1Client is used to interact with features provided by the titanium.k8s.io group.
 type TitaniumV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *TitaniumV1alpha1Client) MysqlBackups(namespace string) MysqlBackupInterface {
+	return newMysqlBackups(c, namespace)
 }
 
 func (c *TitaniumV1alpha1Client) MysqlClusters(namespace string) MysqlClusterInterface {

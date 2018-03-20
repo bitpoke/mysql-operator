@@ -49,6 +49,7 @@ import (
 
 	"github.com/presslabs/titanium/pkg/controller"
 	// Register all available controllers
+	_ "github.com/presslabs/titanium/pkg/controller/backupscontroller"
 	_ "github.com/presslabs/titanium/pkg/controller/clustercontroller"
 )
 

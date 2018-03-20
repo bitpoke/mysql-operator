@@ -53,23 +53,16 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 	return nil
 }
 
-const (
-	// rcloneConfigFile represents the path to the file that contains rclon
-	// configs. This path should be the same as defined in docker entrypoint
-	// script from toolbox/docker-entrypoint.sh. /etc/rclone.conf
-	rcloneConfigFile = "/etc/rclone.conf"
-)
-
 func cloneFromBucket(initBucket string) error {
 
-	if _, err := os.Stat(rcloneConfigFile); os.IsNotExist(err) {
+	if _, err := os.Stat(tb.RcloneConfigFile); os.IsNotExist(err) {
 		glog.Fatalf("Rclone config file does not exists. err: %s", err)
 		return err
 	}
 	// rclone --config={conf file} cat {bucket uri}
 	// writes to stdout the content of the bucket uri
 	rclone := exec.Command("rclone",
-		fmt.Sprintf("--config=%s", rcloneConfigFile), "cat", initBucket)
+		fmt.Sprintf("--config=%s", tb.RcloneConfigFile), "cat", initBucket)
 
 	// gzip reads from stdin decompress and then writes to stdout
 	gzip := exec.Command("gzip", "-d")

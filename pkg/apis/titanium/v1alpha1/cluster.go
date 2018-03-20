@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -126,4 +128,33 @@ func (vs *VolumeSpec) UpdateDefaults() error {
 	}
 
 	return nil
+}
+
+// ResourceName is the type for aliasing resources that will be created.
+type ResourceName string
+
+const (
+	// HeadlessSVC is the alias of the headless service resource
+	HeadlessSVC ResourceName = "headless"
+	// StatefulSet is the alias of the statefulset resource
+	StatefulSet ResourceName = "mysql"
+	// ConfigMap is the alias for mysql configs, the config map resource
+	ConfigMap ResourceName = "config-files"
+	// VolumePVC is the alias of the PVC volume
+	VolumePVC ResourceName = "mysql-data"
+	// EnvSecret is the alias for secret that contains env variables
+	EnvSecret ResourceName = "env-config"
+)
+
+func (c *MysqlCluster) GetNameForResource(name ResourceName) string {
+	return getNameForResource(name, c.Name)
+}
+
+func getNameForResource(name ResourceName, clusterName string) string {
+	return fmt.Sprintf("%s-%s", clusterName, name)
+}
+
+func (c *MysqlCluster) GetLastSlaveHost() string {
+	return fmt.Sprintf("%s-%d.%s", c.GetNameForResource(StatefulSet), c.Status.ReadyNodes-1,
+		c.GetNameForResource(HeadlessSVC))
 }

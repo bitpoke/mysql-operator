@@ -1,0 +1,9 @@
+apiVersion: titanium.presslabs.net/v1alpha1
+kind: MysqlBackup
+metadata:
+  name: bar-backup
+
+clusterName: foo
+spec:
+  bucketUri: gs:pl-test-mysql-backups/ti/
+  bucketSecretName: backup-secret

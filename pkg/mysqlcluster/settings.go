@@ -3,6 +3,7 @@ package mysqlcluster
 import (
 	"fmt"
 
+	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -66,29 +67,9 @@ var (
 	MysqlSlaveConfigs = map[string]string{}
 )
 
-// ResourceName is the type for aliasing resources that will be created.
-type ResourceName string
-
-const (
-	// HeadlessSVC is the alias of the headless service resource
-	HeadlessSVC ResourceName = "headless"
-	// StatefulSet is the alias of the statefulset resource
-	StatefulSet ResourceName = "mysql"
-	// ConfigMap is the alias for mysql configs, the config map resource
-	ConfigMap ResourceName = "config-files"
-	// VolumePVC is the alias of the PVC volume
-	VolumePVC ResourceName = "mysql-data"
-	// EnvSecret is the alias for secret that contains env variables
-	EnvSecret ResourceName = "env-config"
-)
-
-func (f *cFactory) getNameForResource(name ResourceName) string {
-	return fmt.Sprintf("%s-%s", f.cl.Name, name)
-}
-
 func (f *cFactory) getPodHostName(p int) string {
-	pod := fmt.Sprintf("%s-%d", f.getNameForResource(StatefulSet), p)
-	return fmt.Sprintf("%s.%s", pod, f.getNameForResource(HeadlessSVC))
+	pod := fmt.Sprintf("%s-%d", f.cl.GetNameForResource(api.StatefulSet), p)
+	return fmt.Sprintf("%s.%s", pod, f.cl.GetNameForResource(api.HeadlessSVC))
 }
 
 func (f *cFactory) getLabels(extra map[string]string) map[string]string {

@@ -28,6 +28,7 @@ import (
 
 	"github.com/presslabs/titanium/cmd/toolbox/appclone"
 	"github.com/presslabs/titanium/cmd/toolbox/appconf"
+	"github.com/presslabs/titanium/cmd/toolbox/apptakebackup"
 	"github.com/presslabs/titanium/cmd/toolbox/apptitanium"
 	"github.com/presslabs/titanium/pkg/util/logs"
 )
@@ -36,8 +37,6 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 	stopCh := SetupSignalHandler()
-
-	glog.Info("START!")
 
 	cmd := &cobra.Command{
 		Use:   "toolbox",
@@ -85,6 +84,25 @@ titanium-toolbox: helper for config pods`,
 		},
 	}
 	cmd.AddCommand(titaniumCmd)
+
+	takeBackupCmd := &cobra.Command{
+		Use:   "take-backup-to",
+		Short: "Take a backup from node and push it to rclone path.",
+		Args: func(cmd *cobra.Command, args []string) error {
+			glog.Infof("Args: %v", args)
+			if len(args) != 2 {
+				return fmt.Errorf("require two arguments. source host and destination bucket")
+			}
+			return nil
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			err := apptakebackup.RunTakeBackupCommand(stopCh, args[0], args[1])
+			if err != nil {
+				glog.Fatalf("Take backup command failed with error: %s .", err)
+			}
+		},
+	}
+	cmd.AddCommand(takeBackupCmd)
 
 	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 	flag.CommandLine.Parse([]string{})

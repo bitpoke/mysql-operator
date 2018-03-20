@@ -61,11 +61,6 @@ type ClusterSpec struct {
 	InitBucketURI        string `json:initBucketURI,omitempty`
 	InitBucketSecretName string `json:initBucketSecretName,omitempty`
 
-	// A bucket URI to save backups.
-	// +optional
-	BackupBucketURI        string `json:backupBucketURI,omitempty`
-	BackupBucketSecretName string `json:backupBucketSecretName,omitempty`
-
 	// Specify under crontab format interval to take backups
 	// leave it empty to deactivate the backup process
 	// Defaults to ""
@@ -130,3 +125,55 @@ type PodSpec struct {
 type VolumeSpec struct {
 	apiv1.PersistentVolumeClaimSpec `json:",inline"`
 }
+
+// +genclient
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +resource:path=mysqlbackup
+
+type MysqlBackup struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	ClusterName       string       `json:mysqlCluster`
+	Spec              BackupSpec   `json:"spec"`
+	Status            BackupStatus `json:status,omitempty`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type MysqlBackupList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []MysqlBackup `json:"items"`
+}
+
+type BackupSpec struct {
+	// A bucket URI as prefix to put backup
+	BucketUri        string `json:bucketUri,omitempty`
+	BucketSecretName string `json:bucketSecretName,omitempty`
+}
+
+type BackupCondition struct {
+	// type of cluster condition, values in (\"Ready\")
+	Type BackupConditionType `json:type`
+	// Status of the condition, one of (\"True\", \"False\", \"Unknown\")
+	Status apiv1.ConditionStatus `json:status`
+
+	// optional TODO: detail each member.
+	// are optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+	Reason             string      `json:"reason"`
+	Message            string      `json:"message"`
+}
+
+type BackupStatus struct {
+	BucketUri  string            `json:bucketUri`
+	Conditions []BackupCondition `json:conditions`
+}
+
+type BackupConditionType string
+
+const (
+	Ready   BackupConditionType = "Ready"
+	Started BackupConditionType = "Started"
+)

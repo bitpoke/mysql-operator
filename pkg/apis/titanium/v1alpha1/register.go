@@ -9,9 +9,12 @@ import (
 const (
 	// MysqlClusterKind is the kind of the crd that will be created.
 	MysqlClusterKind = "MysqlCluster"
-	// MysqlClusterCRDPlural is the plural for mysqlcluster
+	// MysqlClusterPlural is the plural for mysqlcluster
 	MysqlClusterPlural = "mysqlclusters"
 	groupName          = "titanium.presslabs.net"
+
+	MysqlBackupKind   = "MysqlBackup"
+	MysqlBackupPlural = "mysqlbackups"
 )
 
 var (
@@ -23,6 +26,9 @@ var (
 	SchemeGroupVersion = schema.GroupVersion{Group: groupName, Version: "v1alpha1"}
 	// MysqlClusterCRDName the crd name
 	MysqlClusterCRDName = MysqlClusterPlural + "." + groupName
+
+	// MysqlBackupCRDName the crd name of backup resource
+	MysqlBackupCRDName = MysqlBackupPlural + "." + groupName
 )
 
 // Resource gets an MysqlCluster GroupResource for a specified resource
@@ -35,6 +41,8 @@ func addKnownTypes(s *runtime.Scheme) error {
 	s.AddKnownTypes(SchemeGroupVersion,
 		&MysqlCluster{},
 		&MysqlClusterList{},
+		&MysqlBackup{},
+		&MysqlBackupList{},
 	)
 	metav1.AddToGroupVersion(s, SchemeGroupVersion)
 	return nil
