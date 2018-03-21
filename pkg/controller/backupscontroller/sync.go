@@ -5,33 +5,45 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	batchv1 "k8s.io/api/batch/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	batch "k8s.io/api/batch/v1"
+	core "k8s.io/api/core/v1"
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	bfactory "github.com/presslabs/titanium/pkg/backupfactory"
 	controllerpkg "github.com/presslabs/titanium/pkg/controller"
+	"github.com/presslabs/titanium/pkg/util/options"
+)
+
+var (
+	opt = options.GetOptions()
 )
 
 // Sync for add and update.
 func (c *Controller) Sync(ctx context.Context, backup *api.MysqlBackup, ns string) error {
 	glog.Infof("sync backup: %s", backup.Name)
 
-	if len(backup.ClusterName) == 0 {
+	if len(backup.Spec.ClusterName) == 0 {
 		return fmt.Errorf("cluster name is not specified")
 	}
 
-	cluster, err := c.clusterLister.MysqlClusters(backup.Namespace).Get(backup.ClusterName)
+	if backup.Status.Completed {
+		// silence skip it
+		glog.V(2).Infof("Backup '%s' already competed, skiping.", backup.Name)
+		return nil
+	}
+
+	cluster, err := c.clusterLister.MysqlClusters(backup.Namespace).Get(backup.Spec.ClusterName)
 	if err != nil {
 		return fmt.Errorf("cluster not found: %s", err)
 	}
 
 	copyBackup := backup.DeepCopy()
-	if err := copyBackup.UpdateDefaults(); err != nil {
-		return err
+	factory := bfactory.New(copyBackup, c.k8client, c.clientset, cluster)
+
+	if err := factory.SetDefaults(); err != nil {
+		return fmt.Errorf("set defaults: %s", err)
 	}
 
-	factory := bfactory.New(copyBackup, c.k8client, c.clientset, cluster)
 	if err := factory.Sync(ctx); err != nil {
 		return fmt.Errorf("sync: %s", err)
 	}
@@ -44,20 +56,20 @@ func (c *Controller) Sync(ctx context.Context, backup *api.MysqlBackup, ns strin
 }
 
 func (c *Controller) subresourceUpdated(obj interface{}) {
-	var objectMeta *metav1.ObjectMeta
+	var job *batch.Job
 	var err error
 
 	switch typedObject := obj.(type) {
-	case *batchv1.Job:
-		objectMeta = &typedObject.ObjectMeta
+	case *batch.Job:
+		job = typedObject
 	}
 
-	if objectMeta == nil {
+	if job == nil {
 		glog.Errorf("Cannot get ObjectMeta for object %#v", obj)
 		return
 	}
 
-	cluster, err := c.instanceForOwnerReference(objectMeta)
+	cluster, err := c.instanceForOwnerReference(&job.ObjectMeta)
 	if err != nil {
 		glog.Errorf("cannot get cluster for ObjectMeta, err: %s", err)
 		return
@@ -68,5 +80,31 @@ func (c *Controller) subresourceUpdated(obj interface{}) {
 		glog.Errorf("key func: %s", err)
 		return
 	}
+
+	glog.V(2).Infof("Job '%s' is updated, requeueing backup: %s", job.Name, key)
 	c.queue.Add(key)
+
+	if i, exists := indexOf(batch.JobComplete, job.Status.Conditions); exists {
+		cond := job.Status.Conditions[i]
+		if cond.Status == core.ConditionTrue {
+			// delete job after 5 hours
+			key, err := controllerpkg.KeyFunc(job)
+			if err != nil {
+				glog.Errorf("key func: %s", err)
+				return
+			}
+			glog.V(3).Infof("[subresourceUpdate] queueing '%s' job to deletion in %s.",
+				key, opt.JobCompleteSuccessGraceTime)
+			c.jobDeletionQueue.AddAfter(key, opt.JobCompleteSuccessGraceTime)
+		}
+	}
+}
+
+func indexOf(ty batch.JobConditionType, cs []batch.JobCondition) (int, bool) {
+	for i, cond := range cs {
+		if cond.Type == ty {
+			return i, true
+		}
+	}
+	return 0, false
 }

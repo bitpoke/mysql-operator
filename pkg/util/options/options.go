@@ -3,6 +3,7 @@ package options
 import (
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/spf13/pflag"
 	"k8s.io/api/core/v1"
@@ -21,6 +22,8 @@ type Options struct {
 
 	OrchestratorUri                string
 	OrchestratorTopologySecretName string
+
+	JobCompleteSuccessGraceTime time.Duration
 }
 
 const (
@@ -32,18 +35,23 @@ const (
 	orcSCRT                = ""
 )
 
+var (
+	defaultJobGraceTime = 24 * time.Hour
+)
+
 func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.mysqlImage, "mysql-image", defaultMysqlImage,
-		"The mysql image. Default to "+defaultMysqlImage)
+		"The mysql image.")
 	fs.StringVar(&o.TitaniumImage, "titanium-toolbox-image", defaultTitaniumImage,
-		"The image that instrumentate mysql. Default to "+defaultTitaniumImage)
+		"The image that instrumentate mysql.")
 	fs.StringVar(&o.ImagePullSecretName, "pull-secret", "",
-		"The secret name for used as pull secret. Default none.")
+		"The secret name for used as pull secret.")
 	fs.StringVar(&o.OrchestratorUri, "orchestrator-uri", orcURI,
-		"The orchestrator uri. Default ''(empty string) ")
+		"The orchestrator uri")
 	fs.StringVar(&o.OrchestratorTopologySecretName, "orchestrator-secret", orcURI,
-		"The orchestrator topology secret name. Default ''(empty string) ")
-
+		"The orchestrator topology secret name.")
+	fs.DurationVar(&o.JobCompleteSuccessGraceTime, "job-grace-time", defaultJobGraceTime,
+		"The time in hours how jobs after completion are keept.")
 }
 
 var instance *Options
@@ -55,7 +63,8 @@ func GetOptions() *Options {
 			mysqlImage:    defaultMysqlImage,
 			TitaniumImage: defaultTitaniumImage,
 
-			ImagePullPolicy: defaultImagePullPolicy,
+			ImagePullPolicy:             defaultImagePullPolicy,
+			JobCompleteSuccessGraceTime: defaultJobGraceTime,
 		}
 	})
 

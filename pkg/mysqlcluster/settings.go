@@ -60,6 +60,44 @@ var (
 		"utility-user-schema-access": "mysql",
 		// TODO: least privileges principle
 		"utility-user-privileges": "SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,GRANT,ALTER,SHOW DATABASES,SUPER,CREATE USER,PROCESS,RELOAD,LOCK TABLES,REPLICATION CLIENT,REPLICATION SLAVE",
+
+		// MyISAM
+		"key-buffer-size": "32M",
+		"myisam-recover":  "FORCE,BACKUP",
+
+		// Safety
+		"max-allowed-packet": "16M",
+		"max-connect-errors": "1000000",
+		"skip-name-resolve":  "1",
+		"sql-mode":           "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
+		"sysdate-is-now":     "1",
+
+		// binary logging
+		"expire-logs-days": "14",
+		"sync-binlog":      "1",
+
+		// CACHES AND LIMITS
+		"tmp-table-size":         "32M",
+		"max-heap-table-size":    "32M",
+		"query-cache-type":       "0",
+		"query-cache-size":       "0",
+		"max-connections":        "500",
+		"thread-cache-size":      "50",
+		"open-files-limit":       "65535",
+		"table-definition-cache": "4096",
+		"table-open-cache":       "4096",
+
+		// InnoDB
+		"innodb-flush-method":            "O_DIRECT",
+		"innodb-log-files-in-group":      "2",
+		"innodb-log-file-size":           "128M",
+		"innodb-flush-log-at-trx-commit": "2",
+		"innodb-file-per-table":          "1",
+
+		// logging
+		"log-queries-not-using-indexes": "1",
+		// TODO: write a test for slow queries
+		"slow-query-log": "1",
 	}
 	// MysqlMasterConfigs represents configs specific to master
 	MysqlMasterConfigs = map[string]string{}

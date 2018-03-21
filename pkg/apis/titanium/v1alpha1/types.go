@@ -27,7 +27,7 @@ type MysqlCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              ClusterSpec   `json:"spec"`
-	Status            ClusterStatus `json:status,omitempty`
+	Status            ClusterStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -58,26 +58,28 @@ type ClusterSpec struct {
 
 	// A bucket URI that contains a xtrabackup to initialize the mysql database.
 	// +optional
-	InitBucketURI        string `json:initBucketURI,omitempty`
-	InitBucketSecretName string `json:initBucketSecretName,omitempty`
+	InitBucketURI        string `json:"initBucketURI,omitempty"`
+	InitBucketSecretName string `json:"initBucketSecretName,omitempty"`
 
 	// Specify under crontab format interval to take backups
 	// leave it empty to deactivate the backup process
 	// Defaults to ""
 	// +optional
-	BackupSchedule string `json:backupSchedule,omitempty`
+	BackupSchedule         string `json:"backupSchedule,omitempty"`
+	BackupBucketUri        string `json:"backupBucketURI,omitempty"`
+	BackupBucketSecretName string `json:"backupBucketSecretName,omitempty"`
 
 	// A map[string]string that will be passed to my.cnf file.
 	// +optional
-	MysqlConf MysqlConf `json:mysqlConf,omitempty`
+	MysqlConf MysqlConf `json:"mysqlConf,omitempty"`
 
 	// Pod extra specification
 	// +optional
-	PodSpec PodSpec `json:podSpec,omitempty`
+	PodSpec PodSpec `json:"podSpec,omitempty"`
 
 	// PVC extra specifiaction
 	// +optional
-	VolumeSpec `json:volumeSpec,omitempty`
+	VolumeSpec `json:"volumeSpec,omitempty"`
 }
 
 type MysqlConf map[string]string
@@ -86,14 +88,14 @@ type ClusterStatus struct {
 	// ReadyNodes represents number of the nodes that are in ready state
 	ReadyNodes int
 	// Conditions contains the list of the cluster conditions fulfilled
-	Conditions []ClusterCondition `json:conditions`
+	Conditions []ClusterCondition `json:"conditions"`
 }
 
 type ClusterCondition struct {
 	// type of cluster condition, values in (\"Ready\")
-	Type ClusterConditionType `json:type`
+	Type ClusterConditionType `json:"type"`
 	// Status of the condition, one of (\"True\", \"False\", \"Unknown\")
-	Status apiv1.ConditionStatus `json:status`
+	Status apiv1.ConditionStatus `json:"status"`
 
 	// optional TODO: detail each member.
 	// are optional
@@ -112,14 +114,14 @@ const (
 )
 
 type PodSpec struct {
-	ImagePullPolicy  apiv1.PullPolicy             `json:imagePullPolicy,omitempty`
-	ImagePullSecrets []apiv1.LocalObjectReference `json:imagePullSecrets,omitempty`
+	ImagePullPolicy  apiv1.PullPolicy             `json:"imagePullPolicy,omitempty"`
+	ImagePullSecrets []apiv1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	Labels       map[string]string          `json:labels`
-	Annotations  map[string]string          `json:annotations`
-	Resources    apiv1.ResourceRequirements `json:resources`
-	Affinity     apiv1.Affinity             `json:affinity`
-	NodeSelector map[string]string          `json:nodeSelector`
+	Labels       map[string]string          `json:"labels"`
+	Annotations  map[string]string          `json:"annotations"`
+	Resources    apiv1.ResourceRequirements `json:"resources"`
+	Affinity     apiv1.Affinity             `json:"affinity"`
+	NodeSelector map[string]string          `json:"nodeSelector"`
 }
 
 type VolumeSpec struct {
@@ -134,9 +136,8 @@ type VolumeSpec struct {
 type MysqlBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	ClusterName       string       `json:mysqlCluster`
 	Spec              BackupSpec   `json:"spec"`
-	Status            BackupStatus `json:status,omitempty`
+	Status            BackupStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -148,16 +149,23 @@ type MysqlBackupList struct {
 }
 
 type BackupSpec struct {
-	// A bucket URI as prefix to put backup
-	BucketUri        string `json:bucketUri,omitempty`
-	BucketSecretName string `json:bucketSecretName,omitempty`
+	// ClustterName represents the cluster for which to take backup
+	ClusterName string `json:"clusterName"`
+	// BucketUri a fully specified bucket URI where to put backup.
+	// Default is used the one specified in cluster.
+	// optional
+	BucketUri string `json:"bucketUri,omitempty"`
+	// BucketSecretName the name of secrets that contains the credentials to
+	// access the bucket. Default is used the secret specified in cluster.
+	// optinal
+	BucketSecretName string `json:"bucketSecretName,omitempty"`
 }
 
 type BackupCondition struct {
 	// type of cluster condition, values in (\"Ready\")
-	Type BackupConditionType `json:type`
+	Type BackupConditionType `json:"type"`
 	// Status of the condition, one of (\"True\", \"False\", \"Unknown\")
-	Status apiv1.ConditionStatus `json:status`
+	Status apiv1.ConditionStatus `json:"status"`
 
 	// optional TODO: detail each member.
 	// are optional
@@ -167,13 +175,17 @@ type BackupCondition struct {
 }
 
 type BackupStatus struct {
-	BucketUri  string            `json:bucketUri`
-	Conditions []BackupCondition `json:conditions`
+	// Complete marks the backup in final state
+	Completed bool `json:"completed"`
+
+	Conditions []BackupCondition `json:"conditions"`
 }
 
 type BackupConditionType string
 
 const (
-	Ready   BackupConditionType = "Ready"
-	Started BackupConditionType = "Started"
+	// BackupComplete means the backup has finished his execution
+	BackupComplete BackupConditionType = "Complete"
+	// BackupFailed means backup has failed
+	BackupFailed BackupConditionType = "Failed"
 )

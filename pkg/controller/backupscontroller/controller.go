@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/glog"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	batchinformers "k8s.io/client-go/informers/batch/v1"
@@ -47,6 +48,8 @@ type Controller struct {
 	queue       workqueue.RateLimitingInterface
 	workerWg    sync.WaitGroup
 	syncedFuncs []cache.InformerSynced
+
+	jobDeletionQueue workqueue.DelayingInterface
 }
 
 // New returns a new controller
@@ -73,12 +76,14 @@ func New(
 		clientset: clientset,
 		recorder:  eventRecorder,
 	}
-
-	// MysqlBackup
+	// queues
 	ctrl.queue = workqueue.NewNamedRateLimitingQueue(
 		workqueue.DefaultControllerRateLimiter(), "mysqlbackup")
+	ctrl.jobDeletionQueue = workqueue.NewNamedDelayingQueue("job-deletion-mysqlbackups")
+
 	backupInformer.Informer().AddEventHandler(
 		&controllerpkg.QueuingEventHandler{Queue: ctrl.queue})
+
 	ctrl.backupsLister = backupInformer.Lister()
 	ctrl.syncedFuncs = append(ctrl.syncedFuncs, backupInformer.Informer().HasSynced)
 
@@ -105,6 +110,11 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 		c.workerWg.Add(1)
 		go wait.Until(func() { c.work(stopCh) }, workerPeriodTime, stopCh)
 	}
+
+	// add delete job worker
+	c.workerWg.Add(1)
+	go wait.Until(func() { c.deleteJobWork(stopCh) }, workerPeriodTime, stopCh)
+
 	<-stopCh
 	glog.V(2).Info("Shutting down controller.")
 	c.queue.ShutDown()
@@ -168,7 +178,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context, key string) error 
 
 	if err != nil {
 		if k8errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("issuer %q in work queue no longer exists", key))
+			runtime.HandleError(fmt.Errorf("backup %q in work queue no longer exists", key))
 			glog.Errorf("resource not found: %s", err)
 			return nil
 		}
@@ -177,6 +187,62 @@ func (c *Controller) processNextWorkItem(ctx context.Context, key string) error 
 	}
 
 	return c.Sync(ctx, mysqlBackup, namespace)
+}
+
+func (c *Controller) deleteJobWork(stopCh <-chan struct{}) {
+	defer c.workerWg.Done()
+	ctx, cancel := context.WithCancel(context.Background())
+	ctx = util.ContextWithStopCh(ctx, stopCh)
+	defer cancel()
+
+	glog.V(3).Info("Deletion job worker started.")
+
+	for {
+		obj, shutdown := c.jobDeletionQueue.Get()
+		if shutdown {
+			break
+		}
+
+		var key string
+		err := func(obj interface{}) error {
+			defer c.jobDeletionQueue.Done(obj)
+
+			var ok bool
+			if key, ok = obj.(string); !ok {
+				return nil
+			}
+
+			// process items from queue
+			if err := c.deleteJobWithKey(ctx, key); err != nil {
+				return err
+			}
+
+			return nil
+		}(obj)
+
+		if err != nil {
+			glog.Errorf("%s controller: Re-queuing item %q due to error processing: %s",
+				ControllerName, key, err.Error(),
+			)
+			continue
+		}
+	}
+}
+
+func (c *Controller) deleteJobWithKey(ctx context.Context, key string) error {
+	glog.V(3).Infof("[deleteJobWithKey] deleting: %s", key)
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+
+	err = c.k8client.BatchV1().Jobs(namespace).Delete(name, &metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("job deletion: %s", err)
+	}
+
+	return nil
 }
 
 func init() {

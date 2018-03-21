@@ -25,7 +25,6 @@ import (
 
 	"github.com/golang/glog"
 
-	// _ "github.com/jetstack/cert-manager/pkg/issuer/acme"
 	"github.com/presslabs/titanium/cmd/titanium/app"
 	"github.com/presslabs/titanium/pkg/util/logs"
 )

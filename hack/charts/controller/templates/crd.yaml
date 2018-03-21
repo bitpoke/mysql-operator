@@ -66,7 +66,7 @@ spec:
         spec:
           type: object
           required:
-            - bucketUri
+            - clusterName
           properties:
             secretName:
               type: string

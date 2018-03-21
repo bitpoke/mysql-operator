@@ -3,7 +3,7 @@ kind: MysqlBackup
 metadata:
   name: bar-backup
 
-clusterName: foo
 spec:
-  bucketUri: gs:pl-test-mysql-backups/ti/
+  clusterName: foo
+  bucketUri: gs:pl-test-mysql-backups/ti/bar-backup.xtrabackup.gz
   bucketSecretName: backup-secret

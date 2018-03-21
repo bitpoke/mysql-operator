@@ -3,8 +3,11 @@ package backupfactory
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	kbatch "github.com/appscode/kutil/batch/v1"
+	"github.com/golang/glog"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +18,7 @@ import (
 )
 
 type Interface interface {
+	SetDefaults() error
 	Sync(ctx context.Context) error
 }
 
@@ -38,17 +42,21 @@ func New(backup *api.MysqlBackup, k8client kubernetes.Interface,
 
 func (f *bFactory) Sync(ctx context.Context) error {
 	meta := metav1.ObjectMeta{
-		Name:      fmt.Sprintf("%s-%s-backup", f.backup.Name, f.backup.ClusterName),
+		Name:      fmt.Sprintf("%s-%s-backup", f.backup.Name, f.backup.Spec.ClusterName),
 		Namespace: f.backup.Namespace,
 		Labels: map[string]string{
-			"cluster": f.backup.ClusterName,
+			"cluster": f.backup.Spec.ClusterName,
 		},
 		OwnerReferences: []metav1.OwnerReference{
 			f.backup.AsOwnerReference(),
 		},
 	}
 	_, _, err := kbatch.CreateOrPatchJob(f.k8Client, meta, func(in *batch.Job) *batch.Job {
-		in.Spec.Template.Spec = f.ensurePodSpec(in.Spec.Template.Spec)
+		if len(in.Spec.Template.Spec.Containers) == 0 {
+			in.Spec.Template.Spec = f.ensurePodSpec(in.Spec.Template.Spec)
+		} else {
+			f.updateStatus(in)
+		}
 		return in
 	})
 
@@ -67,8 +75,8 @@ func (f *bFactory) ensurePodSpec(in core.PodSpec) core.PodSpec {
 	in.Containers[0].ImagePullPolicy = core.PullIfNotPresent
 	in.Containers[0].Args = []string{
 		"take-backup-to",
-		f.cluster.GetLastSlaveHost(),
-		f.backup.Status.BucketUri,
+		f.cluster.GetHealtySlaveHost(),
+		f.backup.Spec.BucketUri,
 	}
 
 	if len(f.backup.Spec.BucketSecretName) != 0 {
@@ -83,4 +91,74 @@ func (f *bFactory) ensurePodSpec(in core.PodSpec) core.PodSpec {
 		}
 	}
 	return in
+}
+
+func (f *bFactory) SetDefaults() error {
+	if completeCond := f.backup.GetCondition(api.BackupComplete); completeCond != nil {
+		// initialization was done. Skip
+		glog.V(3).Info("Backup object is initialized, skip initialization.")
+		return nil
+	}
+
+	f.backup.UpdateStatusCondition(api.BackupComplete, core.ConditionUnknown, "set defaults",
+		"First initialization of backup")
+
+	f.backup.UpdateStatusCondition(api.BackupFailed, core.ConditionUnknown, "set defaults",
+		"First initialization of backup")
+
+	if len(f.backup.Spec.BucketUri) == 0 {
+		if len(f.cluster.Spec.BackupBucketUri) > 0 {
+			f.backup.Spec.BucketUri = getBucketUri(
+				f.cluster.Name, f.cluster.Spec.BackupBucketUri)
+		} else {
+			return fmt.Errorf("bucketURI not specified, neither in cluster")
+		}
+	}
+
+	if len(f.backup.Spec.BucketSecretName) == 0 {
+		f.backup.Spec.BucketSecretName = f.cluster.Spec.BackupBucketSecretName
+	}
+
+	// mark backup as not in final state
+	f.backup.Status.Completed = false
+
+	return nil
+}
+
+func getBucketUri(cluster, bucket string) string {
+	if strings.HasSuffix(bucket, "/") {
+		bucket = bucket[:len(bucket)-1]
+	}
+	t := time.Now()
+	return bucket + fmt.Sprintf(
+		"/%s-%s.xbackup.gz", cluster, t.Format("2006-01-02T15:04:05"),
+	)
+}
+
+func (f *bFactory) updateStatus(job *batch.Job) {
+	glog.V(2).Infof("Updating status of '%s'  backup", f.backup.Name)
+
+	if i, exists := indexOf(batch.JobComplete, job.Status.Conditions); exists {
+		cond := job.Status.Conditions[i]
+		f.backup.UpdateStatusCondition(api.BackupComplete, cond.Status,
+			cond.Reason, cond.Message)
+
+		if cond.Status == core.ConditionTrue {
+			f.backup.Status.Completed = true
+		}
+	}
+
+	if i, exists := indexOf(batch.JobFailed, job.Status.Conditions); exists {
+		cond := job.Status.Conditions[i]
+		f.backup.UpdateStatusCondition(api.BackupFailed, cond.Status, cond.Reason, cond.Message)
+	}
+}
+
+func indexOf(ty batch.JobConditionType, cs []batch.JobCondition) (int, bool) {
+	for i, cond := range cs {
+		if cond.Type == ty {
+			return i, true
+		}
+	}
+	return 0, false
 }

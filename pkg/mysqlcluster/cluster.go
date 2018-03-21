@@ -96,6 +96,12 @@ func (f *cFactory) getComponents() []component {
 			erFaild:   api.EventReasonSFSFaild,
 			erUpdated: api.EventReasonSFSUpdated,
 		},
+		component{
+			name:      f.cl.GetNameForResource(api.BackupCronJob),
+			syncFn:    f.syncBackupCronJob,
+			erFaild:   api.EventReasonCronJobFailed,
+			erUpdated: api.EventReasonCronJobUpdated,
+		},
 	}
 }
 

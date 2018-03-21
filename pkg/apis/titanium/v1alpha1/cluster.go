@@ -3,11 +3,13 @@ package v1alpha1
 import (
 	"fmt"
 
+	"github.com/golang/glog"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/presslabs/titanium/pkg/util/options"
+	orc "github.com/presslabs/titanium/pkg/util/orchestrator"
 )
 
 const (
@@ -144,6 +146,8 @@ const (
 	VolumePVC ResourceName = "mysql-data"
 	// EnvSecret is the alias for secret that contains env variables
 	EnvSecret ResourceName = "env-config"
+	// BackupCronJob is the name of cron job
+	BackupCronJob ResourceName = "backup-cron"
 )
 
 func (c *MysqlCluster) GetNameForResource(name ResourceName) string {
@@ -154,7 +158,26 @@ func getNameForResource(name ResourceName, clusterName string) string {
 	return fmt.Sprintf("%s-%s", clusterName, name)
 }
 
-func (c *MysqlCluster) GetLastSlaveHost() string {
-	return fmt.Sprintf("%s-%d.%s", c.GetNameForResource(StatefulSet), c.Status.ReadyNodes-1,
+func (c *MysqlCluster) GetHealtySlaveHost() string {
+	host := fmt.Sprintf("%s-%d.%s", c.GetNameForResource(StatefulSet), c.Status.ReadyNodes-1,
 		c.GetNameForResource(HeadlessSVC))
+
+	if len(c.Spec.GetOrcUri()) != 0 {
+		glog.V(2).Info("[GetHealtySlaveHost]: Use orchestrator to get slave host.")
+		client := orc.NewFromUri(c.Spec.GetOrcUri())
+		replicas, err := client.ClusterOSCReplicas(c.Name)
+		if err != nil {
+			glog.Errorf("[GetHealtySlaveHost] orc failed with: %s", err)
+			return host
+		}
+		for _, r := range replicas {
+			if r.SecondsBehindMaster.Valid && r.SecondsBehindMaster.Int64 <= 5 {
+				glog.V(2).Infof("[GetHealtySlaveHost]: Using orc we choses: %s", r.Key.Hostname)
+				host = r.Key.Hostname
+			}
+		}
+	}
+
+	glog.V(2).Infof("[GetHealtySlaveHost]: The slave host is: %s", host)
+	return host
 }

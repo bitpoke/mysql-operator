@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/golang/glog"
 
@@ -12,6 +13,7 @@ import (
 
 func RunTakeBackupCommand(stopCh <-chan struct{}, srcHost, destBucket string) error {
 	glog.Infof("Take backup from '%s' to bucket '%s' started...", srcHost, destBucket)
+	destBucket = normalizeBucketUri(destBucket)
 	return pushBackupFromTo(srcHost, destBucket)
 }
 
@@ -66,4 +68,8 @@ func pushBackupFromTo(srcHost, destBucket string) error {
 	}
 
 	return nil
+}
+
+func normalizeBucketUri(bucket string) string {
+	return strings.Replace(bucket, "://", ":", 1)
 }

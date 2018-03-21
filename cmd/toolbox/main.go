@@ -28,6 +28,7 @@ import (
 
 	"github.com/presslabs/titanium/cmd/toolbox/appclone"
 	"github.com/presslabs/titanium/cmd/toolbox/appconf"
+	"github.com/presslabs/titanium/cmd/toolbox/appschedulebackup"
 	"github.com/presslabs/titanium/cmd/toolbox/apptakebackup"
 	"github.com/presslabs/titanium/cmd/toolbox/apptitanium"
 	"github.com/presslabs/titanium/pkg/util/logs"
@@ -89,7 +90,6 @@ titanium-toolbox: helper for config pods`,
 		Use:   "take-backup-to",
 		Short: "Take a backup from node and push it to rclone path.",
 		Args: func(cmd *cobra.Command, args []string) error {
-			glog.Infof("Args: %v", args)
 			if len(args) != 2 {
 				return fmt.Errorf("require two arguments. source host and destination bucket")
 			}
@@ -103,6 +103,24 @@ titanium-toolbox: helper for config pods`,
 		},
 	}
 	cmd.AddCommand(takeBackupCmd)
+
+	scheduleBackupCmd := &cobra.Command{
+		Use:   "schedule-backup",
+		Short: "Schedule a backup for cluster",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return fmt.Errorf("require cluster name")
+			}
+			return nil
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			err := appschedulebackup.RunCommand(stopCh, args[0])
+			if err != nil {
+				glog.Fatalf("Schduler command failed with error: %s .", err)
+			}
+		},
+	}
+	cmd.AddCommand(scheduleBackupCmd)
 
 	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 	flag.CommandLine.Parse([]string{})

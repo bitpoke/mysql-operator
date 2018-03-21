@@ -14,6 +14,7 @@ type Orchestrator interface {
 	Forget(host string, port int) error
 
 	Master(clusterHint string) (*Instance, error)
+	ClusterOSCReplicas(cluster string) ([]Instance, error)
 }
 
 type orchestrator struct {
@@ -112,4 +113,31 @@ func (o *orchestrator) makeGetAPIResponse(path string) error {
 	}
 
 	return fmt.Errorf("unknown response code from orc. obj: %v ", apiObj)
+}
+
+func (o *orchestrator) ClusterOSCReplicas(cluster string) ([]Instance, error) {
+	uri := fmt.Sprintf("%s/cluster-osc-slaves/%s", o.connectUri, cluster)
+	glog.V(2).Infof("Orc request on: %s", uri)
+
+	resp, err := http.Get(uri)
+	if err != nil {
+		return nil, fmt.Errorf("http get error: %s", err)
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("http error code: %s", resp.Status)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("io read error: %s", err)
+	}
+
+	var insts []Instance
+	if err = json.Unmarshal(body, &insts); err != nil {
+		glog.V(3).Infof("Unmarshal data is: %s", string(body))
+		return nil, fmt.Errorf("unmarshal error: %s", err)
+	}
+
+	return insts, nil
 }
