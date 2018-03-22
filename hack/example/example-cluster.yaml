@@ -5,6 +5,9 @@ metadata:
 spec:
   replicas: 2
   secretName: the-secret
+  backupSchedule: "*/3 * * * *"
+  backupBucketUri: gs://pl-test-mysql-backups/ti/
+  backupBucketSecretName: backup-secret
   volumeSpec:
     accessModes: [ "ReadWriteOnce" ]
     resources:

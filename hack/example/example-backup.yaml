@@ -6,4 +6,8 @@ metadata:
 spec:
   clusterName: foo
   bucketUri: gs:pl-test-mysql-backups/ti/bar-backup.xtrabackup.gz
+  # TODO maybe implement this
+  # if bucketUri is not specified then cluster.backupBucketUri + bucketSuffix + .xtrabackup.gz is used
+  # else a random suffix is used
+  # bucketSuffix: this-is-my-backup
   bucketSecretName: backup-secret

@@ -62,12 +62,22 @@ func RandomString(length int) string {
 	return base64.StdEncoding.EncodeToString(buf)
 }
 
+func randStringFrom(chars []rune, n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = chars[mrand.Intn(len(chars))]
+	}
+	return string(b)
+}
+
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func RandStringUser(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[mrand.Intn(len(letterRunes))]
-	}
-	return string(b)
+	return randStringFrom(letterRunes, n)
+}
+
+var lowerLetters = []rune("abcdefghijklmnopqrstuvwxyz")
+
+func RandStringLowerLetters(n int) string {
+	return randStringFrom(lowerLetters, n)
 }

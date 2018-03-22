@@ -32,7 +32,8 @@ func (c *Controller) Sync(ctx context.Context, backup *api.MysqlBackup, ns strin
 		return nil
 	}
 
-	cluster, err := c.clusterLister.MysqlClusters(backup.Namespace).Get(backup.Spec.ClusterName)
+	cluster, err := c.clusterLister.MysqlClusters(backup.Namespace).Get(
+		backup.Spec.ClusterName)
 	if err != nil {
 		return fmt.Errorf("cluster not found: %s", err)
 	}
@@ -65,17 +66,17 @@ func (c *Controller) subresourceUpdated(obj interface{}) {
 	}
 
 	if job == nil {
-		glog.Errorf("Cannot get ObjectMeta for object %#v", obj)
+		glog.Errorf("Cannot get Job from object %#v", obj)
 		return
 	}
 
-	cluster, err := c.instanceForOwnerReference(&job.ObjectMeta)
+	backup, err := c.instanceForOwnerReference(&job.ObjectMeta)
 	if err != nil {
-		glog.Errorf("cannot get cluster for ObjectMeta, err: %s", err)
+		glog.Errorf("cannot get backup for Job, err: %s", err)
 		return
 	}
 
-	key, err := controllerpkg.KeyFunc(cluster)
+	key, err := controllerpkg.KeyFunc(backup)
 	if err != nil {
 		glog.Errorf("key func: %s", err)
 		return

@@ -16,13 +16,13 @@ func (c *Controller) instanceForOwnerReference(objectMeta *metav1.ObjectMeta) (*
 	}
 
 	if owner.Kind != api.MysqlBackupKind || owner.APIVersion != api.SchemeGroupVersion.String() {
-		return nil, fmt.Errorf("reference is not mysql cluster resource")
+		return nil, fmt.Errorf("reference is not a mysql backup resource")
 	}
 
-	cluster, err := c.backupsLister.MysqlBackups(objectMeta.Namespace).Get(owner.Name)
+	backup, err := c.backupsLister.MysqlBackups(objectMeta.Namespace).Get(owner.Name)
 	if err != nil {
-		return nil, fmt.Errorf("error getting reference for cluster, err: %s", err)
+		return nil, fmt.Errorf("error getting reference for backup, err: %s", err)
 	}
 
-	return cluster, nil
+	return backup, nil
 }

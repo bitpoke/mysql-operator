@@ -22,8 +22,6 @@ metadata:
 spec:
   readReplicas: 2
   secretName: the-secret
-  # volumeSpec:
-  #   persistenceDisabled: true
 ```
 ## Tech considerations
 

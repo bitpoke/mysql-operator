@@ -53,6 +53,10 @@ case "$1" in
         shift 1
         toolbox $VERBOSE take-backup-to "$@"
         ;;
+    schedule-backup)
+        shift 1
+        toolbox $VERBOSE schedule-backup "$@"
+        ;;
     *)
         echo "Usage: $0 {files-config|clone|config-and-serve}"
         echo "Now runs your command."
