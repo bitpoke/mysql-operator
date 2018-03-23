@@ -24,7 +24,7 @@ const (
 
 	// ConfigVersion is the mysql config that needs to be updated if configs
 	// change
-	ConfigVersion = "2018-03-09:12:39"
+	ConfigVersion = "2018-03-23:12:31"
 
 	TitaniumProbePath = "/health"
 	TitaniumProbePort = 8001
@@ -53,11 +53,6 @@ var (
 		"gtid-mode":                "on",
 		"enforce-gtid-consistency": "on",
 
-		// Utility user configs
-		"utility-user-schema-access": "mysql",
-		// TODO: least privileges principle
-		"utility-user-privileges": "SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,GRANT,ALTER,SHOW DATABASES,SUPER,CREATE USER,PROCESS,RELOAD,LOCK TABLES,REPLICATION CLIENT,REPLICATION SLAVE",
-
 		// MyISAM
 		"key-buffer-size":        "32M",
 		"myisam-recover-options": "FORCE,BACKUP",
@@ -72,6 +67,7 @@ var (
 		// binary logging
 		"expire-logs-days": "14",
 		"sync-binlog":      "1",
+		"binlog-format":    "ROW",
 
 		// CACHES AND LIMITS
 		"tmp-table-size":         "32M",
@@ -90,6 +86,9 @@ var (
 		"innodb-log-file-size":           "128M",
 		"innodb-flush-log-at-trx-commit": "2",
 		"innodb-file-per-table":          "1",
+
+		"character-set-server": "utf8mb4",
+		"collation-server":     "utf8mb4_unicode_ci",
 	}
 )
 

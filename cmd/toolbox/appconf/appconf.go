@@ -18,6 +18,7 @@ package appconf
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/go-ini/ini"
@@ -37,50 +38,70 @@ func RunConfigCommand(stopCh <-chan struct{}) error {
 	role := tb.NodeRole()
 	glog.Infof("Configuring server: %s as %s", tb.GetHostname(), role)
 
-	cfgFileName := tb.MountConfigDir + "/server-master-cnf"
-	if role == "slave" {
-		cfgFileName = tb.MountConfigDir + "/server-slave-cnf"
-	}
-	cfg, err := ini.Load(cfgFileName)
-	if err != nil {
-		return fmt.Errorf("failed to load configs, err: %s", err)
+	if err := tb.CopyFile(tb.MountConfigDir+"/my.cnf", tb.ConfigDir+"/my.cnf"); err != nil {
+		return fmt.Errorf("copy file my.cnf: %s", err)
 	}
 
-	mysqld, err := cfg.GetSection("mysqld")
-	if err != nil {
-		return fmt.Errorf("failed to load configs, err: %s", err)
-	}
-
-	uName := fmt.Sprintf("%s@%%", tb.UtilityUser)
 	uPass := util.RandomString(rStrLen)
+	reportHost := tb.GetHostFor(tb.GetServerId())
+	dynCFG := getDynamicConfigs(tb.GetServerId(), reportHost)
 
-	mysqld.NewKey("server-id", strconv.Itoa(tb.GetServerId()))
-	mysqld.NewKey("utility-user", uName)
-	mysqld.NewKey("utility-user-password", uPass)
-
-	hostname := tb.GetHostFor(tb.GetServerId())
-	mysqld.NewKey("report-host", hostname)
-
-	err = cfg.SaveTo(tb.ConfigDir + "/my.cnf")
-	if err != nil {
-		return fmt.Errorf("failed to save configs, err: %s", err)
+	if err := os.Mkdir(tb.ConfDPath, os.ModeDir); err != nil {
+		if !os.IsExist(err) {
+			return fmt.Errorf("error mkdir %s/conf.d: %s", tb.ConfigDir, err)
+		}
+	}
+	if err := dynCFG.SaveTo(tb.ConfDPath + "/10-dynamic.cnf"); err != nil {
+		return fmt.Errorf("failed to save configs: %s", err)
 	}
 
-	cfg = ini.Empty()
-	// create file /etc/mysql/client.cnf
-	client, err := cfg.NewSection("client")
-	if err != nil {
-		return fmt.Errorf("failed to load configs, err: %s", err)
+	utilityCFG := getUtilityUserConfigs(tb.UtilityUser, uPass)
+	if err := utilityCFG.SaveTo(tb.ConfDPath + "/10-utility-user.cnf"); err != nil {
+		return fmt.Errorf("failed to configure utility user: %s", err)
 	}
-	client.NewKey("host", "127.0.0.1")
-	client.NewKey("port", tb.MysqlPort)
-	client.NewKey("user", tb.UtilityUser)
-	client.NewKey("password", uPass)
 
-	err = cfg.SaveTo(tb.ConfigDir + "/client.cnf")
-	if err != nil {
-		return fmt.Errorf("failed to save configs, err: %s", err)
+	clientCFG := getClientConfigs(tb.UtilityUser, uPass)
+	if err := clientCFG.SaveTo(tb.ConfigDir + "/client.cnf"); err != nil {
+		return fmt.Errorf("failed to save configs: %s", err)
 	}
 
 	return nil
+}
+
+func getClientConfigs(user, pass string) *ini.File {
+	cfg := ini.Empty()
+	// create file /etc/mysql/client.cnf
+	client := cfg.Section("client")
+
+	client.NewKey("host", "127.0.0.1")
+	client.NewKey("port", tb.MysqlPort)
+	client.NewKey("user", user)
+	client.NewKey("password", pass)
+
+	return cfg
+}
+
+func getDynamicConfigs(id int, reportHost string) *ini.File {
+	cfg := ini.Empty()
+	mysqld := cfg.Section("mysqld")
+
+	mysqld.NewKey("server-id", strconv.Itoa(id))
+	mysqld.NewKey("report-host", reportHost)
+
+	return cfg
+}
+
+func getUtilityUserConfigs(user, pass string) *ini.File {
+	cfg := ini.Empty()
+	mysqld := cfg.Section("mysqld")
+
+	mysqld.NewKey("utility-user", fmt.Sprintf("%s@%%", user))
+	mysqld.NewKey("utility-user-password", pass)
+	mysqld.NewKey("utility-user-schema-access", "mysql")
+	mysqld.NewKey("utility-user-privileges",
+		"SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,GRANT,ALTER,SHOW DATABASES,SUPER,CREATE USER,"+
+			"PROCESS,RELOAD,LOCK TABLES,REPLICATION CLIENT,REPLICATION SLAVE",
+	)
+
+	return cfg
 }

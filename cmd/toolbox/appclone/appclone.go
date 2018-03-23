@@ -181,3 +181,16 @@ func checkIfWasInit() (bool, error) {
 
 	return true, nil
 }
+
+func checkIfDataExists() bool {
+	path := fmt.Sprintf("%s/mysql")
+	_, err := os.Open(path)
+
+	if os.IsNotExist(err) {
+		return false
+	} else {
+		glog.Warning("[checkIfDataExists] faild to open %s with err: %s", path, err)
+	}
+
+	return true
+}

@@ -2,6 +2,7 @@ package mysqlcluster
 
 import (
 	"bytes"
+	"fmt"
 
 	kcore "github.com/appscode/kutil/core/v1"
 	"github.com/go-ini/ini"
@@ -46,17 +47,12 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 }
 
 func (f *cFactory) getConfigMapData() (map[string]string, error) {
-	master, err := f.getMysqlConfigs(f.cluster.Spec.MysqlConf)
-	if err != nil {
-		return nil, err
-	}
-	slave, err := f.getMysqlConfigs(f.cluster.Spec.MysqlConf)
+	cnf, err := f.getMysqlConfigs(MysqlMasterSlaveConfigs, f.cluster.Spec.MysqlConf)
 	if err != nil {
 		return nil, err
 	}
 	return map[string]string{
-		"server-master-cnf": master,
-		"server-slave-cnf":  slave,
+		"my.cnf": cnf,
 	}, nil
 }
 
@@ -72,11 +68,8 @@ func (f *cFactory) getMysqlConfigs(extraMysqld ...map[string]string) (string, er
 		}
 	}
 
-	for k, v := range MysqlMasterSlaveConfigs {
-		if _, err := s.NewKey(k, v); err != nil {
-			return "", err
-		}
-	}
+	// include configs from /etc/mysql/conf.d/*.cnf
+	s.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
 
 	var buf bytes.Buffer
 	if _, err := cfg.WriteTo(&buf); err != nil {

@@ -16,6 +16,7 @@ import (
 const (
 	confVolumeName      = "conf"
 	ConfVolumeMountPath = "/etc/mysql"
+	ConfDPath           = "/etc/mysql/conf.d"
 
 	confMapVolumeName      = "config-map"
 	ConfMapVolumeMountPath = "/mnt/conf"
@@ -71,11 +72,15 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 func (f *cFactory) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec {
 	in.ObjectMeta.Labels = f.getLabels(f.cluster.Spec.PodSpec.Labels)
 	in.ObjectMeta.Annotations = f.cluster.Spec.PodSpec.Annotations
+	if len(in.ObjectMeta.Annotations) == 0 {
+		in.ObjectMeta.Annotations = make(map[string]string)
+	}
+	in.ObjectMeta.Annotations["config_hash"] = f.configHash
 
 	in.Spec.InitContainers = f.ensureInitContainersSpec(in.Spec.InitContainers)
 	in.Spec.Containers = f.ensureContainersSpec(in.Spec.Containers)
 
-	// TODO
+	// TODO: ensure function for volume
 	if len(in.Spec.Volumes) == 0 {
 		in.Spec.Volumes = f.getVolumes()
 	}
