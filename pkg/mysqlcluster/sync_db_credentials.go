@@ -7,8 +7,7 @@ import (
 	"github.com/golang/glog"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	orc "github.com/presslabs/titanium/pkg/util/orchestrator"
+	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
 type dbCreds struct {
@@ -20,13 +19,13 @@ type dbCreds struct {
 
 func (f *cFactory) syncDbCredentialsSecret() (state string, err error) {
 	state = statusUpToDate
-	if len(f.cl.Spec.SecretName) == 0 {
+	if len(f.cluster.Spec.SecretName) == 0 {
 		err = fmt.Errorf("the Spec.SecretName is empty")
 		state = statusFaild
 		return
 	}
 	meta := metav1.ObjectMeta{
-		Name:      f.cl.Spec.SecretName,
+		Name:      f.cluster.Spec.SecretName,
 		Labels:    f.getLabels(map[string]string{}),
 		Namespace: f.namespace,
 	}
@@ -36,7 +35,7 @@ func (f *cFactory) syncDbCredentialsSecret() (state string, err error) {
 			var creds dbCreds
 			if _, ok := in.Data["ROOT_PASSWORD"]; !ok {
 				glog.Errorf("ROOT_PASSWORD not set in secret: %s/%s", in.Namespace, in.Name)
-				panic(fmt.Sprintf("ROOT_PASSWORD not set in secret: %s", in.Name))
+				runtime.HandleError(fmt.Errorf("ROOT_PASSWORD not set in secret: %s", in.Name))
 			}
 
 			creds.RootPassword = string(in.Data["ROOT_PASSWORD"])
@@ -54,22 +53,11 @@ func (f *cFactory) syncDbCredentialsSecret() (state string, err error) {
 				creds.Database = string(d)
 			}
 
-			// TODO: always update it with the master host
-			if _, ok := in.Data["DB_CONNECT_URL"]; !ok {
-				masterHost := f.getPodHostName(0)
-				// connect to orc and get the master host of the cluster.
-				if len(f.cl.Spec.GetOrcUri()) != 0 {
-					client := orc.NewFromUri(f.cl.Spec.GetOrcUri())
-					if inst, err := client.Master(f.cl.Name); err == nil {
-						masterHost = inst.Key.Hostname
-					}
-				}
+			in.Data["DB_CONNECT_URL"] = []byte(fmt.Sprintf(
+				"mysql://%s:%s@%s/%s",
+				creds.User, creds.Password, f.cluster.GetMasterHost(), creds.Database,
+			))
 
-				in.Data["DB_CONNECT_URL"] = []byte(fmt.Sprintf(
-					"mysql://%s:%s@%s/%s",
-					creds.User, creds.Password, masterHost, creds.Database,
-				))
-			}
 			return in
 		})
 

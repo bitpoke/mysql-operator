@@ -18,8 +18,8 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	controllerpkg "github.com/presslabs/titanium/pkg/controller"
-	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
-	mcinformers "github.com/presslabs/titanium/pkg/generated/informers/externalversions/titanium/v1alpha1"
+	ticlientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
+	tiinformers "github.com/presslabs/titanium/pkg/generated/informers/externalversions/titanium/v1alpha1"
 	mclisters "github.com/presslabs/titanium/pkg/generated/listers/titanium/v1alpha1"
 	"github.com/presslabs/titanium/pkg/util"
 )
@@ -34,10 +34,10 @@ const (
 
 // Controller structure
 type Controller struct {
-	Namespace string
+	namespace string
 
-	KubeCli  kubernetes.Interface
-	mcclient clientset.Interface
+	k8client kubernetes.Interface
+	tiClient ticlientset.Interface
 	recorder record.EventRecorder
 
 	statefulSetLister appslisters.StatefulSetLister
@@ -52,10 +52,10 @@ type Controller struct {
 func New(
 	// kubernetes client
 	kubecli kubernetes.Interface,
-	// clientset client
-	mcclient clientset.Interface,
+	// titanium clientset client
+	tiClient ticlientset.Interface,
 	// mysql cluster informer
-	mysqlClusterInformer mcinformers.MysqlClusterInformer,
+	mysqlClusterInformer tiinformers.MysqlClusterInformer,
 	// event recorder
 	eventRecorder record.EventRecorder,
 	// the namespace
@@ -65,23 +65,26 @@ func New(
 
 ) *Controller {
 	ctrl := &Controller{
-		Namespace: namespace,
-		KubeCli:   kubecli,
-		mcclient:  mcclient,
+		namespace: namespace,
+		k8client:  kubecli,
+		tiClient:  tiClient,
 		recorder:  eventRecorder,
 	}
 
 	// MysqlCluster
 	ctrl.queue = workqueue.NewNamedRateLimitingQueue(
 		workqueue.DefaultControllerRateLimiter(), "mysqlcluster")
+
 	mysqlClusterInformer.Informer().AddEventHandler(
 		&controllerpkg.QueuingEventHandler{Queue: ctrl.queue})
+
 	ctrl.clusterLister = mysqlClusterInformer.Lister()
 	ctrl.syncedFuncs = append(ctrl.syncedFuncs, mysqlClusterInformer.Informer().HasSynced)
 
 	// StatefulSet
 	statefulSetInformer.Informer().AddEventHandler(
 		&controllerpkg.BlockingEventHandler{WorkFunc: ctrl.subresourceUpdated})
+
 	ctrl.statefulSetLister = statefulSetInformer.Lister()
 	ctrl.syncedFuncs = append(ctrl.syncedFuncs, statefulSetInformer.Informer().HasSynced)
 
@@ -114,10 +117,6 @@ func (c *Controller) work(stopCh <-chan struct{}) {
 	defer c.workerWg.Done()
 	glog.V(2).Info("Starting worker.")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	ctx = util.ContextWithStopCh(ctx, stopCh)
-	defer cancel() // TODO: is safe?
-
 	for {
 		obj, shutdown := c.queue.Get()
 		if shutdown {
@@ -132,6 +131,11 @@ func (c *Controller) work(stopCh <-chan struct{}) {
 			if key, ok = obj.(string); !ok {
 				return nil
 			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			ctx = util.ContextWithStopCh(ctx, stopCh)
+			defer cancel()
+
 			glog.V(2).Info(fmt.Sprintf("[%s controller]: syncing item '%s'", ControllerName, key))
 
 			// process items from queue
@@ -160,13 +164,19 @@ func (c *Controller) processNextWorkItem(ctx context.Context, key string) error 
 		return nil
 	}
 
+	if namespace != c.namespace {
+		runtime.HandleError(
+			fmt.Errorf("received object with namespace '%s' that is not in working namespace '%s`",
+				namespace, c.namespace))
+		return nil
+	}
+
 	mysqlCluster, err := c.clusterLister.MysqlClusters(namespace).Get(name)
 
 	if err != nil {
 		if k8errors.IsNotFound(err) {
 			runtime.HandleError(fmt.Errorf("issuer %q in work queue no longer exists", key))
 			glog.Errorf("resource not found: %s", err)
-			// TODO: fix deletion
 			return nil
 		}
 

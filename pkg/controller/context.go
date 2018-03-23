@@ -13,7 +13,7 @@ import (
 type Context struct {
 	// KubeClient is a Kubernetes clientset
 	KubeClient kubernetes.Interface
-	// Client is a oxygen clientset
+	// Client is a titanium clientset
 	Client clientset.Interface
 	// Recorder to record events to
 	Recorder record.EventRecorder

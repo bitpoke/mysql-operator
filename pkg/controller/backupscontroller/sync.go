@@ -39,7 +39,7 @@ func (c *Controller) Sync(ctx context.Context, backup *api.MysqlBackup, ns strin
 	}
 
 	copyBackup := backup.DeepCopy()
-	factory := bfactory.New(copyBackup, c.k8client, c.clientset, cluster)
+	factory := bfactory.New(copyBackup, c.k8client, c.tiClient, cluster)
 
 	if err := factory.SetDefaults(); err != nil {
 		return fmt.Errorf("set defaults: %s", err)
@@ -49,7 +49,7 @@ func (c *Controller) Sync(ctx context.Context, backup *api.MysqlBackup, ns strin
 		return fmt.Errorf("sync: %s", err)
 	}
 
-	if _, err := c.clientset.Titanium().MysqlBackups(ns).Update(copyBackup); err != nil {
+	if _, err := c.tiClient.Titanium().MysqlBackups(ns).Update(copyBackup); err != nil {
 		return fmt.Errorf("backup update: %s", err)
 	}
 

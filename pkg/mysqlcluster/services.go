@@ -11,7 +11,7 @@ import (
 func (f *cFactory) syncHeadlessService() (state string, err error) {
 	state = statusUpToDate
 	meta := metav1.ObjectMeta{
-		Name:            f.cl.GetNameForResource(api.HeadlessSVC),
+		Name:            f.cluster.GetNameForResource(api.HeadlessSVC),
 		Labels:          f.getLabels(map[string]string{}),
 		OwnerReferences: f.getOwnerReferences(),
 		Namespace:       f.namespace,

@@ -1,9 +1,6 @@
 package mysqlcluster
 
 import (
-	"fmt"
-
-	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -62,8 +59,8 @@ var (
 		"utility-user-privileges": "SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,GRANT,ALTER,SHOW DATABASES,SUPER,CREATE USER,PROCESS,RELOAD,LOCK TABLES,REPLICATION CLIENT,REPLICATION SLAVE",
 
 		// MyISAM
-		"key-buffer-size": "32M",
-		"myisam-recover":  "FORCE,BACKUP",
+		"key-buffer-size":        "32M",
+		"myisam-recover-options": "FORCE,BACKUP",
 
 		// Safety
 		"max-allowed-packet": "16M",
@@ -93,27 +90,13 @@ var (
 		"innodb-log-file-size":           "128M",
 		"innodb-flush-log-at-trx-commit": "2",
 		"innodb-file-per-table":          "1",
-
-		// logging
-		"log-queries-not-using-indexes": "1",
-		// TODO: write a test for slow queries
-		"slow-query-log": "1",
 	}
-	// MysqlMasterConfigs represents configs specific to master
-	MysqlMasterConfigs = map[string]string{}
-	// MysqlSlaveConfigs represents configs specific to slave
-	MysqlSlaveConfigs = map[string]string{}
 )
-
-func (f *cFactory) getPodHostName(p int) string {
-	pod := fmt.Sprintf("%s-%d", f.cl.GetNameForResource(api.StatefulSet), p)
-	return fmt.Sprintf("%s.%s", pod, f.cl.GetNameForResource(api.HeadlessSVC))
-}
 
 func (f *cFactory) getLabels(extra map[string]string) map[string]string {
 	lables := map[string]string{
 		"app":              AppName,
-		"titanium_cluster": f.cl.Name,
+		"titanium_cluster": f.cluster.Name,
 	}
 	for k, v := range extra {
 		lables[k] = v

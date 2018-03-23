@@ -15,7 +15,7 @@ import (
 func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 
 	meta := metav1.ObjectMeta{
-		Name: f.cl.GetNameForResource(api.ConfigMap),
+		Name: f.cluster.GetNameForResource(api.ConfigMap),
 		Labels: f.getLabels(map[string]string{
 			"generated": "true"}),
 		OwnerReferences: f.getOwnerReferences(),
@@ -46,11 +46,11 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 }
 
 func (f *cFactory) getConfigMapData() (map[string]string, error) {
-	master, err := f.getMysqlConfigs(MysqlMasterConfigs, f.cl.Spec.MysqlConf)
+	master, err := f.getMysqlConfigs(f.cluster.Spec.MysqlConf)
 	if err != nil {
 		return nil, err
 	}
-	slave, err := f.getMysqlConfigs(MysqlSlaveConfigs, f.cl.Spec.MysqlConf)
+	slave, err := f.getMysqlConfigs(f.cluster.Spec.MysqlConf)
 	if err != nil {
 		return nil, err
 	}

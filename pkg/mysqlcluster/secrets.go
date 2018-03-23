@@ -12,7 +12,7 @@ import (
 func (f *cFactory) syncEnvSecret() (state string, err error) {
 
 	meta := metav1.ObjectMeta{
-		Name: f.cl.GetNameForResource(api.EnvSecret),
+		Name: f.cluster.GetNameForResource(api.EnvSecret),
 		Labels: f.getLabels(map[string]string{
 			"generated": "true"}),
 		OwnerReferences: f.getOwnerReferences(),
@@ -40,9 +40,9 @@ func (f *cFactory) getEnvSecretData(data map[string][]byte) map[string][]byte {
 	}
 
 	configs := map[string]string{
-		"TITANIUM_HEADLESS_SERVICE": f.cl.GetNameForResource(api.HeadlessSVC),
-		"TITANIUM_INIT_BUCKET_URI":  f.cl.Spec.InitBucketURI,
-		"TITANIUM_ORC_URI":          f.cl.Spec.GetOrcUri(),
+		"TITANIUM_HEADLESS_SERVICE": f.cluster.GetNameForResource(api.HeadlessSVC),
+		"TITANIUM_INIT_BUCKET_URI":  f.cluster.Spec.InitBucketURI,
+		"TITANIUM_ORC_URI":          f.cluster.Spec.GetOrcUri(),
 	}
 	fConf := make(map[string][]byte)
 	for k, v := range configs {

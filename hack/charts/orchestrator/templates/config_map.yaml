@@ -40,6 +40,8 @@ data:
 
       "UnseenInstanceForgetHours": 1,
 
+      "RecoveryPeriodBlockSeconds": 5,
+
       "ApplyMySQLPromotionAfterMasterFailover": true
 
       {{- /*Raft configuration*/ -}}

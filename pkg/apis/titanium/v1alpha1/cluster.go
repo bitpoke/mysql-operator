@@ -181,3 +181,26 @@ func (c *MysqlCluster) GetHealtySlaveHost() string {
 	glog.V(2).Infof("[GetHealtySlaveHost]: The slave host is: %s", host)
 	return host
 }
+
+func (c *MysqlCluster) GetMasterHost() string {
+	masterHost := c.GetPodHostName(0)
+	// connect to orc and get the master host of the cluster.
+	if len(c.Spec.GetOrcUri()) != 0 {
+		client := orc.NewFromUri(c.Spec.GetOrcUri())
+		if inst, err := client.Master(c.Name); err == nil {
+			masterHost = inst.Key.Hostname
+		} else {
+			glog.Warning(
+				"[GetMasterHost]: Failed to connect to orcheatratoro: %s, failback to default",
+				err,
+			)
+		}
+	}
+
+	return masterHost
+}
+
+func (c *MysqlCluster) GetPodHostName(p int) string {
+	pod := fmt.Sprintf("%s-%d", c.GetNameForResource(StatefulSet), p)
+	return fmt.Sprintf("%s.%s", pod, c.GetNameForResource(HeadlessSVC))
+}

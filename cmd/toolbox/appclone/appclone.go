@@ -1,11 +1,10 @@
 package appclone
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/golang/glog"
 
@@ -23,6 +22,11 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 	} else if init {
 		glog.Info("Data exists and is initialized. Skip clonging.")
 		return nil
+	} else {
+		if checkIfDataExists() {
+			glog.Infof("Data alerady exists! Remove manualy PVC to cleanup or to reinitialize.")
+			return nil
+		}
 	}
 
 	if tb.NodeRole() == "master" {
@@ -54,6 +58,9 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 }
 
 func cloneFromBucket(initBucket string) error {
+	initBucket = strings.Replace(initBucket, "://", ":", 1)
+
+	glog.Infof("Cloning from bucket: %s", initBucket)
 
 	if _, err := os.Stat(tb.RcloneConfigFile); os.IsNotExist(err) {
 		glog.Fatalf("Rclone config file does not exists. err: %s", err)
@@ -61,7 +68,7 @@ func cloneFromBucket(initBucket string) error {
 	}
 	// rclone --config={conf file} cat {bucket uri}
 	// writes to stdout the content of the bucket uri
-	rclone := exec.Command("rclone",
+	rclone := exec.Command("rclone", "-vv",
 		fmt.Sprintf("--config=%s", tb.RcloneConfigFile), "cat", initBucket)
 
 	// gzip reads from stdin decompress and then writes to stdout
@@ -82,9 +89,9 @@ func cloneFromBucket(initBucket string) error {
 		return err
 	}
 
-	var out bytes.Buffer
-	xbstream.Stdout = &out
-	defer io.Copy(os.Stdout, &out)
+	rclone.Stderr = os.Stderr
+	gzip.Stderr = os.Stderr
+	xbstream.Stderr = os.Stderr
 
 	if err := rclone.Start(); err != nil {
 		return fmt.Errorf("rclone start error: %s", err)
@@ -110,6 +117,7 @@ func cloneFromBucket(initBucket string) error {
 		return fmt.Errorf("xbstream wait error: %s", err)
 	}
 
+	glog.Info("Cloning done successfully.")
 	return nil
 }
 

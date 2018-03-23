@@ -26,7 +26,7 @@ const (
 func (f *cFactory) syncStatefulSet() (state string, err error) {
 	state = statusUpToDate
 	meta := metav1.ObjectMeta{
-		Name:            f.cl.GetNameForResource(api.StatefulSet),
+		Name:            f.cluster.GetNameForResource(api.StatefulSet),
 		Labels:          f.getLabels(map[string]string{}),
 		OwnerReferences: f.getOwnerReferences(),
 		Namespace:       f.namespace,
@@ -35,21 +35,21 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 	_, act, err := kapps.CreateOrPatchStatefulSet(f.client, meta,
 		func(in *apps.StatefulSet) *apps.StatefulSet {
 			if in.Status.ReadyReplicas == in.Status.Replicas {
-				f.cl.UpdateStatusCondition(api.ClusterConditionReady,
+				f.cluster.UpdateStatusCondition(api.ClusterConditionReady,
 					core.ConditionTrue, "statefulset ready", "Cluster is ready.")
 			} else {
-				f.cl.UpdateStatusCondition(api.ClusterConditionReady,
+				f.cluster.UpdateStatusCondition(api.ClusterConditionReady,
 					core.ConditionFalse, "statefulset not ready", "Cluster is not ready.")
 			}
 
-			f.cl.Status.ReadyNodes = int(in.Status.ReadyReplicas)
+			f.cluster.Status.ReadyNodes = int(in.Status.ReadyReplicas)
 
-			in.Spec.Replicas = &f.cl.Spec.Replicas
+			in.Spec.Replicas = &f.cluster.Spec.Replicas
 			in.Spec.Selector = &metav1.LabelSelector{
 				MatchLabels: f.getLabels(map[string]string{}),
 			}
 
-			in.Spec.ServiceName = f.cl.GetNameForResource(api.HeadlessSVC)
+			in.Spec.ServiceName = f.cluster.GetNameForResource(api.HeadlessSVC)
 			in.Spec.Template = f.ensureTemplate(in.Spec.Template)
 			if len(in.Spec.VolumeClaimTemplates) == 0 {
 				in.Spec.VolumeClaimTemplates = f.getVolumeClaimTemplates()
@@ -69,8 +69,8 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 }
 
 func (f *cFactory) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec {
-	in.ObjectMeta.Labels = f.getLabels(f.cl.Spec.PodSpec.Labels)
-	in.ObjectMeta.Annotations = f.cl.Spec.PodSpec.Annotations
+	in.ObjectMeta.Labels = f.getLabels(f.cluster.Spec.PodSpec.Labels)
+	in.ObjectMeta.Annotations = f.cluster.Spec.PodSpec.Annotations
 
 	in.Spec.InitContainers = f.ensureInitContainersSpec(in.Spec.InitContainers)
 	in.Spec.Containers = f.ensureContainersSpec(in.Spec.Containers)
@@ -79,9 +79,9 @@ func (f *cFactory) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec 
 	if len(in.Spec.Volumes) == 0 {
 		in.Spec.Volumes = f.getVolumes()
 	}
-	in.Spec.Affinity = &f.cl.Spec.PodSpec.Affinity
-	in.Spec.NodeSelector = f.cl.Spec.PodSpec.NodeSelector
-	in.Spec.ImagePullSecrets = f.cl.Spec.PodSpec.ImagePullSecrets
+	in.Spec.Affinity = &f.cluster.Spec.PodSpec.Affinity
+	in.Spec.NodeSelector = f.cluster.Spec.PodSpec.NodeSelector
+	in.Spec.ImagePullSecrets = f.cluster.Spec.PodSpec.ImagePullSecrets
 
 	return in
 }
@@ -96,7 +96,7 @@ const (
 func (f *cFactory) ensureContainer(in core.Container, name, image string, args []string) core.Container {
 	in.Name = name
 	in.Image = image
-	in.ImagePullPolicy = f.cl.Spec.PodSpec.ImagePullPolicy
+	in.ImagePullPolicy = f.cluster.Spec.PodSpec.ImagePullPolicy
 	in.Args = args
 	in.EnvFrom = f.getEnvSourcesFor(name)
 	in.VolumeMounts = f.getVolumeMountsFor(name)
@@ -111,13 +111,13 @@ func (f *cFactory) ensureInitContainersSpec(in []core.Container) []core.Containe
 
 	// init container for configs
 	in[0] = f.ensureContainer(in[0], containerInitName,
-		f.cl.Spec.GetTitaniumImage(),
+		f.cluster.Spec.GetTitaniumImage(),
 		[]string{"files-config"},
 	)
 
 	// clone container
 	in[1] = f.ensureContainer(in[1], containerCloneName,
-		f.cl.Spec.GetTitaniumImage(),
+		f.cluster.Spec.GetTitaniumImage(),
 		[]string{"clone"},
 	)
 
@@ -131,14 +131,14 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 
 	// MYSQL container
 	mysql := f.ensureContainer(in[0], containerMysqlName,
-		f.cl.Spec.GetMysqlImage(),
+		f.cluster.Spec.GetMysqlImage(),
 		[]string{},
 	)
 	mysql.Ports = ensureContainerPorts(mysql.Ports, core.ContainerPort{
 		Name:          MysqlPortName,
 		ContainerPort: MysqlPort,
 	})
-	mysql.Resources = f.cl.Spec.PodSpec.Resources
+	mysql.Resources = f.cluster.Spec.PodSpec.Resources
 	mysql.LivenessProbe = ensureProbe(mysql.LivenessProbe, 30, 5, 10, core.Handler{
 		Exec: &core.ExecAction{
 			Command: []string{
@@ -162,7 +162,7 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 	in[0] = mysql
 
 	titanium := f.ensureContainer(in[1], containerTitaniumName,
-		f.cl.Spec.GetTitaniumImage(),
+		f.cluster.Spec.GetTitaniumImage(),
 		[]string{"config-and-serve"},
 	)
 	titanium.Ports = ensureContainerPorts(titanium.Ports, core.ContainerPort{
@@ -197,26 +197,26 @@ func (f *cFactory) getVolumes() []core.Volume {
 			VolumeSource: core.VolumeSource{
 				ConfigMap: &core.ConfigMapVolumeSource{
 					LocalObjectReference: core.LocalObjectReference{
-						Name: f.cl.GetNameForResource(api.ConfigMap),
+						Name: f.cluster.GetNameForResource(api.ConfigMap),
 					},
 				},
 			},
 		},
 		core.Volume{
-			Name: f.cl.GetNameForResource(api.VolumePVC),
+			Name: f.cluster.GetNameForResource(api.VolumePVC),
 			VolumeSource: core.VolumeSource{
 				PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
-					ClaimName: f.cl.GetNameForResource(api.VolumePVC),
+					ClaimName: f.cluster.GetNameForResource(api.VolumePVC),
 				},
 			},
 		},
 	}
-	if len(f.cl.Spec.GetOrcTopologySecret()) != 0 {
+	if len(f.cluster.Spec.GetOrcTopologySecret()) != 0 {
 		volumes = append(volumes, core.Volume{
 			Name: "orc-topology-secret",
 			VolumeSource: core.VolumeSource{
 				Secret: &core.SecretVolumeSource{
-					SecretName: f.cl.Spec.GetOrcTopologySecret(),
+					SecretName: f.cluster.Spec.GetOrcTopologySecret(),
 				},
 			},
 		})
@@ -229,34 +229,34 @@ func (f *cFactory) getVolumeClaimTemplates() []core.PersistentVolumeClaim {
 	return []core.PersistentVolumeClaim{
 		core.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            f.cl.GetNameForResource(api.VolumePVC),
+				Name:            f.cluster.GetNameForResource(api.VolumePVC),
 				Labels:          f.getLabels(map[string]string{}),
 				OwnerReferences: f.getOwnerReferences(),
 			},
-			Spec: f.cl.Spec.VolumeSpec.PersistentVolumeClaimSpec,
+			Spec: f.cluster.Spec.VolumeSpec.PersistentVolumeClaimSpec,
 		},
 	}
 }
 
 func (f *cFactory) getEnvSourcesFor(name string) []core.EnvFromSource {
 	ss := []core.EnvFromSource{
-		envFromSecret(f.cl.GetNameForResource(api.EnvSecret)),
+		envFromSecret(f.cluster.GetNameForResource(api.EnvSecret)),
 	}
 	switch name {
 	case containerTitaniumName:
-		//		if len(f.cl.Spec.BackupBucketSecretName) != 0 {
-		//			ss = append(ss, envFromSecret(f.cl.Spec.BackupBucketSecretName))
+		//		if len(f.cluster.Spec.BackupBucketSecretName) != 0 {
+		//			ss = append(ss, envFromSecret(f.cluster.Spec.BackupBucketSecretName))
 		//		}
 	case containerCloneName:
-		if len(f.cl.Spec.InitBucketSecretName) != 0 {
-			ss = append(ss, envFromSecret(f.cl.Spec.InitBucketSecretName))
+		if len(f.cluster.Spec.InitBucketSecretName) != 0 {
+			ss = append(ss, envFromSecret(f.cluster.Spec.InitBucketSecretName))
 		}
 	case containerMysqlName:
 		ss = append(ss, core.EnvFromSource{
 			Prefix: "MYSQL_",
 			SecretRef: &core.SecretEnvSource{
 				LocalObjectReference: core.LocalObjectReference{
-					Name: f.cl.Spec.SecretName,
+					Name: f.cluster.Spec.SecretName,
 				},
 			},
 		})
@@ -271,13 +271,13 @@ func (f *cFactory) getVolumeMountsFor(name string) []core.VolumeMount {
 			MountPath: ConfVolumeMountPath,
 		},
 		core.VolumeMount{
-			Name:      f.cl.GetNameForResource(api.VolumePVC),
+			Name:      f.cluster.GetNameForResource(api.VolumePVC),
 			MountPath: DataVolumeMountPath,
 		},
 	}
 
 	titaniumVolumeMounts := commonVolumeMounts
-	if len(f.cl.Spec.GetOrcTopologySecret()) != 0 {
+	if len(f.cluster.Spec.GetOrcTopologySecret()) != 0 {
 		titaniumVolumeMounts = append(commonVolumeMounts, core.VolumeMount{
 			Name:      "orc-topology-secret",
 			MountPath: OrcTopologyDir,
@@ -319,6 +319,6 @@ func envFromSecret(name string) core.EnvFromSource {
 }
 
 func (f *cFactory) getHostForReplica(no int) string {
-	return fmt.Sprintf("%s-%d.%s", f.cl.GetNameForResource(api.StatefulSet), no,
-		f.cl.GetNameForResource(api.HeadlessSVC))
+	return fmt.Sprintf("%s-%d.%s", f.cluster.GetNameForResource(api.StatefulSet), no,
+		f.cluster.GetNameForResource(api.HeadlessSVC))
 }

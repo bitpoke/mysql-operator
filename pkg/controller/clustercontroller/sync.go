@@ -37,17 +37,17 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster, ns str
 		glog.V(2).Infof("now just update defaults for %s", cluster.Name)
 		c.recorder.Event(copyCluster, api.EventNormal, api.EventReasonInitDefaults,
 			"defaults seted")
-		_, err := c.mcclient.Titanium().MysqlClusters(ns).Update(copyCluster)
+		_, err := c.tiClient.Titanium().MysqlClusters(ns).Update(copyCluster)
 		return err
 	}
 
 	// create a cluster factory and sync it.
-	clusterFactory := mcfactory.New(copyCluster, c.KubeCli, c.mcclient, ns, c.recorder)
+	clusterFactory := mcfactory.New(copyCluster, c.k8client, c.tiClient, ns, c.recorder)
 	if err := clusterFactory.Sync(ctx); err != nil {
 		return fmt.Errorf("failed to set-up the cluster: %s", err)
 	}
 
-	if _, err := c.mcclient.Titanium().MysqlClusters(ns).Update(copyCluster); err != nil {
+	if _, err := c.tiClient.Titanium().MysqlClusters(ns).Update(copyCluster); err != nil {
 		return err
 	}
 
