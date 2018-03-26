@@ -31,12 +31,14 @@ const (
 
 	ExporterPortName = "exporter"
 	ExporterPort     = 9104
-	EporterPath      = "/metrics"
+	ExporterPath     = "/metrics"
 )
 
 var (
 	// TargetPort is the mysql port that is set for headless service and should be string
 	TargetPort = intstr.FromInt(MysqlPort)
+	// ExporterTargetPort is the port on which metrics exporter expose metrics
+	ExporterTargetPort = intstr.FromInt(ExporterPort)
 
 	// MysqlMasterSlaveConfigs contains configs for both master and slave
 	MysqlMasterSlaveConfigs = map[string]string{
@@ -64,10 +66,8 @@ var (
 		// Safety
 		"max-allowed-packet": "16M",
 		"max-connect-errors": "1000000",
-		"skip-name-resolve":  "on",
-		//"skip-host-cache":    "on",
-		"sql-mode":       "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
-		"sysdate-is-now": "1",
+		"sql-mode":           "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
+		"sysdate-is-now":     "1",
 
 		// Binary logging
 		"expire-logs-days": "14",
@@ -94,6 +94,11 @@ var (
 
 		"character-set-server": "utf8mb4",
 		"collation-server":     "utf8mb4_unicode_ci",
+	}
+	MysqlMasterSlaveBooleanConfigs = []string{
+		// Safety
+		"skip-name-resolve",
+		"skip-host-cache",
 	}
 )
 

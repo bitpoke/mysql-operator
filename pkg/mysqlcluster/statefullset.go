@@ -21,6 +21,7 @@ const (
 	confMapVolumeName      = "config-map"
 	ConfMapVolumeMountPath = "/mnt/conf"
 
+	DataVolumeName      = "data"
 	DataVolumeMountPath = "/var/lib/mysql"
 )
 
@@ -182,8 +183,9 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 	// TITANIUM container
 	titanium.ReadinessProbe = ensureProbe(titanium.ReadinessProbe, 5, 5, 10, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
-			Path: TitaniumProbePath,
-			Port: intstr.FromInt(TitaniumProbePort),
+			Path:   TitaniumProbePath,
+			Port:   intstr.FromInt(TitaniumProbePort),
+			Scheme: core.URISchemeHTTP,
 		},
 	})
 	in[1] = titanium
@@ -202,7 +204,7 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 	exporter.LivenessProbe = ensureProbe(exporter.LivenessProbe, 30, 30, 120, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   ExporterPath,
-			Port:   ExporterPort,
+			Port:   ExporterTargetPort,
 			Scheme: core.URISchemeHTTP,
 		},
 	})
@@ -233,10 +235,10 @@ func (f *cFactory) getVolumes() []core.Volume {
 			},
 		},
 		core.Volume{
-			Name: f.cluster.GetNameForResource(api.VolumePVC),
+			Name: DataVolumeName,
 			VolumeSource: core.VolumeSource{
 				PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
-					ClaimName: f.cluster.GetNameForResource(api.VolumePVC),
+					ClaimName: DataVolumeName,
 				},
 			},
 		},
@@ -259,7 +261,7 @@ func (f *cFactory) getVolumeClaimTemplates() []core.PersistentVolumeClaim {
 	return []core.PersistentVolumeClaim{
 		core.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            f.cluster.GetNameForResource(api.VolumePVC),
+				Name:            DataVolumeName,
 				Labels:          f.getLabels(map[string]string{}),
 				OwnerReferences: f.getOwnerReferences(),
 			},
@@ -303,7 +305,7 @@ func (f *cFactory) getVolumeMountsFor(name string) []core.VolumeMount {
 			MountPath: ConfVolumeMountPath,
 		},
 		core.VolumeMount{
-			Name:      f.cluster.GetNameForResource(api.VolumePVC),
+			Name:      DataVolumeName,
 			MountPath: DataVolumeMountPath,
 		},
 	}

@@ -42,10 +42,16 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		}
 	} else {
 		// clonging from prior node
-		sourceHost := tb.GetHostFor(tb.GetServerId() - 1)
-		err := cloneFromSource(sourceHost)
-		if err != nil {
-			return fmt.Errorf("faild to clone from %s, err: %s", sourceHost, err)
+		if tb.GetServerId() > 100 {
+			sourceHost := tb.GetHostFor(tb.GetServerId() - 1)
+			err := cloneFromSource(sourceHost)
+			if err != nil {
+				return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)
+			}
+		} else {
+			return fmt.Errorf(
+				"failed to initialize because no of no prior node exists, check orchestrator maybe",
+			)
 		}
 	}
 

@@ -21,6 +21,7 @@ func ensureProbe(in *core.Probe, ids, ts, ps int32, handler core.Handler) *core.
 	if handler.TCPSocket != nil {
 		in.Handler.TCPSocket = handler.TCPSocket
 	}
+
 	return in
 }
 

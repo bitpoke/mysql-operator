@@ -27,13 +27,11 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 
 	_, act, err := kcore.CreateOrPatchConfigMap(f.client, meta,
 		func(in *core.ConfigMap) *core.ConfigMap {
-			data, hash, err := f.getConfigMapData()
+			data, current_hash, err := f.getMysqlConfData()
 			if err != nil {
 				glog.Errorf("Fail to create mysql configs. err: %s", err)
 				return in
 			}
-			current_hash := strconv.FormatUint(hash, 10)
-			f.configHash = current_hash
 
 			if key, ok := in.ObjectMeta.Annotations["config_hash"]; ok {
 				if key == current_hash {
@@ -48,7 +46,10 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 				"config_hash": current_hash,
 			}
 
-			in.Data = data
+			in.Data = map[string]string{
+				"my.cnf": data,
+			}
+
 			return in
 		})
 
@@ -56,36 +57,54 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 	return
 }
 
-func (f *cFactory) getConfigMapData() (map[string]string, uint64, error) {
-	cnf, hash, err := f.getMysqlConfigs(MysqlMasterSlaveConfigs, f.cluster.Spec.MysqlConf)
-	if err != nil {
-		return nil, hash, err
-	}
-	return map[string]string{
-		"my.cnf": cnf,
-	}, hash, nil
-}
-
-func (f *cFactory) getMysqlConfigs(extraMysqld ...map[string]string) (string, uint64, error) {
+func (f *cFactory) getMysqlConfData() (string, string, error) {
 	cfg := ini.Empty()
 	s := cfg.Section("mysqld")
 
+	addKVConfigsToSection(s, MysqlMasterSlaveConfigs, f.cluster.Spec.MysqlConf)
+	addBConfigsToSection(s, MysqlMasterSlaveBooleanConfigs)
+
+	// include configs from /etc/mysql/conf.d/*.cnf
+	s.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
+
+	data, hash, err := writeConfigs(cfg)
+	if err != nil {
+		return "", "", err
+	}
+
+	current_hash := strconv.FormatUint(hash, 10)
+	f.configHash = current_hash
+
+	return data, current_hash, nil
+
+}
+
+func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
 	for _, extra := range extraMysqld {
 		for k, v := range extra {
 			if _, err := s.NewKey(k, v); err != nil {
-				return "", 0, err
+				glog.Errorf("Failed to add '%s':'%s' to config section, err: %s", k, v, err)
 			}
 		}
 	}
+}
 
-	hash, err := hashstructure.Hash(extraMysqld, nil)
+func addBConfigsToSection(s *ini.Section, boolConfigs ...[]string) {
+	for _, extra := range boolConfigs {
+		for _, k := range extra {
+			if _, err := s.NewBooleanKey(k); err != nil {
+				glog.Errorf("Failed to add boolean key '%s' to config section, err: %s", k, err)
+			}
+		}
+	}
+}
+
+func writeConfigs(cfg *ini.File) (string, uint64, error) {
+	hash, err := hashstructure.Hash(cfg.Section("mysqld").KeysHash(), nil)
 	if err != nil {
 		glog.Errorf("Can't compute hash for map data: %s", err)
 		return "", 0, err
 	}
-
-	// include configs from /etc/mysql/conf.d/*.cnf
-	s.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
 
 	var buf bytes.Buffer
 	if _, err := cfg.WriteTo(&buf); err != nil {

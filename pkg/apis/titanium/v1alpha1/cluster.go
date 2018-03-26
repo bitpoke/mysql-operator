@@ -148,6 +148,7 @@ const (
 	// ConfigMap is the alias for mysql configs, the config map resource
 	ConfigMap ResourceName = "config-files"
 	// VolumePVC is the alias of the PVC volume
+	// TODO: remove
 	VolumePVC ResourceName = "mysql-data"
 	// EnvSecret is the alias for secret that contains env variables
 	EnvSecret ResourceName = "env-config"
@@ -160,7 +161,7 @@ func (c *MysqlCluster) GetNameForResource(name ResourceName) string {
 }
 
 func getNameForResource(name ResourceName, clusterName string) string {
-	return fmt.Sprintf("%s-%s", clusterName, name)
+	return fmt.Sprintf("%s-mysql", clusterName)
 }
 
 func (c *MysqlCluster) GetHealtySlaveHost() string {
