@@ -61,6 +61,11 @@ func RunRunCommand(stopCh <-chan struct{}) error {
 		return err
 	}
 
+	// update metrics exporter user and password
+	if err := configureExporterUser(); err != nil {
+		return err
+	}
+
 	// if it's slave set replication source (master host)
 	if err := configTopology(); err != nil {
 		return err
@@ -89,7 +94,19 @@ func configureReplicationUser() error {
     GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO '%s'@'%%' IDENTIFIED BY '%s';
     `, tb.GetReplUser(), tb.GetReplPass())
 	if _, err := tb.RunQuery(query); err != nil {
-		return fmt.Errorf("failed to configure master node, err: %s", err)
+		return fmt.Errorf("failed to configure replication user: %s", err)
+	}
+
+	return nil
+}
+
+func configureExporterUser() error {
+	query := fmt.Sprintf(`
+    SET @@SESSION.SQL_LOG_BIN = 0;
+    GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO '%s'@'%%' IDENTIFIED BY '%s' WITH MAX_USER_CONNECTIONS 3;
+    `, tb.GetExporterUser(), tb.GetExporterPass())
+	if _, err := tb.RunQuery(query); err != nil {
+		return fmt.Errorf("failed to metrics exporter user: %s", err)
 	}
 
 	return nil

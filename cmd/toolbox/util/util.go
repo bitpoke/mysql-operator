@@ -102,41 +102,47 @@ func GetServerId() int {
 // GetHostFor returns the host for given server id
 func GetHostFor(id int) string {
 	base := fmt.Sprintf("%s-%s", GetClusterName(), NameOfStatefulSet)
-	govSVC := os.Getenv("TITANIUM_HEADLESS_SERVICE")
+	govSVC := getEnvValue("TITANIUM_HEADLESS_SERVICE")
 	return fmt.Sprintf("%s-%d.%s", base, id-100, govSVC)
+}
+
+func getEnvValue(key string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		glog.Warning(fmt.Sprintf("%s is not set!", key))
+	}
+
+	return value
 }
 
 // GetReplUser returns the replication user name from env variable
 // TITANIUM_REPLICATION_USER
 func GetReplUser() string {
-	user := os.Getenv("TITANIUM_REPLICATION_USER")
-	if len(user) == 0 {
-		glog.Warning("TITANIUM_REPLICATION_USER is not set!")
-	}
-
-	return user
+	return getEnvValue("TITANIUM_REPLICATION_USER")
 }
 
 // GetReplPass returns the replication password from env variable
 // TITANIUM_REPLICATION_PASSWORD
 func GetReplPass() string {
-	pass := os.Getenv("TITANIUM_REPLICATION_PASSWORD")
-	if len(pass) == 0 {
-		glog.Warning("TITANIUM_REPLICATION_PASSWORD is not set!")
-	}
+	return getEnvValue("TITANIUM_REPLICATION_PASSWORD")
+}
 
-	return pass
+// GetExporterUser returns the replication user name from env variable
+// TITANIUM_EXPORTER_USER
+func GetExporterUser() string {
+	return getEnvValue("TITANIUM_EXPORTER_USER")
+}
+
+// GetExporterPass returns the replication password from env variable
+// TITANIUM_EXPORTER_PASSWORD
+func GetExporterPass() string {
+	return getEnvValue("TITANIUM_EXPORTER_PASSWORD")
 }
 
 // GetInitBucket returns the bucket uri from env variable
 // TITANIUM_INIT_BUCKET_URI
 func GetInitBucket() string {
-	uri := os.Getenv("TITANIUM_INIT_BUCKET_URI")
-	if len(uri) == 0 {
-		glog.Warning("TIANIUM_INIT_BUCKET_URI is not set!")
-	}
-
-	return uri
+	return getEnvValue("TITANIUM_INIT_BUCKET_URI")
 }
 
 // GetMasterHost returns the master host
@@ -230,12 +236,7 @@ func RunQuery(q string) (string, error) {
 }
 
 func getOrcUri() string {
-	uri := os.Getenv("TITANIUM_ORC_URI")
-	if len(uri) == 0 {
-		glog.Warning("TIANIUM_ORC_URI is not set!")
-	}
-
-	return uri
+	return getEnvValue("TITANIUM_ORC_URI")
 }
 
 // CopyFile the src file to dst. Any existing file will be overwritten and will not

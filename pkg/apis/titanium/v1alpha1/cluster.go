@@ -72,6 +72,11 @@ func (c *ClusterSpec) GetTitaniumImage() string {
 	return opt.TitaniumImage
 }
 
+// GetMetricsExporterImage return titanium image from options
+func (c *ClusterSpec) GetMetricsExporterImage() string {
+	return opt.MetricsExporterImage
+}
+
 // GetOrcUri return the orchestrator uri
 func (c *ClusterSpec) GetOrcUri() string {
 	return opt.OrchestratorUri

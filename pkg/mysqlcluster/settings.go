@@ -28,6 +28,10 @@ const (
 
 	TitaniumProbePath = "/health"
 	TitaniumProbePort = 8001
+
+	ExporterPortName = "exporter"
+	ExporterPort     = 9104
+	EporterPath      = "/metrics"
 )
 
 var (

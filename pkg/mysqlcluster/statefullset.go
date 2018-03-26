@@ -76,6 +76,8 @@ func (f *cFactory) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec 
 		in.ObjectMeta.Annotations = make(map[string]string)
 	}
 	in.ObjectMeta.Annotations["config_hash"] = f.configHash
+	in.ObjectMeta.Annotations["prometheus.io/scrape"] = "true"
+	in.ObjectMeta.Annotations["prometheus.io/port"] = fmt.Sprintf("%d", ExporterPort)
 
 	in.Spec.InitContainers = f.ensureInitContainersSpec(in.Spec.InitContainers)
 	in.Spec.Containers = f.ensureContainersSpec(in.Spec.Containers)
@@ -96,6 +98,7 @@ const (
 	containerCloneName    = "clone-mysql"
 	containerTitaniumName = "titanium"
 	containerMysqlName    = "mysql"
+	containerExporterName = "metrics-exporter"
 )
 
 func (f *cFactory) ensureContainer(in core.Container, name, image string, args []string) core.Container {
@@ -130,8 +133,9 @@ func (f *cFactory) ensureInitContainersSpec(in []core.Container) []core.Containe
 }
 
 func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
-	if len(in) == 0 {
-		in = make([]core.Container, 2)
+	noContainers := 3
+	if len(in) != noContainers {
+		in = make([]core.Container, noContainers)
 	}
 
 	// MYSQL container
@@ -183,6 +187,27 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 		},
 	})
 	in[1] = titanium
+
+	exporter := f.ensureContainer(in[2], containerExporterName,
+		f.cluster.Spec.GetMetricsExporterImage(),
+		[]string{
+			fmt.Sprintf("--web.listen-address=0.0.0.0:%d", ExporterPort),
+			fmt.Sprintf("--web.telemetry-path=%s", ExporterPath),
+		},
+	)
+	exporter.Ports = ensureContainerPorts(mysql.Ports, core.ContainerPort{
+		Name:          ExporterPortName,
+		ContainerPort: ExporterPort,
+	})
+	exporter.LivenessProbe = ensureProbe(exporter.LivenessProbe, 30, 30, 120, core.Handler{
+		HTTPGet: &core.HTTPGetAction{
+			Path:   ExporterPath,
+			Port:   ExporterPort,
+			Scheme: core.URISchemeHTTP,
+		},
+	})
+
+	in[2] = exporter
 
 	return in
 }
@@ -265,6 +290,8 @@ func (f *cFactory) getEnvSourcesFor(name string) []core.EnvFromSource {
 				},
 			},
 		})
+	case containerExporterName:
+		// metrics exporter env
 	}
 	return ss
 }

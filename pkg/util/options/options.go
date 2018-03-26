@@ -17,6 +17,8 @@ type Options struct {
 
 	TitaniumImage string
 
+	MetricsExporterImage string
+
 	ImagePullSecretName string
 	ImagePullPolicy     v1.PullPolicy
 
@@ -29,6 +31,7 @@ type Options struct {
 const (
 	defaultMysqlImage    = "percona:5.7"
 	defaultTitaniumImage = "gcr.io/pl-infra/titanium-toolbox:latest"
+	defaultExporterImage = "prom/mysqld-exporter:latest"
 
 	defaultImagePullPolicy = v1.PullIfNotPresent
 	orcURI                 = ""
@@ -44,6 +47,8 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 		"The mysql image.")
 	fs.StringVar(&o.TitaniumImage, "titanium-toolbox-image", defaultTitaniumImage,
 		"The image that instrumentate mysql.")
+	fs.StringVar(&o.MetricsExporterImage, "metrics-exporter-image", defaultExporterImage,
+		"The image for mysql metrics exporter.")
 	fs.StringVar(&o.ImagePullSecretName, "pull-secret", "",
 		"The secret name for used as pull secret.")
 	fs.StringVar(&o.OrchestratorUri, "orchestrator-uri", orcURI,
@@ -60,8 +65,9 @@ var once sync.Once
 func GetOptions() *Options {
 	once.Do(func() {
 		instance = &Options{
-			mysqlImage:    defaultMysqlImage,
-			TitaniumImage: defaultTitaniumImage,
+			mysqlImage:           defaultMysqlImage,
+			TitaniumImage:        defaultTitaniumImage,
+			MetricsExporterImage: defaultExporterImage,
 
 			ImagePullPolicy:             defaultImagePullPolicy,
 			JobCompleteSuccessGraceTime: defaultJobGraceTime,
