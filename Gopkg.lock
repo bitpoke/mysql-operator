@@ -25,6 +25,8 @@
   packages = [
     ".",
     "apps/v1",
+    "batch/v1",
+    "batch/v1beta1",
     "core/v1",
     "meta"
   ]
@@ -219,6 +221,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/mitchellh/hashstructure"
+  packages = ["."]
+  revision = "2bca23e0e452137f789efbc8610126fd8b94f73b"
+
+[[projects]]
+  branch = "master"
   name = "github.com/petar/GoLLRB"
   packages = ["llrb"]
   revision = "53be0d36a84c2a886ca057d34b6aa4468df9ccb4"
@@ -228,12 +236,6 @@
   packages = ["."]
   revision = "5f041e8faa004a95c88a202771f4cc3e991971e6"
   version = "v2.0.1"
-
-[[projects]]
-  name = "github.com/radovskyb/watcher"
-  packages = ["."]
-  revision = "6145e1439b9de93806925353403f91d2abbad8a5"
-  version = "v1.0.2"
 
 [[projects]]
   name = "github.com/sergi/go-diff"
@@ -623,6 +625,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "64c58b9479e476c509d8a1628f7d0626bb8183bdc5d4f0e43e9ac3f1ec073753"
+  inputs-digest = "2072129d536cab12edbee0aaa48742a38c1c1f2c1e15fe6e11f6f7ac18fd1b74"
   solver-name = "gps-cdcl"
   solver-version = 1

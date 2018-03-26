@@ -29,7 +29,7 @@ generate: $(TYPES_FILES)
 
 bin/%/$(BINARY): $(GOFILES) Makefile
 	CGO_ENABLED=0 GOOS=$* GOARCH=amd64 go build $(GOFLAGS) \
-				-i -installsuffix titan -v -o bin/$*/$(BINARY) $<
+				 -v -o bin/$*/$(BINARY) $<
 
 TSRCDIRS  := cmd/toolbox
 TPACKAGES := $(shell find $(TSRCDIRS) -type d)
@@ -38,7 +38,7 @@ TGOFILES  := $(wildcard $(TGOFILES))
 
 toolbox: $(TGOFILES) Makefile
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(GOFLAGS) \
-				-i -installsuffix titan -v -o bin/linux/toolbox $<
+				-v -o bin/linux/toolbox $<
 
 
 test: $(TEST_FILES)

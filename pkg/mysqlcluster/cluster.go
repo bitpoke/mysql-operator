@@ -44,7 +44,7 @@ func New(cluster *api.MysqlCluster, klient kubernetes.Interface,
 		tiClient:   tiClient,
 		namespace:  ns,
 		rec:        rec,
-		configHash: ConfigVersion,
+		configHash: "1",
 	}
 }
 

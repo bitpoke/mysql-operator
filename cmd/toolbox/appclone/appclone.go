@@ -132,6 +132,9 @@ func cloneFromSource(host string) error {
 	// data target dir
 	xbstream := exec.Command("xbstream", "-x", "-C", tb.DataDir)
 
+	ncat.Stderr = os.Stderr
+	xbstream.Stderr = os.Stderr
+
 	var err error
 	if xbstream.Stdin, err = ncat.StdoutPipe(); err != nil {
 		return fmt.Errorf("set pipe, error: %s", err)
@@ -164,6 +167,8 @@ func xtrabackupPreperData() error {
 	xtbkCmd := exec.Command("xtrabackup", "--prepare",
 		fmt.Sprintf("--target-dir=%s", tb.DataDir),
 		fmt.Sprintf("--user=%s", replUser), fmt.Sprintf("--password=%s", replPass))
+
+	xtbkCmd.Stderr = os.Stderr
 
 	return xtbkCmd.Run()
 }

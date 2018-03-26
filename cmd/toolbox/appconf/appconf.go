@@ -46,7 +46,7 @@ func RunConfigCommand(stopCh <-chan struct{}) error {
 	reportHost := tb.GetHostFor(tb.GetServerId())
 	dynCFG := getDynamicConfigs(tb.GetServerId(), reportHost)
 
-	if err := os.Mkdir(tb.ConfDPath, os.ModeDir); err != nil {
+	if err := os.Mkdir(tb.ConfDPath, os.FileMode(0755)); err != nil {
 		if !os.IsExist(err) {
 			return fmt.Errorf("error mkdir %s/conf.d: %s", tb.ConfigDir, err)
 		}

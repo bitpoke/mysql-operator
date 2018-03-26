@@ -3,10 +3,12 @@ package mysqlcluster
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 
 	kcore "github.com/appscode/kutil/core/v1"
 	"github.com/go-ini/ini"
 	"github.com/golang/glog"
+	"github.com/mitchellh/hashstructure"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -25,19 +27,27 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 
 	_, act, err := kcore.CreateOrPatchConfigMap(f.client, meta,
 		func(in *core.ConfigMap) *core.ConfigMap {
-			if key := in.ObjectMeta.Annotations["config_version"]; key == ConfigVersion {
-				glog.V(2).Infof("Skip updating configs, it's up to date: %s",
-					in.ObjectMeta.Annotations["config_version"])
-				return in
-			}
-			in.ObjectMeta.Annotations = map[string]string{
-				"config_version": ConfigVersion,
-			}
-			data, err := f.getConfigMapData()
+			data, hash, err := f.getConfigMapData()
 			if err != nil {
 				glog.Errorf("Fail to create mysql configs. err: %s", err)
 				return in
 			}
+			current_hash := strconv.FormatUint(hash, 10)
+			f.configHash = current_hash
+
+			if key, ok := in.ObjectMeta.Annotations["config_hash"]; ok {
+				if key == current_hash {
+					glog.V(2).Infof("Skip updating configs, it's up to date: %s",
+						in.ObjectMeta.Annotations["config_hash"])
+					return in
+				} else {
+					glog.Infof("Config hashes doesn't match: %s != %s . Updateing configs.", key, current_hash)
+				}
+			}
+			in.ObjectMeta.Annotations = map[string]string{
+				"config_hash": current_hash,
+			}
+
 			in.Data = data
 			return in
 		})
@@ -46,26 +56,32 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 	return
 }
 
-func (f *cFactory) getConfigMapData() (map[string]string, error) {
-	cnf, err := f.getMysqlConfigs(MysqlMasterSlaveConfigs, f.cluster.Spec.MysqlConf)
+func (f *cFactory) getConfigMapData() (map[string]string, uint64, error) {
+	cnf, hash, err := f.getMysqlConfigs(MysqlMasterSlaveConfigs, f.cluster.Spec.MysqlConf)
 	if err != nil {
-		return nil, err
+		return nil, hash, err
 	}
 	return map[string]string{
 		"my.cnf": cnf,
-	}, nil
+	}, hash, nil
 }
 
-func (f *cFactory) getMysqlConfigs(extraMysqld ...map[string]string) (string, error) {
+func (f *cFactory) getMysqlConfigs(extraMysqld ...map[string]string) (string, uint64, error) {
 	cfg := ini.Empty()
 	s := cfg.Section("mysqld")
 
 	for _, extra := range extraMysqld {
 		for k, v := range extra {
 			if _, err := s.NewKey(k, v); err != nil {
-				return "", err
+				return "", 0, err
 			}
 		}
+	}
+
+	hash, err := hashstructure.Hash(extraMysqld, nil)
+	if err != nil {
+		glog.Errorf("Can't compute hash for map data: %s", err)
+		return "", 0, err
 	}
 
 	// include configs from /etc/mysql/conf.d/*.cnf
@@ -73,7 +89,7 @@ func (f *cFactory) getMysqlConfigs(extraMysqld ...map[string]string) (string, er
 
 	var buf bytes.Buffer
 	if _, err := cfg.WriteTo(&buf); err != nil {
-		return "", err
+		return "", 0, err
 	}
-	return buf.String(), nil
+	return buf.String(), hash, nil
 }

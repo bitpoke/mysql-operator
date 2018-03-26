@@ -24,7 +24,7 @@ const (
 
 	// ConfigVersion is the mysql config that needs to be updated if configs
 	// change
-	ConfigVersion = "2018-03-23:12:31"
+	ConfigVersion = "2018-03-23:12:33"
 
 	TitaniumProbePath = "/health"
 	TitaniumProbePort = 8001
@@ -60,11 +60,12 @@ var (
 		// Safety
 		"max-allowed-packet": "16M",
 		"max-connect-errors": "1000000",
-		"skip-name-resolve":  "1",
-		"sql-mode":           "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
-		"sysdate-is-now":     "1",
+		"skip-name-resolve":  "on",
+		//"skip-host-cache":    "on",
+		"sql-mode":       "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
+		"sysdate-is-now": "1",
 
-		// binary logging
+		// Binary logging
 		"expire-logs-days": "14",
 		"sync-binlog":      "1",
 		"binlog-format":    "ROW",

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -103,6 +104,8 @@ func startServeBackups() error {
 
 	ncat := exec.Command("ncat", "--listen", "--keep-open", "--send-only", "--max-conns=1",
 		tb.BackupPort, "-c", strings.Join(xtrabackup_cmd, " "))
+
+	ncat.Stderr = os.Stderr
 
 	return ncat.Run()
 
