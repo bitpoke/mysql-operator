@@ -106,7 +106,6 @@ func (ps *PodSpec) UpdateDefaults(opt *options.Options) error {
 		ps.ImagePullPolicy = opt.ImagePullPolicy
 	}
 
-	// TODO: check if are applied or write a test for thoses
 	if len(ps.Resources.Requests) == 0 {
 		ps.Resources = apiv1.ResourceRequirements{
 			Requests: apiv1.ResourceList{
@@ -147,9 +146,6 @@ const (
 	StatefulSet ResourceName = "mysql"
 	// ConfigMap is the alias for mysql configs, the config map resource
 	ConfigMap ResourceName = "config-files"
-	// VolumePVC is the alias of the PVC volume
-	// TODO: remove
-	VolumePVC ResourceName = "mysql-data"
 	// EnvSecret is the alias for secret that contains env variables
 	EnvSecret ResourceName = "env-config"
 	// BackupCronJob is the name of cron job

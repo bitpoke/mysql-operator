@@ -188,9 +188,7 @@ func configReadOnly() error {
 func configTopology() error {
 	if tb.NodeRole() == "slave" {
 		// slave node
-		// TODO: check why need stop slave; here
 		query := fmt.Sprintf(`
-            STOP SLAVE;
             CHANGE MASTER TO MASTER_AUTO_POSITION=1,
 			  MASTER_HOST='%s',
 			  MASTER_USER='%s',
@@ -202,13 +200,7 @@ func configTopology() error {
 			return fmt.Errorf("failed to configure slave node, err: %s", err)
 		}
 
-		// TODO: fix this issue
-		// https://bugs.mysql.com/bug.php?id=83713
 		query = `
-        RESET SLAVE;
-        START SLAVE IO_THREAD;
-        STOP SLAVE IO_THREAD;
-        RESET SLAVE;
         START SLAVE;
         `
 		if _, err := tb.RunQuery(query); err != nil {

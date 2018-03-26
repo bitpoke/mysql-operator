@@ -15,6 +15,7 @@ import (
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
+	"github.com/presslabs/titanium/pkg/util"
 )
 
 type Interface interface {
@@ -138,7 +139,7 @@ func getBucketUri(cluster, bucket string) string {
 func (f *bFactory) updateStatus(job *batch.Job) {
 	glog.V(2).Infof("Updating status of '%s'  backup", f.backup.Name)
 
-	if i, exists := indexOf(batch.JobComplete, job.Status.Conditions); exists {
+	if i, exists := util.JobConditionIndex(batch.JobComplete, job.Status.Conditions); exists {
 		cond := job.Status.Conditions[i]
 		f.backup.UpdateStatusCondition(api.BackupComplete, cond.Status,
 			cond.Reason, cond.Message)
@@ -148,17 +149,8 @@ func (f *bFactory) updateStatus(job *batch.Job) {
 		}
 	}
 
-	if i, exists := indexOf(batch.JobFailed, job.Status.Conditions); exists {
+	if i, exists := util.JobConditionIndex(batch.JobFailed, job.Status.Conditions); exists {
 		cond := job.Status.Conditions[i]
 		f.backup.UpdateStatusCondition(api.BackupFailed, cond.Status, cond.Reason, cond.Message)
 	}
-}
-
-func indexOf(ty batch.JobConditionType, cs []batch.JobCondition) (int, bool) {
-	for i, cond := range cs {
-		if cond.Type == ty {
-			return i, true
-		}
-	}
-	return 0, false
 }

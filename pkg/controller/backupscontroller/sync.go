@@ -11,6 +11,7 @@ import (
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	bfactory "github.com/presslabs/titanium/pkg/backupfactory"
 	controllerpkg "github.com/presslabs/titanium/pkg/controller"
+	"github.com/presslabs/titanium/pkg/util"
 	"github.com/presslabs/titanium/pkg/util/options"
 )
 
@@ -85,7 +86,7 @@ func (c *Controller) subresourceUpdated(obj interface{}) {
 	glog.V(2).Infof("Job '%s' is updated, requeueing backup: %s", job.Name, key)
 	c.queue.Add(key)
 
-	if i, exists := indexOf(batch.JobComplete, job.Status.Conditions); exists {
+	if i, exists := util.JobConditionIndex(batch.JobComplete, job.Status.Conditions); exists {
 		cond := job.Status.Conditions[i]
 		if cond.Status == core.ConditionTrue {
 			// delete job after 5 hours
@@ -99,13 +100,4 @@ func (c *Controller) subresourceUpdated(obj interface{}) {
 			c.jobDeletionQueue.AddAfter(key, opt.JobCompleteSuccessGraceTime)
 		}
 	}
-}
-
-func indexOf(ty batch.JobConditionType, cs []batch.JobCondition) (int, bool) {
-	for i, cond := range cs {
-		if cond.Type == ty {
-			return i, true
-		}
-	}
-	return 0, false
 }

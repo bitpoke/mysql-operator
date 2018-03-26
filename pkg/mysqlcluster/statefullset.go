@@ -21,8 +21,10 @@ const (
 	confMapVolumeName      = "config-map"
 	ConfMapVolumeMountPath = "/mnt/conf"
 
-	DataVolumeName      = "data"
+	dataVolumeName      = "data"
 	DataVolumeMountPath = "/var/lib/mysql"
+
+	orcSecretVolumeName = "orc-topology-secret"
 )
 
 func (f *cFactory) syncStatefulSet() (state string, err error) {
@@ -53,9 +55,7 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 
 			in.Spec.ServiceName = f.cluster.GetNameForResource(api.HeadlessSVC)
 			in.Spec.Template = f.ensureTemplate(in.Spec.Template)
-			if len(in.Spec.VolumeClaimTemplates) == 0 {
-				in.Spec.VolumeClaimTemplates = f.getVolumeClaimTemplates()
-			}
+			in.Spec.VolumeClaimTemplates = f.ensureVolumeClaimTemplates(in.Spec.VolumeClaimTemplates)
 
 			return in
 		})
@@ -83,10 +83,8 @@ func (f *cFactory) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec 
 	in.Spec.InitContainers = f.ensureInitContainersSpec(in.Spec.InitContainers)
 	in.Spec.Containers = f.ensureContainersSpec(in.Spec.Containers)
 
-	// TODO: ensure function for volume
-	if len(in.Spec.Volumes) == 0 {
-		in.Spec.Volumes = f.getVolumes()
-	}
+	in.Spec.Volumes = f.ensureVolumes(in.Spec.Volumes)
+
 	in.Spec.Affinity = &f.cluster.Spec.PodSpec.Affinity
 	in.Spec.NodeSelector = f.cluster.Spec.PodSpec.NodeSelector
 	in.Spec.ImagePullSecrets = f.cluster.Spec.PodSpec.ImagePullSecrets
@@ -214,60 +212,57 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 	return in
 }
 
-func (f *cFactory) getVolumes() []core.Volume {
-	volumes := []core.Volume{
-		// mysql config volume mount: /etc/mysql
-		core.Volume{
-			Name: confVolumeName,
-			VolumeSource: core.VolumeSource{
-				EmptyDir: &core.EmptyDirVolumeSource{},
-			},
-		},
-		// config volume that contains config maps mount: /mnt/
-		core.Volume{
-			Name: confMapVolumeName,
-			VolumeSource: core.VolumeSource{
-				ConfigMap: &core.ConfigMapVolumeSource{
-					LocalObjectReference: core.LocalObjectReference{
-						Name: f.cluster.GetNameForResource(api.ConfigMap),
-					},
-				},
-			},
-		},
-		core.Volume{
-			Name: DataVolumeName,
-			VolumeSource: core.VolumeSource{
-				PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
-					ClaimName: DataVolumeName,
-				},
-			},
-		},
-	}
+func (f *cFactory) ensureVolumes(in []core.Volume) []core.Volume {
+	noVolumes := 3
+	orcVolume := false
 	if len(f.cluster.Spec.GetOrcTopologySecret()) != 0 {
-		volumes = append(volumes, core.Volume{
-			Name: "orc-topology-secret",
-			VolumeSource: core.VolumeSource{
-				Secret: &core.SecretVolumeSource{
-					SecretName: f.cluster.Spec.GetOrcTopologySecret(),
-				},
+		noVolumes += 1
+		orcVolume = true
+	}
+
+	in[0] = ensureVolume(in[0], confVolumeName, core.VolumeSource{
+		EmptyDir: &core.EmptyDirVolumeSource{},
+	})
+
+	in[1] = ensureVolume(in[1], confMapVolumeName, core.VolumeSource{
+		ConfigMap: &core.ConfigMapVolumeSource{
+			LocalObjectReference: core.LocalObjectReference{
+				Name: f.cluster.GetNameForResource(api.ConfigMap),
+			},
+			DefaultMode: in[1].ConfigMap.DefaultMode,
+		},
+	})
+
+	in[2] = ensureVolume(in[2], dataVolumeName, core.VolumeSource{
+		PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
+			ClaimName: dataVolumeName,
+		},
+	})
+
+	if orcVolume {
+		in[3] = ensureVolume(in[3], orcSecretVolumeName, core.VolumeSource{
+			Secret: &core.SecretVolumeSource{
+				SecretName:  f.cluster.Spec.GetOrcTopologySecret(),
+				DefaultMode: in[3].Secret.DefaultMode,
 			},
 		})
 	}
 
-	return volumes
+	return in
 }
 
-func (f *cFactory) getVolumeClaimTemplates() []core.PersistentVolumeClaim {
-	return []core.PersistentVolumeClaim{
-		core.PersistentVolumeClaim{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            DataVolumeName,
-				Labels:          f.getLabels(map[string]string{}),
-				OwnerReferences: f.getOwnerReferences(),
-			},
-			Spec: f.cluster.Spec.VolumeSpec.PersistentVolumeClaimSpec,
-		},
+func (f *cFactory) ensureVolumeClaimTemplates(in []core.PersistentVolumeClaim) []core.PersistentVolumeClaim {
+	if len(in) == 0 {
+		in = make([]core.PersistentVolumeClaim, 1)
 	}
+	data := in[0]
+
+	data.Name = dataVolumeName
+	data.Spec = f.cluster.Spec.VolumeSpec.PersistentVolumeClaimSpec
+
+	in[0] = data
+
+	return in
 }
 
 func (f *cFactory) getEnvSourcesFor(name string) []core.EnvFromSource {
@@ -276,9 +271,7 @@ func (f *cFactory) getEnvSourcesFor(name string) []core.EnvFromSource {
 	}
 	switch name {
 	case containerTitaniumName:
-		//		if len(f.cluster.Spec.BackupBucketSecretName) != 0 {
-		//			ss = append(ss, envFromSecret(f.cluster.Spec.BackupBucketSecretName))
-		//		}
+		// titanium container env source
 	case containerCloneName:
 		if len(f.cluster.Spec.InitBucketSecretName) != 0 {
 			ss = append(ss, envFromSecret(f.cluster.Spec.InitBucketSecretName))
@@ -305,7 +298,7 @@ func (f *cFactory) getVolumeMountsFor(name string) []core.VolumeMount {
 			MountPath: ConfVolumeMountPath,
 		},
 		core.VolumeMount{
-			Name:      DataVolumeName,
+			Name:      dataVolumeName,
 			MountPath: DataVolumeMountPath,
 		},
 	}
@@ -352,7 +345,9 @@ func envFromSecret(name string) core.EnvFromSource {
 	}
 }
 
-func (f *cFactory) getHostForReplica(no int) string {
-	return fmt.Sprintf("%s-%d.%s", f.cluster.GetNameForResource(api.StatefulSet), no,
-		f.cluster.GetNameForResource(api.HeadlessSVC))
+func ensureVolume(in core.Volume, name string, source core.VolumeSource) core.Volume {
+	in.Name = name
+	in.VolumeSource = source
+
+	return in
 }

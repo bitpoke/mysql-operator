@@ -2,8 +2,10 @@ package appschedulebackup
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/golang/glog"
+	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
@@ -19,13 +21,34 @@ func RunCommand(stopCh <-chan struct{}, namespace, cluster string) error {
 		return fmt.Errorf("kube client config: %s", err)
 	}
 
-	_, err = createBackup(tiClient, namespace, cluster)
+	backup, err := createBackup(tiClient, namespace, cluster)
 	if err != nil {
 		return fmt.Errorf("create backup: %s", err)
 	}
 
-	// TODO: wait for backup to finish. Waiting for it guarantees that two
+	// Wait for backup to finish. Waiting for it guarantees that two
 	// backups will not overlap.
+
+	for {
+		select {
+		case <-stopCh:
+			break
+		case <-time.After(time.Second):
+			b, err := tiClient.Titanium().MysqlBackups(namespace).Get(backup.Name, meta.GetOptions{})
+			if err != nil {
+				glog.Warningf("Failed to get backup: %s", err)
+			}
+			if i, ok := util.BackupConditionIndex(api.BackupComplete, b.Status.Conditions); ok {
+				cond := b.Status.Conditions[i]
+				if cond.Status == core.ConditionTrue {
+					glog.Infof("Backup '%s' finished.", backup.Name)
+					break
+				}
+			}
+		case <-time.After(time.Hour): // TODO: make duration constant
+			return fmt.Errorf("timeout occured while waiting for backup: %s", backup.Name)
+		}
+	}
 
 	return nil
 }

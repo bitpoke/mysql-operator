@@ -8,12 +8,14 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	batch "k8s.io/api/batch/v1"
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 
+	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
 	"github.com/presslabs/titanium/pkg/util/constants"
 )
 
@@ -80,4 +82,24 @@ var lowerLetters = []rune("abcdefghijklmnopqrstuvwxyz")
 
 func RandStringLowerLetters(n int) string {
 	return randStringFrom(lowerLetters, n)
+}
+
+// JobConditionIndex
+func JobConditionIndex(ty batch.JobConditionType, cs []batch.JobCondition) (int, bool) {
+	for i, cond := range cs {
+		if cond.Type == ty {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
+// BackupConditionIndex
+func BackupConditionIndex(ty api.BackupConditionType, cs []api.BackupCondition) (int, bool) {
+	for i, cond := range cs {
+		if cond.Type == ty {
+			return i, true
+		}
+	}
+	return 0, false
 }

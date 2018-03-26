@@ -156,3 +156,8 @@ func (f *cFactory) getOwnerReferences(ors ...[]metav1.OwnerReference) []metav1.O
 	}
 	return rs
 }
+
+func (f *cFactory) getHostForReplica(no int) string {
+	return fmt.Sprintf("%s-%d.%s", f.cluster.GetNameForResource(api.StatefulSet), no,
+		f.cluster.GetNameForResource(api.HeadlessSVC))
+}

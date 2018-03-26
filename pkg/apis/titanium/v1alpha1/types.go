@@ -97,11 +97,12 @@ type ClusterCondition struct {
 	// Status of the condition, one of (\"True\", \"False\", \"Unknown\")
 	Status apiv1.ConditionStatus `json:"status"`
 
-	// optional TODO: detail each member.
-	// are optional
+	// LastTransitionTime
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
-	Reason             string      `json:"reason"`
-	Message            string      `json:"message"`
+	// Reaseon
+	Reason string `json:"reason"`
+	// Message
+	Message string `json:"message"`
 }
 
 type ClusterConditionType string
@@ -167,11 +168,12 @@ type BackupCondition struct {
 	// Status of the condition, one of (\"True\", \"False\", \"Unknown\")
 	Status apiv1.ConditionStatus `json:"status"`
 
-	// optional TODO: detail each member.
-	// are optional
+	// LastTransitionTime
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
-	Reason             string      `json:"reason"`
-	Message            string      `json:"message"`
+	// Reason
+	Reason string `json:"reason"`
+	// Message
+	Message string `json:"message"`
 }
 
 type BackupStatus struct {

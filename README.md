@@ -25,4 +25,8 @@ spec:
 ```
 ## Tech considerations
 
-This project uses Percona Server for MySQL 5.7 because of backup improvements (eg. backup locks), monitoring improvements and some serviceability improvements (eg. utility user). The case against MariaDB is that WordPress requires MySQL, but MariaDB is not a drop-in replacement for it. Since MariaDB 10 it's fork rather than following MySQL.
+This project uses Percona Server for MySQL 5.7 because of backup improvements
+(eg. backup locks), monitoring improvements and some serviceability improvements
+(eg. utility user). The case against MariaDB is that WordPress requires MySQL,
+but MariaDB is not a drop-in replacement for it. Since MariaDB 10 it's fork
+rather than following MySQL.
