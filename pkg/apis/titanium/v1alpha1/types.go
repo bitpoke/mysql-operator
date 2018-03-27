@@ -39,7 +39,7 @@ type MysqlClusterList struct {
 }
 
 type ClusterSpec struct {
-	// The number of slaves pods. This updates replicas filed
+	// The number of pods. This updates replicas filed
 	// Defaults to 0
 	// +optional
 	Replicas int32 `json:"replicas"`

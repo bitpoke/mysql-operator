@@ -2,9 +2,11 @@ package v1alpha1
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/golang/glog"
 	apiv1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -14,6 +16,13 @@ import (
 
 const (
 	innodbBufferSizePercent = 80
+)
+
+const (
+	_        = iota // ignore first value by assigning to blank identifier
+	KB int64 = 1 << (10 * iota)
+	MB
+	GB
 )
 
 var (
@@ -38,29 +47,66 @@ func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
 
 // UpdateDefaults sets the defaults for Spec and Status
 func (c *MysqlCluster) UpdateDefaults(opt *options.Options) error {
-	return c.Spec.UpdateDefaults(opt)
+	return c.Spec.UpdateDefaults(opt, c)
 }
 
 // UpdateDefaults updates Spec defaults
-func (c *ClusterSpec) UpdateDefaults(opt *options.Options) error {
+func (c *ClusterSpec) UpdateDefaults(opt *options.Options, cluster *MysqlCluster) error {
 	if len(c.MysqlVersion) == 0 {
 		c.MysqlVersion = opt.MysqlImageTag
 	}
 
-	if err := c.PodSpec.UpdateDefaults(opt); err != nil {
+	if err := c.PodSpec.UpdateDefaults(opt, cluster); err != nil {
 		return err
 	}
 
-	// set innodb-buffer-pool-size as 80% of requested memory
+	if len(c.MysqlConf) == 0 {
+		c.MysqlConf = make(MysqlConf)
+	}
+
+	// configure mysql based on:
+	// https://www.percona.com/blog/2018/03/26/mysql-8-0-innodb_dedicated_server-variable-optimizes-innodb/
+
+	// set innodb-buffer-pool-size if not set
 	if _, ok := c.MysqlConf["innodb-buffer-pool-size"]; !ok {
 		if mem := c.PodSpec.Resources.Requests.Memory(); mem != nil {
-			val := (innodbBufferSizePercent * mem.Value()) / 100 // val is 80% of requested memory
-			res := resource.NewQuantity(val, resource.DecimalSI)
-			if len(c.MysqlConf) == 0 {
-				c.MysqlConf = make(MysqlConf)
+			var bufferSize int64
+			if mem.Value() < GB {
+				// RAM < 1G => buffer size set to 128M
+				bufferSize = 128 * MB
+			} else if mem.Value() <= 4*GB {
+				// RAM <= 4GB => buffer size set to RAM * 0.5
+				bufferSize = int64(float64(mem.Value()) * 0.5)
+			} else {
+				// RAM > 4GB => buffer size set to RAM * 0.75
+				bufferSize = int64(float64(mem.Value()) * 0.75)
 			}
-			// TODO: make it human readable
-			c.MysqlConf["innodb-buffer-pool-size"] = res.String()
+
+			c.MysqlConf["innodb-buffer-pool-size"] = strconv.FormatInt(bufferSize, 10)
+		}
+	}
+
+	if _, ok := c.MysqlConf["innodb-log-file-size"]; !ok {
+		if mem := c.PodSpec.Resources.Requests.Memory(); mem != nil {
+			var logFileSize int64
+			if mem.Value() < GB {
+				// RAM < 1G
+				logFileSize = 48 * MB
+			} else if mem.Value() <= 4*GB {
+				// RAM <= 4GB
+				logFileSize = 128 * MB
+			} else if mem.Value() <= 8*GB {
+				// RAM <= 8GB
+				logFileSize = 512 * GB
+			} else if mem.Value() <= 16*GB {
+				// RAM <= 16GB
+				logFileSize = 1 * GB
+			} else {
+				// RAM > 16GB
+				logFileSize = 2 * GB
+			}
+
+			c.MysqlConf["innodb-log-file-size"] = strconv.FormatInt(logFileSize, 10)
 		}
 	}
 
@@ -97,11 +143,11 @@ const (
 	resourceRequestCPU    = "200m"
 	resourceRequestMemory = "1Gi"
 
-	resourceStorage = "8Gi"
+	resourceStorage = "1Gi"
 )
 
 // UpdateDefaults for PodSpec
-func (ps *PodSpec) UpdateDefaults(opt *options.Options) error {
+func (ps *PodSpec) UpdateDefaults(opt *options.Options, cluster *MysqlCluster) error {
 	if len(ps.ImagePullPolicy) == 0 {
 		ps.ImagePullPolicy = opt.ImagePullPolicy
 	}
@@ -111,6 +157,23 @@ func (ps *PodSpec) UpdateDefaults(opt *options.Options) error {
 			Requests: apiv1.ResourceList{
 				apiv1.ResourceCPU:    resource.MustParse(resourceRequestCPU),
 				apiv1.ResourceMemory: resource.MustParse(resourceRequestMemory),
+			},
+		}
+	}
+
+	// set pod antiaffinity to nodes stay away from other nodes.
+	if ps.Affinity.PodAntiAffinity == nil {
+		ps.Affinity.PodAntiAffinity = &core.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: []core.WeightedPodAffinityTerm{
+				core.WeightedPodAffinityTerm{
+					Weight: 100,
+					PodAffinityTerm: core.PodAffinityTerm{
+						TopologyKey: "kubernetes.io/hostname",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: cluster.GetLabels(),
+						},
+					},
+				},
 			},
 		}
 	}
@@ -205,4 +268,11 @@ func (c *MysqlCluster) GetMasterHost() string {
 func (c *MysqlCluster) GetPodHostName(p int) string {
 	pod := fmt.Sprintf("%s-%d", c.GetNameForResource(StatefulSet), p)
 	return fmt.Sprintf("%s.%s", pod, c.GetNameForResource(HeadlessSVC))
+}
+
+func (c *MysqlCluster) GetLabels() map[string]string {
+	return map[string]string{
+		"app":           "mysql-operator",
+		"mysql_cluster": c.Name,
+	}
 }

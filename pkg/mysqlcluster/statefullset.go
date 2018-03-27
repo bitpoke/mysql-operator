@@ -220,16 +220,21 @@ func (f *cFactory) ensureVolumes(in []core.Volume) []core.Volume {
 		orcVolume = true
 	}
 
+	if len(in) != noVolumes {
+		in = make([]core.Volume, noVolumes)
+	}
+
 	in[0] = ensureVolume(in[0], confVolumeName, core.VolumeSource{
 		EmptyDir: &core.EmptyDirVolumeSource{},
 	})
 
+	fileMode := int32(0644)
 	in[1] = ensureVolume(in[1], confMapVolumeName, core.VolumeSource{
 		ConfigMap: &core.ConfigMapVolumeSource{
 			LocalObjectReference: core.LocalObjectReference{
 				Name: f.cluster.GetNameForResource(api.ConfigMap),
 			},
-			DefaultMode: in[1].ConfigMap.DefaultMode,
+			DefaultMode: &fileMode,
 		},
 	})
 
@@ -243,7 +248,7 @@ func (f *cFactory) ensureVolumes(in []core.Volume) []core.Volume {
 		in[3] = ensureVolume(in[3], orcSecretVolumeName, core.VolumeSource{
 			Secret: &core.SecretVolumeSource{
 				SecretName:  f.cluster.Spec.GetOrcTopologySecret(),
-				DefaultMode: in[3].Secret.DefaultMode,
+				DefaultMode: &fileMode,
 			},
 		})
 	}

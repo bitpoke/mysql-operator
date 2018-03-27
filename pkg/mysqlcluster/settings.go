@@ -5,8 +5,6 @@ import (
 )
 
 const (
-	// AppName is the name of this application, it will be set as label for every resource
-	AppName = "Titanium"
 	// MysqlPortName represents the mysql port name.
 	MysqlPortName = "mysql"
 	// MysqlPort is the default mysql port.
@@ -88,7 +86,6 @@ var (
 		// InnoDB
 		"innodb-flush-method":            "O_DIRECT",
 		"innodb-log-files-in-group":      "2",
-		"innodb-log-file-size":           "128M",
 		"innodb-flush-log-at-trx-commit": "2",
 		"innodb-file-per-table":          "1",
 
@@ -103,12 +100,9 @@ var (
 )
 
 func (f *cFactory) getLabels(extra map[string]string) map[string]string {
-	lables := map[string]string{
-		"app":              AppName,
-		"titanium_cluster": f.cluster.Name,
-	}
+	defaults_labels := f.cluster.GetLabels()
 	for k, v := range extra {
-		lables[k] = v
+		defaults_labels[k] = v
 	}
-	return lables
+	return defaults_labels
 }

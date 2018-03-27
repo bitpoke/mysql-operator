@@ -3,12 +3,32 @@ kind: MysqlCluster
 metadata:
   name: foo
 spec:
-  replicas: 2
+  replicas: 3
   secretName: the-secret
-  backupBucketUri: gs://pl-test-mysql-backups/ti/
-  backupBucketSecretName: backup-secret
-  volumeSpec:
-    accessModes: [ "ReadWriteOnce" ]
-    resources:
-      requests:
-        storage: 1Gi
+  # mysqlVersion: 5.7
+  # initBucketURI: gs://bucket_name/backup.xtrabackup.gz
+  # initBucketSecretName:
+
+  ## For recurrent backups set backupSchedule with a cronjob expression
+  # backupSchedule:
+  # backupBucketURI: s3://bucket_name/
+  # backupBucketSecretName:
+
+  ## Configs that will be added to my.cnf for cluster
+  # mysqlConf:
+  #   innodb-buffer-size: 128M
+
+
+  ## Specify additional pod specification
+  # podSpec:
+  #   resources:
+  #     requests:
+  #       memory: 1G
+  #       cpu:    200m
+
+  ## Specify additional volume specification
+  # volumeSpec:
+  #   accessModes: [ "ReadWriteOnce" ]
+  #   resources:
+  #     requests:
+  #       storage: 1Gi

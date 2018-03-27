@@ -204,7 +204,18 @@ func configTopology() error {
         START SLAVE;
         `
 		if _, err := tb.RunQuery(query); err != nil {
-			return fmt.Errorf("failed to start slave node, err: %s", err)
+			glog.Warning("Failed to start slave simple, err: %s, try second method.")
+			// TODO: https://bugs.mysql.com/bug.php?id=83713
+			query2 := `
+			reset slave;
+			start slave IO_THREAD;
+			stop slave IO_THREAD;
+			reset slave;
+			start slave;
+            `
+			if _, err := tb.RunQuery(query2); err != nil {
+				return fmt.Errorf("failed to start slave node, err: %s", err)
+			}
 		}
 	}
 
