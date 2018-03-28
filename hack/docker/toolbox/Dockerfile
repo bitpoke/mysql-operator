@@ -20,9 +20,5 @@ RUN wget https://nmap.org/dist/ncat-7.60-1.x86_64.rpm \
     && mv rclone-*-linux-amd64/rclone /usr/bin/ \
     && chmod 755 /usr/bin/rclone
 
-WORKDIR /app
-
-COPY ./hack/docker/toolbox/docker-entrypoint.sh /app/
-COPY ./bin/linux/toolbox /usr/bin/
-
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+COPY docker-entrypoint.sh toolbox /usr/local/bin/
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
