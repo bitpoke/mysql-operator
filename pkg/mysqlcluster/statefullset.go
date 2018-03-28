@@ -77,7 +77,7 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 		})
 
 	if err != nil {
-		state = statusFaild
+		state = statusFailed
 		return
 	}
 

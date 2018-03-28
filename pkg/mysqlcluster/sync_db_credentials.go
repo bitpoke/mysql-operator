@@ -36,7 +36,7 @@ func (f *cFactory) syncDbCredentialsSecret() (state string, err error) {
 	state = statusUpToDate
 	if len(f.cluster.Spec.SecretName) == 0 {
 		err = fmt.Errorf("the Spec.SecretName is empty")
-		state = statusFaild
+		state = statusFailed
 		return
 	}
 	secret, err := f.client.CoreV1().Secrets(f.namespace).Get(
@@ -45,7 +45,7 @@ func (f *cFactory) syncDbCredentialsSecret() (state string, err error) {
 	)
 	if err != nil {
 		err = fmt.Errorf("secret '%s' failed to get: %s", f.cluster.Spec.SecretName, err)
-		state = statusFaild
+		state = statusFailed
 		return
 	}
 

@@ -68,7 +68,7 @@ const (
 	statusUpToDate = "up-to-date"
 	statusCreated  = "created"
 	statusUpdated  = "updated"
-	statusFaild    = "faild"
+	statusFailed    = "faild"
 	statusOk       = "ok"
 	statusSkip     = "skip"
 )
@@ -79,7 +79,7 @@ type component struct {
 	name   string
 	syncFn func() (string, error)
 	//event reason when sync faild
-	erFaild string
+	reasonFailed string
 	// event reason when boject is modified
 	erUpdated string
 }
@@ -87,46 +87,46 @@ type component struct {
 func (f *cFactory) getComponents() []component {
 	return []component{
 		component{
-			alias:     "db-secret",
-			name:      fmt.Sprintf("db-credentials(%s)", f.cluster.Spec.SecretName),
-			syncFn:    f.syncDbCredentialsSecret,
-			erFaild:   api.EventReasonDbSecretFaild,
-			erUpdated: api.EventReasonDbSecretUpdated,
+			alias:        "db-secret",
+			name:         fmt.Sprintf("db-credentials(%s)", f.cluster.Spec.SecretName),
+			syncFn:       f.syncDbCredentialsSecret,
+			reasonFailed: api.EventReasonDbSecretFailed,
+			erUpdated:    api.EventReasonDbSecretUpdated,
 		},
 		component{
-			alias:     "env-secret",
-			name:      f.cluster.GetNameForResource(api.EnvSecret),
-			syncFn:    f.syncEnvSecret,
-			erFaild:   api.EventReasonEnvSecretFaild,
-			erUpdated: api.EventReasonEnvSecretUpdated,
+			alias:        "env-secret",
+			name:         f.cluster.GetNameForResource(api.EnvSecret),
+			syncFn:       f.syncEnvSecret,
+			reasonFailed: api.EventReasonEnvSecretFailed,
+			erUpdated:    api.EventReasonEnvSecretUpdated,
 		},
 		component{
-			alias:     "config-map",
-			name:      f.cluster.GetNameForResource(api.ConfigMap),
-			syncFn:    f.syncConfigMysqlMap,
-			erFaild:   api.EventReasonConfigMapFaild,
-			erUpdated: api.EventReasonConfigMapUpdated,
+			alias:        "config-map",
+			name:         f.cluster.GetNameForResource(api.ConfigMap),
+			syncFn:       f.syncConfigMysqlMap,
+			reasonFailed: api.EventReasonConfigMapFailed,
+			erUpdated:    api.EventReasonConfigMapUpdated,
 		},
 		component{
-			alias:     "headless-service",
-			name:      f.cluster.GetNameForResource(api.HeadlessSVC),
-			syncFn:    f.syncHeadlessService,
-			erFaild:   api.EventReasonServiceFaild,
-			erUpdated: api.EventReasonServiceUpdated,
+			alias:        "headless-service",
+			name:         f.cluster.GetNameForResource(api.HeadlessSVC),
+			syncFn:       f.syncHeadlessService,
+			reasonFailed: api.EventReasonServiceFailed,
+			erUpdated:    api.EventReasonServiceUpdated,
 		},
 		component{
-			alias:     "statefulset",
-			name:      f.cluster.GetNameForResource(api.StatefulSet),
-			syncFn:    f.syncStatefulSet,
-			erFaild:   api.EventReasonSFSFaild,
-			erUpdated: api.EventReasonSFSUpdated,
+			alias:        "statefulset",
+			name:         f.cluster.GetNameForResource(api.StatefulSet),
+			syncFn:       f.syncStatefulSet,
+			reasonFailed: api.EventReasonSFSFailed,
+			erUpdated:    api.EventReasonSFSUpdated,
 		},
 		component{
-			alias:     "backup-cron-job",
-			name:      f.cluster.GetNameForResource(api.BackupCronJob),
-			syncFn:    f.syncBackupCronJob,
-			erFaild:   api.EventReasonCronJobFailed,
-			erUpdated: api.EventReasonCronJobUpdated,
+			alias:        "backup-cron-job",
+			name:         f.cluster.GetNameForResource(api.BackupCronJob),
+			syncFn:       f.syncBackupCronJob,
+			reasonFailed: api.EventReasonCronJobFailed,
+			erUpdated:    api.EventReasonCronJobUpdated,
 		},
 	}
 }
@@ -137,7 +137,7 @@ func (f *cFactory) Sync(ctx context.Context) error {
 		if err != nil {
 			glog.V(2).Infof("[%s]: %s ... (%s)", comp.alias, comp.name, state)
 			err = fmt.Errorf("%s faild to sync with err: %s", comp.name, err)
-			f.rec.Event(f.cluster, api.EventWarning, comp.erFaild, err.Error())
+			f.rec.Event(f.cluster, api.EventWarning, comp.reasonFailed, err.Error())
 			return err
 		}
 		glog.V(2).Infof("[%s]: %s ... (%s)", comp.alias, comp.name, state)

@@ -40,7 +40,7 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster, ns str
 	opt := options.GetOptions()
 
 	if err := copyCluster.UpdateDefaults(opt); err != nil {
-		c.recorder.Event(copyCluster, api.EventWarning, api.EventReasonInitDefaultsFaild,
+		c.recorder.Event(copyCluster, api.EventWarning, api.EventReasonInitDefaultsFailed,
 			"faild to set defauls")
 		return fmt.Errorf("failed to set defaults for cluster: %s", err)
 	}
