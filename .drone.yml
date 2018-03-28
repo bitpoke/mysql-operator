@@ -3,48 +3,56 @@ workspace:
   path: src/github.com/presslabs/mysql-operator
 
 pipeline:
-  build-operator:
+  build:
     image: golang:1.9
     commands:
-      #- go get -u github.com/golang/dep/cmd/dep
-      #- dep ensure
       - make
-      - make test
+      - make full-test
+      - make install-docker
 
   publish-operator:
     group: publish
     image: plugins/docker
-    mirror: https://mirror.gcr.io
-    registry: gcr.io
-    repo: gcr.io/pl-infra/mysql-operator
-    username: _json_key
+    registry: quay.io
+    repo: quay.io/presslabs/mysql-operator
+    username: presslabs+drone
     tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
-    force_tag: true
-    build_args:
-      - release="${DRONE_COMMIT_SHA:0:7}"
     secrets:
-      - source: GOOGLE_CREDENTIALS
+      - source: QUAY_TOKEN
         target: DOCKER_PASSWORD
     when:
       event: push
 
-  publish-toolbox:
+  publish-operator:
     group: publish
     image: plugins/docker
-    mirror: https://mirror.gcr.io
-    registry: gcr.io
-    repo: gcr.io/pl-infra/titanium-toolbox
-    dockerfile: hack/docker/toolbox/Dockerfile
-    username: _json_key
-    tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
-    force_tag: true
-    build_args:
-      - release="${DRONE_COMMIT_SHA:0:7}"
+    registry: quay.io
+    repo: quay.io/presslabs/mysql-operator
+    username: presslabs+drone
+    tags: ["${DRONE_TAG}"]
     secrets:
-      - source: GOOGLE_CREDENTIALS
+      - source: QUAY_TOKEN
         target: DOCKER_PASSWORD
     when:
-      event: push
+      event: tag
+
+  # publish-toolbox:
+  #   group: publish
+  #   image: plugins/docker
+  #   mirror: https://mirror.gcr.io
+  #   registry: gcr.io
+  #   repo: gcr.io/pl-infra/titanium-toolbox
+  #   dockerfile: hack/docker/toolbox/Dockerfile
+  #   username: _json_key
+  #   tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
+  #   force_tag: true
+  #   build_args:
+  #     - release="${DRONE_COMMIT_SHA:0:7}"
+  #   secrets:
+  #     - source: GOOGLE_CREDENTIALS
+  #       target: DOCKER_PASSWORD
+  #   when:
+  #     event: push
 
 #  e2e-tests:
 #    image: gcr.io/pl-infra/kluster-toolbox:latest
