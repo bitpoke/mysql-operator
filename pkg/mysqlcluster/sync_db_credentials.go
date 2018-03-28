@@ -23,13 +23,17 @@ func (f *cFactory) syncDbCredentialsSecret() (state string, err error) {
 		state = statusFaild
 		return
 	}
-	meta := metav1.ObjectMeta{
-		Name:      f.cluster.Spec.SecretName,
-		Labels:    f.getLabels(map[string]string{}),
-		Namespace: f.namespace,
+	secret, err := f.client.CoreV1().Secrets(f.namespace).Get(
+		f.cluster.Spec.SecretName,
+		metav1.GetOptions{},
+	)
+	if err != nil {
+		err = fmt.Errorf("secret '%s' failed to get: %s", f.cluster.Spec.SecretName, err)
+		state = statusFaild
+		return
 	}
 
-	_, act, err := kcore.CreateOrPatchSecret(f.client, meta,
+	_, act, err := kcore.PatchSecret(f.client, secret,
 		func(in *core.Secret) *core.Secret {
 			var creds dbCreds
 			if _, ok := in.Data["ROOT_PASSWORD"]; !ok {

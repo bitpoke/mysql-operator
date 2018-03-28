@@ -137,7 +137,7 @@ func getBucketUri(cluster, bucket string) string {
 }
 
 func (f *bFactory) updateStatus(job *batch.Job) {
-	glog.V(2).Infof("Updating status of '%s'  backup", f.backup.Name)
+	glog.V(2).Infof("Updating status of '%s' backup", f.backup.Name)
 
 	if i, exists := util.JobConditionIndex(batch.JobComplete, job.Status.Conditions); exists {
 		cond := job.Status.Conditions[i]
