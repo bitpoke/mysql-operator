@@ -22,7 +22,7 @@ GOPATH ?= $(HOME)/go
 
 .PHONY: all clean generate
 
-all: bin/$(GoperatorINARY)
+all: bin/$(GOOS)/$(BINARY)
 
 generate: $(TYPES_FILES)
 	GOPATH=$(GOPATH) $(HACK_DIR)/update-codegen.sh
