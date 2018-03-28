@@ -1,4 +1,4 @@
-apiVersion: titanium.presslabs.net/v1alpha1
+apiVersion: mysql.presslabs.net/v1alpha1
 kind: MysqlCluster
 metadata:
   name: foob2
@@ -7,8 +7,8 @@ spec:
   secretName: the-secret
 
   backupSchedule: "1 1 * * *"
-  backupBucketUri: gs://pl-test-mysql-backups/ti/
+  backupBucketUri: gs://bucket_name/path/
   backupBucketSecretName: backup-secret
 
-  initBucketUri: gs://pl-test-mysql-backups/amaznas-titanium/2017-12-05T09:51-RVYARFX.xbackup.gz
+  initBucketUri: gs://bucket_name/path/to/backup.xbackup.gz
   initBucketSecretName: backup-secret

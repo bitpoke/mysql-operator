@@ -1,4 +1,4 @@
-apiVersion: titanium.presslabs.net/v1alpha1
+apiVersion: mysql.presslabs.net/v1alpha1
 kind: MysqlCluster
 metadata:
   name: foo
