@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	kcore "github.com/appscode/kutil/core/v1"
-	"github.com/golang/glog"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -34,8 +33,8 @@ func (f *cFactory) syncDbCredentialsSecret() (state string, err error) {
 		func(in *core.Secret) *core.Secret {
 			var creds dbCreds
 			if _, ok := in.Data["ROOT_PASSWORD"]; !ok {
-				glog.Errorf("ROOT_PASSWORD not set in secret: %s/%s", in.Namespace, in.Name)
 				runtime.HandleError(fmt.Errorf("ROOT_PASSWORD not set in secret: %s", in.Name))
+				return in
 			}
 
 			creds.RootPassword = string(in.Data["ROOT_PASSWORD"])

@@ -20,12 +20,12 @@ func (f *cFactory) SyncHeadlessService() (string, error) {
 	return f.syncHeadlessService()
 }
 
-func (f *cFactory) SyncConfigEnvSecret() (string, error) {
-	return f.syncConfigEnvSecret()
+func (f *cFactory) SyncEnvSecret() (string, error) {
+	return f.syncEnvSecret()
 }
 
 func (f *cFactory) SyncConfigMapFiles() (string, error) {
-	return f.syncConfigMapFiles()
+	return f.syncConfigMysqlMap()
 }
 
 func (f *cFactory) SyncStatefulSet() (string, error) {
@@ -33,7 +33,7 @@ func (f *cFactory) SyncStatefulSet() (string, error) {
 }
 
 func (f *cFactory) GetMysqlCluster() *api.MysqlCluster {
-	return f.cl
+	return f.cluster
 }
 
 func (f *cFactory) GetComponents() []component {
@@ -50,8 +50,8 @@ func newFakeCluster(name string) *api.MysqlCluster {
 			Name: name,
 		},
 		Spec: api.ClusterSpec{
-			ReadReplicas: 1,
-			SecretName:   "the-db-secret",
+			Replicas:   1,
+			SecretName: "the-db-secret",
 		},
 	}
 }
@@ -82,9 +82,9 @@ func getFakeFactory(name string) (*fake.Clientset, *fakeClientSet.Clientset,
 	rec := record.NewFakeRecorder(100)
 
 	return k8sClient, clientSet, rec, &cFactory{
-		cl:        clusterFake,
+		cluster:   clusterFake,
 		client:    k8sClient,
-		cmclient:  clientSet,
+		tiClient:  clientSet,
 		namespace: DefaultNamespace,
 		rec:       rec,
 	}

@@ -194,7 +194,7 @@ func checkIfWasInit() (bool, error) {
 }
 
 func checkIfDataExists() bool {
-	path := fmt.Sprintf("%s/mysql")
+	path := fmt.Sprintf("%s/mysql", tb.DataDir)
 	_, err := os.Open(path)
 
 	if os.IsNotExist(err) {

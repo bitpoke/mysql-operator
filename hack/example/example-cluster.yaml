@@ -3,7 +3,7 @@ kind: MysqlCluster
 metadata:
   name: foo
 spec:
-  replicas: 3
+  replicas: 1
   secretName: the-secret
   # mysqlVersion: 5.7
   # initBucketURI: gs://bucket_name/backup.xtrabackup.gz

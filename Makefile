@@ -42,8 +42,7 @@ toolbox: $(TGOFILES) Makefile
 
 
 test: $(TEST_FILES)
-	go test -v -installsuffix titan_test \
-	    -race \
+	go test -v -race \
 			$$(go list ./... | \
 			grep -v '/vendor/' | \
 			grep -v '/pkg/generated/' \

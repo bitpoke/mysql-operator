@@ -1,13 +1,13 @@
 workspace:
   base: /go
-  path: src/github.com/presslabs/titanium
+  path: src/github.com/presslabs/mysql-operator
 
 pipeline:
   build-operator:
     image: golang:1.9
     commands:
-      - go get -u github.com/golang/dep/cmd/dep
-      - dep ensure
+      #- go get -u github.com/golang/dep/cmd/dep
+      #- dep ensure
       - make
       - make test
 
@@ -16,7 +16,7 @@ pipeline:
     image: plugins/docker
     mirror: https://mirror.gcr.io
     registry: gcr.io
-    repo: gcr.io/pl-infra/titanium-operator
+    repo: gcr.io/pl-infra/mysql-operator
     username: _json_key
     tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
     force_tag: true
@@ -46,24 +46,24 @@ pipeline:
     when:
       event: push
 
-  e2e-tests:
-    image: gcr.io/pl-infra/kluster-toolbox:latest
-    pull: true
-    secrets:
-      - GOOGLE_CREDENTIALS
-      - GOOGLE_PROJECT_ID
-      - TITANIUM_TEST_GS_CREDENTIALS
-    environment:
-      - TITANIUM_IMAGE_TAG=${DRONE_COMMIT_SHA:0:7}
-      - OPERATOR_IMAGE=gcr.io/pl-infra/titanium-operator:${DRONE_COMMIT_SHA:0:7}
-      - KUBECONFIG=/go/.kube/config
-    commands:
-      - sleep 1
-
-services:
-  minikube:
-    image: gcr.io/pl-infra/drone-minikube:v1.9.0
-    privileged: true
-    secrets:
-      - GOOGLE_CREDENTIALS
+#  e2e-tests:
+#    image: gcr.io/pl-infra/kluster-toolbox:latest
+#    pull: true
+#    secrets:
+#      - GOOGLE_CREDENTIALS
+#      - GOOGLE_PROJECT_ID
+#      - TITANIUM_TEST_GS_CREDENTIALS
+#    environment:
+#      - TITANIUM_IMAGE_TAG=${DRONE_COMMIT_SHA:0:7}
+#      - OPERATOR_IMAGE=gcr.io/pl-infra/titanium-operator:${DRONE_COMMIT_SHA:0:7}
+#      - KUBECONFIG=/go/.kube/config
+#    commands:
+#      - sleep 1
+#
+#services:
+#  minikube:
+#    image: gcr.io/pl-infra/drone-minikube:v1.9.0
+#    privileged: true
+#    secrets:
+#      - GOOGLE_CREDENTIALS
 
