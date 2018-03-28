@@ -16,9 +16,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
-	titaniumv1alpha1 "github.com/presslabs/titanium/pkg/generated/clientset/versioned/typed/titanium/v1alpha1"
-	faketitaniumv1alpha1 "github.com/presslabs/titanium/pkg/generated/clientset/versioned/typed/titanium/v1alpha1/fake"
+	clientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/typed/mysql/v1alpha1"
+	fakemysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/typed/mysql/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -59,12 +59,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// TitaniumV1alpha1 retrieves the TitaniumV1alpha1Client
-func (c *Clientset) TitaniumV1alpha1() titaniumv1alpha1.TitaniumV1alpha1Interface {
-	return &faketitaniumv1alpha1.FakeTitaniumV1alpha1{Fake: &c.Fake}
+// MysqlV1alpha1 retrieves the MysqlV1alpha1Client
+func (c *Clientset) MysqlV1alpha1() mysqlv1alpha1.MysqlV1alpha1Interface {
+	return &fakemysqlv1alpha1.FakeMysqlV1alpha1{Fake: &c.Fake}
 }
 
-// Titanium retrieves the TitaniumV1alpha1Client
-func (c *Clientset) Titanium() titaniumv1alpha1.TitaniumV1alpha1Interface {
-	return &faketitaniumv1alpha1.FakeTitaniumV1alpha1{Fake: &c.Fake}
+// Mysql retrieves the MysqlV1alpha1Client
+func (c *Clientset) Mysql() mysqlv1alpha1.MysqlV1alpha1Interface {
+	return &fakemysqlv1alpha1.FakeMysqlV1alpha1{Fake: &c.Fake}
 }

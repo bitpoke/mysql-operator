@@ -10,8 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/presslabs/titanium/pkg/util/options"
-	orc "github.com/presslabs/titanium/pkg/util/orchestrator"
+	"github.com/presslabs/mysql-operator/pkg/util/options"
+	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
 
 const (

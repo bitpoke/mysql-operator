@@ -7,8 +7,8 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
-	"github.com/presslabs/titanium/pkg/util"
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/util"
 )
 
 func (f *cFactory) syncEnvSecret() (state string, err error) {

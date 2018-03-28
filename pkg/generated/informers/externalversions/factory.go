@@ -19,9 +19,9 @@ limitations under the License.
 package externalversions
 
 import (
-	versioned "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
-	internalinterfaces "github.com/presslabs/titanium/pkg/generated/informers/externalversions/internalinterfaces"
-	titanium "github.com/presslabs/titanium/pkg/generated/informers/externalversions/titanium"
+	versioned "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	internalinterfaces "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions/internalinterfaces"
+	mysql "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions/mysql"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -122,9 +122,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Titanium() titanium.Interface
+	Mysql() mysql.Interface
 }
 
-func (f *sharedInformerFactory) Titanium() titanium.Interface {
-	return titanium.New(f, f.namespace, f.tweakListOptions)
+func (f *sharedInformerFactory) Mysql() mysql.Interface {
+	return mysql.New(f, f.namespace, f.tweakListOptions)
 }

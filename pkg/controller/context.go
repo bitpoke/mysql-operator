@@ -5,8 +5,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 
-	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
-	informers "github.com/presslabs/titanium/pkg/generated/informers/externalversions"
+	clientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	informers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions"
 )
 
 // Context contains the info that controller needs in order to run

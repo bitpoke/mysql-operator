@@ -11,7 +11,7 @@ const (
 	MysqlClusterKind = "MysqlCluster"
 	// MysqlClusterPlural is the plural for mysqlcluster
 	MysqlClusterPlural = "mysqlclusters"
-	groupName          = "titanium.presslabs.net"
+	groupName          = "mysql.presslabs.net"
 
 	MysqlBackupKind   = "MysqlBackup"
 	MysqlBackupPlural = "mysqlbackups"

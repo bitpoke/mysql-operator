@@ -17,11 +17,11 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	controllerpkg "github.com/presslabs/titanium/pkg/controller"
-	ticlientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
-	tiinformers "github.com/presslabs/titanium/pkg/generated/informers/externalversions/titanium/v1alpha1"
-	mclisters "github.com/presslabs/titanium/pkg/generated/listers/titanium/v1alpha1"
-	"github.com/presslabs/titanium/pkg/util"
+	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
+	ticlientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	tiinformers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions/mysql/v1alpha1"
+	mclisters "github.com/presslabs/mysql-operator/pkg/generated/listers/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/util"
 )
 
 const (
@@ -191,7 +191,7 @@ func init() {
 		return New(
 			ctx.KubeClient,
 			ctx.Client,
-			ctx.SharedInformerFactory.Titanium().V1alpha1().MysqlClusters(),
+			ctx.SharedInformerFactory.Mysql().V1alpha1().MysqlClusters(),
 			ctx.Recorder,
 			ctx.Namespace,
 			ctx.KubeSharedInformerFactory.Apps().V1().StatefulSets(),

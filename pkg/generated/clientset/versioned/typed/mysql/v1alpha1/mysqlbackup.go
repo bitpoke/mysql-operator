@@ -16,8 +16,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
-	scheme "github.com/presslabs/titanium/pkg/generated/clientset/versioned/scheme"
+	v1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	scheme "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -51,7 +51,7 @@ type mysqlBackups struct {
 }
 
 // newMysqlBackups returns a MysqlBackups
-func newMysqlBackups(c *TitaniumV1alpha1Client, namespace string) *mysqlBackups {
+func newMysqlBackups(c *MysqlV1alpha1Client, namespace string) *mysqlBackups {
 	return &mysqlBackups{
 		client: c.RESTClient(),
 		ns:     namespace,

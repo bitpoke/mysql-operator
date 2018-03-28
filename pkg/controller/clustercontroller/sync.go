@@ -11,10 +11,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 
-	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
-	controllerpkg "github.com/presslabs/titanium/pkg/controller"
-	mcfactory "github.com/presslabs/titanium/pkg/mysqlcluster"
-	"github.com/presslabs/titanium/pkg/util/options"
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
+	mcfactory "github.com/presslabs/mysql-operator/pkg/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/util/options"
 )
 
 // Sync for add and update.
@@ -37,7 +37,7 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster, ns str
 		glog.V(2).Infof("now just update defaults for %s", cluster.Name)
 		c.recorder.Event(copyCluster, api.EventNormal, api.EventReasonInitDefaults,
 			"defaults seted")
-		_, err := c.tiClient.Titanium().MysqlClusters(ns).Update(copyCluster)
+		_, err := c.tiClient.Mysql().MysqlClusters(ns).Update(copyCluster)
 		return err
 	}
 
@@ -47,7 +47,7 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster, ns str
 		return fmt.Errorf("failed to set-up the cluster: %s", err)
 	}
 
-	if _, err := c.tiClient.Titanium().MysqlClusters(ns).Update(copyCluster); err != nil {
+	if _, err := c.tiClient.Mysql().MysqlClusters(ns).Update(copyCluster); err != nil {
 		return err
 	}
 

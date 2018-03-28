@@ -16,26 +16,26 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/presslabs/titanium/pkg/generated/clientset/versioned/typed/titanium/v1alpha1"
+	v1alpha1 "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/typed/mysql/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeTitaniumV1alpha1 struct {
+type FakeMysqlV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeTitaniumV1alpha1) MysqlBackups(namespace string) v1alpha1.MysqlBackupInterface {
+func (c *FakeMysqlV1alpha1) MysqlBackups(namespace string) v1alpha1.MysqlBackupInterface {
 	return &FakeMysqlBackups{c, namespace}
 }
 
-func (c *FakeTitaniumV1alpha1) MysqlClusters(namespace string) v1alpha1.MysqlClusterInterface {
+func (c *FakeMysqlV1alpha1) MysqlClusters(namespace string) v1alpha1.MysqlClusterInterface {
 	return &FakeMysqlClusters{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeTitaniumV1alpha1) RESTClient() rest.Interface {
+func (c *FakeMysqlV1alpha1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

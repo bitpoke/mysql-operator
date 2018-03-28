@@ -9,9 +9,9 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/record"
 
-	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
-	fakeClientSet "github.com/presslabs/titanium/pkg/generated/clientset/versioned/fake"
-	"github.com/presslabs/titanium/pkg/util/options"
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	fakeClientSet "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/fake"
+	"github.com/presslabs/mysql-operator/pkg/util/options"
 )
 
 // The following function are helpers for accessing private members of cluster

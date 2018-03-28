@@ -12,9 +12,9 @@ import (
 
 	"github.com/golang/glog"
 
-	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
-	"github.com/presslabs/titanium/pkg/mysqlcluster"
-	orc "github.com/presslabs/titanium/pkg/util/orchestrator"
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/mysqlcluster"
+	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
 
 var (

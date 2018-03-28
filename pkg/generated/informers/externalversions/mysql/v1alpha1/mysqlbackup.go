@@ -19,10 +19,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	titanium_v1alpha1 "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
-	versioned "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
-	internalinterfaces "github.com/presslabs/titanium/pkg/generated/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/presslabs/titanium/pkg/generated/listers/titanium/v1alpha1"
+	mysql_v1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	versioned "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	internalinterfaces "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/presslabs/mysql-operator/pkg/generated/listers/mysql/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -60,16 +60,16 @@ func NewFilteredMysqlBackupInformer(client versioned.Interface, namespace string
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.TitaniumV1alpha1().MysqlBackups(namespace).List(options)
+				return client.MysqlV1alpha1().MysqlBackups(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.TitaniumV1alpha1().MysqlBackups(namespace).Watch(options)
+				return client.MysqlV1alpha1().MysqlBackups(namespace).Watch(options)
 			},
 		},
-		&titanium_v1alpha1.MysqlBackup{},
+		&mysql_v1alpha1.MysqlBackup{},
 		resyncPeriod,
 		indexers,
 	)
@@ -80,7 +80,7 @@ func (f *mysqlBackupInformer) defaultInformer(client versioned.Interface, resync
 }
 
 func (f *mysqlBackupInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&titanium_v1alpha1.MysqlBackup{}, f.defaultInformer)
+	return f.factory.InformerFor(&mysql_v1alpha1.MysqlBackup{}, f.defaultInformer)
 }
 
 func (f *mysqlBackupInformer) Lister() v1alpha1.MysqlBackupLister {

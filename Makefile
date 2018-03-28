@@ -2,7 +2,7 @@ DATE    = $(shell date +%Y%m%d%H%M)
 IMAGE   ?= presslabs/titanium
 VERSION = v$(DATE)
 GOOS    ?= $(shell go env | grep GOOS | cut -d'"' -f2)
-BINARY  := titanium
+BINARY  := operator
 
 LDFLAGS :=  -X github.com/presslabs/titanium/pkg/operator.VERSION=$(VERSION)
 GOFLAGS := -ldflags "$(LDFLAGS)"
@@ -22,7 +22,7 @@ GOPATH ?= $(HOME)/go
 
 .PHONY: all clean generate
 
-all: bin/$(GOOS)/$(BINARY)
+all: bin/$(GoperatorINARY)
 
 generate: $(TYPES_FILES)
 	GOPATH=$(GOPATH) $(HACK_DIR)/update-codegen.sh

@@ -5,7 +5,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 func (c *Controller) instanceForOwnerReference(objectMeta *metav1.ObjectMeta) (*api.MysqlCluster, error) {

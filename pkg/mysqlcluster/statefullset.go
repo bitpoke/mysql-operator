@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 const (

@@ -20,7 +20,7 @@ package externalversions
 
 import (
 	"fmt"
-	v1alpha1 "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
+	v1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -51,11 +51,11 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=titanium.k8s.io, Version=v1alpha1
+	// Group=mysql.presslabs.net, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("mysqlbackups"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Titanium().V1alpha1().MysqlBackups().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Mysql().V1alpha1().MysqlBackups().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("mysqlclusters"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Titanium().V1alpha1().MysqlClusters().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Mysql().V1alpha1().MysqlClusters().Informer()}, nil
 
 	}
 

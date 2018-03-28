@@ -38,19 +38,19 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
 
-	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
-	intscheme "github.com/presslabs/titanium/pkg/generated/clientset/versioned/scheme"
-	informers "github.com/presslabs/titanium/pkg/generated/informers/externalversions"
+	clientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	intscheme "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/scheme"
+	informers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions"
 
-	"github.com/presslabs/titanium/cmd/titanium/app/options"
-	"github.com/presslabs/titanium/pkg/util"
-	"github.com/presslabs/titanium/pkg/util/kube"
-	goptions "github.com/presslabs/titanium/pkg/util/options"
+	"github.com/presslabs/mysql-operator/cmd/mysql-operator/app/options"
+	"github.com/presslabs/mysql-operator/pkg/util"
+	"github.com/presslabs/mysql-operator/pkg/util/kube"
+	goptions "github.com/presslabs/mysql-operator/pkg/util/options"
 
-	"github.com/presslabs/titanium/pkg/controller"
+	"github.com/presslabs/mysql-operator/pkg/controller"
 	// Register all available controllers
-	_ "github.com/presslabs/titanium/pkg/controller/backupscontroller"
-	_ "github.com/presslabs/titanium/pkg/controller/clustercontroller"
+	_ "github.com/presslabs/mysql-operator/pkg/controller/backupscontroller"
+	_ "github.com/presslabs/mysql-operator/pkg/controller/clustercontroller"
 )
 
 const controllerAgentName = "titanium-controller"

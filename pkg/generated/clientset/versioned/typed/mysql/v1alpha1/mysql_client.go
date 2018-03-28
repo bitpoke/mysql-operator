@@ -16,33 +16,33 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
-	"github.com/presslabs/titanium/pkg/generated/clientset/versioned/scheme"
+	v1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )
 
-type TitaniumV1alpha1Interface interface {
+type MysqlV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	MysqlBackupsGetter
 	MysqlClustersGetter
 }
 
-// TitaniumV1alpha1Client is used to interact with features provided by the titanium.k8s.io group.
-type TitaniumV1alpha1Client struct {
+// MysqlV1alpha1Client is used to interact with features provided by the mysql.presslabs.net group.
+type MysqlV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *TitaniumV1alpha1Client) MysqlBackups(namespace string) MysqlBackupInterface {
+func (c *MysqlV1alpha1Client) MysqlBackups(namespace string) MysqlBackupInterface {
 	return newMysqlBackups(c, namespace)
 }
 
-func (c *TitaniumV1alpha1Client) MysqlClusters(namespace string) MysqlClusterInterface {
+func (c *MysqlV1alpha1Client) MysqlClusters(namespace string) MysqlClusterInterface {
 	return newMysqlClusters(c, namespace)
 }
 
-// NewForConfig creates a new TitaniumV1alpha1Client for the given config.
-func NewForConfig(c *rest.Config) (*TitaniumV1alpha1Client, error) {
+// NewForConfig creates a new MysqlV1alpha1Client for the given config.
+func NewForConfig(c *rest.Config) (*MysqlV1alpha1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -51,12 +51,12 @@ func NewForConfig(c *rest.Config) (*TitaniumV1alpha1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &TitaniumV1alpha1Client{client}, nil
+	return &MysqlV1alpha1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new TitaniumV1alpha1Client for the given config and
+// NewForConfigOrDie creates a new MysqlV1alpha1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *TitaniumV1alpha1Client {
+func NewForConfigOrDie(c *rest.Config) *MysqlV1alpha1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -64,9 +64,9 @@ func NewForConfigOrDie(c *rest.Config) *TitaniumV1alpha1Client {
 	return client
 }
 
-// New creates a new TitaniumV1alpha1Client for the given RESTClient.
-func New(c rest.Interface) *TitaniumV1alpha1Client {
-	return &TitaniumV1alpha1Client{c}
+// New creates a new MysqlV1alpha1Client for the given RESTClient.
+func New(c rest.Interface) *MysqlV1alpha1Client {
+	return &MysqlV1alpha1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -84,7 +84,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *TitaniumV1alpha1Client) RESTClient() rest.Interface {
+func (c *MysqlV1alpha1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

@@ -26,12 +26,12 @@ import (
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 
-	"github.com/presslabs/titanium/cmd/toolbox/appclone"
-	"github.com/presslabs/titanium/cmd/toolbox/appconf"
-	"github.com/presslabs/titanium/cmd/toolbox/appschedulebackup"
-	"github.com/presslabs/titanium/cmd/toolbox/apptakebackup"
-	"github.com/presslabs/titanium/cmd/toolbox/apptitanium"
-	"github.com/presslabs/titanium/pkg/util/logs"
+	"github.com/presslabs/mysql-operator/cmd/toolbox/appclone"
+	"github.com/presslabs/mysql-operator/cmd/toolbox/appconf"
+	"github.com/presslabs/mysql-operator/cmd/toolbox/appschedulebackup"
+	"github.com/presslabs/mysql-operator/cmd/toolbox/apptakebackup"
+	"github.com/presslabs/mysql-operator/cmd/toolbox/apptitanium"
+	"github.com/presslabs/mysql-operator/pkg/util/logs"
 )
 
 func main() {

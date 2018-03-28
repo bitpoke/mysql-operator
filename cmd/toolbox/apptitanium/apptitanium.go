@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	tb "github.com/presslabs/titanium/cmd/toolbox/util"
+	tb "github.com/presslabs/mysql-operator/cmd/toolbox/util"
 )
 
 const (

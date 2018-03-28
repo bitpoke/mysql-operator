@@ -8,10 +8,10 @@ import (
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
-	tiClientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
-	"github.com/presslabs/titanium/pkg/util"
-	"github.com/presslabs/titanium/pkg/util/kube"
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	tiClientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	"github.com/presslabs/mysql-operator/pkg/util"
+	"github.com/presslabs/mysql-operator/pkg/util/kube"
 )
 
 func RunCommand(stopCh <-chan struct{}, namespace, cluster string) error {
@@ -34,7 +34,7 @@ func RunCommand(stopCh <-chan struct{}, namespace, cluster string) error {
 		case <-stopCh:
 			break
 		case <-time.After(time.Second):
-			b, err := tiClient.Titanium().MysqlBackups(namespace).Get(backup.Name, meta.GetOptions{})
+			b, err := tiClient.Mysql().MysqlBackups(namespace).Get(backup.Name, meta.GetOptions{})
 			if err != nil {
 				glog.Warningf("Failed to get backup: %s", err)
 			}
@@ -55,7 +55,7 @@ func RunCommand(stopCh <-chan struct{}, namespace, cluster string) error {
 
 func createBackup(tiClient tiClientset.Interface, ns, cluster string) (*api.MysqlBackup, error) {
 	randStr := util.RandStringLowerLetters(10)
-	return tiClient.Titanium().MysqlBackups(ns).Create(&api.MysqlBackup{
+	return tiClient.Mysql().MysqlBackups(ns).Create(&api.MysqlBackup{
 		ObjectMeta: meta.ObjectMeta{
 			Name: fmt.Sprintf("%s-recurent-backup-%s", cluster, randStr),
 			Labels: map[string]string{

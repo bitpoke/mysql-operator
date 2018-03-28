@@ -9,10 +9,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 
-	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
-	ticlientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
-	"github.com/presslabs/titanium/pkg/util/options"
-	orc "github.com/presslabs/titanium/pkg/util/orchestrator"
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	ticlientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	"github.com/presslabs/mysql-operator/pkg/util/options"
+	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
 
 // Interface is for cluster Factory

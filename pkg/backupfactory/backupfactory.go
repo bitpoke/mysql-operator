@@ -13,9 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
-	clientset "github.com/presslabs/titanium/pkg/generated/clientset/versioned"
-	"github.com/presslabs/titanium/pkg/util"
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	clientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	"github.com/presslabs/mysql-operator/pkg/util"
 )
 
 type Interface interface {

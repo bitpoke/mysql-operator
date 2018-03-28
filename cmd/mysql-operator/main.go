@@ -25,8 +25,8 @@ import (
 
 	"github.com/golang/glog"
 
-	"github.com/presslabs/titanium/cmd/titanium/app"
-	"github.com/presslabs/titanium/pkg/util/logs"
+	"github.com/presslabs/mysql-operator/cmd/mysql-operator/app"
+	"github.com/presslabs/mysql-operator/pkg/util/logs"
 )
 
 func main() {

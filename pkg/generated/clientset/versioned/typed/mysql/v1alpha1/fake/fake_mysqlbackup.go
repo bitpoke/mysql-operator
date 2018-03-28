@@ -16,7 +16,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
+	v1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,13 +27,13 @@ import (
 
 // FakeMysqlBackups implements MysqlBackupInterface
 type FakeMysqlBackups struct {
-	Fake *FakeTitaniumV1alpha1
+	Fake *FakeMysqlV1alpha1
 	ns   string
 }
 
-var mysqlbackupsResource = schema.GroupVersionResource{Group: "titanium.k8s.io", Version: "v1alpha1", Resource: "mysqlbackups"}
+var mysqlbackupsResource = schema.GroupVersionResource{Group: "mysql.presslabs.net", Version: "v1alpha1", Resource: "mysqlbackups"}
 
-var mysqlbackupsKind = schema.GroupVersionKind{Group: "titanium.k8s.io", Version: "v1alpha1", Kind: "MysqlBackup"}
+var mysqlbackupsKind = schema.GroupVersionKind{Group: "mysql.presslabs.net", Version: "v1alpha1", Kind: "MysqlBackup"}
 
 // Get takes name of the mysqlBackup, and returns the corresponding mysqlBackup object, and an error if there is any.
 func (c *FakeMysqlBackups) Get(name string, options v1.GetOptions) (result *v1alpha1.MysqlBackup, err error) {

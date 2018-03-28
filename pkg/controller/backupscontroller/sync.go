@@ -8,11 +8,11 @@ import (
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 
-	api "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
-	bfactory "github.com/presslabs/titanium/pkg/backupfactory"
-	controllerpkg "github.com/presslabs/titanium/pkg/controller"
-	"github.com/presslabs/titanium/pkg/util"
-	"github.com/presslabs/titanium/pkg/util/options"
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	bfactory "github.com/presslabs/mysql-operator/pkg/backupfactory"
+	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
+	"github.com/presslabs/mysql-operator/pkg/util"
+	"github.com/presslabs/mysql-operator/pkg/util/options"
 )
 
 var (
@@ -50,7 +50,7 @@ func (c *Controller) Sync(ctx context.Context, backup *api.MysqlBackup, ns strin
 		return fmt.Errorf("sync: %s", err)
 	}
 
-	if _, err := c.tiClient.Titanium().MysqlBackups(ns).Update(copyBackup); err != nil {
+	if _, err := c.tiClient.Mysql().MysqlBackups(ns).Update(copyBackup); err != nil {
 		return fmt.Errorf("backup update: %s", err)
 	}
 

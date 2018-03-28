@@ -16,7 +16,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/presslabs/titanium/pkg/apis/titanium/v1alpha1"
+	v1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,13 +27,13 @@ import (
 
 // FakeMysqlClusters implements MysqlClusterInterface
 type FakeMysqlClusters struct {
-	Fake *FakeTitaniumV1alpha1
+	Fake *FakeMysqlV1alpha1
 	ns   string
 }
 
-var mysqlclustersResource = schema.GroupVersionResource{Group: "titanium.k8s.io", Version: "v1alpha1", Resource: "mysqlclusters"}
+var mysqlclustersResource = schema.GroupVersionResource{Group: "mysql.presslabs.net", Version: "v1alpha1", Resource: "mysqlclusters"}
 
-var mysqlclustersKind = schema.GroupVersionKind{Group: "titanium.k8s.io", Version: "v1alpha1", Kind: "MysqlCluster"}
+var mysqlclustersKind = schema.GroupVersionKind{Group: "mysql.presslabs.net", Version: "v1alpha1", Kind: "MysqlCluster"}
 
 // Get takes name of the mysqlCluster, and returns the corresponding mysqlCluster object, and an error if there is any.
 func (c *FakeMysqlClusters) Get(name string, options v1.GetOptions) (result *v1alpha1.MysqlCluster, err error) {
