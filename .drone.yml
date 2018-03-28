@@ -17,6 +17,7 @@ pipeline:
     repo: quay.io/presslabs/mysql-operator
     username: presslabs+drone
     dockerfile: hack/docker/mysql-operator/Dockerfile
+    context: hack/docker/mysql-operator
     tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
     secrets:
       - source: QUAY_TOKEN
@@ -31,6 +32,7 @@ pipeline:
     repo: quay.io/presslabs/mysql-operator
     username: presslabs+drone
     dockerfile: hack/docker/mysql-operator/Dockerfile
+    context: hack/docker/mysql-operator
     tags: ["${DRONE_TAG}"]
     secrets:
       - source: QUAY_TOKEN
