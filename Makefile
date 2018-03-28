@@ -1,52 +1,115 @@
-DATE    = $(shell date +%Y%m%d%H%M)
-IMAGE   ?= presslabs/titanium
-VERSION = v$(DATE)
-GOOS    ?= $(shell go env | grep GOOS | cut -d'"' -f2)
-BINARY  := operator
-
-LDFLAGS :=  -X github.com/presslabs/titanium/pkg/operator.VERSION=$(VERSION)
-GOFLAGS := -ldflags "$(LDFLAGS)"
+PACKAGE_NAME := github.com/presslabs/mysql-operator
+REGISTRY := quay.io/presslabs
+IMAGE_TAGS := canary
+BUILD_TAG := build
 
 SRCDIRS  := cmd pkg
-PACKAGES := $(shell find $(SRCDIRS) -type d)
-GOFILES  := $(addsuffix /*.go,$(PACKAGES))
-GOFILES  := $(wildcard $(GOFILES))
+PACKAGES := $(shell go list ./... | grep -v /vendor)
+GOFILES  := $(shell find $(SRCDIRS) -name '*.go' -type f | grep -v '_test.go')
 
-TEST_FILES := $(addsuffix /*_test.go,$(PACKAGES))
-TEST_FILES := $(wildcard $(TEST_FILES))
+ifeq ($(APP_VERSION),)
+APP_VERSION := $(shell git describe --abbrev=4 --dirty --tags --always)
+endif
 
-# A list of all types.go files in pkg/apis
-TYPES_FILES := $(shell find pkg/apis -name types.go)
+GIT_COMMIT ?= $(shell git rev-parse HEAD)
+
+ifeq ($(shell git status --porcelain),)
+	GIT_STATE ?= clean
+else
+	GIT_STATE ?= dirty
+endif
+
 HACK_DIR ?= hack
 GOPATH ?= $(HOME)/go
+GOOS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
+GOARCH ?= amd64
+GOLDFLAGS := -ldflags "-X $(PACKAGE_NAME)/pkg/util.AppGitState=${GIT_STATE} -X $(PACKAGE_NAME)/pkg/util.AppGitCommit=${GIT_COMMIT} -X $(PACKAGE_NAME)/pkg/util.AppVersion=${APP_VERSION}"
 
-.PHONY: all clean generate
+# Get a list of all binaries to be built
+CMDS     := $(shell find ./cmd/ -maxdepth 1 -type d -exec basename {} \; | grep -v cmd)
+BIN_CMDS := $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
+DOCKER_BIN_CMDS := $(patsubst %, $(HACK_DIR)/docker/%/%, $(CMDS))
 
-all: bin/$(GOOS)/$(BINARY)
+.DEFAULT_GOAL := bin/mysql-operator_$(GOOS)_$(GOARCH)
 
-generate: $(TYPES_FILES)
-	GOPATH=$(GOPATH) $(HACK_DIR)/update-codegen.sh
+# Code building targets
+#######################
+.PHONY: build
+build: $(BIN_CMDS)
 
-bin/%/$(BINARY): $(GOFILES) Makefile
-	CGO_ENABLED=0 GOOS=$* GOARCH=amd64 go build $(GOFLAGS) \
-				 -v -o bin/$*/$(BINARY) $<
+bin/%: $(GOFILES)
+	CGO_ENABLED=0 \
+	GOOS=$(shell echo "$*" | cut -d'_' -f2) \
+	GOARCH=$(shell echo "$*" | cut -d'_' -f3) \
+		go build $(GOFLAGS) \
+			-v -o $@ cmd/$(shell echo "$*" | cut -d'_' -f1)/main.go
 
-TSRCDIRS  := cmd/toolbox
-TPACKAGES := $(shell find $(TSRCDIRS) -type d)
-TGOFILES  := $(addsuffix /*.go,$(TPACKAGES))
-TGOFILES  := $(wildcard $(TGOFILES))
-
-toolbox: $(TGOFILES) Makefile
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(GOFLAGS) \
-				-v -o bin/linux/toolbox $<
-
-
-test: $(TEST_FILES)
-	go test -v -race \
-			$$(go list ./... | \
+# Testing targets
+#################
+.PHONY: test
+test:
+	go test -v \
+	    -race \
+		$$(go list ./... | \
 			grep -v '/vendor/' | \
-			grep -v '/pkg/generated/' \
+			grep -v '/test/e2e' | \
+			grep -v '/pkg/generated/' | \
+			grep -v '/pkg/client' \
 		)
 
+.PHONY: full-test
+full-test: generate_verify test
+
+.PHONY: lint
+lint:
+	@set -e; \
+	GO_FMT=$$(git ls-files *.go | grep -v 'vendor/' | xargs gofmt -d); \
+	if [ -n "$${GO_FMT}" ] ; then \
+		echo "Please run go fmt"; \
+		echo "$$GO_FMT"; \
+		exit 1; \
+	fi
+
+# Code generation targets
+#########################
+.PHONY: generate generate_verify
+generate:
+	GOPATH=$(GOPATH) $(HACK_DIR)/update-codegen.sh
+
+generate_verify:
+	$(HACK_DIR)/verify-codegen.sh
+
+# Cleanup targets
+#################
+.PHONY: clean
 clean:
 	rm -rf bin/*
+
+# Docker image targets
+######################
+.PHONY: install-docker
+install-docker : $(patsubst %, bin/%_linux_amd64, $(CMDS))
+	set -e;
+		for cmd in $(CMDS); do \
+			install -m 755 bin/$${cmd}_linux_amd64 $(HACK_DIR)/docker/$${cmd}/$${cmd} ; \
+		done
+
+.PHONY: images
+images: install-docker
+	set -e;
+	for cmd in $(CMDS); do \
+		docker build \
+			--build-arg VCS_REF=$(GIT_COMMIT) \
+			--build-arg APP_VERSION=$(APP_VERSION) \
+			-t $(REGISTRY)/$${cmd}:$(BUILD_TAG) \
+			-f $(HACK_DIR)/docker/$${cmd}/Dockerfile $(HACK_DIR)/docker/$${cmd} ; \
+	done
+
+publish: images
+	set -e; \
+	for cmd in $(CMDS); do \
+		for tag in $(IMAGE_TAGS); do \
+			docker tag $(REGISTRY)/$${cmd}:$(BUILD_TAG) $(REGISTRY)/$${cmd}:$${tag}; \
+			docker push $(REGISTRY)/$${cmd}:$${tag}; \
+		done ; \
+	done
