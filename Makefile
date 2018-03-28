@@ -1,3 +1,4 @@
+PACKAGE_NAME := github.com/presslabs/mysql-operator
 REGISTRY := quay.io/presslabs
 IMAGE_TAGS := canary
 BUILD_TAG := build
