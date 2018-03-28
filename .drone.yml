@@ -6,7 +6,7 @@ pipeline:
   build:
     image: golang:1.9
     commands:
-      - make
+      - make build
       - make full-test
       - make install-docker
 
