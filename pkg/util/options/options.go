@@ -56,7 +56,7 @@ const (
 )
 
 var (
-	defaultHelperImage = "gcr.io/pl-infra/mysql-helper:" + util.AppVersion
+	defaultHelperImage = "quay.io/presslabs/mysql-operator-helper:" + util.AppVersion
 
 	defaultJobGraceTime = 24 * time.Hour
 )
