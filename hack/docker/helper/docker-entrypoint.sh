@@ -39,23 +39,23 @@ VERBOSE="-v 3"
 case "$1" in
     files-config)
         shift 1
-        toolbox  $VERBOSE init-configs "$@"
+        mysql-helper  $VERBOSE init-configs "$@"
         ;;
     clone)
         shift 1
-        toolbox $VERBOSE clone "$@"
+        mysql-helper $VERBOSE clone "$@"
         ;;
     config-and-serve)
         shift 1
-        toolbox $VERBOSE run "$@"
+        mysql-helper $VERBOSE run "$@"
         ;;
     take-backup-to)
         shift 1
-        toolbox $VERBOSE take-backup-to "$@"
+        mysql-helper $VERBOSE take-backup-to "$@"
         ;;
     schedule-backup)
         shift 1
-        toolbox $VERBOSE schedule-backup "$@"
+        mysql-helper $VERBOSE schedule-backup "$@"
         ;;
     *)
         echo "Usage: $0 {files-config|clone|config-and-serve}"

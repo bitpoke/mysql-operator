@@ -17,7 +17,7 @@ while true; do
     sleep 5
 done
 
-NAMESPACE="titanium-testing"
+NAMESPACE="mysql-testing"
 echo "Create testing namespace ($NAMESPACE)..."
 
 cat <<EOF | kubectl apply -f -
@@ -31,7 +31,7 @@ EOF
 SECRET_NAME="backups-secret-for-gs"
 echo "Create backup secret ..."
 
-json_key="$(echo ${TITANIUM_TEST_GS_CREDENTIALS} | base64 | awk -v ORS='' '$0' )"
+json_key="$(echo ${MYSQL_TEST_GS_CREDENTIALS} | base64 | awk -v ORS='' '$0' )"
 project_id="$(echo $GOOGLE_PROJECT_ID | base64 | awk -v ORS='' '$0' )"
 
 cat <<EOF | kubectl apply -f -
@@ -48,32 +48,32 @@ data:
 EOF
 
 echo "Deploy controller..."
-OPERATOR_IMAGE=${OPERATOR_IMAGE:-"gcr.io/pl-infra/titanium-operator:latest"}
+OPERATOR_IMAGE=${OPERATOR_IMAGE:-"gcr.io/pl-infra/mysql-operator:latest"}
 echo "Using image: $OPERATOR_IMAGE"
 
 cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
-  name: titanium-controller
-  namespace: titanium-testing
+  name: mysql-controller
+  namespace: mysql-testing
   labels:
-    app: titanium
+    app: mysql
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: titanium
+      app: mysql
   template:
     metadata:
       labels:
-        app: titanium
+        app: mysql
     spec:
       containers:
       - name: controller
         image: ${OPERATOR_IMAGE}
         imagePullPolicy: IfNotPresent
-        args: ["-namespace", "titanium-testing"]
+        args: ["-namespace", "mysql-testing"]
 
 EOF
 
@@ -83,7 +83,7 @@ echo "Wait for controller to be up..."
 # wait for pod
 j=0
 while [ $j -le 50 ]; do
-    pod="$(kubectl get pods --namespace $NAMESPACE | awk '$1~/titanium-controller/{print $1}')"
+    pod="$(kubectl get pods --namespace $NAMESPACE | awk '$1~/mysql-controller/{print $1}')"
     phase="$(kubectl get pods $pod --namespace $NAMESPACE -o jsonpath='{.status.phase}')"
     if [ "$phase" == "Running" ]; then
         break
@@ -97,7 +97,7 @@ done
 echo "Create CRD ..."
 path=$(dirname $0)
 
-kubectl apply -f ${path}/../deploy/titanium-rbac.yaml
+# kubectl apply -f ${path}/../deploy/mysql-rbac.yaml
 
 echo "Wait for CRD to be ready..."
 

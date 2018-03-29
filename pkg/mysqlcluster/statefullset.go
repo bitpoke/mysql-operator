@@ -111,7 +111,7 @@ func (f *cFactory) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec 
 const (
 	containerInitName     = "init-mysql"
 	containerCloneName    = "clone-mysql"
-	containerTitaniumName = "titanium"
+	containerHelperName   = "helper"
 	containerMysqlName    = "mysql"
 	containerExporterName = "metrics-exporter"
 )
@@ -134,13 +134,13 @@ func (f *cFactory) ensureInitContainersSpec(in []core.Container) []core.Containe
 
 	// init container for configs
 	in[0] = f.ensureContainer(in[0], containerInitName,
-		f.cluster.Spec.GetTitaniumImage(),
+		f.cluster.Spec.GetHelperImage(),
 		[]string{"files-config"},
 	)
 
 	// clone container
 	in[1] = f.ensureContainer(in[1], containerCloneName,
-		f.cluster.Spec.GetTitaniumImage(),
+		f.cluster.Spec.GetHelperImage(),
 		[]string{"clone"},
 	)
 
@@ -185,24 +185,24 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 	})
 	in[0] = mysql
 
-	titanium := f.ensureContainer(in[1], containerTitaniumName,
-		f.cluster.Spec.GetTitaniumImage(),
+	helper := f.ensureContainer(in[1], containerHelperName,
+		f.cluster.Spec.GetHelperImage(),
 		[]string{"config-and-serve"},
 	)
-	titanium.Ports = ensureContainerPorts(titanium.Ports, core.ContainerPort{
-		Name:          TitaniumXtrabackupPortName,
-		ContainerPort: TitaniumXtrabackupPort,
+	helper.Ports = ensureContainerPorts(helper.Ports, core.ContainerPort{
+		Name:          HelperXtrabackupPortName,
+		ContainerPort: HelperXtrabackupPort,
 	})
 
-	// TITANIUM container
-	titanium.ReadinessProbe = ensureProbe(titanium.ReadinessProbe, 5, 5, 10, core.Handler{
+	// HELPER container
+	helper.ReadinessProbe = ensureProbe(helper.ReadinessProbe, 5, 5, 10, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
-			Path:   TitaniumProbePath,
-			Port:   intstr.FromInt(TitaniumProbePort),
+			Path:   HelperProbePath,
+			Port:   intstr.FromInt(HelperProbePort),
 			Scheme: core.URISchemeHTTP,
 		},
 	})
-	in[1] = titanium
+	in[1] = helper
 
 	exporter := f.ensureContainer(in[2], containerExporterName,
 		f.cluster.Spec.GetMetricsExporterImage(),
@@ -291,8 +291,8 @@ func (f *cFactory) getEnvSourcesFor(name string) []core.EnvFromSource {
 		envFromSecret(f.cluster.GetNameForResource(api.EnvSecret)),
 	}
 	switch name {
-	case containerTitaniumName:
-		// titanium container env source
+	case containerHelperName:
+		// helper container env source
 	case containerCloneName:
 		if len(f.cluster.Spec.InitBucketSecretName) != 0 {
 			ss = append(ss, envFromSecret(f.cluster.Spec.InitBucketSecretName))
@@ -324,9 +324,9 @@ func (f *cFactory) getVolumeMountsFor(name string) []core.VolumeMount {
 		},
 	}
 
-	titaniumVolumeMounts := commonVolumeMounts
+	helperVolumeMounts := commonVolumeMounts
 	if len(f.cluster.Spec.GetOrcTopologySecret()) != 0 {
-		titaniumVolumeMounts = append(commonVolumeMounts, core.VolumeMount{
+		helperVolumeMounts = append(commonVolumeMounts, core.VolumeMount{
 			Name:      "orc-topology-secret",
 			MountPath: OrcTopologyDir,
 		})
@@ -350,8 +350,8 @@ func (f *cFactory) getVolumeMountsFor(name string) []core.VolumeMount {
 	case containerMysqlName:
 		return commonVolumeMounts
 
-	case containerTitaniumName:
-		return titaniumVolumeMounts
+	case containerHelperName:
+		return helperVolumeMounts
 	}
 	return nil
 }

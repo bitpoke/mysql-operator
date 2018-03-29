@@ -24,7 +24,7 @@ import (
 	"github.com/go-ini/ini"
 	"github.com/golang/glog"
 
-	tb "github.com/presslabs/mysql-operator/cmd/toolbox/util"
+	tb "github.com/presslabs/mysql-operator/cmd/mysql-helper/util"
 	"github.com/presslabs/mysql-operator/pkg/util"
 )
 

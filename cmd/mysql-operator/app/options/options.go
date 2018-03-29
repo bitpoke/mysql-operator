@@ -24,7 +24,7 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
-type TitaniumControllerOptions struct {
+type MysqlControllerOptions struct {
 	APIServerHost            string
 	Namespace                string
 	ClusterResourceNamespace string
@@ -55,8 +55,8 @@ const (
 	defaultProbeAddr = ":80"
 )
 
-func NewTitaniumControllerOptions() *TitaniumControllerOptions {
-	return &TitaniumControllerOptions{
+func NewControllerOptions() *MysqlControllerOptions {
+	return &MysqlControllerOptions{
 		APIServerHost:               defaultAPIServerHost,
 		Namespace:                   defaultNamespace,
 		LeaderElect:                 defaultLeaderElect,
@@ -70,7 +70,7 @@ func NewTitaniumControllerOptions() *TitaniumControllerOptions {
 	}
 }
 
-func (s *TitaniumControllerOptions) AddFlags(fs *pflag.FlagSet) {
+func (s *MysqlControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.APIServerHost, "master", defaultAPIServerHost, ""+
 		"Optional apiserver host address to connect to. If not specified, autoconfiguration "+
 		"will be attempted.")
@@ -79,8 +79,8 @@ func (s *TitaniumControllerOptions) AddFlags(fs *pflag.FlagSet) {
 		"namespace will be watched")
 
 	fs.BoolVar(&s.LeaderElect, "leader-elect", true, ""+
-		"If true, titanium-controller will perform leader election between instances "+
-		"to ensure no more than one instance of titanium-controller operates at a time")
+		"If true, mysql-controller will perform leader election between instances "+
+		"to ensure no more than one instance of mysql-controller operates at a time")
 	fs.StringVar(&s.LeaderElectionNamespace, "leader-election-namespace",
 		defaultLeaderElectionNamespace, ""+
 			"Namespace used to perform leader election. Only used if leader election is enabled")
@@ -108,7 +108,7 @@ func (s *TitaniumControllerOptions) AddFlags(fs *pflag.FlagSet) {
 		"The address for probing. Default :80")
 }
 
-func (o *TitaniumControllerOptions) Validate() error {
+func (o *MysqlControllerOptions) Validate() error {
 	var errs []error
 	if len(o.Namespace) == 0 {
 		errs = append(errs, fmt.Errorf("no namespace specified"))

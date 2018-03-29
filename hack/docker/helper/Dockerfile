@@ -20,5 +20,5 @@ RUN wget https://nmap.org/dist/ncat-7.60-1.x86_64.rpm \
     && mv rclone-*-linux-amd64/rclone /usr/bin/ \
     && chmod 755 /usr/bin/rclone
 
-COPY docker-entrypoint.sh toolbox /usr/local/bin/
+COPY docker-entrypoint.sh mysql-helper /usr/local/bin/
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

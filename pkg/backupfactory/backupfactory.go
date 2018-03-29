@@ -88,7 +88,7 @@ func (f *bFactory) ensurePodSpec(in core.PodSpec) core.PodSpec {
 	in.RestartPolicy = core.RestartPolicyNever
 
 	in.Containers[0].Name = "backup"
-	in.Containers[0].Image = f.backup.GetTitaniumImage()
+	in.Containers[0].Image = f.backup.GetHelperImage()
 	in.Containers[0].ImagePullPolicy = core.PullIfNotPresent
 	in.Containers[0].Args = []string{
 		"take-backup-to",

@@ -53,18 +53,18 @@ import (
 	_ "github.com/presslabs/mysql-operator/pkg/controller/clustercontroller"
 )
 
-const controllerAgentName = "titanium-controller"
+const controllerAgentName = "mysql-controller"
 
-// NewTitaniumControllerCommand creates a new cobra command for running the titanium controller
-func NewTitaniumControllerCommand(out, errOut io.Writer, stopCh <-chan struct{}) *cobra.Command {
-	o := options.NewTitaniumControllerOptions()
+// NewControllerCommand creates a new cobra command for running the mysql controller
+func NewControllerCommand(out, errOut io.Writer, stopCh <-chan struct{}) *cobra.Command {
+	o := options.NewControllerOptions()
 	gOpt := goptions.GetOptions()
 
 	cmd := &cobra.Command{
-		Use:   "titanium-controller",
+		Use:   "mysql-controller",
 		Short: fmt.Sprintf("Managed WordPress deployments for kubernetes (%s) (%s)", util.AppVersion, util.AppGitCommit),
 		Long: `
-titanium-operator is a Kubernetes addon to automate the deployment, scaling and
+mysql-operator is a Kubernetes addon to automate the deployment, scaling and
 management of multiple mysql clusters.`,
 		// TODO: Refactor this function from this package
 		Run: func(cmd *cobra.Command, args []string) {
@@ -75,7 +75,7 @@ management of multiple mysql clusters.`,
 				glog.Fatalf("error validating mysql controller options: %s", err.Error())
 			}
 			// go StartPrometheusMetricsServer(stopCh)
-			RunTitaniumController(o, stopCh)
+			RunController(o, stopCh)
 		},
 	}
 	flags := cmd.Flags()
@@ -85,8 +85,8 @@ management of multiple mysql clusters.`,
 	return cmd
 }
 
-// RunTitaniumController starts the titanium reconcile loops
-func RunTitaniumController(opts *options.TitaniumControllerOptions, stopCh <-chan struct{}) {
+// RunController starts the mysql reconcile loops
+func RunController(opts *options.MysqlControllerOptions, stopCh <-chan struct{}) {
 	glog.Info("Start controller...")
 	ctx, kubeCfg, err := buildControllerContext(opts)
 	if err != nil {
@@ -137,7 +137,7 @@ func RunTitaniumController(opts *options.TitaniumControllerOptions, stopCh <-cha
 	panic("unreachable")
 }
 
-func buildControllerContext(opts *options.TitaniumControllerOptions) (*controller.Context, *rest.Config, error) {
+func buildControllerContext(opts *options.MysqlControllerOptions) (*controller.Context, *rest.Config, error) {
 	// Load the users Kubernetes config
 	kubeCfg, err := kube.KubeConfig(opts.APIServerHost)
 
@@ -160,7 +160,7 @@ func buildControllerContext(opts *options.TitaniumControllerOptions) (*controlle
 	}
 
 	// Create event broadcaster
-	// Add titanium types to the default Kubernetes Scheme so Events can be
+	// Add mysql types to the default Kubernetes Scheme so Events can be
 	// logged properly
 	intscheme.AddToScheme(scheme.Scheme)
 	glog.V(4).Info("Creating event broadcaster")
@@ -185,7 +185,7 @@ func buildControllerContext(opts *options.TitaniumControllerOptions) (*controlle
 	}, kubeCfg, nil
 }
 
-func startLeaderElection(opts *options.TitaniumControllerOptions, leaderElectionClient kubernetes.Interface, recorder record.EventRecorder, run func(<-chan struct{})) {
+func startLeaderElection(opts *options.MysqlControllerOptions, leaderElectionClient kubernetes.Interface, recorder record.EventRecorder, run func(<-chan struct{})) {
 	// Identity used to distinguish between multiple controller manager instances
 	id, err := os.Hostname()
 	if err != nil {

@@ -31,7 +31,6 @@ import (
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
@@ -102,16 +101,6 @@ func RandStringLowerLetters(n int) string {
 
 // JobConditionIndex
 func JobConditionIndex(ty batch.JobConditionType, cs []batch.JobCondition) (int, bool) {
-	for i, cond := range cs {
-		if cond.Type == ty {
-			return i, true
-		}
-	}
-	return 0, false
-}
-
-// BackupConditionIndex
-func BackupConditionIndex(ty api.BackupConditionType, cs []api.BackupCondition) (int, bool) {
 	for i, cond := range cs {
 		if cond.Type == ty {
 			return i, true

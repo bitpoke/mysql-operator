@@ -129,12 +129,12 @@ func (c *ClusterSpec) UpdateDefaults(opt *options.Options, cluster *MysqlCluster
 	return c.VolumeSpec.UpdateDefaults()
 }
 
-// GetTitaniumImage return titanium image from options
-func (c *ClusterSpec) GetTitaniumImage() string {
-	return opt.TitaniumImage
+// GetHelperImage return helper image from options
+func (c *ClusterSpec) GetHelperImage() string {
+	return opt.HelperImage
 }
 
-// GetMetricsExporterImage return titanium image from options
+// GetMetricsExporterImage return helper image from options
 func (c *ClusterSpec) GetMetricsExporterImage() string {
 	return opt.MetricsExporterImage
 }

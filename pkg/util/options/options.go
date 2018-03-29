@@ -23,6 +23,8 @@ import (
 
 	"github.com/spf13/pflag"
 	"k8s.io/api/core/v1"
+
+	"github.com/presslabs/mysql-operator/pkg/util"
 )
 
 type Options struct {
@@ -31,7 +33,7 @@ type Options struct {
 	MysqlImage    string
 	MysqlImageTag string
 
-	TitaniumImage string
+	HelperImage string
 
 	MetricsExporterImage string
 
@@ -46,7 +48,6 @@ type Options struct {
 
 const (
 	defaultMysqlImage    = "percona:5.7"
-	defaultTitaniumImage = "gcr.io/pl-infra/titanium-toolbox:latest"
 	defaultExporterImage = "prom/mysqld-exporter:latest"
 
 	defaultImagePullPolicy = v1.PullIfNotPresent
@@ -55,13 +56,15 @@ const (
 )
 
 var (
+	defaultHelperImage = "gcr.io/pl-infra/mysql-helper:" + util.AppVersion
+
 	defaultJobGraceTime = 24 * time.Hour
 )
 
 func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.mysqlImage, "mysql-image", defaultMysqlImage,
 		"The mysql image.")
-	fs.StringVar(&o.TitaniumImage, "titanium-toolbox-image", defaultTitaniumImage,
+	fs.StringVar(&o.HelperImage, "helper-image", defaultHelperImage,
 		"The image that instrumentate mysql.")
 	fs.StringVar(&o.MetricsExporterImage, "metrics-exporter-image", defaultExporterImage,
 		"The image for mysql metrics exporter.")
@@ -82,7 +85,7 @@ func GetOptions() *Options {
 	once.Do(func() {
 		instance = &Options{
 			mysqlImage:           defaultMysqlImage,
-			TitaniumImage:        defaultTitaniumImage,
+			HelperImage:          defaultHelperImage,
 			MetricsExporterImage: defaultExporterImage,
 
 			ImagePullPolicy:             defaultImagePullPolicy,

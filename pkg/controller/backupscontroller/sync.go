@@ -56,7 +56,7 @@ func (c *Controller) Sync(ctx context.Context, backup *api.MysqlBackup, ns strin
 	}
 
 	copyBackup := backup.DeepCopy()
-	factory := bfactory.New(copyBackup, c.k8client, c.tiClient, cluster)
+	factory := bfactory.New(copyBackup, c.k8client, c.myClient, cluster)
 
 	if err := factory.SetDefaults(); err != nil {
 		return fmt.Errorf("set defaults: %s", err)
@@ -66,7 +66,7 @@ func (c *Controller) Sync(ctx context.Context, backup *api.MysqlBackup, ns strin
 		return fmt.Errorf("sync: %s", err)
 	}
 
-	if _, err := c.tiClient.Mysql().MysqlBackups(ns).Update(copyBackup); err != nil {
+	if _, err := c.myClient.Mysql().MysqlBackups(ns).Update(copyBackup); err != nil {
 		return fmt.Errorf("backup update: %s", err)
 	}
 

@@ -3,10 +3,10 @@ kind: Config
 build:
   tagPolicy: sha256
   artifacts:
-  - imageName: titanium-toolbox
-    dockerfilePath: hack/docker/toolbox/Dockerfile
+  - imageName: mysql-helper
+    dockerfilePath: hack/docker/mysql-helper/Dockerfile
     workspace: .
-  - imageName: titanium-controller
+  - imageName: mysql-operator
     dockerfilePath: Dockerfile
     workspace: .
   local:
@@ -17,5 +17,5 @@ deploy:
     - name: test
       chartPath: hack/charts/controller
       values:
-        image: titanium-controller
-        conf.titanium-toolbox-image: titanium-toolbox
+        image: mysql-operator
+        conf.helper-image: mysql-helper

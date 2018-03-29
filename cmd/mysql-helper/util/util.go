@@ -35,7 +35,7 @@ import (
 
 var (
 	// BackupPort is the port on which xtrabackup expose backups, 3306
-	BackupPort = strconv.Itoa(mysqlcluster.TitaniumXtrabackupPort)
+	BackupPort = strconv.Itoa(mysqlcluster.HelperXtrabackupPort)
 
 	// MysqlPort represents port on wich mysql works
 	MysqlPort = strconv.Itoa(mysqlcluster.MysqlPort)
@@ -58,7 +58,7 @@ var (
 	ToolsInitTableName = "init"
 
 	// UtilityUser is the name of the percona utility user.
-	UtilityUser = "sys_titanium"
+	UtilityUser = "sys_utility_helper"
 
 	// OrcTopologyDir contains the path where the secret with orc credentails is
 	// mounted.
@@ -66,14 +66,14 @@ var (
 
 	NameOfStatefulSet = api.StatefulSet
 
-	TitaniumProbePath = mysqlcluster.TitaniumProbePath
-	TitaniumProbePort = mysqlcluster.TitaniumProbePort
+	HelperProbePath = mysqlcluster.HelperProbePath
+	HelperProbePort = mysqlcluster.HelperProbePort
 )
 
 const (
 	// rcloneConfigFile represents the path to the file that contains rclon
 	// configs. This path should be the same as defined in docker entrypoint
-	// script from toolbox/docker-entrypoint.sh. /etc/rclone.conf
+	// script from mysql-helper/docker-entrypoint.sh. /etc/rclone.conf
 	RcloneConfigFile = "/etc/rclone.conf"
 )
 

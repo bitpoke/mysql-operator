@@ -102,7 +102,7 @@ func init() {
 }
 
 func getFakeFactory(ns string, cluster *api.MysqlCluster, client *fake.Clientset,
-	tiClient *fakeTiClient.Clientset) (*record.FakeRecorder, *cFactory) {
+	myClient *fakeTiClient.Clientset) (*record.FakeRecorder, *cFactory) {
 	if err := cluster.UpdateDefaults(opt); err != nil {
 		panic(err)
 	}
@@ -112,7 +112,7 @@ func getFakeFactory(ns string, cluster *api.MysqlCluster, client *fake.Clientset
 	return rec, &cFactory{
 		cluster:   cluster,
 		client:    client,
-		tiClient:  tiClient,
+		myClient:  myClient,
 		namespace: ns,
 		rec:       rec,
 	}
@@ -132,10 +132,10 @@ func assertEqual(t *testing.T, left, right interface{}, msg string) {
 func TestSyncClusterCreationNoSecret(t *testing.T) {
 	ns := DefaultNamespace
 	client := fake.NewSimpleClientset()
-	tiClient := fakeTiClient.NewSimpleClientset()
+	myClient := fakeTiClient.NewSimpleClientset()
 
 	cluster := newFakeCluster("test-1")
-	_, f := getFakeFactory(ns, cluster, client, tiClient)
+	_, f := getFakeFactory(ns, cluster, client, myClient)
 
 	ctx := context.TODO()
 	err := f.Sync(ctx)
@@ -151,13 +151,13 @@ func TestSyncClusterCreationNoSecret(t *testing.T) {
 func TestSyncClusterCreationWithSecret(t *testing.T) {
 	ns := DefaultNamespace
 	client := fake.NewSimpleClientset()
-	tiClient := fakeTiClient.NewSimpleClientset()
+	myClient := fakeTiClient.NewSimpleClientset()
 
 	sct := newFakeSecret("test-2", "Asd")
 	client.CoreV1().Secrets(ns).Create(sct)
 
 	cluster := newFakeCluster("test-2")
-	_, f := getFakeFactory(ns, cluster, client, tiClient)
+	_, f := getFakeFactory(ns, cluster, client, myClient)
 
 	ctx := context.TODO()
 	if err := f.Sync(ctx); err != nil {

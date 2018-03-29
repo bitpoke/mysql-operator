@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package apptitanium
+package apphelper
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	tb "github.com/presslabs/mysql-operator/cmd/toolbox/util"
+	tb "github.com/presslabs/mysql-operator/cmd/mysql-helper/util"
 )
 
 const (
@@ -132,12 +132,12 @@ func httpServer(stop <-chan struct{}) {
 	mux := http.NewServeMux()
 
 	// Add health endpoint
-	mux.HandleFunc(tb.TitaniumProbePath, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(tb.HelperProbePath, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", tb.TitaniumProbePort),
+		Addr:    fmt.Sprintf(":%d", tb.HelperProbePort),
 		Handler: mux,
 	}
 

@@ -53,7 +53,7 @@ type Controller struct {
 	namespace string
 
 	k8client kubernetes.Interface
-	tiClient ticlientset.Interface
+	myClient ticlientset.Interface
 	recorder record.EventRecorder
 
 	statefulSetLister appslisters.StatefulSetLister
@@ -68,8 +68,8 @@ type Controller struct {
 func New(
 	// kubernetes client
 	kubecli kubernetes.Interface,
-	// titanium clientset client
-	tiClient ticlientset.Interface,
+	// mysql clientset client
+	myClient ticlientset.Interface,
 	// mysql cluster informer
 	mysqlClusterInformer tiinformers.MysqlClusterInformer,
 	// event recorder
@@ -83,7 +83,7 @@ func New(
 	ctrl := &Controller{
 		namespace: namespace,
 		k8client:  kubecli,
-		tiClient:  tiClient,
+		myClient:  myClient,
 		recorder:  eventRecorder,
 	}
 

@@ -45,7 +45,7 @@ type cFactory struct {
 	namespace string
 
 	client   kubernetes.Interface
-	tiClient ticlientset.Interface
+	myClient ticlientset.Interface
 	rec      record.EventRecorder
 
 	configHash string
@@ -53,11 +53,11 @@ type cFactory struct {
 
 // New creates a new cluster factory
 func New(cluster *api.MysqlCluster, klient kubernetes.Interface,
-	tiClient ticlientset.Interface, ns string, rec record.EventRecorder) Interface {
+	myClient ticlientset.Interface, ns string, rec record.EventRecorder) Interface {
 	return &cFactory{
 		cluster:    cluster,
 		client:     klient,
-		tiClient:   tiClient,
+		myClient:   myClient,
 		namespace:  ns,
 		rec:        rec,
 		configHash: "1",

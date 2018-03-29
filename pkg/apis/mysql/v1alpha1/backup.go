@@ -33,6 +33,6 @@ func (c *MysqlBackup) AsOwnerReference() metav1.OwnerReference {
 	}
 }
 
-func (c *MysqlBackup) GetTitaniumImage() string {
-	return opt.TitaniumImage
+func (c *MysqlBackup) GetHelperImage() string {
+	return opt.HelperImage
 }

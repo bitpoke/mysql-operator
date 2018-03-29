@@ -34,7 +34,7 @@ func main() {
 	defer logs.FlushLogs()
 	stopCh := SetupSignalHandler()
 
-	cmd := app.NewTitaniumControllerCommand(os.Stdout, os.Stderr, stopCh)
+	cmd := app.NewControllerCommand(os.Stdout, os.Stderr, stopCh)
 	cmd.Flags().AddGoFlagSet(flag.CommandLine)
 	flag.CommandLine.Parse([]string{})
 	if err := cmd.Execute(); err != nil {

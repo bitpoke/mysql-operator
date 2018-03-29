@@ -25,19 +25,19 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	tiClientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	myClientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
 	"github.com/presslabs/mysql-operator/pkg/util"
 	"github.com/presslabs/mysql-operator/pkg/util/kube"
 )
 
 func RunCommand(stopCh <-chan struct{}, namespace, cluster string) error {
 	glog.Infof("Schedule backup for cluster: %s", cluster)
-	tiClient, err := getTitaniumClient()
+	myClient, err := getTitaniumClient()
 	if err != nil {
 		return fmt.Errorf("kube client config: %s", err)
 	}
 
-	backup, err := createBackup(tiClient, namespace, cluster)
+	backup, err := createBackup(myClient, namespace, cluster)
 	if err != nil {
 		return fmt.Errorf("create backup: %s", err)
 	}
@@ -50,11 +50,11 @@ func RunCommand(stopCh <-chan struct{}, namespace, cluster string) error {
 		case <-stopCh:
 			break
 		case <-time.After(time.Second):
-			b, err := tiClient.Mysql().MysqlBackups(namespace).Get(backup.Name, meta.GetOptions{})
+			b, err := myClient.Mysql().MysqlBackups(namespace).Get(backup.Name, meta.GetOptions{})
 			if err != nil {
 				glog.Warningf("Failed to get backup: %s", err)
 			}
-			if i, ok := util.BackupConditionIndex(api.BackupComplete, b.Status.Conditions); ok {
+			if i, ok := backupConditionIndex(api.BackupComplete, b.Status.Conditions); ok {
 				cond := b.Status.Conditions[i]
 				if cond.Status == core.ConditionTrue {
 					glog.Infof("Backup '%s' finished.", backup.Name)
@@ -69,9 +69,9 @@ func RunCommand(stopCh <-chan struct{}, namespace, cluster string) error {
 	return nil
 }
 
-func createBackup(tiClient tiClientset.Interface, ns, cluster string) (*api.MysqlBackup, error) {
+func createBackup(myClient myClientset.Interface, ns, cluster string) (*api.MysqlBackup, error) {
 	randStr := util.RandStringLowerLetters(10)
-	return tiClient.Mysql().MysqlBackups(ns).Create(&api.MysqlBackup{
+	return myClient.Mysql().MysqlBackups(ns).Create(&api.MysqlBackup{
 		ObjectMeta: meta.ObjectMeta{
 			Name: fmt.Sprintf("%s-recurent-backup-%s", cluster, randStr),
 			Labels: map[string]string{
@@ -84,7 +84,7 @@ func createBackup(tiClient tiClientset.Interface, ns, cluster string) (*api.Mysq
 	})
 }
 
-func getTitaniumClient() (tiClientset.Interface, error) {
+func getTitaniumClient() (myClientset.Interface, error) {
 	// Load the users Kubernetes config
 	// in cluster use
 	kubeCfg, err := kube.KubeConfig("")
@@ -94,10 +94,19 @@ func getTitaniumClient() (tiClientset.Interface, error) {
 	}
 
 	// Create a Navigator api client
-	tiClient, err := tiClientset.NewForConfig(kubeCfg)
+	myClient, err := myClientset.NewForConfig(kubeCfg)
 	if err != nil {
 		return nil, fmt.Errorf("error creating internal group client: %s", err.Error())
 	}
 
-	return tiClient, nil
+	return myClient, nil
+}
+
+func backupConditionIndex(ty api.BackupConditionType, cs []api.BackupCondition) (int, bool) {
+	for i, cond := range cs {
+		if cond.Type == ty {
+			return i, true
+		}
+	}
+	return 0, false
 }

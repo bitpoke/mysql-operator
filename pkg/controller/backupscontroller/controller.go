@@ -37,7 +37,7 @@ import (
 	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
 	ticlientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
 	tiinformers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions/mysql/v1alpha1"
-	titaniumlisters "github.com/presslabs/mysql-operator/pkg/generated/listers/mysql/v1alpha1"
+	mysqllisters "github.com/presslabs/mysql-operator/pkg/generated/listers/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/util"
 )
 
@@ -54,12 +54,12 @@ type Controller struct {
 	namespace string
 
 	k8client kubernetes.Interface
-	tiClient ticlientset.Interface
+	myClient ticlientset.Interface
 	recorder record.EventRecorder
 
 	jobLister     batchlisters.JobLister
-	backupsLister titaniumlisters.MysqlBackupLister
-	clusterLister titaniumlisters.MysqlClusterLister
+	backupsLister mysqllisters.MysqlBackupLister
+	clusterLister mysqllisters.MysqlClusterLister
 
 	queue       workqueue.RateLimitingInterface
 	workerWg    sync.WaitGroup
@@ -73,7 +73,7 @@ func New(
 	// kubernetes client
 	k8client kubernetes.Interface,
 	// clientset client
-	tiClient ticlientset.Interface,
+	myClient ticlientset.Interface,
 	// mysql backups informer
 	backupInformer tiinformers.MysqlBackupInformer,
 	// mysql clusters informer
@@ -89,7 +89,7 @@ func New(
 	ctrl := &Controller{
 		namespace: namespace,
 		k8client:  k8client,
-		tiClient:  tiClient,
+		myClient:  myClient,
 		recorder:  eventRecorder,
 	}
 	// queues

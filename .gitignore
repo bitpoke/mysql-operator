@@ -111,5 +111,3 @@ pylintrc
 
 # ignore bin
 bin/
-hack/docker/mysql-operator/mysql-operator
-hack/docker/toolbox/toolbox

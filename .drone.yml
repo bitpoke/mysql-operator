@@ -40,13 +40,13 @@ pipeline:
     when:
       event: tag
 
-  # publish-toolbox:
+  # publish-mysql-helper:
   #   group: publish
   #   image: plugins/docker
   #   mirror: https://mirror.gcr.io
   #   registry: gcr.io
-  #   repo: gcr.io/pl-infra/titanium-toolbox
-  #   dockerfile: hack/docker/toolbox/Dockerfile
+  #   repo: gcr.io/pl-infra/mysql-helper
+  #   dockerfile: hack/docker/mysql-helper/Dockerfile
   #   username: _json_key
   #   tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
   #   force_tag: true
@@ -59,7 +59,7 @@ pipeline:
   #     event: push
 
 #  e2e-tests:
-#    image: gcr.io/pl-infra/kluster-toolbox:latest
+#    image: gcr.io/pl-infra/kluster-mysql-helper:latest
 #    pull: true
 #    secrets:
 #      - GOOGLE_CREDENTIALS
@@ -67,7 +67,7 @@ pipeline:
 #      - TITANIUM_TEST_GS_CREDENTIALS
 #    environment:
 #      - TITANIUM_IMAGE_TAG=${DRONE_COMMIT_SHA:0:7}
-#      - OPERATOR_IMAGE=gcr.io/pl-infra/titanium-operator:${DRONE_COMMIT_SHA:0:7}
+#      - OPERATOR_IMAGE=gcr.io/pl-infra/mysql-operator:${DRONE_COMMIT_SHA:0:7}
 #      - KUBECONFIG=/go/.kube/config
 #    commands:
 #      - sleep 1

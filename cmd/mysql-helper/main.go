@@ -26,11 +26,11 @@ import (
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 
-	"github.com/presslabs/mysql-operator/cmd/toolbox/appclone"
-	"github.com/presslabs/mysql-operator/cmd/toolbox/appconf"
-	"github.com/presslabs/mysql-operator/cmd/toolbox/appschedulebackup"
-	"github.com/presslabs/mysql-operator/cmd/toolbox/apptakebackup"
-	"github.com/presslabs/mysql-operator/cmd/toolbox/apptitanium"
+	"github.com/presslabs/mysql-operator/cmd/mysql-helper/appclone"
+	"github.com/presslabs/mysql-operator/cmd/mysql-helper/appconf"
+	"github.com/presslabs/mysql-operator/cmd/mysql-helper/apphelper"
+	"github.com/presslabs/mysql-operator/cmd/mysql-helper/appschedulebackup"
+	"github.com/presslabs/mysql-operator/cmd/mysql-helper/apptakebackup"
 	"github.com/presslabs/mysql-operator/pkg/util/logs"
 )
 
@@ -40,12 +40,11 @@ func main() {
 	stopCh := SetupSignalHandler()
 
 	cmd := &cobra.Command{
-		Use:   "toolbox",
-		Short: fmt.Sprintf("Titanium operator toolbox."),
-		Long: `
-titanium-toolbox: helper for config pods`,
+		Use:   "mysql-helper",
+		Short: fmt.Sprintf("Helper for mysql operator."),
+		Long:  `mysql-helper: helper for config pods`,
 		Run: func(cmd *cobra.Command, args []string) {
-			glog.Fatal("Running toolbox, see help.")
+			glog.Fatal("you run mysql-helper, see help section.")
 		},
 	}
 
@@ -74,17 +73,17 @@ titanium-toolbox: helper for config pods`,
 	}
 	cmd.AddCommand(cloneCmd)
 
-	titaniumCmd := &cobra.Command{
+	helperCmd := &cobra.Command{
 		Use:   "run",
 		Short: "Configs mysql users, replication, and serve backups.",
 		Run: func(cmd *cobra.Command, args []string) {
-			err := apptitanium.RunRunCommand(stopCh)
+			err := apphelper.RunRunCommand(stopCh)
 			if err != nil {
 				glog.Fatalf("Run command failed with error: %s .", err)
 			}
 		},
 	}
-	cmd.AddCommand(titaniumCmd)
+	cmd.AddCommand(helperCmd)
 
 	takeBackupCmd := &cobra.Command{
 		Use:   "take-backup-to",

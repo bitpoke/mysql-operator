@@ -26,10 +26,10 @@ const (
 	// MysqlPort is the default mysql port.
 	MysqlPort = 3306
 
-	// TitaniumXtrabackupPortName is name of the port on which we take backups
-	TitaniumXtrabackupPortName = "xtrabackup"
-	// TitaniumXtrabackupPort is the port on which we serve backups
-	TitaniumXtrabackupPort = 3307
+	// HelperXtrabackupPortName is name of the port on which we take backups
+	HelperXtrabackupPortName = "xtrabackup"
+	// HelperXtrabackupPort is the port on which we serve backups
+	HelperXtrabackupPort = 3307
 
 	// OrcTopologyDir path where orc conf secret is mounted
 	OrcTopologyDir = "/var/run/orc-topology"
@@ -40,8 +40,8 @@ const (
 	// change
 	ConfigVersion = "2018-03-23:12:33"
 
-	TitaniumProbePath = "/health"
-	TitaniumProbePort = 8001
+	HelperProbePath = "/health"
+	HelperProbePort = 8001
 
 	ExporterPortName = "exporter"
 	ExporterPort     = 9104
