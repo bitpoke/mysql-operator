@@ -3,7 +3,7 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: mysqlclusters.titanium.presslabs.net
+  name: mysqlclusters.mysql.presslabs.net
   labels:
     app: {{ template "name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
@@ -11,7 +11,7 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   scope: Namespaced
-  group: titanium.presslabs.net
+  group: mysql.presslabs.net
   version: v1alpha1
   scope: Namespaced
   names:
@@ -41,7 +41,7 @@ spec:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: mysqlbackups.titanium.presslabs.net
+  name: mysqlbackups.mysql.presslabs.net
   labels:
     app: {{ template "name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
@@ -49,7 +49,7 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   scope: Namespaced
-  group: titanium.presslabs.net
+  group: mysql.presslabs.net
   version: v1alpha1
   scope: Namespaced
   names:

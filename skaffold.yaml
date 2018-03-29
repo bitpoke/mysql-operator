@@ -4,11 +4,9 @@ build:
   tagPolicy: sha256
   artifacts:
   - imageName: mysql-helper
-    dockerfilePath: hack/docker/mysql-helper/Dockerfile
-    workspace: .
+    workspace: hack/docker/mysql-helper
   - imageName: mysql-operator
-    dockerfilePath: Dockerfile
-    workspace: .
+    workspace: hack/docker/mysql-operator
   local:
     skipPush: true
 deploy:
