@@ -240,8 +240,12 @@ func getNameForResource(name ResourceName, clusterName string) string {
 }
 
 func (c *MysqlCluster) GetHealtySlaveHost() string {
-	host := fmt.Sprintf("%s-%d.%s", c.GetNameForResource(StatefulSet), c.Status.ReadyNodes-1,
-		c.GetNameForResource(HeadlessSVC))
+	if c.Status.ReadyNodes < 1 {
+		glog.Warning("[GetHealtySlaveHost]: no ready nodes yet!")
+		glog.V(2).Infof("[GetHealtySlaveHost]: The slave host is: %s", c.GetPodHostName(0))
+		return c.GetPodHostName(0)
+	}
+	host := c.GetPodHostName(c.Status.ReadyNodes - 1)
 
 	if len(c.Spec.GetOrcUri()) != 0 {
 		glog.V(2).Info("[GetHealtySlaveHost]: Use orchestrator to get slave host.")
@@ -253,7 +257,8 @@ func (c *MysqlCluster) GetHealtySlaveHost() string {
 		}
 		for _, r := range replicas {
 			if r.SecondsBehindMaster.Valid && r.SecondsBehindMaster.Int64 <= 5 {
-				glog.V(2).Infof("[GetHealtySlaveHost]: Using orc we choses: %s", r.Key.Hostname)
+				glog.V(2).Infof("[GetHealtySlaveHost]: Using orc we choses: %s",
+					r.Key.Hostname)
 				host = r.Key.Hostname
 			}
 		}

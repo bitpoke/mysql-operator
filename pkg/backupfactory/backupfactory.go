@@ -44,22 +44,22 @@ type bFactory struct {
 	cluster *api.MysqlCluster
 
 	k8Client kubernetes.Interface
-	tClient  clientset.Interface
+	myClient clientset.Interface
 }
 
 func New(backup *api.MysqlBackup, k8client kubernetes.Interface,
-	tclient clientset.Interface, cluster *api.MysqlCluster) Interface {
+	myClient clientset.Interface, cluster *api.MysqlCluster) Interface {
 	return &bFactory{
 		backup:   backup,
 		cluster:  cluster,
 		k8Client: k8client,
-		tClient:  tclient,
+		myClient: myClient,
 	}
 }
 
 func (f *bFactory) Sync(ctx context.Context) error {
 	meta := metav1.ObjectMeta{
-		Name:      fmt.Sprintf("%s-%s-backup", f.backup.Name, f.backup.Spec.ClusterName),
+		Name:      f.getJobName(),
 		Namespace: f.backup.Namespace,
 		Labels: map[string]string{
 			"cluster": f.backup.Spec.ClusterName,
@@ -78,6 +78,10 @@ func (f *bFactory) Sync(ctx context.Context) error {
 	})
 
 	return err
+}
+
+func (f *bFactory) getJobName() string {
+	return fmt.Sprintf("%s-%s-backup", f.backup.Name, f.backup.Spec.ClusterName)
 }
 
 func (f *bFactory) ensurePodSpec(in core.PodSpec) core.PodSpec {
@@ -128,7 +132,7 @@ func (f *bFactory) SetDefaults() error {
 			f.backup.Spec.BucketUri = getBucketUri(
 				f.cluster.Name, f.cluster.Spec.BackupBucketUri)
 		} else {
-			return fmt.Errorf("bucketURI not specified, neither in cluster")
+			return fmt.Errorf("bucketUri not specified, neither in cluster")
 		}
 	}
 

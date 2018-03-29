@@ -85,7 +85,7 @@ func GetClusterName() string {
 	hn := GetHostname()
 	l := strings.Split(hn, "-")
 
-	return l[0]
+	return strings.Join(l[:len(l)-1], "-")
 }
 
 func NodeRole() string {

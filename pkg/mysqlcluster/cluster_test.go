@@ -30,7 +30,7 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	fakeTiClient "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/fake"
+	fakeMyClient "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/fake"
 	"github.com/presslabs/mysql-operator/pkg/util/options"
 )
 
@@ -102,7 +102,7 @@ func init() {
 }
 
 func getFakeFactory(ns string, cluster *api.MysqlCluster, client *fake.Clientset,
-	myClient *fakeTiClient.Clientset) (*record.FakeRecorder, *cFactory) {
+	myClient *fakeMyClient.Clientset) (*record.FakeRecorder, *cFactory) {
 	if err := cluster.UpdateDefaults(opt); err != nil {
 		panic(err)
 	}
@@ -132,7 +132,7 @@ func assertEqual(t *testing.T, left, right interface{}, msg string) {
 func TestSyncClusterCreationNoSecret(t *testing.T) {
 	ns := DefaultNamespace
 	client := fake.NewSimpleClientset()
-	myClient := fakeTiClient.NewSimpleClientset()
+	myClient := fakeMyClient.NewSimpleClientset()
 
 	cluster := newFakeCluster("test-1")
 	_, f := getFakeFactory(ns, cluster, client, myClient)
@@ -151,12 +151,13 @@ func TestSyncClusterCreationNoSecret(t *testing.T) {
 func TestSyncClusterCreationWithSecret(t *testing.T) {
 	ns := DefaultNamespace
 	client := fake.NewSimpleClientset()
-	myClient := fakeTiClient.NewSimpleClientset()
+	myClient := fakeMyClient.NewSimpleClientset()
 
 	sct := newFakeSecret("test-2", "Asd")
 	client.CoreV1().Secrets(ns).Create(sct)
 
 	cluster := newFakeCluster("test-2")
+	cluster.Spec.BackupSchedule = "* * * *"
 	_, f := getFakeFactory(ns, cluster, client, myClient)
 
 	ctx := context.TODO()
@@ -196,7 +197,7 @@ func TestSyncClusterCreationWithSecret(t *testing.T) {
 		return
 	}
 
-	_, err = client.BatchV1().CronJobs(ns).Get(cluster.GetNameForResource(api.StatefulSet), metav1.GetOptions{})
+	_, err = client.BatchV1beta1().CronJobs(ns).Get(cluster.GetNameForResource(api.StatefulSet), metav1.GetOptions{})
 	if err != nil {
 		t.Fail()
 		return
