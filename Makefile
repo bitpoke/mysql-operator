@@ -8,7 +8,7 @@ PACKAGES := $(shell go list ./... | grep -v /vendor)
 GOFILES  := $(shell find $(SRCDIRS) -name '*.go' -type f | grep -v '_test.go')
 
 ifeq ($(APP_VERSION),)
-APP_VERSION := $(shell git describe --abbrev=4 --dirty --tags --always)
+APP_VERSION := $(shell git describe --abbrev=7 --dirty --tags --always)
 endif
 
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
@@ -37,7 +37,7 @@ DOCKER_BIN_CMDS := $(patsubst %, $(HACK_DIR)/docker/%/%, $(CMDS))
 .PHONY: build
 build: $(BIN_CMDS)
 
-bin/%: $(GOFILES)
+bin/%: $(GOFILES) Makefile
 	CGO_ENABLED=0 \
 	GOOS=$(shell echo "$*" | cut -d'_' -f2) \
 	GOARCH=$(shell echo "$*" | cut -d'_' -f3) \

@@ -42,3 +42,4 @@ docs/_build/
 bin/
 hack/docker/mysql-helper/mysql-helper
 hack/docker/mysql-operator/mysql-operator
+**/charts/*.tgz

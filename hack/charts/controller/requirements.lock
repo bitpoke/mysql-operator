@@ -1,6 +1,0 @@
-dependencies:
-- name: orc
-  repository: file://../orchestrator
-  version: 0.1.0
-digest: sha256:e7c35ffa45218ccb255dda66e6c1edd1fdd80add1936c4f70edb57858763a996
-generated: 2018-03-05T11:25:07.798735949+02:00

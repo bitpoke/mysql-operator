@@ -18,7 +18,7 @@ pipeline:
     username: presslabs+drone
     dockerfile: hack/docker/mysql-operator/Dockerfile
     context: hack/docker/mysql-operator
-    tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
+    tags: ["${DRONE_BRANCH/master/latest}"]
     secrets:
       - source: QUAY_TOKEN
         target: DOCKER_PASSWORD
@@ -39,6 +39,53 @@ pipeline:
         target: DOCKER_PASSWORD
     when:
       event: tag
+
+  publish-helper:
+    group: publish
+    image: plugins/docker
+    registry: quay.io
+    repo: quay.io/presslabs/mysql-helper
+    username: presslabs+drone
+    dockerfile: hack/docker/mysql-helper/Dockerfile
+    context: hack/docker/mysql-helper
+    tags: ["${DRONE_BRANCH/master/latest}"]
+    secrets:
+      - source: QUAY_TOKEN
+        target: DOCKER_PASSWORD
+    when:
+      event: push
+
+  publish-helper:
+    group: publish
+    image: plugins/docker
+    registry: quay.io
+    repo: quay.io/presslabs/mysql-helper
+    username: presslabs+drone
+    dockerfile: hack/docker/mysql-helper/Dockerfile
+    context: hack/docker/mysql-helper
+    tags: ["${DRONE_TAG}"]
+    secrets:
+      - source: QUAY_TOKEN
+        target: DOCKER_PASSWORD
+    when:
+      event: tag
+
+  publish-helm-chart:
+    group: publish
+    image: quay.io/presslabs/kluster-toolbox
+    pull: true
+    environment:
+      - GH_USER=presslabs-bot
+    commands:
+      - cd hack/charts
+      - (cd mysql-operator && helm dep build)
+      - helm package mysql-operator
+      - CHART="$(basename *.tgz)" ; MESSAGE="Publish $(basename $CHART .tgz)"
+      - /usr/local/bin/gh put --skip-existing -m "$MESSAGE" "$CHART" "presslabs/charts/docs/"
+    secrets:
+      - GH_PASSWORD
+    when:
+      branch: master
 
   # publish-mysql-helper:
   #   group: publish
