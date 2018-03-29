@@ -5,9 +5,11 @@ workspace:
 pipeline:
   build:
     image: golang:1.9
+    environment:
+      - APP_VERSION=${DRONE_TAG}
     commands:
-      - make build
       - make full-test
+      - make build
       - make install-docker
 
   publish-operator:
