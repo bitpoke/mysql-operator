@@ -119,22 +119,9 @@ func TestSync(t *testing.T) {
 		t.Fail()
 		return
 	}
-}
 
-// func TestSyncNoCluster(t *testing.T) {
-// 	client := fake.NewSimpleClientset()
-// 	myClient := fakeMyClient.NewSimpleClientset()
-//
-// 	backup := newFakeBackup("test-1", "")
-// 	f := getFakeFactory(backup, client, myClient)
-//
-// 	err := f.SetDefaults()
-// 	if err != nil {
-// 		t.Fail()
-// 	}
-// 	ctx := context.TODO()
-// 	err = f.Sync(ctx)
-// 	if err == nil {
-// 		t.Fail()
-// 	}
-// }
+	err = f.Sync(ctx)
+	if err != nil {
+		t.Fail()
+	}
+}
