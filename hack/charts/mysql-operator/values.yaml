@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 replicaCount: 1
-image: quay.io/presslabs/mysql-operator:latest
+image: quay.io/presslabs/mysql-operator:v0.1.1
 imagePullPolicy: IfNotPresent
 
 resources: {}
