@@ -28,8 +28,6 @@ installCRDs: true
 
 orchestrator:
   orchestratorConf:
-    RaftAdvertise: "{{ .Env.HOSTNAME }}.mysql-operator-orchestrator-headless"
-
     # the operator is handling the registries, do not auto discover
     DiscoverByShowSlaveHosts: false
     # forget missing instances automatically

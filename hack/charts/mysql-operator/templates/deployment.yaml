@@ -26,7 +26,7 @@ spec:
           args:
             - --orchestrator-uri=http://{{ template "mysql-operator.orchestrator.fullname" . }}.{{ .Release.Namespace }}/api
             - --orchestrator-secret={{ template "mysql-operator.orchestrator.fullname" . }}
-            {{- if .Values.helperImage -}}
+            {{- if .Values.helperImage }}
             - --helper-image={{ .Values.helperImage }}
             {{- end -}}
             {{- range $arg := .Values.extraArgs }}

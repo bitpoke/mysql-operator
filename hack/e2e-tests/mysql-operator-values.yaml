@@ -1,0 +1,3 @@
+orchestrator:
+  antiAffinity: soft
+  replicas: 1

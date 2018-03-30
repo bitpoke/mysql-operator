@@ -3,9 +3,9 @@ kind: Config
 build:
   tagPolicy: sha256
   artifacts:
-  - imageName: mysql-helper
+  - imageName: quay.io/presslabs/mysql-helper
     workspace: hack/docker/mysql-helper
-  - imageName: mysql-operator
+  - imageName: quay.io/presslabs/mysql-operator
     workspace: hack/docker/mysql-operator
   local:
     skipPush: true
@@ -13,7 +13,8 @@ deploy:
   helm:
     releases:
     - name: test
-      chartPath: hack/charts/controller
+      chartPath: hack/charts/mysql-operator
+      valuesFilePath: hack/e2e-tests/mysql-operator-values.yaml
       values:
-        image: mysql-operator
-        conf.helper-image: mysql-helper
+        image: quay.io/presslabs/mysql-operator
+        helperImage: quay.io/presslabs/mysql-helper
