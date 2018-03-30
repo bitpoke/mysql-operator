@@ -68,7 +68,7 @@ const (
 	statusUpToDate = "up-to-date"
 	statusCreated  = "created"
 	statusUpdated  = "updated"
-	statusFailed    = "faild"
+	statusFailed   = "faild"
 	statusOk       = "ok"
 	statusSkip     = "skip"
 )
@@ -154,7 +154,7 @@ func (f *cFactory) Sync(ctx context.Context) error {
 		for i := 0; i < int(f.cluster.Status.ReadyNodes); i++ {
 			host := f.getHostForReplica(i)
 			if err := client.Discover(host, MysqlPort); err != nil {
-				glog.Infof("Failed to register into orchestrator host: %s", host)
+				glog.Infof("Failed to register %s with orchestrator: %s", host, err.Error())
 			}
 		}
 	}
@@ -174,6 +174,7 @@ func (f *cFactory) getOwnerReferences(ors ...[]metav1.OwnerReference) []metav1.O
 }
 
 func (f *cFactory) getHostForReplica(no int) string {
-	return fmt.Sprintf("%s-%d.%s", f.cluster.GetNameForResource(api.StatefulSet), no,
-		f.cluster.GetNameForResource(api.HeadlessSVC))
+	return fmt.Sprintf("%s-%d.%s.%s", f.cluster.GetNameForResource(api.StatefulSet), no,
+		f.cluster.GetNameForResource(api.HeadlessSVC),
+		f.cluster.Namespace)
 }

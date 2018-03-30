@@ -27,6 +27,6 @@ const (
 	DefaultBackupPodHTTPPort = 19999
 
 	EnvOperatorPodName            = "MY_POD_NAME"
-	EnvOperatorPodNamespace       = "MY_POD_NAMESPACE"
+	EnvOperatorPodNamespace       = "MY_NAMESPACE"
 	EnvRestoreOperatorServiceName = "SERVICE_ADDR"
 )

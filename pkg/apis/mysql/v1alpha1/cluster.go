@@ -232,10 +232,10 @@ const (
 )
 
 func (c *MysqlCluster) GetNameForResource(name ResourceName) string {
-	return getNameForResource(name, c.Name)
+	return GetNameForResource(name, c.Name)
 }
 
-func getNameForResource(name ResourceName, clusterName string) string {
+func GetNameForResource(name ResourceName, clusterName string) string {
 	return fmt.Sprintf("%s-mysql", clusterName)
 }
 
@@ -273,12 +273,13 @@ func (c *MysqlCluster) GetMasterHost() string {
 	// connect to orc and get the master host of the cluster.
 	if len(c.Spec.GetOrcUri()) != 0 {
 		client := orc.NewFromUri(c.Spec.GetOrcUri())
-		if inst, err := client.Master(c.Name); err == nil {
+		orcClusterName := fmt.Sprintf("%s.%s", c.Name, c.Namespace)
+		if inst, err := client.Master(orcClusterName); err == nil {
 			masterHost = inst.Key.Hostname
 		} else {
-			glog.Warning(
-				"[GetMasterHost]: Failed to connect to orcheatratoro: %s, failback to default",
-				err,
+			glog.Warningf(
+				"Failed getting master for %s: %s, falling back to default.",
+				orcClusterName, err,
 			)
 		}
 	}

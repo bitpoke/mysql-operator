@@ -37,7 +37,7 @@ orchestrator:
     HostnameResolveMethod: "none"
     MySQLHostnameResolveMethod: "@@report_host"
     RemoveTextFromHostnameDisplay: ":3306"
-    DetectClusterAliasQuery: "SELECT SUBSTRING(@@hostname, 1, LENGTH(@@hostname) - 1 - LENGTH(SUBSTRING_INDEX(@@hostname,'-',-2)))"
+    DetectClusterAliasQuery: "SELECT CONCAT(SUBSTRING(@@hostname, 1, LENGTH(@@hostname) - 1 - LENGTH(SUBSTRING_INDEX(@@hostname,'-',-2))),'.',SUBSTRING_INDEX(@@report_host,'.',-1))"
     DetectInstanceAliasQuery: "SELECT @@hostname"
 
     # Automated recovery (this is opt-in, so we need to set these)

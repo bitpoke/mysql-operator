@@ -122,9 +122,50 @@ func (f *cFactory) ensureContainer(in core.Container, name, image string, args [
 	in.ImagePullPolicy = f.cluster.Spec.PodSpec.ImagePullPolicy
 	in.Args = args
 	in.EnvFrom = f.getEnvSourcesFor(name)
+	in.Env = f.getDefaultEnv()
 	in.VolumeMounts = f.getVolumeMountsFor(name)
 
 	return in
+}
+
+func (f *cFactory) getDefaultEnv() (env []core.EnvVar) {
+	env = append(env, core.EnvVar{
+		Name: "MY_NAMESPACE",
+		ValueFrom: &core.EnvVarSource{
+			FieldRef: &core.ObjectFieldSelector{
+				FieldPath: "metadata.namespace",
+			},
+		},
+	})
+	env = append(env, core.EnvVar{
+		Name: "MY_POD_NAME",
+		ValueFrom: &core.EnvVarSource{
+			FieldRef: &core.ObjectFieldSelector{
+				FieldPath: "metadata.name",
+			},
+		},
+	})
+	env = append(env, core.EnvVar{
+		Name: "MY_POD_IP",
+		ValueFrom: &core.EnvVarSource{
+			FieldRef: &core.ObjectFieldSelector{
+				FieldPath: "status.podIP",
+			},
+		},
+	})
+	env = append(env, core.EnvVar{
+		Name:  "MY_SERVICE_NAME",
+		Value: f.cluster.GetNameForResource(api.HeadlessSVC),
+	})
+	env = append(env, core.EnvVar{
+		Name:  "MY_CLUSTER_NAME",
+		Value: f.cluster.Name,
+	})
+	env = append(env, core.EnvVar{
+		Name:  "MY_FQDN",
+		Value: "$(MY_POD_NAME).$(MY_SERVICE_NAME).$(MY_NAMESPACE)",
+	})
+	return
 }
 
 func (f *cFactory) ensureInitContainersSpec(in []core.Container) []core.Container {

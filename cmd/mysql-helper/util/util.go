@@ -82,10 +82,15 @@ func GetHostname() string {
 }
 
 func GetClusterName() string {
-	hn := GetHostname()
-	l := strings.Split(hn, "-")
+	return getEnvValue("MY_CLUSTER_NAME")
+}
 
-	return strings.Join(l[:len(l)-2], "-")
+func GetNamespace() string {
+	return getEnvValue("MY_NAMESPACE")
+}
+
+func GetServiceName() string {
+	return getEnvValue("MY_SERVICE_NAME")
 }
 
 func NodeRole() string {
@@ -93,7 +98,6 @@ func NodeRole() string {
 		return "master"
 	}
 	return "slave"
-
 }
 
 func getOrdinal() int {
@@ -117,9 +121,10 @@ func GetServerId() int {
 
 // GetHostFor returns the host for given server id
 func GetHostFor(id int) string {
-	base := fmt.Sprintf("%s-%s", GetClusterName(), NameOfStatefulSet)
-	govSVC := getEnvValue("TITANIUM_HEADLESS_SERVICE")
-	return fmt.Sprintf("%s-%d.%s", base, id-100, govSVC)
+	base := api.GetNameForResource(NameOfStatefulSet, GetClusterName())
+	govSVC := GetServiceName()
+	namespace := GetNamespace()
+	return fmt.Sprintf("%s-%d.%s.%s", base, id-100, govSVC, namespace)
 }
 
 func getEnvValue(key string) string {
@@ -169,8 +174,10 @@ func GetMasterHost() string {
 		return GetHostFor(100)
 	}
 
+	fqClusterName := fmt.Sprintf("%s.%s", GetClusterName(), GetNamespace())
+
 	client := orc.NewFromUri(orcUri)
-	inst, err := client.Master(GetClusterName())
+	inst, err := client.Master(fqClusterName)
 	if err != nil {
 		glog.Errorf("Failed to connect to orc for finding master, err: %s."+
 			" Fallback to determine master by its id.", err)
