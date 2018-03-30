@@ -122,13 +122,15 @@ func (f *cFactory) ensureContainer(in core.Container, name, image string, args [
 	in.ImagePullPolicy = f.cluster.Spec.PodSpec.ImagePullPolicy
 	in.Args = args
 	in.EnvFrom = f.getEnvSourcesFor(name)
-	in.Env = f.getDefaultEnv()
+	in.Env = f.getEnvFor(name)
 	in.VolumeMounts = f.getVolumeMountsFor(name)
 
 	return in
 }
 
-func (f *cFactory) getDefaultEnv() (env []core.EnvVar) {
+func (f *cFactory) getEnvFor(name string) (env []core.EnvVar) {
+	boolTrue := true
+
 	env = append(env, core.EnvVar{
 		Name: "MY_NAMESPACE",
 		ValueFrom: &core.EnvVarSource{
@@ -165,6 +167,97 @@ func (f *cFactory) getDefaultEnv() (env []core.EnvVar) {
 		Name:  "MY_FQDN",
 		Value: "$(MY_POD_NAME).$(MY_SERVICE_NAME).$(MY_NAMESPACE)",
 	})
+	env = append(env, core.EnvVar{
+		Name:  "ORCHESTRATOR_URI",
+		Value: f.cluster.Spec.GetOrcUri(),
+	})
+
+	if len(f.cluster.Spec.InitBucketURI) > 0 && name == containerCloneName {
+		env = append(env, core.EnvVar{
+			Name:  "INIT_BUCKET_URI",
+			Value: f.cluster.Spec.InitBucketURI,
+		})
+	}
+
+	switch name {
+	case containerExporterName:
+		env = append(env, core.EnvVar{
+			Name: "USER",
+			ValueFrom: &core.EnvVarSource{
+				SecretKeyRef: &core.SecretKeySelector{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: f.cluster.Spec.SecretName,
+					},
+					Key: "METRICS_EXPORTER_USER",
+				},
+			},
+		})
+		env = append(env, core.EnvVar{
+			Name: "PASSWORD",
+			ValueFrom: &core.EnvVarSource{
+				SecretKeyRef: &core.SecretKeySelector{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: f.cluster.Spec.SecretName,
+					},
+					Key: "METRICS_EXPORTER_PASSWORD",
+				},
+			},
+		})
+		env = append(env, core.EnvVar{
+			Name:  "DATA_SOURCE_NAME",
+			Value: fmt.Sprintf("$(USER):$(PASSWORD)@(127.0.0.1:%d)/", MysqlPort),
+		})
+	case containerMysqlName:
+		env = append(env, core.EnvVar{
+			Name: "MYSQL_ROOT_PASSWORD",
+			ValueFrom: &core.EnvVarSource{
+				SecretKeyRef: &core.SecretKeySelector{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: f.cluster.Spec.SecretName,
+					},
+					Key: "ROOT_PASSWORD",
+				},
+			},
+		})
+		env = append(env, core.EnvVar{
+			Name: "MYSQL_USER",
+			ValueFrom: &core.EnvVarSource{
+				SecretKeyRef: &core.SecretKeySelector{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: f.cluster.Spec.SecretName,
+					},
+					Key:      "USER",
+					Optional: &boolTrue,
+				},
+			},
+		})
+		env = append(env, core.EnvVar{
+			Name: "MYSQL_PASSWORD",
+			ValueFrom: &core.EnvVarSource{
+				SecretKeyRef: &core.SecretKeySelector{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: f.cluster.Spec.SecretName,
+					},
+					Key:      "PASSWORD",
+					Optional: &boolTrue,
+				},
+			},
+		})
+		env = append(env, core.EnvVar{
+			Name: "MYSQL_DATABASE",
+			ValueFrom: &core.EnvVarSource{
+				SecretKeyRef: &core.SecretKeySelector{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: f.cluster.Spec.SecretName,
+					},
+					Key:      "DATABASE",
+					Optional: &boolTrue,
+				},
+			},
+		})
+	}
+
+	//if len(f.cluster.Spec.GetOrcTopologySecret()) != 0 {
 	return
 }
 
@@ -271,12 +364,6 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 
 func (f *cFactory) ensureVolumes(in []core.Volume) []core.Volume {
 	noVolumes := 3
-	orcVolume := false
-	if len(f.cluster.Spec.GetOrcTopologySecret()) != 0 {
-		noVolumes += 1
-		orcVolume = true
-	}
-
 	if len(in) != noVolumes {
 		in = make([]core.Volume, noVolumes)
 	}
@@ -301,15 +388,6 @@ func (f *cFactory) ensureVolumes(in []core.Volume) []core.Volume {
 		},
 	})
 
-	if orcVolume {
-		in[3] = ensureVolume(in[3], orcSecretVolumeName, core.VolumeSource{
-			Secret: &core.SecretVolumeSource{
-				SecretName:  f.cluster.Spec.GetOrcTopologySecret(),
-				DefaultMode: &fileMode,
-			},
-		})
-	}
-
 	return in
 }
 
@@ -327,19 +405,18 @@ func (f *cFactory) ensureVolumeClaimTemplates(in []core.PersistentVolumeClaim) [
 	return in
 }
 
-func (f *cFactory) getEnvSourcesFor(name string) []core.EnvFromSource {
-	ss := []core.EnvFromSource{
-		envFromSecret(f.cluster.GetNameForResource(api.EnvSecret)),
+func (f *cFactory) getEnvSourcesFor(name string) (envSources []core.EnvFromSource) {
+	if name == containerCloneName && len(f.cluster.Spec.InitBucketSecretName) > 0 {
+		envSources = append(envSources, core.EnvFromSource{
+			SecretRef: &core.SecretEnvSource{
+				LocalObjectReference: core.LocalObjectReference{
+					Name: f.cluster.Spec.InitBucketSecretName,
+				},
+			},
+		})
 	}
-	switch name {
-	case containerHelperName:
-		// helper container env source
-	case containerCloneName:
-		if len(f.cluster.Spec.InitBucketSecretName) != 0 {
-			ss = append(ss, envFromSecret(f.cluster.Spec.InitBucketSecretName))
-		}
-	case containerMysqlName:
-		ss = append(ss, core.EnvFromSource{
+	if name == containerHelperName {
+		envSources = append(envSources, core.EnvFromSource{
 			Prefix: "MYSQL_",
 			SecretRef: &core.SecretEnvSource{
 				LocalObjectReference: core.LocalObjectReference{
@@ -347,31 +424,11 @@ func (f *cFactory) getEnvSourcesFor(name string) []core.EnvFromSource {
 				},
 			},
 		})
-	case containerExporterName:
-		// metrics exporter env
 	}
-	return ss
+	return
 }
 
 func (f *cFactory) getVolumeMountsFor(name string) []core.VolumeMount {
-	commonVolumeMounts := []core.VolumeMount{
-		core.VolumeMount{
-			Name:      confVolumeName,
-			MountPath: ConfVolumeMountPath,
-		},
-		core.VolumeMount{
-			Name:      dataVolumeName,
-			MountPath: DataVolumeMountPath,
-		},
-	}
-
-	helperVolumeMounts := commonVolumeMounts
-	if len(f.cluster.Spec.GetOrcTopologySecret()) != 0 {
-		helperVolumeMounts = append(commonVolumeMounts, core.VolumeMount{
-			Name:      "orc-topology-secret",
-			MountPath: OrcTopologyDir,
-		})
-	}
 	switch name {
 	case containerInitName:
 		return []core.VolumeMount{
@@ -385,26 +442,19 @@ func (f *cFactory) getVolumeMountsFor(name string) []core.VolumeMount {
 			},
 		}
 
-	case containerCloneName:
-		return commonVolumeMounts
-
-	case containerMysqlName:
-		return commonVolumeMounts
-
-	case containerHelperName:
-		return helperVolumeMounts
+	case containerCloneName, containerMysqlName, containerHelperName:
+		return []core.VolumeMount{
+			core.VolumeMount{
+				Name:      confVolumeName,
+				MountPath: ConfVolumeMountPath,
+			},
+			core.VolumeMount{
+				Name:      dataVolumeName,
+				MountPath: DataVolumeMountPath,
+			},
+		}
 	}
 	return nil
-}
-
-func envFromSecret(name string) core.EnvFromSource {
-	return core.EnvFromSource{
-		SecretRef: &core.SecretEnvSource{
-			LocalObjectReference: core.LocalObjectReference{
-				Name: name,
-			},
-		},
-	}
 }
 
 func ensureVolume(in core.Volume, name string, source core.VolumeSource) core.Volume {

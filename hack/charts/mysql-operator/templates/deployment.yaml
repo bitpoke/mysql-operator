@@ -23,9 +23,20 @@ spec:
         - name: mysql-operator
           image: "{{ .Values.image }}"
           imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            - name: ORC_TOPOLOGY_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "mysql-operator.orchestrator.fullname" . }}
+                  key: TOPOLOGY_USER
+            - name: ORC_TOPOLOGY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "mysql-operator.orchestrator.fullname" . }}
+                  key: TOPOLOGY_PASSWORD
           args:
             - --orchestrator-uri=http://{{ template "mysql-operator.orchestrator.fullname" . }}.{{ .Release.Namespace }}/api
-            - --orchestrator-secret={{ template "mysql-operator.orchestrator.fullname" . }}
+            - --leader-election-namespace={{ .Release.Namespace }}
             {{- if .Values.helperImage }}
             - --helper-image={{ .Values.helperImage }}
             {{- end -}}

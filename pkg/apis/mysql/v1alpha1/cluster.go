@@ -144,12 +144,6 @@ func (c *ClusterSpec) GetOrcUri() string {
 	return opt.OrchestratorUri
 }
 
-// GetOrcTopologySecret return the name of the secret that contains the
-// credentaials for orc to connect to mysql nodes.
-func (c *ClusterSpec) GetOrcTopologySecret() string {
-	return opt.OrchestratorTopologySecretName
-}
-
 // GetMysqlImage returns mysql image, composed from oprions and  Spec.MysqlVersion
 func (c *ClusterSpec) GetMysqlImage() string {
 	return opt.MysqlImage + ":" + c.MysqlVersion

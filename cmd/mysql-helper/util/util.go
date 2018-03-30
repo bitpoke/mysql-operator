@@ -137,33 +137,33 @@ func getEnvValue(key string) string {
 }
 
 // GetReplUser returns the replication user name from env variable
-// TITANIUM_REPLICATION_USER
+// MYSQL_REPLICATION_USER
 func GetReplUser() string {
-	return getEnvValue("TITANIUM_REPLICATION_USER")
+	return getEnvValue("MYSQL_REPLICATION_USER")
 }
 
 // GetReplPass returns the replication password from env variable
-// TITANIUM_REPLICATION_PASSWORD
+// MYSQL_REPLICATION_PASSWORD
 func GetReplPass() string {
-	return getEnvValue("TITANIUM_REPLICATION_PASSWORD")
+	return getEnvValue("MYSQL_REPLICATION_PASSWORD")
 }
 
 // GetExporterUser returns the replication user name from env variable
-// TITANIUM_EXPORTER_USER
+// MYSQL_METRICS_EXPORTER_USER
 func GetExporterUser() string {
-	return getEnvValue("TITANIUM_EXPORTER_USER")
+	return getEnvValue("MYSQL_METRICS_EXPORTER_USER")
 }
 
 // GetExporterPass returns the replication password from env variable
-// TITANIUM_EXPORTER_PASSWORD
+// MYSQL_METRICS_EXPORTER_PASSWORD
 func GetExporterPass() string {
-	return getEnvValue("TITANIUM_EXPORTER_PASSWORD")
+	return getEnvValue("MYSQL_METRICS_EXPORTER_PASSWORD")
 }
 
 // GetInitBucket returns the bucket uri from env variable
-// TITANIUM_INIT_BUCKET_URI
+// INIT_BUCKET_URI
 func GetInitBucket() string {
-	return getEnvValue("TITANIUM_INIT_BUCKET_URI")
+	return getEnvValue("INIT_BUCKET_URI")
 }
 
 // GetMasterHost returns the master host
@@ -187,16 +187,16 @@ func GetMasterHost() string {
 	return inst.Key.Hostname
 }
 
-// GetOrcTopologyUser returns the orchestrator topology user. It is readed from
-// /var/run/orc-topology/TOPOLOGY_USER
+// GetOrcTopologyUser returns the orchestrator topology user from env variable
+// MYSQL_ORC_TOPOLOGY_USER
 func GetOrcUser() string {
-	return readFileContent(OrcTopologyDir + "/TOPOLOGY_USER")
+	return getEnvValue("MYSQL_ORC_TOPOLOGY_USER")
 }
 
-// GetOrcTopologyPass returns the orchestrator topology user. It is readed from
-// /var/run/orc-topology/TOPOLOGY_PASSWORD
+// GetOrcTopologyPass returns the orchestrator topology passowrd from env variable
+// MYSQL_ORC_TOPOLOGY_PASSWORD
 func GetOrcPass() string {
-	return readFileContent(OrcTopologyDir + "/TOPOLOGY_PASSWORD")
+	return getEnvValue("MYSQL_ORC_TOPOLOGY_PASSWORD")
 }
 
 func readFileContent(fileName string) string {
@@ -259,7 +259,7 @@ func RunQuery(q string) (string, error) {
 }
 
 func getOrcUri() string {
-	return getEnvValue("TITANIUM_ORC_URI")
+	return getEnvValue("ORCHESTRATOR_URI")
 }
 
 // CopyFile the src file to dst. Any existing file will be overwritten and will not

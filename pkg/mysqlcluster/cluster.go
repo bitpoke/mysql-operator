@@ -40,7 +40,7 @@ type Interface interface {
 // cluster factory
 type cFactory struct {
 	cluster *api.MysqlCluster
-	opt     options.Options
+	opt     *options.Options
 
 	namespace string
 
@@ -52,10 +52,11 @@ type cFactory struct {
 }
 
 // New creates a new cluster factory
-func New(cluster *api.MysqlCluster, klient kubernetes.Interface,
+func New(cluster *api.MysqlCluster, opt *options.Options, klient kubernetes.Interface,
 	myClient ticlientset.Interface, ns string, rec record.EventRecorder) Interface {
 	return &cFactory{
 		cluster:    cluster,
+		opt:        opt,
 		client:     klient,
 		myClient:   myClient,
 		namespace:  ns,
@@ -87,18 +88,11 @@ type component struct {
 func (f *cFactory) getComponents() []component {
 	return []component{
 		component{
-			alias:        "db-secret",
-			name:         fmt.Sprintf("db-credentials(%s)", f.cluster.Spec.SecretName),
-			syncFn:       f.syncDbCredentialsSecret,
+			alias:        "cluster-secret",
+			name:         f.cluster.Spec.SecretName,
+			syncFn:       f.syncClusterSecret,
 			reasonFailed: api.EventReasonDbSecretFailed,
 			erUpdated:    api.EventReasonDbSecretUpdated,
-		},
-		component{
-			alias:        "env-secret",
-			name:         f.cluster.GetNameForResource(api.EnvSecret),
-			syncFn:       f.syncEnvSecret,
-			reasonFailed: api.EventReasonEnvSecretFailed,
-			erUpdated:    api.EventReasonEnvSecretUpdated,
 		},
 		component{
 			alias:        "config-map",
@@ -135,12 +129,13 @@ func (f *cFactory) Sync(ctx context.Context) error {
 	for _, comp := range f.getComponents() {
 		state, err := comp.syncFn()
 		if err != nil {
-			glog.V(2).Infof("[%s]: %s ... (%s)", comp.alias, comp.name, state)
-			err = fmt.Errorf("%s faild to sync with err: %s", comp.name, err)
+			glog.Warningf("[%s]: failed syncing %s: ", comp.alias, comp.name, err.Error())
+			err = fmt.Errorf("%s sync failed: %s", comp.name, err)
 			f.rec.Event(f.cluster, api.EventWarning, comp.reasonFailed, err.Error())
 			return err
+		} else {
+			glog.V(2).Infof("[%s]: %s ... (%s)", comp.alias, comp.name, state)
 		}
-		glog.V(2).Infof("[%s]: %s ... (%s)", comp.alias, comp.name, state)
 		switch state {
 		case statusCreated, statusUpdated:
 			f.rec.Event(f.cluster, api.EventNormal, comp.erUpdated, "")
@@ -154,7 +149,7 @@ func (f *cFactory) Sync(ctx context.Context) error {
 		for i := 0; i < int(f.cluster.Status.ReadyNodes); i++ {
 			host := f.getHostForReplica(i)
 			if err := client.Discover(host, MysqlPort); err != nil {
-				glog.Infof("Failed to register %s with orchestrator: %s", host, err.Error())
+				glog.Warningf("Failed to register %s with orchestrator: %s", host, err.Error())
 			}
 		}
 	}

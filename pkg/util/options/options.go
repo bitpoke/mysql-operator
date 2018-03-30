@@ -17,6 +17,7 @@ limitations under the License.
 package options
 
 import (
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +27,14 @@ import (
 
 	"github.com/presslabs/mysql-operator/pkg/util"
 )
+
+func EnvDefault(key, def string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return def
+	}
+	return value
+}
 
 type Options struct {
 	mysqlImage string
@@ -40,8 +49,9 @@ type Options struct {
 	ImagePullSecretName string
 	ImagePullPolicy     v1.PullPolicy
 
-	OrchestratorUri                string
-	OrchestratorTopologySecretName string
+	OrchestratorUri              string
+	OrchestratorTopologyPassword string
+	OrchestratorTopologyUser     string
 
 	JobCompleteSuccessGraceTime time.Duration
 }
@@ -51,13 +61,10 @@ const (
 	defaultExporterImage = "prom/mysqld-exporter:latest"
 
 	defaultImagePullPolicy = v1.PullIfNotPresent
-	orcURI                 = ""
-	orcSCRT                = ""
 )
 
 var (
-	defaultHelperImage = "quay.io/presslabs/mysql-helper:" + util.AppVersion
-
+	defaultHelperImage  = "quay.io/presslabs/mysql-helper:" + util.AppVersion
 	defaultJobGraceTime = 24 * time.Hour
 )
 
@@ -70,10 +77,12 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 		"The image for mysql metrics exporter.")
 	fs.StringVar(&o.ImagePullSecretName, "pull-secret", "",
 		"The secret name for used as pull secret.")
-	fs.StringVar(&o.OrchestratorUri, "orchestrator-uri", orcURI,
+	fs.StringVar(&o.OrchestratorUri, "orchestrator-uri", "",
 		"The orchestrator uri")
-	fs.StringVar(&o.OrchestratorTopologySecretName, "orchestrator-secret", orcURI,
-		"The orchestrator topology secret name.")
+	fs.StringVar(&o.OrchestratorTopologyPassword, "orchestrator-topology-password", "",
+		"The orchestrator topology password. Can also be set as ORC_TOPOLOGY_PASSWORD environment variable.")
+	fs.StringVar(&o.OrchestratorTopologyUser, "orchestrator-topology-user", "",
+		"The orchestrator topology user. Can also be set as ORC_TOPOLOGY_USER environment variable.")
 	fs.DurationVar(&o.JobCompleteSuccessGraceTime, "job-grace-time", defaultJobGraceTime,
 		"The time in hours how jobs after completion are keept.")
 }
@@ -101,5 +110,11 @@ func (o *Options) Validate() error {
 	i := strings.Split(o.mysqlImage, ":")
 	o.MysqlImage = i[0]
 	o.MysqlImageTag = i[1]
+	if len(o.OrchestratorTopologyUser) == 0 {
+		o.OrchestratorTopologyUser = EnvDefault("ORC_TOPOLOGY_USER", "")
+	}
+	if len(o.OrchestratorTopologyPassword) == 0 {
+		o.OrchestratorTopologyPassword = EnvDefault("ORC_TOPOLOGY_PASSWORD", "")
+	}
 	return nil
 }

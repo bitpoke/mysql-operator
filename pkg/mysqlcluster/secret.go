@@ -23,16 +23,11 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
+
+	"github.com/presslabs/mysql-operator/pkg/util"
 )
 
-type dbCreds struct {
-	User         string
-	Password     string
-	Database     string
-	RootPassword string
-}
-
-func (f *cFactory) syncDbCredentialsSecret() (state string, err error) {
+func (f *cFactory) syncClusterSecret() (state string, err error) {
 	state = statusUpToDate
 	if len(f.cluster.Spec.SecretName) == 0 {
 		err = fmt.Errorf("the Spec.SecretName is empty")
@@ -51,32 +46,25 @@ func (f *cFactory) syncDbCredentialsSecret() (state string, err error) {
 
 	_, act, err := kcore.PatchSecret(f.client, secret,
 		func(in *core.Secret) *core.Secret {
-			var creds dbCreds
 			if _, ok := in.Data["ROOT_PASSWORD"]; !ok {
 				runtime.HandleError(fmt.Errorf("ROOT_PASSWORD not set in secret: %s", in.Name))
 				return in
 			}
 
-			creds.RootPassword = string(in.Data["ROOT_PASSWORD"])
-			creds.User = "root"
-			creds.Password = creds.RootPassword
-			creds.Database = ""
-
-			u, oku := in.Data["USER"]
-			p, okp := in.Data["PASSWORD"]
-			if oku && okp {
-				creds.User = string(u)
-				creds.Password = string(p)
+			if len(in.Data["REPLICATION_USER"]) == 0 {
+				in.Data["REPLICATION_USER"] = []byte("repl_" + util.RandStringUser(5))
 			}
-			if d, ok := in.Data["DATABASE"]; ok {
-				creds.Database = string(d)
+			if len(in.Data["REPLICATION_PASSWORD"]) == 0 {
+				in.Data["REPLICATION_PASSWORD"] = []byte(util.RandomString(rStrLen))
 			}
-
-			in.Data["DB_CONNECT_URL"] = []byte(fmt.Sprintf(
-				"mysql://%s:%s@%s/%s",
-				creds.User, creds.Password, f.cluster.GetMasterHost(), creds.Database,
-			))
-
+			if len(in.Data["METRICS_EXPORTER_USER"]) == 0 {
+				in.Data["METRICS_EXPORTER_USER"] = []byte("repl_" + util.RandStringUser(5))
+			}
+			if len(in.Data["METRICS_EXPORTER_PASSWORD"]) == 0 {
+				in.Data["METRICS_EXPORTER_PASSWORD"] = []byte(util.RandomString(rStrLen))
+			}
+			in.Data["ORC_TOPOLOGY_USER"] = []byte(f.opt.OrchestratorTopologyUser)
+			in.Data["ORC_TOPOLOGY_PASSWORD"] = []byte(f.opt.OrchestratorTopologyPassword)
 			return in
 		})
 

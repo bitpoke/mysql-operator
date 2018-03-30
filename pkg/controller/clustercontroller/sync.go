@@ -58,7 +58,7 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster, ns str
 	}
 
 	// create a cluster factory and sync it.
-	clusterFactory := mcfactory.New(copyCluster, c.k8client, c.myClient, ns, c.recorder)
+	clusterFactory := mcfactory.New(copyCluster, opt, c.k8client, c.myClient, ns, c.recorder)
 	if err := clusterFactory.Sync(ctx); err != nil {
 		return fmt.Errorf("failed to set-up the cluster: %s", err)
 	}
