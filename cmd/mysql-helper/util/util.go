@@ -18,14 +18,16 @@ package util
 
 import (
 	"bufio"
-	"bytes"
+	"database/sql"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 
+	"github.com/go-ini/ini"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang/glog"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -215,47 +217,68 @@ func readFileContent(fileName string) string {
 	return scanner.Text()
 }
 
-func UpdateOrcUserPass() error {
-	glog.V(2).Info("Creating orchestrator user, password and privileges...")
-	query := fmt.Sprintf(`
-    SET @@SESSION.SQL_LOG_BIN = 0;
-    GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO '%[1]s'@'%%' IDENTIFIED BY '%[2]s';
-    GRANT SELECT ON meta.* TO '%[1]s'@'%%';
-    GRANT SELECT ON mysql.slave_master_info TO '%[1]s'@'%%';
-    `, GetOrcUser(), GetOrcPass())
-
-	if _, err := RunQuery(query); err != nil {
-		return fmt.Errorf("failed to configure orchestrator (user/pass/access), err: %s", err)
+func GetMySQLConnectionString() (dsn string, err error) {
+	cnfPath := path.Join(ConfigDir, "client.cnf")
+	cfg, err := ini.Load(cnfPath)
+	if err != nil {
+		return "", fmt.Errorf("Could not open %s: %s", cnfPath, err)
 	}
-	glog.V(2).Info("Orchestrator user configured!")
-
-	return nil
+	client := cfg.Section("client")
+	host := client.Key("host").String()
+	user := client.Key("user").String()
+	passowrd := client.Key("password").String()
+	port, err := client.Key("port").Int()
+	if err != nil {
+		return "", fmt.Errorf("Invalid port in %s: %s", cnfPath, err)
+	}
+	dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/?timeout=5s&multiStatements=true", user, passowrd, host, port)
+	return
 }
 
-func RunQuery(q string) (string, error) {
-	glog.V(3).Infof("QUERY: %s", q)
-
-	mysql := exec.Command("mysql",
-		fmt.Sprintf("--defaults-file=%s/%s", ConfigDir, "client.cnf"),
-	)
-
-	// write query through pipe to mysql
-	rq := strings.NewReader(q)
-	mysql.Stdin = rq
-	var bufOUT, bufERR bytes.Buffer
-	mysql.Stdout = &bufOUT
-	mysql.Stderr = &bufERR
-
-	if err := mysql.Run(); err != nil {
-		glog.Errorf("Failed to run query, err: %s", err)
-		glog.V(2).Infof("Mysql STDOUT: %s, STDERR: %s", bufOUT.String(), bufERR.String())
-		return "", err
+func RunQuery(q string) (err error) {
+	dsn, err := GetMySQLConnectionString()
+	if err != nil {
+		glog.Warningf("Could not get mysql connection dsn: %s", err)
+		return
 	}
 
-	glog.V(2).Infof("Mysql STDOUT: %s, STDERR: %s", bufOUT.String(), bufERR.String())
-	glog.V(3).Infof("Mysql output for query %s is: %s", q, bufOUT.String())
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		glog.Warningf("Could not open mysql connection: %s", err)
+		return
+	}
 
-	return bufOUT.String(), nil
+	if _, err := db.Query(q); err != nil {
+		glog.V(2).Infof("QUERY: %s", q)
+		glog.Warningf("Could not query mysql: %s", err)
+		return err
+	}
+
+	return
+
+	// 	glog.V(3).Infof("QUERY: %s", q)
+
+	// 	mysql := exec.Command("mysql",
+	// 		fmt.Sprintf("--defaults-file=%s/%s", ConfigDir, "client.cnf"),
+	// 	)
+
+	// 	// write query through pipe to mysql
+	// 	rq := strings.NewReader(q)
+	// 	mysql.Stdin = rq
+	// 	var bufOUT, bufERR bytes.Buffer
+	// 	mysql.Stdout = &bufOUT
+	// 	mysql.Stderr = &bufERR
+
+	// 	if err := mysql.Run(); err != nil {
+	// 		glog.Errorf("Failed to run query, err: %s", err)
+	// 		glog.V(2).Infof("Mysql STDOUT: %s, STDERR: %s", bufOUT.String(), bufERR.String())
+	// 		return "", err
+	// 	}
+
+	// 	glog.V(2).Infof("Mysql STDOUT: %s, STDERR: %s", bufOUT.String(), bufERR.String())
+	// 	glog.V(3).Infof("Mysql output for query %s is: %s", q, bufOUT.String())
+
+	// 	return bufOUT.String(), nil
 }
 
 func getOrcUri() string {
