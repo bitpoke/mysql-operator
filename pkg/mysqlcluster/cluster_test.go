@@ -40,10 +40,6 @@ func (f *cFactory) SyncHeadlessService() (string, error) {
 	return f.syncHeadlessService()
 }
 
-func (f *cFactory) SyncEnvSecret() (string, error) {
-	return f.syncEnvSecret()
-}
-
 func (f *cFactory) SyncConfigMapFiles() (string, error) {
 	return f.syncConfigMysqlMap()
 }
@@ -108,8 +104,10 @@ func getFakeFactory(ns string, cluster *api.MysqlCluster, client *fake.Clientset
 	}
 
 	rec := record.NewFakeRecorder(100)
+	opt := newFakeOption()
 
 	return rec, &cFactory{
+		opt:       opt,
 		cluster:   cluster,
 		client:    client,
 		myClient:  myClient,
@@ -173,12 +171,6 @@ func TestSyncClusterCreationWithSecret(t *testing.T) {
 	}
 
 	var err error
-	_, err = client.CoreV1().Secrets(ns).Get(cluster.GetNameForResource(api.EnvSecret), metav1.GetOptions{})
-	if err != nil {
-		t.Fail()
-		return
-	}
-
 	_, err = client.CoreV1().ConfigMaps(ns).Get(cluster.GetNameForResource(api.ConfigMap), metav1.GetOptions{})
 	if err != nil {
 		t.Fail()

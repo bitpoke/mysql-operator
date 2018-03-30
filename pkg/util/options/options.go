@@ -61,6 +61,9 @@ const (
 	defaultExporterImage = "prom/mysqld-exporter:latest"
 
 	defaultImagePullPolicy = v1.PullIfNotPresent
+
+	defaultOrchestratorTopologyUser     = ""
+	defaultOrchestratorTopologyPassword = ""
 )
 
 var (
@@ -79,9 +82,9 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 		"The secret name for used as pull secret.")
 	fs.StringVar(&o.OrchestratorUri, "orchestrator-uri", "",
 		"The orchestrator uri")
-	fs.StringVar(&o.OrchestratorTopologyPassword, "orchestrator-topology-password", "",
+	fs.StringVar(&o.OrchestratorTopologyPassword, "orchestrator-topology-password", defaultOrchestratorTopologyUser,
 		"The orchestrator topology password. Can also be set as ORC_TOPOLOGY_PASSWORD environment variable.")
-	fs.StringVar(&o.OrchestratorTopologyUser, "orchestrator-topology-user", "",
+	fs.StringVar(&o.OrchestratorTopologyUser, "orchestrator-topology-user", defaultOrchestratorTopologyPassword,
 		"The orchestrator topology user. Can also be set as ORC_TOPOLOGY_USER environment variable.")
 	fs.DurationVar(&o.JobCompleteSuccessGraceTime, "job-grace-time", defaultJobGraceTime,
 		"The time in hours how jobs after completion are keept.")
@@ -99,6 +102,9 @@ func GetOptions() *Options {
 
 			ImagePullPolicy:             defaultImagePullPolicy,
 			JobCompleteSuccessGraceTime: defaultJobGraceTime,
+
+			OrchestratorTopologyUser:     "",
+			OrchestratorTopologyPassword: "",
 		}
 	})
 

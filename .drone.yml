@@ -6,11 +6,24 @@ pipeline:
   build:
     image: golang:1.9
     environment:
+      - APP_VERSION=${DRONE_BRANCH/master/latest}
+    commands:
+      - make full-test
+      - make build
+      - make install-docker
+    when:
+      event: push
+
+  build:
+    image: golang:1.9
+    environment:
       - APP_VERSION=${DRONE_TAG}
     commands:
       - make full-test
       - make build
       - make install-docker
+    when:
+      event: tag
 
   publish-operator:
     group: publish
