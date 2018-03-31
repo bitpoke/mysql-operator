@@ -43,7 +43,7 @@ const (
 	HelperProbePath = "/health"
 	HelperProbePort = 8001
 
-	ExporterPortName = "exporter"
+	ExporterPortName = "prometheus"
 	ExporterPort     = 9104
 	ExporterPath     = "/metrics"
 )

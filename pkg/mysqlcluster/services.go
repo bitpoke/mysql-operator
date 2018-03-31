@@ -37,13 +37,18 @@ func (f *cFactory) syncHeadlessService() (state string, err error) {
 		func(in *core.Service) *core.Service {
 			in.Spec.ClusterIP = "None"
 			in.Spec.Selector = f.getLabels(map[string]string{})
-			if len(in.Spec.Ports) == 0 {
-				in.Spec.Ports = make([]core.ServicePort, 1)
+			if len(in.Spec.Ports) != 2 {
+				in.Spec.Ports = make([]core.ServicePort, 2)
 			}
-			in.Spec.Ports[0].Name = "mysql"
+			in.Spec.Ports[0].Name = MysqlPortName
 			in.Spec.Ports[0].Port = MysqlPort
 			in.Spec.Ports[0].TargetPort = TargetPort
 			in.Spec.Ports[0].Protocol = "TCP"
+
+			in.Spec.Ports[1].Name = ExporterPortName
+			in.Spec.Ports[1].Port = ExporterPort
+			in.Spec.Ports[1].TargetPort = ExporterTargetPort
+			in.Spec.Ports[1].Protocol = "TCP"
 
 			return in
 		})
