@@ -231,7 +231,9 @@ func GetMySQLConnectionString() (dsn string, err error) {
 	if err != nil {
 		return "", fmt.Errorf("Invalid port in %s: %s", cnfPath, err)
 	}
-	dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/?timeout=5s&multiStatements=true", user, passowrd, host, port)
+	dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/?timeout=5s&multiStatements=true",
+		user, passowrd, host, port,
+	)
 	return
 }
 
@@ -255,30 +257,6 @@ func RunQuery(q string) (err error) {
 	}
 
 	return
-
-	// 	glog.V(3).Infof("QUERY: %s", q)
-
-	// 	mysql := exec.Command("mysql",
-	// 		fmt.Sprintf("--defaults-file=%s/%s", ConfigDir, "client.cnf"),
-	// 	)
-
-	// 	// write query through pipe to mysql
-	// 	rq := strings.NewReader(q)
-	// 	mysql.Stdin = rq
-	// 	var bufOUT, bufERR bytes.Buffer
-	// 	mysql.Stdout = &bufOUT
-	// 	mysql.Stderr = &bufERR
-
-	// 	if err := mysql.Run(); err != nil {
-	// 		glog.Errorf("Failed to run query, err: %s", err)
-	// 		glog.V(2).Infof("Mysql STDOUT: %s, STDERR: %s", bufOUT.String(), bufERR.String())
-	// 		return "", err
-	// 	}
-
-	// 	glog.V(2).Infof("Mysql STDOUT: %s, STDERR: %s", bufOUT.String(), bufERR.String())
-	// 	glog.V(3).Infof("Mysql output for query %s is: %s", q, bufOUT.String())
-
-	// 	return bufOUT.String(), nil
 }
 
 func getOrcUri() string {

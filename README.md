@@ -23,7 +23,7 @@ The main goals of this operator are:
 To deploy this controller, use the provided helm chart, by running:
 ```
 helm repo add presslabs https://presslabs.github.io/charts
-helm install presslabs/mysql-operator
+helm install presslabs/mysql-operator --name mysql-operator
 ```
 
 This chart will deploy the controller and an orchestrator cluster.
@@ -115,13 +115,17 @@ Status:
     Reason:                
     Status:                True
     Type:                  Complete
-    Last Transition Time:  2018-03-21T16:02:48Z
-    Message:               First initialization of backup
-    Reason:                set defaults
-    Status:                Unknown
-    Type:                  Failed
 ...
 ```
+
+## Access orchestrator
+To connect to orchestrator dashboard you have to port forward orchestrator port
+3000 to your local machine by using:
+
+```
+kubectl port-forward mysql-operator-orchestrator 3000
+```
+
 
 ## Tech considerations
 

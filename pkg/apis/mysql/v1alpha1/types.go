@@ -61,16 +61,16 @@ type ClusterSpec struct {
 
 	// A bucket URI that contains a xtrabackup to initialize the mysql database.
 	// +optional
-	InitBucketURI        string `json:"initBucketURI,omitempty"`
+	InitBucketUri        string `json:"initBucketUri,omitempty"`
 	InitBucketSecretName string `json:"initBucketSecretName,omitempty"`
 
 	// Specify under crontab format interval to take backups
 	// leave it empty to deactivate the backup process
 	// Defaults to ""
 	// +optional
-	BackupSchedule         string `json:"backupSchedule,omitempty"`
-	BackupBucketUri        string `json:"backupBucketURI,omitempty"`
-	BackupBucketSecretName string `json:"backupBucketSecretName,omitempty"`
+	BackupSchedule   string `json:"backupSchedule,omitempty"`
+	BackupUri        string `json:"backupUri,omitempty"`
+	BackupSecretName string `json:"backupSecretName,omitempty"`
 
 	// A map[string]string that will be passed to my.cnf file.
 	// +optional
@@ -158,11 +158,11 @@ type BackupSpec struct {
 	// BucketUri a fully specified bucket URI where to put backup.
 	// Default is used the one specified in cluster.
 	// optional
-	BucketUri string `json:"bucketUri,omitempty"`
-	// BucketSecretName the name of secrets that contains the credentials to
+	BackupUri string `json:"backupUri,omitempty"`
+	// BackupSecretName the name of secrets that contains the credentials to
 	// access the bucket. Default is used the secret specified in cluster.
 	// optinal
-	BucketSecretName string `json:"bucketSecretName,omitempty"`
+	BackupSecretName string `json:"backupSecretName,omitempty"`
 }
 
 type BackupCondition struct {

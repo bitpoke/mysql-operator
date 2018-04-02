@@ -80,13 +80,13 @@ func (c *Controller) subresourceUpdated(obj interface{}) {
 	}
 
 	if objectMeta == nil {
-		runtime.HandleError(fmt.Errorf("Cannot get ObjectMeta for object %#v", obj))
+		glog.V(2).Warrningf("Cannot get ObjectMeta for obj: %#v", obj)
 		return
 	}
 
 	cluster, err := c.instanceForOwnerReference(objectMeta)
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("cannot get cluster for ObjectMeta, err: %s", err))
+		glog.V(3).Warrningf("Cannot get cluster for ObjectMeta, err: %s", err)
 		return
 	}
 

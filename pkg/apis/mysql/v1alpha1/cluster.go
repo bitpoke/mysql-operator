@@ -219,14 +219,17 @@ const (
 	StatefulSet ResourceName = "mysql"
 	// ConfigMap is the alias for mysql configs, the config map resource
 	ConfigMap ResourceName = "config-files"
-	// EnvSecret is the alias for secret that contains env variables
-	EnvSecret ResourceName = "env-config"
 	// BackupCronJob is the name of cron job
 	BackupCronJob ResourceName = "backup-cron"
 )
 
 func (c *MysqlCluster) GetNameForResource(name ResourceName) string {
-	return GetNameForResource(name, c.Name)
+	switch name {
+	case HeadlessSVC, StatefulSet, ConfigMap, BackupCronJob:
+		return GetNameForResource(name, c.Name)
+	default:
+		return GetNameForResource(name, c.Name)
+	}
 }
 
 func GetNameForResource(name ResourceName, clusterName string) string {

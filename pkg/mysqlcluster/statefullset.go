@@ -93,6 +93,7 @@ func (f *cFactory) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec 
 		in.ObjectMeta.Annotations = make(map[string]string)
 	}
 	in.ObjectMeta.Annotations["config_hash"] = f.configHash
+	in.ObjectMeta.Annotations["secret_hash"] = f.secretHash
 	in.ObjectMeta.Annotations["prometheus.io/scrape"] = "true"
 	in.ObjectMeta.Annotations["prometheus.io/port"] = fmt.Sprintf("%d", ExporterPort)
 
@@ -172,10 +173,10 @@ func (f *cFactory) getEnvFor(name string) (env []core.EnvVar) {
 		Value: f.cluster.Spec.GetOrcUri(),
 	})
 
-	if len(f.cluster.Spec.InitBucketURI) > 0 && name == containerCloneName {
+	if len(f.cluster.Spec.InitBucketUri) > 0 && name == containerCloneName {
 		env = append(env, core.EnvVar{
 			Name:  "INIT_BUCKET_URI",
-			Value: f.cluster.Spec.InitBucketURI,
+			Value: f.cluster.Spec.InitBucketUri,
 		})
 	}
 

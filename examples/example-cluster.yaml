@@ -6,12 +6,12 @@ spec:
   replicas: 1
   secretName: the-secret
   # mysqlVersion: 5.7
-  # initBucketURI: gs://bucket_name/backup.xtrabackup.gz
+  # initBucketUri: gs://bucket_name/backup.xtrabackup.gz
   # initBucketSecretName:
 
   ## For recurrent backups set backupSchedule with a cronjob expression
   # backupSchedule:
-  # backupBucketURI: s3://bucket_name/
+  # backupBucketUri: s3://bucket_name/
   # backupBucketSecretName:
 
   ## Configs that will be added to my.cnf for cluster

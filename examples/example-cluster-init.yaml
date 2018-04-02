@@ -7,8 +7,8 @@ spec:
   secretName: the-secret
 
   backupSchedule: "1 1 * * *"
-  backupBucketUri: gs://bucket_name/path/
-  backupBucketSecretName: backup-secret
+  backupUri: gs://bucket_name/path/
+  backupSecretName: backup-secret
 
   initBucketUri: gs://bucket_name/path/to/backup.xbackup.gz
   initBucketSecretName: backup-secret

@@ -18,8 +18,11 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"strconv"
 
 	kcore "github.com/appscode/kutil/core/v1"
+	"github.com/golang/glog"
+	"github.com/mitchellh/hashstructure"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -65,6 +68,19 @@ func (f *cFactory) syncClusterSecret() (state string, err error) {
 			}
 			in.Data["ORC_TOPOLOGY_USER"] = []byte(f.opt.OrchestratorTopologyUser)
 			in.Data["ORC_TOPOLOGY_PASSWORD"] = []byte(f.opt.OrchestratorTopologyPassword)
+
+			hash, err := hashstructure.Hash(in.Data, nil)
+			if err != nil {
+				glog.Errorf("Can't compute the hash for db secret: %s", err)
+			}
+
+			if len(in.ObjectMeta.Annotations) == 0 {
+				in.ObjectMeta.Annotations = make(map[string]string)
+			}
+
+			f.secretHash = strconv.FormatUint(hash, 10)
+			in.ObjectMeta.Annotations["secret_hash"] = f.secretHash
+
 			return in
 		})
 

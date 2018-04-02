@@ -83,13 +83,13 @@ func (c *Controller) subresourceUpdated(obj interface{}) {
 	}
 
 	if job == nil {
-		glog.Errorf("Cannot get Job from object %#v", obj)
+		glog.V(2).Warrningf("Cannot get Job from object %#v", obj)
 		return
 	}
 
 	backup, err := c.instanceForOwnerReference(&job.ObjectMeta)
 	if err != nil {
-		glog.Errorf("cannot get backup for Job, err: %s", err)
+		glog.V(3).Warrningf("cannot get backup for Job, err: %s", err)
 		return
 	}
 

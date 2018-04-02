@@ -26,7 +26,6 @@ import (
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	myClientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
-	"github.com/presslabs/mysql-operator/pkg/util"
 	"github.com/presslabs/mysql-operator/pkg/util/kube"
 )
 
@@ -58,7 +57,7 @@ func RunCommand(stopCh <-chan struct{}, namespace, cluster string) error {
 				cond := b.Status.Conditions[i]
 				if cond.Status == core.ConditionTrue {
 					glog.Infof("Backup '%s' finished.", backup.Name)
-					break
+					return nil
 				}
 			}
 		case <-time.After(time.Hour): // TODO: make duration constant
@@ -70,10 +69,10 @@ func RunCommand(stopCh <-chan struct{}, namespace, cluster string) error {
 }
 
 func createBackup(myClient myClientset.Interface, ns, cluster string) (*api.MysqlBackup, error) {
-	randStr := util.RandStringLowerLetters(10)
+	now := time.Now().Format("2006-01-02T15:04:05")
 	return myClient.Mysql().MysqlBackups(ns).Create(&api.MysqlBackup{
 		ObjectMeta: meta.ObjectMeta{
-			Name: fmt.Sprintf("%s-recurent-backup-%s", cluster, randStr),
+			Name: fmt.Sprintf("%s-auto-backup-%s", cluster, now),
 			Labels: map[string]string{
 				"recurrent": "true",
 			},

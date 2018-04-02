@@ -49,6 +49,7 @@ type cFactory struct {
 	rec      record.EventRecorder
 
 	configHash string
+	secretHash string
 }
 
 // New creates a new cluster factory
@@ -62,6 +63,7 @@ func New(cluster *api.MysqlCluster, opt *options.Options, klient kubernetes.Inte
 		namespace:  ns,
 		rec:        rec,
 		configHash: "1",
+		secretHash: "1",
 	}
 }
 
@@ -81,46 +83,46 @@ type component struct {
 	syncFn func() (string, error)
 	//event reason when sync faild
 	reasonFailed string
-	// event reason when boject is modified
-	erUpdated string
+	// event reason when object is updated
+	reasonUpdated string
 }
 
 func (f *cFactory) getComponents() []component {
 	return []component{
 		component{
-			alias:        "cluster-secret",
-			name:         f.cluster.Spec.SecretName,
-			syncFn:       f.syncClusterSecret,
-			reasonFailed: api.EventReasonDbSecretFailed,
-			erUpdated:    api.EventReasonDbSecretUpdated,
+			alias:         "cluster-secret",
+			name:          f.cluster.Spec.SecretName,
+			syncFn:        f.syncClusterSecret,
+			reasonFailed:  api.EventReasonDbSecretFailed,
+			reasonUpdated: api.EventReasonDbSecretUpdated,
 		},
 		component{
-			alias:        "config-map",
-			name:         f.cluster.GetNameForResource(api.ConfigMap),
-			syncFn:       f.syncConfigMysqlMap,
-			reasonFailed: api.EventReasonConfigMapFailed,
-			erUpdated:    api.EventReasonConfigMapUpdated,
+			alias:         "config-map",
+			name:          f.cluster.GetNameForResource(api.ConfigMap),
+			syncFn:        f.syncConfigMysqlMap,
+			reasonFailed:  api.EventReasonConfigMapFailed,
+			reasonUpdated: api.EventReasonConfigMapUpdated,
 		},
 		component{
-			alias:        "headless-service",
-			name:         f.cluster.GetNameForResource(api.HeadlessSVC),
-			syncFn:       f.syncHeadlessService,
-			reasonFailed: api.EventReasonServiceFailed,
-			erUpdated:    api.EventReasonServiceUpdated,
+			alias:         "headless-service",
+			name:          f.cluster.GetNameForResource(api.HeadlessSVC),
+			syncFn:        f.syncHeadlessService,
+			reasonFailed:  api.EventReasonServiceFailed,
+			reasonUpdated: api.EventReasonServiceUpdated,
 		},
 		component{
-			alias:        "statefulset",
-			name:         f.cluster.GetNameForResource(api.StatefulSet),
-			syncFn:       f.syncStatefulSet,
-			reasonFailed: api.EventReasonSFSFailed,
-			erUpdated:    api.EventReasonSFSUpdated,
+			alias:         "statefulset",
+			name:          f.cluster.GetNameForResource(api.StatefulSet),
+			syncFn:        f.syncStatefulSet,
+			reasonFailed:  api.EventReasonSFSFailed,
+			reasonUpdated: api.EventReasonSFSUpdated,
 		},
 		component{
-			alias:        "backup-cron-job",
-			name:         f.cluster.GetNameForResource(api.BackupCronJob),
-			syncFn:       f.syncBackupCronJob,
-			reasonFailed: api.EventReasonCronJobFailed,
-			erUpdated:    api.EventReasonCronJobUpdated,
+			alias:         "backup-cron-job",
+			name:          f.cluster.GetNameForResource(api.BackupCronJob),
+			syncFn:        f.syncBackupCronJob,
+			reasonFailed:  api.EventReasonCronJobFailed,
+			reasonUpdated: api.EventReasonCronJobUpdated,
 		},
 	}
 }
@@ -138,7 +140,7 @@ func (f *cFactory) Sync(ctx context.Context) error {
 		}
 		switch state {
 		case statusCreated, statusUpdated:
-			f.rec.Event(f.cluster, api.EventNormal, comp.erUpdated, "")
+			f.rec.Event(f.cluster, api.EventNormal, comp.reasonUpdated, "")
 		}
 	}
 

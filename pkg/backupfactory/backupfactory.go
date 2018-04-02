@@ -97,15 +97,15 @@ func (f *bFactory) ensurePodSpec(in core.PodSpec) core.PodSpec {
 	in.Containers[0].Args = []string{
 		"take-backup-to",
 		f.cluster.GetHealtySlaveHost(),
-		f.backup.Spec.BucketUri,
+		f.backup.Spec.BackupUri,
 	}
 
-	if len(f.backup.Spec.BucketSecretName) != 0 {
+	if len(f.backup.Spec.BackupSecretName) != 0 {
 		in.Containers[0].EnvFrom = []core.EnvFromSource{
 			core.EnvFromSource{
 				SecretRef: &core.SecretEnvSource{
 					LocalObjectReference: core.LocalObjectReference{
-						Name: f.backup.Spec.BucketSecretName,
+						Name: f.backup.Spec.BackupSecretName,
 					},
 				},
 			},
@@ -124,20 +124,17 @@ func (f *bFactory) SetDefaults() error {
 	f.backup.UpdateStatusCondition(api.BackupComplete, core.ConditionUnknown, "set defaults",
 		"First initialization of backup")
 
-	f.backup.UpdateStatusCondition(api.BackupFailed, core.ConditionUnknown, "set defaults",
-		"First initialization of backup")
-
-	if len(f.backup.Spec.BucketUri) == 0 {
-		if len(f.cluster.Spec.BackupBucketUri) > 0 {
-			f.backup.Spec.BucketUri = getBucketUri(
-				f.cluster.Name, f.cluster.Spec.BackupBucketUri)
+	if len(f.backup.Spec.BackupUri) == 0 {
+		if len(f.cluster.Spec.BackupUri) > 0 {
+			f.backup.Spec.BackupUri = getBucketUri(
+				f.cluster.Name, f.cluster.Spec.BackupUri)
 		} else {
-			return fmt.Errorf("bucketUri not specified, neither in cluster")
+			return fmt.Errorf("backupUri not specified, neither in cluster")
 		}
 	}
 
-	if len(f.backup.Spec.BucketSecretName) == 0 {
-		f.backup.Spec.BucketSecretName = f.cluster.Spec.BackupBucketSecretName
+	if len(f.backup.Spec.BackupSecretName) == 0 {
+		f.backup.Spec.BackupSecretName = f.cluster.Spec.BackupSecretName
 	}
 
 	// mark backup as not in final state
