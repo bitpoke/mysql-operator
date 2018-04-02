@@ -1,22 +1,22 @@
 # MySQL Operator
 
-MySQL Operator is a bulletproof MySQL on Kubernetes. It manages all the necessary resources for a MySQL CLuster deployment. 
-
-The MySQL Operator provides efortless backups, while the cluster being highly-available.
+MySQL Operator enables bulletproof MySQL on Kubernetes. It manages all the necessary resources for deploying and managing a highly available MySQL cluster. It provides efortless backups, while keeping the cluster highly-available.
 
 MySQL Operator was developed by the awesome engineering team at [Presslabs](https://www.presslabs.com/), 
 a Managed WordPress Hosting provider.
 
 For more open-source projects, check [Presslabs Code](https://www.presslabs.org/). 
 
-## Goals
+## Goals and status
 
 The main goals of this operator are:
 
 1. Easily deploy mysql clusters in kubernetes (cluster-per-service model)
-2. Friendly devops (monitoring story solved)
-3. Out-of-the-box backups (automated and on demand) and point-in-time recovery
+2. Friendly to devops (monitoring, availability, scalability and backup stories solved)
+3. Out-of-the-box backups (scheduled and on demand) and point-in-time recovery
 4. Support for cloning in cluster and across clusters
+
+The operator is to be considered alpha and not suited for critical production workloads. We (Presslabs) sucessfully use it at the moment for some non-critical production workloads.
 
 ## Controller deploy
 
@@ -26,42 +26,44 @@ helm repo add presslabs https://presslabs.github.io/charts
 helm install presslabs/mysql-operator --name mysql-operator
 ```
 
-This chart will deploy the controller and an orchestrator cluster.
+This chart will deploy the controller along an [orchestrator](https://github.com/github/orchestrator) cluster.
 
 
-## Example of a cluster
+## Deploying a cluster
+__tl;dr__
+```shell
+kubectl apply -f https://github.com/presslabs/mysql-operator/blob/master/examples/example-cluster-secret.yaml
+kubectl apply -f https://github.com/presslabs/mysql-operator/blob/master/examples/example-cluster.yaml
+```
 
-Before creating a cluster, we need a secret that contains the `ROOT_PASSWORD` to
+Before creating a cluster, you need a secret that contains the `ROOT_PASSWORD` key to
 init mysql with (an example for this secret can be found
-[here](examples/example-backup-secret.yaml)). Now, to create a cluster we need
-just a simple yaml file that defines it — let's call it
-`cluster.yaml` and can be as follows:
+at [examples/example-cluster-secret.yaml](examples/example-cluster-secret.yaml)). Now, to create a cluster you need
+just a simple yaml file that defines it (an example can be found at [examples/example-cluster.yaml](examples/example-cluster.yaml):
 
 ```yaml
 apiVersion: mysql.presslabs.net/v1alpha1
 kind: MysqlCluster
 metadata:
-  name: foo
+  name: my-cluster
 spec:
-  replicas: 2
-  secretName: the-secret
+  replicas: 3
+  secretName: my-cluster-secret
+  # backupSchedule: @hourly
+  # backupBucketURI: s3://bucket_name/
+  # backupBucketSecretName:
 ```
 
-For a more in depth configuration, check [examples](examples/). To deploy this
-cluster, run:
+For a more in depth configuration, check [examples](examples/).
 
-```
-kubectl apply -f cluster.yaml
-```
-
-To list the deployed clusters use:
+### To list the deployed clusters use:
 ```
 $ kubectl get mysql
 NAME      AGE
 foo       1m
 ```
 
-To check cluster state use:
+### To check cluster state use:
 ```
 $ kubectl describe mysql foo
 ...
@@ -76,36 +78,66 @@ Status:
 ...
 ```
 
-## Example of a backup
+## Backups
 
-Making a backup is easy — defining a cluster, you should define a backup;
-for a detailed example, check [this](examples/example-backup.yaml) example. Let's
-define a new one on:
+Backups are stored on object storage services like S3 or google cloud storage. In order to be able to store backup, the secret defined under `backupBucketSecretName` must the credentias to store those backups.
+
+### Setup backup to S3
+
+You need to specify the `backupBucketURI` for the cluster to an uri like `s3://BUCKET_NAME`, and a secret with the following structure:
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-cluster-backup-secret
+type: Opaque
+data:
+  AWS_ACCESS_KEY_ID: #
+  AWS_SECRET_KEY: #
+  # Optional, the AWS region to connect
+  # AWS_REGION: us-east1
+  # Optional, specify the storage class
+  # AWS_STORAGE_CLASS: standard
+```
+
+### Setup backup to gcloud
+You need to specify the `backupBucketURI` for the cluster to an uri like `gs://BUCKET_NAME`, and a secret with the following structure:
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-cluster-backup-secret
+type: Opaque
+data:
+  GCS_SERVICE_ACCOUNT_JSON_KEY: #
+  GCS_PROJECT_ID: #
+```
+
+### Requesting a backup
+Requesting a backup is easy — you just need to create a backup object with the following structure:
 
 ```yaml
 apiVersion: mysql.presslabs.net/v1alpha1
 kind: MysqlBackup
 metadata:
-  name: foo-backup
+  name: my-cluster-backup
 spec:
-  clusterName: foo
+  clusterName: my-cluster
 ```
 
-To deploy the backup, run:
-```
-kubeclt apply -f backup.yaml
-```
-
-To lists all backups, run:
+### Listing all backups
 ```
 $ kubectl get backup
-NAME                             AGE
-foo-backup                       1m
+NAME                                  AGE
+my-cluster-backup                     1m
+my-cluster-auto-backup-20180402-1604  1d
 ```
 
-To check backup state and details, use:
+### Checking the backup state:
 ```
-$ kubectl describe backup foo-backup
+$ kubectl describe backup my-cluster-backup
 ...
 Status:
   Completed:  true
@@ -131,9 +163,9 @@ kubectl port-forward mysql-operator-orchestrator 3000
 
 This project uses Percona Server for MySQL 5.7 because of backup improvements
 (eg. backup locks), monitoring improvements and some serviceability improvements
-(eg. utility user). The case against MariaDB is that WordPress requires MySQL,
-but MariaDB is not a drop-in replacement for it, since MariaDB 10 is a fork,
-rather than following MySQL.
+(eg. utility user). Although we could have used MariaDB, our primary focus being WordPress,
+we wanted a drop-in rather than a fork. In the future we might support MariaDB if that can
+be implemented in a compatible way.
 
 ## License
 
