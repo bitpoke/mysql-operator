@@ -59,13 +59,13 @@ For a more in depth configuration, check [examples](examples/).
 ### To list the deployed clusters use:
 ```
 $ kubectl get mysql
-NAME      AGE
-foo       1m
+NAME         AGE
+my-cluster   1m
 ```
 
 ### To check cluster state use:
 ```
-$ kubectl describe mysql foo
+$ kubectl describe mysql my-cluster
 ...
 Status:
   Ready Nodes:  2
