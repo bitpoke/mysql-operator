@@ -50,8 +50,8 @@ spec:
   replicas: 3
   secretName: my-cluster-secret
   # backupSchedule: @hourly
-  # backupBucketURI: s3://bucket_name/
-  # backupBucketSecretName:
+  # backupUri: s3://bucket_name/
+  # backupSecretName:
 ```
 
 For a more in depth configuration, check [examples](examples/).
@@ -84,7 +84,7 @@ Backups are stored on object storage services like S3 or google cloud storage. I
 
 ### Setup backup to S3
 
-You need to specify the `backupBucketURI` for the cluster to an uri like `s3://BUCKET_NAME`, and a secret with the following structure:
+You need to specify the `backupBucketUri` for the cluster to an uri like `s3://BUCKET_NAME`, and a secret with the following structure:
 
 ```
 apiVersion: v1
@@ -102,7 +102,7 @@ data:
 ```
 
 ### Setup backup to gcloud
-You need to specify the `backupBucketURI` for the cluster to an uri like `gs://BUCKET_NAME`, and a secret with the following structure:
+You need to specify the `backupBucketUri` for the cluster to an uri like `gs://BUCKET_NAME`, and a secret with the following structure:
 
 ```
 apiVersion: v1
@@ -129,7 +129,7 @@ spec:
 
 ### Listing all backups
 ```
-$ kubectl get backup
+$ kubectl get mysqlbackup
 NAME                                  AGE
 my-cluster-backup                     1m
 my-cluster-auto-backup-20180402-1604  1d

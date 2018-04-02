@@ -11,8 +11,8 @@ spec:
 
   ## For recurrent backups set backupSchedule with a cronjob expression
   # backupSchedule:
-  # backupBucketUri: s3://bucket_name/
-  # backupBucketSecretName:
+  # backupUri: s3://bucket_name/
+  # backupSecretName:
 
   ## Configs that will be added to my.cnf for cluster
   # mysqlConf:

@@ -9,7 +9,7 @@ spec:
 
   ## if backupUri is specified then the backup will be put
   ## at this path, else the backup uri will be filled with
-  ## the cluster preset backupBucketUri and a random name
+  ## the cluster preset backupUri and a random name
   # backupUri: gs://bucket_name/path/to/backup.xtrabackup.gz
 
   ## specify a secret where to find credentials to access the
