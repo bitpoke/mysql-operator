@@ -43,23 +43,25 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 
 	_, act, err := kcore.CreateOrPatchConfigMap(f.client, meta,
 		func(in *core.ConfigMap) *core.ConfigMap {
-			data, current_hash, err := f.getMysqlConfData()
+			data, new_hash, err := f.getMysqlConfData()
 			if err != nil {
 				glog.Errorf("Fail to create mysql configs. err: %s", err)
 				return in
 			}
 
 			if key, ok := in.ObjectMeta.Annotations["config_hash"]; ok {
-				if key == current_hash {
+				if key == new_hash {
 					glog.V(2).Infof("Skip updating configs, it's up to date: %s",
 						in.ObjectMeta.Annotations["config_hash"])
 					return in
 				} else {
-					glog.Infof("Config hashes doesn't match: %s != %s . Updateing configs.", key, current_hash)
+					glog.Infof("Config hashes doesn't match: %s != %s . Updateing configs.", key, new_hash)
 				}
 			}
+
+			f.configHash = new_hash
 			in.ObjectMeta.Annotations = map[string]string{
-				"config_hash": current_hash,
+				"config_hash": new_hash,
 			}
 
 			in.Data = map[string]string{
@@ -83,18 +85,22 @@ func (f *cFactory) getMysqlConfData() (string, string, error) {
 	// include configs from /etc/mysql/conf.d/*.cnf
 	s.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
 
-	data, hash, err := writeConfigs(cfg)
+	data, err := writeConfigs(cfg)
 	if err != nil {
 		return "", "", err
 	}
+	hash, err := hashstructure.Hash(cfg.Section("mysqld").KeysHash(), nil)
+	if err != nil {
+		glog.Errorf("Can't compute hash for map data: %s", err)
+		return "", "", err
+	}
 
-	current_hash := strconv.FormatUint(hash, 10)
-	f.configHash = current_hash
-
-	return data, current_hash, nil
+	new_hash := strconv.FormatUint(hash, 10)
+	return data, new_hash, nil
 
 }
 
+// helper function to add a map[string]string to a ini.Section
 func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
 	for _, extra := range extraMysqld {
 		for k, v := range extra {
@@ -105,6 +111,7 @@ func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
 	}
 }
 
+// helper function to add a string to a ini.Section
 func addBConfigsToSection(s *ini.Section, boolConfigs ...[]string) {
 	for _, extra := range boolConfigs {
 		for _, k := range extra {
@@ -115,16 +122,11 @@ func addBConfigsToSection(s *ini.Section, boolConfigs ...[]string) {
 	}
 }
 
-func writeConfigs(cfg *ini.File) (string, uint64, error) {
-	hash, err := hashstructure.Hash(cfg.Section("mysqld").KeysHash(), nil)
-	if err != nil {
-		glog.Errorf("Can't compute hash for map data: %s", err)
-		return "", 0, err
-	}
-
+// helper function to write to string ini.File
+func writeConfigs(cfg *ini.File) (string, error) {
 	var buf bytes.Buffer
 	if _, err := cfg.WriteTo(&buf); err != nil {
-		return "", 0, err
+		return "", err
 	}
-	return buf.String(), hash, nil
+	return buf.String(), nil
 }
