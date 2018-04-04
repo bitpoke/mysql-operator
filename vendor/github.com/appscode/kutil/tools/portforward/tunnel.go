@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -53,7 +54,7 @@ func (t *Tunnel) ForwardPort() error {
 
 	local, err := getAvailablePort()
 	if err != nil {
-		return fmt.Errorf("could not find an available port: %s", err)
+		return errors.Errorf("could not find an available port: %s", err)
 	}
 	t.Local = local
 
@@ -71,7 +72,7 @@ func (t *Tunnel) ForwardPort() error {
 
 	select {
 	case err = <-errChan:
-		return fmt.Errorf("forwarding ports: %v", err)
+		return errors.Errorf("forwarding ports: %v", err)
 	case <-pf.Ready:
 		return nil
 	}

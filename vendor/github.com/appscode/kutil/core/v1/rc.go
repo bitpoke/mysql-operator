@@ -1,12 +1,10 @@
 package v1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	. "github.com/appscode/go/types"
 	"github.com/appscode/kutil"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,12 +33,16 @@ func CreateOrPatchRC(c kubernetes.Interface, meta metav1.ObjectMeta, transform f
 }
 
 func PatchRC(c kubernetes.Interface, cur *core.ReplicationController, transform func(*core.ReplicationController) *core.ReplicationController) (*core.ReplicationController, kutil.VerbType, error) {
+	return PatchRCObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchRCObject(c kubernetes.Interface, cur, mod *core.ReplicationController) (*core.ReplicationController, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -73,7 +75,7 @@ func TryUpdateRC(c kubernetes.Interface, meta metav1.ObjectMeta, transform func(
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update ReplicationController %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+		err = errors.Errorf("failed to update ReplicationController %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
 	}
 	return
 }

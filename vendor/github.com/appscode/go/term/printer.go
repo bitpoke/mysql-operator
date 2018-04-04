@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/appscode/go/env"
-	"github.com/appscode/go/errors"
 	"github.com/fatih/color"
+	"github.com/pkg/errors"
 )
 
 func Print(args ...interface{}) {
@@ -46,7 +46,7 @@ func ExitOnError(err error) {
 	if err != nil {
 		doPrintln([]color.Attribute{color.FgRed, color.Bold}, []interface{}{err.Error()})
 		if Env != env.Prod {
-			fmt.Fprintln(os.Stderr, errors.FromErr(err).Error())
+			fmt.Fprintln(os.Stderr, errors.WithStack(err))
 		}
 		os.Exit(1)
 	}

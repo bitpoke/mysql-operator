@@ -1,11 +1,9 @@
 package v1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/appscode/kutil"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,12 +32,16 @@ func CreateOrPatchPVC(c kubernetes.Interface, meta metav1.ObjectMeta, transform 
 }
 
 func PatchPVC(c kubernetes.Interface, cur *core.PersistentVolumeClaim, transform func(*core.PersistentVolumeClaim) *core.PersistentVolumeClaim) (*core.PersistentVolumeClaim, kutil.VerbType, error) {
+	return PatchPVCObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchPVCObject(c kubernetes.Interface, cur, mod *core.PersistentVolumeClaim) (*core.PersistentVolumeClaim, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -72,7 +74,7 @@ func TryUpdatePVC(c kubernetes.Interface, meta metav1.ObjectMeta, transform func
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update PersistentVolumeClaim %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+		err = errors.Errorf("failed to update PersistentVolumeClaim %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
 	}
 	return
 }

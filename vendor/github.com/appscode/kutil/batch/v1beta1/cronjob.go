@@ -1,11 +1,9 @@
 package v1beta1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/appscode/kutil"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	batch "k8s.io/api/batch/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,12 +32,16 @@ func CreateOrPatchCronJob(c kubernetes.Interface, meta metav1.ObjectMeta, transf
 }
 
 func PatchCronJob(c kubernetes.Interface, cur *batch.CronJob, transform func(*batch.CronJob) *batch.CronJob) (*batch.CronJob, kutil.VerbType, error) {
+	return PatchCronJobObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchCronJobObject(c kubernetes.Interface, cur, mod *batch.CronJob) (*batch.CronJob, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -72,7 +74,7 @@ func TryUpdateCronJob(c kubernetes.Interface, meta metav1.ObjectMeta, transform 
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update CronJob %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+		err = errors.Errorf("failed to update CronJob %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
 	}
 	return
 }

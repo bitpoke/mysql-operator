@@ -146,7 +146,7 @@ func (mgr BackupManager) Backup(process processorFunc) error {
 			mgr.config.GroupVersion = &gv
 			mgr.config.APIPath = "/apis"
 			if gv.Group == core.GroupName {
-				mgr.config.APIPath = "/api"
+				mgr.config.APIPath = "/v1beta1"
 			}
 			client, err := rest.RESTClientFor(mgr.config)
 			if err != nil {

@@ -6,9 +6,10 @@ import (
 )
 
 const (
-	RetryInterval    = 50 * time.Millisecond
-	RetryTimeout     = 2 * time.Second
-	ReadinessTimeout = 10 * time.Minute
+	RetryInterval         = 50 * time.Millisecond
+	RetryTimeout          = 2 * time.Second
+	ReadinessTimeout      = 10 * time.Minute
+	PodTerminationTimeout = 5 * time.Minute
 )
 
 type VerbType string
@@ -23,4 +24,5 @@ const (
 
 var (
 	ErrNotFound = errors.New("not found")
+	ErrUnknown  = errors.New("unknown")
 )

@@ -1,11 +1,9 @@
 package v1beta1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/appscode/kutil"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	rbac "k8s.io/api/rbac/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,12 +32,16 @@ func CreateOrPatchRole(c kubernetes.Interface, meta metav1.ObjectMeta, transform
 }
 
 func PatchRole(c kubernetes.Interface, cur *rbac.Role, transform func(*rbac.Role) *rbac.Role) (*rbac.Role, kutil.VerbType, error) {
+	return PatchRoleObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchRoleObject(c kubernetes.Interface, cur, mod *rbac.Role) (*rbac.Role, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -72,7 +74,7 @@ func TryUpdateRole(c kubernetes.Interface, meta metav1.ObjectMeta, transform fun
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update Role %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+		err = errors.Errorf("failed to update Role %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
 	}
 	return
 }

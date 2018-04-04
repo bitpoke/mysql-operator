@@ -50,6 +50,10 @@
   name = "github.com/hashicorp/go-version"
   source = "https://github.com/appscode/go-version.git"
 
+[[override]]
+  name = "github.com/russross/blackfriday"
+  revision = "300106c228d52c8941d4b3de6054a6062a86dda3"
+
 [[constraint]]
   branch = "master"
   name = "github.com/spf13/afero"
@@ -71,12 +75,48 @@
   version = "kubernetes-1.9.0"
 
 [[override]]
+  name = "k8s.io/apiserver"
+  version = "kubernetes-1.9.0"
+
+[[override]]
   name = "k8s.io/client-go"
   version = "v6.0.0"
 
 [[override]]
+  name = "k8s.io/kubernetes"
+  version = "=v1.9.0"
+
+[[override]]
   branch = "release-branch.go1.9"
   name = "golang.org/x/net"
+
+[[override]]
+  name = "github.com/Azure/azure-sdk-for-go"
+  version = "v11.1.1-beta"
+
+[[override]]
+  name = "github.com/Azure/go-autorest"
+  version = "v9.1.0"
+
+[[override]]
+  name = "github.com/docker/distribution"
+  revision = "edc3ab29cdff8694dd6feb85cfeb4b5f1b38ed9c"
+
+[[override]]
+  name = "github.com/docker/docker"
+  revision = "4f3616fb1c112e206b88cb7a9922bf49067a7756"
+
+[[override]]
+  name = "github.com/docker/go-connections"
+  version = "v0.3.0"
+
+[[override]]
+  name = "github.com/docker/go-units"
+  revision = "9e638d38cf6977a37a8ea0078f3ee75a7cdb2dd1"
+
+[[override]]
+  name = "github.com/docker/libtrust"
+  revision = "9cbd2a1374f46905c68a4eb3694a130610adc62a"
 
 [prune]
   unused-packages = true

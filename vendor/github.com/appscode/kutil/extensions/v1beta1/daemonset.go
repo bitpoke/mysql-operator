@@ -1,13 +1,11 @@
 package v1beta1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/appscode/kutil"
 	core_util "github.com/appscode/kutil/core/v1"
 	"github.com/appscode/kutil/discovery"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	extensions "k8s.io/api/extensions/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,12 +34,16 @@ func CreateOrPatchDaemonSet(c kubernetes.Interface, meta metav1.ObjectMeta, tran
 }
 
 func PatchDaemonSet(c kubernetes.Interface, cur *extensions.DaemonSet, transform func(*extensions.DaemonSet) *extensions.DaemonSet) (*extensions.DaemonSet, kutil.VerbType, error) {
+	return PatchDaemonSetObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchDaemonSetObject(c kubernetes.Interface, cur, mod *extensions.DaemonSet) (*extensions.DaemonSet, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -78,7 +80,7 @@ func TryUpdateDaemonSet(c kubernetes.Interface, meta metav1.ObjectMeta, transfor
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update DaemonSet %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+		err = errors.Errorf("failed to update DaemonSet %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
 	}
 	return
 }

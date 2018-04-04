@@ -1,13 +1,15 @@
 package v1
 
 import (
-	"errors"
-
 	"github.com/appscode/kutil/meta"
+	"github.com/json-iterator/go"
+	"github.com/pkg/errors"
 	apps "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+var json = jsoniter.ConfigFastest
 
 func GetGroupVersionKind(v interface{}) schema.GroupVersionKind {
 	return apps.SchemeGroupVersion.WithKind(meta.GetKind(v))
@@ -37,5 +39,5 @@ func AssignTypeKind(v interface{}) error {
 		u.Kind = meta.GetKind(v)
 		return nil
 	}
-	return errors.New("unknown api object type")
+	return errors.New("unknown v1beta1 object type")
 }

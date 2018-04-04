@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/appscode/go/errors"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -37,12 +37,12 @@ type SSHKey struct {
 func NewSSHKeyPair() (*SSHKey, error) {
 	rsaKey, err := rsa.GenerateKey(rand.Reader, RSABitSize)
 	if err != nil {
-		return nil, errors.FromErr(err).Err()
+		return nil, errors.WithStack(err)
 	}
 
 	rsaPubKey, err := ssh.NewPublicKey(&rsaKey.PublicKey)
 	if err != nil {
-		return nil, errors.FromErr(err).Err()
+		return nil, errors.WithStack(err)
 	}
 
 	k := &SSHKey{}
@@ -55,7 +55,7 @@ func NewSSHKeyPair() (*SSHKey, error) {
 
 	der, err := x509.MarshalPKIXPublicKey(&rsaKey.PublicKey)
 	if err != nil {
-		return nil, errors.FromErr(err).Err()
+		return nil, errors.WithStack(err)
 	}
 	k.AwsFingerprint = sshFingerprint(der)
 	return k, nil
@@ -90,27 +90,27 @@ func ParseSSHKeyPair(pub, priv string) (*SSHKey, error) {
 	pubWireb64 := pub[strings.Index(pub, " ")+1:]
 	pubBytes, err := base64.StdEncoding.DecodeString(pubWireb64)
 	if err != nil {
-		return nil, errors.FromErr(err).Err()
+		return nil, errors.WithStack(err)
 	}
 	k.OpensshFingerprint = sshFingerprint(pubBytes)
 
 	// Convert from ssh.rsaPublicKey -> rsa.PublicKey
 	sshPK, _, _, _, err := ssh.ParseAuthorizedKey([]byte(pub))
 	if err != nil {
-		return nil, errors.FromErr(err).Err()
+		return nil, errors.WithStack(err)
 	}
 	b, err := json.Marshal(sshPK)
 	if err != nil {
-		return nil, errors.FromErr(err).Err()
+		return nil, errors.WithStack(err)
 	}
 	var rsaPK rsa.PublicKey
 	err = json.Unmarshal(b, &rsaPK)
 	if err != nil {
-		return nil, errors.FromErr(err).Err()
+		return nil, errors.WithStack(err)
 	}
 	der, err := x509.MarshalPKIXPublicKey(&rsaPK)
 	if err != nil {
-		return nil, errors.FromErr(err).Err()
+		return nil, errors.WithStack(err)
 	}
 	k.AwsFingerprint = sshFingerprint(der)
 

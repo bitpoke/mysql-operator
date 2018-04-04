@@ -1,12 +1,12 @@
 package fsnotify
 
 import (
-	"fmt"
 	"path/filepath"
 	"sync/atomic"
 
 	"github.com/appscode/go/log"
 	"github.com/fsnotify/fsnotify"
+	"github.com/pkg/errors"
 )
 
 type Watcher struct {
@@ -52,7 +52,7 @@ func (w *Watcher) Run(stopCh <-chan struct{}) error {
 	}()
 
 	if err = watcher.Add(w.WatchDir); err != nil {
-		return fmt.Errorf("error watching dir %s. Reason: %s", w.WatchDir, err)
+		return errors.Errorf("error watching dir %s. Reason: %s", w.WatchDir, err)
 	}
 
 	return nil

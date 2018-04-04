@@ -1,12 +1,10 @@
 package v1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/appscode/go/types"
 	"github.com/appscode/kutil"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	batch "k8s.io/api/batch/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,12 +33,16 @@ func CreateOrPatchJob(c kubernetes.Interface, meta metav1.ObjectMeta, transform 
 }
 
 func PatchJob(c kubernetes.Interface, cur *batch.Job, transform func(*batch.Job) *batch.Job) (*batch.Job, kutil.VerbType, error) {
+	return PatchJobObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchJobObject(c kubernetes.Interface, cur, mod *batch.Job) (*batch.Job, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -73,7 +75,7 @@ func TryUpdateJob(c kubernetes.Interface, meta metav1.ObjectMeta, transform func
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update Job %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+		err = errors.Errorf("failed to update Job %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
 	}
 	return
 }

@@ -716,6 +716,33 @@ func TestOptions(t *testing.T) {
 		},
 		wantEqual: true,
 		reason:    "equal because all Ignore options can be composed together",
+	}, {
+		label: "AcyclicTransformer",
+		x:     "a\nb\nc\nd",
+		y:     "a\nb\nd\nd",
+		opts: []cmp.Option{
+			AcyclicTransformer("", func(s string) []string { return strings.Split(s, "\n") }),
+		},
+		wantEqual: false,
+		reason:    "not equal because 3rd line differs, but should not recurse infinitely",
+	}, {
+		label: "AcyclicTransformer",
+		x:     []string{"foo", "Bar", "BAZ"},
+		y:     []string{"Foo", "BAR", "baz"},
+		opts: []cmp.Option{
+			AcyclicTransformer("", func(s string) string { return strings.ToUpper(s) }),
+		},
+		wantEqual: true,
+		reason:    "equal because of strings.ToUpper; AcyclicTransformer unnecessary, but check this still works",
+	}, {
+		label: "AcyclicTransformer",
+		x:     "this is a sentence",
+		y: "this   			is a 			sentence",
+		opts: []cmp.Option{
+			AcyclicTransformer("", func(s string) []string { return strings.Fields(s) }),
+		},
+		wantEqual: true,
+		reason:    "equal because acyclic transformer splits on any contiguous whitespace",
 	}}
 
 	for _, tt := range tests {
@@ -731,6 +758,8 @@ func TestOptions(t *testing.T) {
 				gotEqual = cmp.Equal(tt.x, tt.y, tt.opts...)
 			}()
 			switch {
+			case tt.reason == "":
+				t.Errorf("reason must be provided")
 			case gotPanic == "" && tt.wantPanic:
 				t.Errorf("expected Equal panic\nreason: %s", tt.reason)
 			case gotPanic != "" && !tt.wantPanic:
@@ -936,6 +965,12 @@ func TestPanic(t *testing.T) {
 		fnc:    IgnoreUnexported,
 		args:   args(Foo1{}, struct{ x, X int }{}),
 		reason: "input may be named or unnamed structs",
+	}, {
+		label:     "AcyclicTransformer",
+		fnc:       AcyclicTransformer,
+		args:      args("", "not a func"),
+		wantPanic: "invalid transformer function",
+		reason:    "AcyclicTransformer has same input requirements as Transformer",
 	}}
 
 	for _, tt := range tests {
@@ -972,6 +1007,8 @@ func TestPanic(t *testing.T) {
 			}()
 
 			switch {
+			case tt.reason == "":
+				t.Errorf("reason must be provided")
 			case tt.wantPanic == "" && gotPanic != "":
 				t.Errorf("unexpected panic message: %s\nreason: %s", gotPanic, tt.reason)
 			case tt.wantPanic != "" && !strings.Contains(gotPanic, tt.wantPanic):

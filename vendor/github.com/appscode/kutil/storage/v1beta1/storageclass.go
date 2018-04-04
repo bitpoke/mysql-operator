@@ -1,11 +1,9 @@
 package v1beta1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/appscode/kutil"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	storage "k8s.io/api/storage/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,12 +32,16 @@ func CreateOrPatchStorageClass(c kubernetes.Interface, meta metav1.ObjectMeta, t
 }
 
 func PatchStorageClass(c kubernetes.Interface, cur *storage.StorageClass, transform func(*storage.StorageClass) *storage.StorageClass) (*storage.StorageClass, kutil.VerbType, error) {
+	return PatchStorageClassObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchStorageClassObject(c kubernetes.Interface, cur, mod *storage.StorageClass) (*storage.StorageClass, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -72,7 +74,7 @@ func TryUpdateStorageClass(c kubernetes.Interface, meta metav1.ObjectMeta, trans
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update StorageClass %s after %d attempts due to %v", meta.Name, attempt, err)
+		err = errors.Errorf("failed to update StorageClass %s after %d attempts due to %v", meta.Name, attempt, err)
 	}
 	return
 }

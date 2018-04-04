@@ -1,11 +1,9 @@
 package v1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/appscode/kutil"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,12 +32,16 @@ func CreateOrPatchNode(c kubernetes.Interface, meta metav1.ObjectMeta, transform
 }
 
 func PatchNode(c kubernetes.Interface, cur *core.Node, transform func(*core.Node) *core.Node) (*core.Node, kutil.VerbType, error) {
+	return PatchNodeObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchNodeObject(c kubernetes.Interface, cur, mod *core.Node) (*core.Node, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -72,7 +74,7 @@ func TryUpdateNode(c kubernetes.Interface, meta metav1.ObjectMeta, transform fun
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update Node %s after %d attempts due to %v", meta.Name, attempt, err)
+		err = errors.Errorf("failed to update Node %s after %d attempts due to %v", meta.Name, attempt, err)
 	}
 	return
 }

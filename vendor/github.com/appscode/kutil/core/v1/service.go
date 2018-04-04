@@ -1,11 +1,9 @@
 package v1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/appscode/kutil"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,12 +32,16 @@ func CreateOrPatchService(c kubernetes.Interface, meta metav1.ObjectMeta, transf
 }
 
 func PatchService(c kubernetes.Interface, cur *core.Service, transform func(*core.Service) *core.Service) (*core.Service, kutil.VerbType, error) {
+	return PatchServiceObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchServiceObject(c kubernetes.Interface, cur, mod *core.Service) (*core.Service, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -72,7 +74,7 @@ func TryUpdateService(c kubernetes.Interface, meta metav1.ObjectMeta, transform 
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update Service %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+		err = errors.Errorf("failed to update Service %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
 	}
 	return
 }
@@ -104,4 +106,21 @@ func MergeServicePorts(cur, desired []core.ServicePort) []core.ServicePort {
 		desired[i] = dp
 	}
 	return desired
+}
+
+func WaitUntilServiceDeletedBySelector(kubeClient kubernetes.Interface, namespace string, selector *metav1.LabelSelector) error {
+	sel, err := metav1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		return err
+	}
+
+	return wait.PollImmediate(kutil.RetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+		svcList, err := kubeClient.CoreV1().Services(namespace).List(metav1.ListOptions{
+			LabelSelector: sel.String(),
+		})
+		if err != nil {
+			return false, nil
+		}
+		return len(svcList.Items) == 0, nil
+	})
 }

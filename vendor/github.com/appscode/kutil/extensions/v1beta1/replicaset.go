@@ -1,12 +1,10 @@
 package v1beta1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	. "github.com/appscode/go/types"
 	"github.com/appscode/kutil"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	extensions "k8s.io/api/extensions/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,12 +33,16 @@ func CreateOrPatchReplicaSet(c kubernetes.Interface, meta metav1.ObjectMeta, tra
 }
 
 func PatchReplicaSet(c kubernetes.Interface, cur *extensions.ReplicaSet, transform func(*extensions.ReplicaSet) *extensions.ReplicaSet) (*extensions.ReplicaSet, kutil.VerbType, error) {
+	return PatchReplicaSetObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchReplicaSetObject(c kubernetes.Interface, cur, mod *extensions.ReplicaSet) (*extensions.ReplicaSet, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -73,7 +75,7 @@ func TryUpdateReplicaSet(c kubernetes.Interface, meta metav1.ObjectMeta, transfo
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update ReplicaSet %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+		err = errors.Errorf("failed to update ReplicaSet %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
 	}
 	return
 }

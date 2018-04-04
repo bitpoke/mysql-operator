@@ -1,13 +1,11 @@
 package v1beta1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	. "github.com/appscode/go/types"
 	"github.com/appscode/kutil"
 	core_util "github.com/appscode/kutil/core/v1"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	apps "k8s.io/api/apps/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,12 +34,16 @@ func CreateOrPatchDeployment(c kubernetes.Interface, meta metav1.ObjectMeta, tra
 }
 
 func PatchDeployment(c kubernetes.Interface, cur *apps.Deployment, transform func(*apps.Deployment) *apps.Deployment) (*apps.Deployment, kutil.VerbType, error) {
+	return PatchDeploymentObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchDeploymentObject(c kubernetes.Interface, cur, mod *apps.Deployment) (*apps.Deployment, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -74,7 +76,7 @@ func TryUpdateDeployment(c kubernetes.Interface, meta metav1.ObjectMeta, transfo
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update Deployment %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+		err = errors.Errorf("failed to update Deployment %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
 	}
 	return
 }

@@ -1,12 +1,9 @@
 package v1
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-
 	"github.com/appscode/kutil"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,12 +32,16 @@ func CreateOrPatchPod(c kubernetes.Interface, meta metav1.ObjectMeta, transform 
 }
 
 func PatchPod(c kubernetes.Interface, cur *core.Pod, transform func(*core.Pod) *core.Pod) (*core.Pod, kutil.VerbType, error) {
+	return PatchPodObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchPodObject(c kubernetes.Interface, cur, mod *core.Pod) (*core.Pod, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -73,7 +74,7 @@ func TryUpdatePod(c kubernetes.Interface, meta metav1.ObjectMeta, transform func
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update Pod %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+		err = errors.Errorf("failed to update Pod %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
 	}
 	return
 }
@@ -146,15 +147,26 @@ func WaitUntilPodRunningBySelector(kubeClient kubernetes.Interface, namespace st
 }
 
 func WaitUntilPodDeletedBySelector(kubeClient kubernetes.Interface, namespace string, selector *metav1.LabelSelector) error {
-	r, err := metav1.LabelSelectorAsSelector(selector)
+	sel, err := metav1.LabelSelectorAsSelector(selector)
 	if err != nil {
 		return err
 	}
 
 	return wait.PollImmediate(kutil.RetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
 		podList, err := kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{
-			LabelSelector: r.String(),
+			LabelSelector: sel.String(),
 		})
+		if err != nil {
+			return false, nil
+		}
+		return len(podList.Items) == 0, nil
+	})
+}
+
+// WaitUntillPodTerminatedByLabel waits until all pods with the label are terminated. Timeout is 5 minutes.
+func WaitUntillPodTerminatedByLabel(kubeClient kubernetes.Interface, namespace string, label string) error {
+	return wait.PollImmediate(kutil.RetryInterval, kutil.PodTerminationTimeout, func() (bool, error) {
+		podList, err := kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: label})
 		if err != nil {
 			return false, nil
 		}

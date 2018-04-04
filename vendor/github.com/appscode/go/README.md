@@ -1,6 +1,6 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/appscode/go)](https://goreportcard.com/report/github.com/appscode/go)
-
-[Website](https://appscode.com) • [Slack](https://slack.appscode.com) • [Forum](https://discuss.appscode.com) • [Twitter](https://twitter.com/AppsCodeHQ)
+[![Build Status](https://travis-ci.org/appscode/go.svg?branch=master)](https://travis-ci.org/appscode/go)
+[![Go Report Card](https://goreportcard.com/badge/appscode/go "Go Report Card")](https://goreportcard.com/report/appscode/go)
+[![GoDoc](https://godoc.org/github.com/appscode/go?status.svg "GoDoc")](https://godoc.org/github.com/appscode/go)
 
 # go
 Ensemble of GOlang libraries used by AppsCode

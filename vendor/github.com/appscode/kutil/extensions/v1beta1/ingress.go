@@ -1,11 +1,9 @@
 package v1beta1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/appscode/kutil"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	extensions "k8s.io/api/extensions/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,12 +32,16 @@ func CreateOrPatchIngress(c kubernetes.Interface, meta metav1.ObjectMeta, transf
 }
 
 func PatchIngress(c kubernetes.Interface, cur *extensions.Ingress, transform func(*extensions.Ingress) *extensions.Ingress) (*extensions.Ingress, kutil.VerbType, error) {
+	return PatchIngressObject(c, cur, transform(cur.DeepCopy()))
+}
+
+func PatchIngressObject(c kubernetes.Interface, cur, mod *extensions.Ingress) (*extensions.Ingress, kutil.VerbType, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
 
-	modJson, err := json.Marshal(transform(cur.DeepCopy()))
+	modJson, err := json.Marshal(mod)
 	if err != nil {
 		return nil, kutil.VerbUnchanged, err
 	}
@@ -72,7 +74,7 @@ func TryUpdateIngress(c kubernetes.Interface, meta metav1.ObjectMeta, transform 
 	})
 
 	if err != nil {
-		err = fmt.Errorf("failed to update Ingress %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+		err = errors.Errorf("failed to update Ingress %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
 	}
 	return
 }

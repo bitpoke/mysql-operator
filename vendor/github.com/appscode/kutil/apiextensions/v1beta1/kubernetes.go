@@ -16,7 +16,7 @@ import (
 
 func RegisterCRDs(client crd_cs.ApiextensionsV1beta1Interface, crds []*crd_api.CustomResourceDefinition) error {
 	for _, crd := range crds {
-		_, err := client.CustomResourceDefinitions().Get(crd.Name, metav1.GetOptions{})
+		existing, err := client.CustomResourceDefinitions().Get(crd.Name, metav1.GetOptions{})
 		if kerr.IsNotFound(err) {
 			_, err = client.CustomResourceDefinitions().Create(crd)
 			if err != nil {
@@ -24,6 +24,12 @@ func RegisterCRDs(client crd_cs.ApiextensionsV1beta1Interface, crds []*crd_api.C
 			}
 		} else if err != nil {
 			return err
+		} else {
+			existing.Spec.Validation = crd.Spec.Validation
+			_, err = client.CustomResourceDefinitions().Update(existing)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return WaitForCRDReady(client.RESTClient(), crds)
@@ -48,7 +54,7 @@ func WaitForCRDReady(restClient rest.Interface, crds []*crd_api.CustomResourceDe
 			var statusCode int
 			res.StatusCode(&statusCode)
 			if statusCode != http.StatusOK {
-				return false, fmt.Errorf("invalid status code: %d", statusCode)
+				return false, errors.Errorf("invalid status code: %d", statusCode)
 			}
 		}
 

@@ -28,3 +28,4 @@ dist/
 **/.env
 .vscode/
 vendor/
+coverage.txt
