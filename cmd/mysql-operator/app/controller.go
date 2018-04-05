@@ -17,10 +17,8 @@ limitations under the License.
 package app
 
 import (
-	"context"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -43,6 +41,7 @@ import (
 	informers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions"
 
 	"github.com/presslabs/mysql-operator/cmd/mysql-operator/app/options"
+	"github.com/presslabs/mysql-operator/pkg/http"
 	"github.com/presslabs/mysql-operator/pkg/util"
 	"github.com/presslabs/mysql-operator/pkg/util/kube"
 	goptions "github.com/presslabs/mysql-operator/pkg/util/options"
@@ -93,8 +92,7 @@ func RunController(opts *options.MysqlControllerOptions, stopCh <-chan struct{})
 		glog.Fatalf(err.Error())
 	}
 
-	// start probing http server
-	httpServer(stopCh, opts.ProbeAddr)
+	http.StartHttpServer()
 
 	run := func(_ <-chan struct{}) {
 		var wg sync.WaitGroup
@@ -218,30 +216,4 @@ func startLeaderElection(opts *options.MysqlControllerOptions, leaderElectionCli
 			},
 		},
 	})
-}
-
-func httpServer(stop <-chan struct{}, addr string) {
-	mux := http.NewServeMux()
-
-	// Add health endpoint
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
-	})
-
-	srv := &http.Server{
-		Addr:    addr,
-		Handler: mux,
-	}
-
-	// Shutdown gracefully the http server
-	go func() {
-		<-stop // wait for stop signal
-		if err := srv.Shutdown(context.Background()); err != nil {
-			glog.Errorf("Failed to stop probe server, err: %s", err)
-		}
-	}()
-
-	go func() {
-		glog.Fatal(srv.ListenAndServe())
-	}()
 }

@@ -28,8 +28,16 @@ import (
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	ticlientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
 	"github.com/presslabs/mysql-operator/pkg/util/options"
-	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
+
+type Cluster struct {
+	api.MysqlCluster
+
+	// Master represent the cluster master hostname
+	MasterHostname string
+}
+
+var SavedClusters map[string]Cluster
 
 // Interface is for cluster Factory
 type Interface interface {
@@ -127,6 +135,24 @@ func (f *cFactory) getComponents() []component {
 	}
 }
 
+type action struct {
+	name  string
+	runFn func() error
+}
+
+func (f *cFactory) getActions() []action {
+	return []action{
+		action{
+			name:  "orchestrator-register-nodes",
+			runFn: f.registerNodesInOrc,
+		},
+		action{
+			name:  "orchestrator-get-master",
+			runFn: f.updateClusterMasterFromOrc,
+		},
+	}
+}
+
 func (f *cFactory) Sync(ctx context.Context) error {
 	for _, comp := range f.getComponents() {
 		state, err := comp.syncFn()
@@ -144,15 +170,13 @@ func (f *cFactory) Sync(ctx context.Context) error {
 		}
 	}
 
-	// Register nodes in orchestrator
-	if len(f.cluster.Spec.GetOrcUri()) != 0 {
-		// try to discover ready nodes into orchestrator
-		client := orc.NewFromUri(f.cluster.Spec.GetOrcUri())
-		for i := 0; i < int(f.cluster.Status.ReadyNodes); i++ {
-			host := f.getHostForReplica(i)
-			if err := client.Discover(host, MysqlPort); err != nil {
-				glog.Warningf("Failed to register %s with orchestrator: %s", host, err.Error())
-			}
+	for _, action := range f.getActions() {
+		err := action.runFn()
+		if err != nil {
+			glog.Warningf("[action %s]: failed with error: %s", action.name, err)
+			return err
+		} else {
+			glog.V(2).Infof("[action %s]: succeeded.", action.name)
 		}
 	}
 	return nil
