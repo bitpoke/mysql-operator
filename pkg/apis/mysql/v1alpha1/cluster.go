@@ -265,25 +265,6 @@ func (c *MysqlCluster) GetHealtySlaveHost() string {
 	return host
 }
 
-func (c *MysqlCluster) GetMasterHost() string {
-	masterHost := c.GetPodHostName(0)
-	// connect to orc and get the master host of the cluster.
-	if len(c.Spec.GetOrcUri()) != 0 {
-		client := orc.NewFromUri(c.Spec.GetOrcUri())
-		orcClusterName := fmt.Sprintf("%s.%s", c.Name, c.Namespace)
-		if inst, err := client.Master(orcClusterName); err == nil {
-			masterHost = inst.Key.Hostname
-		} else {
-			glog.Warningf(
-				"Failed getting master for %s: %s, falling back to default.",
-				orcClusterName, err,
-			)
-		}
-	}
-
-	return masterHost
-}
-
 func (c *MysqlCluster) GetPodHostName(p int) string {
 	pod := fmt.Sprintf("%s-%d", c.GetNameForResource(StatefulSet), p)
 	return fmt.Sprintf("%s.%s", pod, c.GetNameForResource(HeadlessSVC))

@@ -149,8 +149,8 @@ const (
 	EventReasonConfigMapUpdated     = "MysqlConfigMapUpdated"
 	EventReasonServiceFailed        = "HLServiceFailed"
 	EventReasonServiceUpdated       = "HLServiceUpdated"
-	EventReasonSFSFailed            = "SFSFailed"
-	EventReasonSFSUpdated           = "SFSUpdated"
+	EventReasonSFSFailed            = "StatefulSetFailed"
+	EventReasonSFSUpdated           = "StatefulSetUpdated"
 	EventReasonCronJobFailed        = "CronJobFailed"
 	EventReasonCronJobUpdated       = "CronJobUpdated"
 )

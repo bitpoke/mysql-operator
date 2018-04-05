@@ -54,6 +54,8 @@ type Options struct {
 	OrchestratorTopologyUser     string
 
 	JobCompleteSuccessGraceTime time.Duration
+
+	HttpServeAddr string
 }
 
 type pullpolicy v1.PullPolicy
@@ -84,6 +86,8 @@ const (
 
 	defaultOrchestratorTopologyUser     = ""
 	defaultOrchestratorTopologyPassword = ""
+
+	defaultHttpServeAddr = ":80"
 )
 
 var (
@@ -112,6 +116,9 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 		"The orchestrator topology user. Can also be set as ORC_TOPOLOGY_USER environment variable.")
 	fs.DurationVar(&o.JobCompleteSuccessGraceTime, "job-grace-time", defaultJobGraceTime,
 		"The time in hours how jobs after completion are keept.")
+
+	fs.StringVar(&o.HttpServeAddr, "http-serve-addr", defaultHttpServeAddr,
+		"The address for http server.")
 }
 
 var instance *Options
@@ -129,6 +136,8 @@ func GetOptions() *Options {
 
 			OrchestratorTopologyUser:     "",
 			OrchestratorTopologyPassword: "",
+
+			HttpServeAddr: defaultHttpServeAddr,
 		}
 	})
 

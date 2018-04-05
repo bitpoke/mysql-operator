@@ -37,8 +37,6 @@ type MysqlControllerOptions struct {
 
 	// The number of workers
 	NoWorkers int
-
-	ProbeAddr string
 }
 
 const (
@@ -52,7 +50,6 @@ const (
 	defaultLeaderElectionRetryPeriod   = 2 * time.Second
 
 	defaultNoWorkers = 5
-	defaultProbeAddr = ":80"
 )
 
 func NewControllerOptions() *MysqlControllerOptions {
@@ -66,7 +63,6 @@ func NewControllerOptions() *MysqlControllerOptions {
 		LeaderElectionRetryPeriod:   defaultLeaderElectionRetryPeriod,
 
 		NoWorkers: defaultNoWorkers,
-		ProbeAddr: defaultProbeAddr,
 	}
 }
 
@@ -104,8 +100,6 @@ func (s *MysqlControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&s.NoWorkers, "workers", defaultNoWorkers, "The number of workers that"+
 		" process events.")
 
-	fs.StringVar(&s.ProbeAddr, "probe-addr", defaultProbeAddr,
-		"The address for probing. Default :80")
 }
 
 func (o *MysqlControllerOptions) Validate() error {
