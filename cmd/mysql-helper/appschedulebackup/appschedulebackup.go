@@ -69,7 +69,7 @@ func RunCommand(stopCh <-chan struct{}, namespace, cluster string) error {
 }
 
 func createBackup(myClient myClientset.Interface, ns, cluster string) (*api.MysqlBackup, error) {
-	now := time.Now().Format("2006-01-02T15:04:05")
+	now := time.Now().Format("2006-01-02t15-04-05")
 	return myClient.Mysql().MysqlBackups(ns).Create(&api.MysqlBackup{
 		ObjectMeta: meta.ObjectMeta{
 			Name: fmt.Sprintf("%s-auto-backup-%s", cluster, now),
