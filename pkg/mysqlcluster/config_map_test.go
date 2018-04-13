@@ -26,17 +26,18 @@ import (
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	fakeMyClient "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/fake"
+	tutil "github.com/presslabs/mysql-operator/pkg/util/test"
 )
 
 // TestConfigMapSync
 // Test: create and update a config map
 // Expect: object to exists and hash to be updated
 func TestConfigMapSync(t *testing.T) {
-	ns := DefaultNamespace
+	ns := tutil.Namespace
 	client := fake.NewSimpleClientset()
 	myClient := fakeMyClient.NewSimpleClientset()
 
-	cluster := newFakeCluster("asd")
+	cluster := tutil.NewFakeCluster("asd")
 
 	_, f := getFakeFactory(ns, cluster, client, myClient)
 
@@ -72,11 +73,11 @@ func TestConfigMapSync(t *testing.T) {
 // Test: get data for cluster
 // Expect: data to be there
 func TestConfigMapData(t *testing.T) {
-	ns := DefaultNamespace
+	ns := tutil.Namespace
 	client := fake.NewSimpleClientset()
 	myClient := fakeMyClient.NewSimpleClientset()
 
-	cluster := newFakeCluster("asd")
+	cluster := tutil.NewFakeCluster("asd")
 	_, f := getFakeFactory(ns, cluster, client, myClient)
 
 	// get first configs

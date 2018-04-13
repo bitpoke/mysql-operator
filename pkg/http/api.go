@@ -30,20 +30,27 @@ type HttpAPI struct{}
 
 var API HttpAPI = HttpAPI{}
 
+// Health api endpoint, returns ok
 func (this *HttpAPI) Health(r render.Render) {
 	r.JSON(http.StatusOK, "OK")
 }
 
+// Master api endpoint to return cluster master hostname
 func (this *HttpAPI) Master(params martini.Params, r render.Render) {
 	clusterName := params["cluster"]
-	cluster, ok := mysqlcluster.SavedClusters[clusterName]
+	clusterInfo, ok := mysqlcluster.SavedClusters[clusterName]
 	if !ok {
 		r.JSON(http.StatusNotFound, "404")
 		return
 	}
-	r.JSON(http.StatusOK, cluster.MasterHostname)
+	r.JSON(http.StatusOK, clusterInfo.MasterHostname)
 }
 
+//
+//
+// From here we register api endpoints
+//
+//
 func (this *HttpAPI) registerAPIEndpoint(m *martini.ClassicMartini,
 	path string, handler martini.Handler) {
 	fullPath := fmt.Sprintf("/%s", path)

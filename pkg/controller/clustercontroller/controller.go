@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
 	ticlientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
 	tiinformers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions/mysql/v1alpha1"
@@ -46,6 +47,8 @@ const (
 
 	// ControllerName is the name of this controller
 	ControllerName = "mysqlclusterController"
+
+	reconcileWorkers = 3
 )
 
 // Controller structure
@@ -62,6 +65,8 @@ type Controller struct {
 	queue       workqueue.RateLimitingInterface
 	workerWg    sync.WaitGroup
 	syncedFuncs []cache.InformerSynced
+
+	reconcileQueue workqueue.DelayingInterface
 }
 
 // New returns a new controller
@@ -91,6 +96,8 @@ func New(
 	ctrl.queue = workqueue.NewNamedRateLimitingQueue(
 		workqueue.DefaultControllerRateLimiter(), "mysqlcluster")
 
+	ctrl.reconcileQueue = workqueue.NewNamedDelayingQueue("mysqlcluster-reconcile")
+
 	mysqlClusterInformer.Informer().AddEventHandler(
 		&controllerpkg.QueuingEventHandler{Queue: ctrl.queue})
 
@@ -118,18 +125,25 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 
 	for i := 0; i < workers; i++ {
 		c.workerWg.Add(1)
-		go wait.Until(func() { c.work(stopCh) }, workerPeriodTime, stopCh)
+		go wait.Until(func() { c.workerController(stopCh) }, workerPeriodTime, stopCh)
 	}
+
+	for i := 0; i < reconcileWorkers; i++ {
+		c.workerWg.Add(1)
+		go wait.Until(func() { c.workerRecouncile(stopCh) }, workerPeriodTime, stopCh)
+	}
+
 	<-stopCh
 	glog.V(2).Info("Shutting down controller.")
 	c.queue.ShutDown()
+	c.reconcileQueue.ShutDown()
 	glog.V(2).Info("Wait for workers to exit...")
 	c.workerWg.Wait()
 	glog.V(2).Info("Workers exited.")
 	return nil
 }
 
-func (c *Controller) work(stopCh <-chan struct{}) {
+func (c *Controller) workerController(stopCh <-chan struct{}) {
 	defer c.workerWg.Done()
 	glog.V(2).Info("Starting worker.")
 
@@ -155,8 +169,13 @@ func (c *Controller) work(stopCh <-chan struct{}) {
 			glog.V(2).Info(fmt.Sprintf("[%s controller]: syncing item '%s'", ControllerName, key))
 
 			// process items from queue
-			if err := c.processNextWorkItem(ctx, key); err != nil {
-				return err
+			cluster, err := c.getNextWorkItem(key)
+			if err != nil {
+				return fmt.Errorf("failed to get cluster: %s", err)
+			}
+
+			if err := c.Sync(ctx, cluster); err != nil {
+				return fmt.Errorf("sync error: %s", err)
 			}
 
 			c.queue.Forget(obj)
@@ -173,33 +192,92 @@ func (c *Controller) work(stopCh <-chan struct{}) {
 	}
 }
 
-func (c *Controller) processNextWorkItem(ctx context.Context, key string) error {
+func (c *Controller) workerRecouncile(stopCh <-chan struct{}) {
+	defer c.workerWg.Done()
+	ctx, cancel := context.WithCancel(context.Background())
+	ctx = util.ContextWithStopCh(ctx, stopCh)
+	defer cancel()
+
+	glog.V(2).Info("Starting recouncile worker.")
+
+	for {
+		obj, shutdown := c.reconcileQueue.Get()
+		if shutdown {
+			break
+		}
+
+		var key string
+		err := func(obj interface{}) error {
+			defer c.reconcileQueue.Done(obj)
+
+			var ok bool
+			if key, ok = obj.(string); !ok {
+				return nil
+			}
+
+			// process items from queue
+			cluster, err := c.getNextWorkItem(key)
+			if err != nil {
+				return fmt.Errorf("failed to get cluster: %s", err)
+			}
+
+			if err := c.Reconcile(ctx, cluster); err != nil {
+				return fmt.Errorf("sync error: %s", err)
+			}
+
+			return nil
+		}(obj)
+
+		if err != nil {
+			glog.Errorf("%s controller: Re-queuing item %q due to error processing: %s",
+				ControllerName, key, err.Error(),
+			)
+			continue
+		}
+	}
+}
+
+func (c *Controller) getNextWorkItem(key string) (*api.MysqlCluster, error) {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
-		return nil
+		return nil, fmt.Errorf("invalid resource key: %s", key)
 	}
 
 	if namespace != c.namespace {
-		runtime.HandleError(
-			fmt.Errorf("received object with namespace '%s' that is not in working namespace '%s`",
-				namespace, c.namespace))
-		return nil
+		return nil, fmt.Errorf("received object with namespace '%s' that is not in working namespace '%s`",
+			namespace, c.namespace)
 	}
 
 	mysqlCluster, err := c.clusterLister.MysqlClusters(namespace).Get(name)
 
 	if err != nil {
 		if k8errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("issuer %q in work queue no longer exists", key))
 			glog.Errorf("resource not found: %s", err)
-			return nil
+			return nil, fmt.Errorf("issuer %q in work queue no longer exists", key)
 		}
 
-		return err
+		return nil, err
 	}
 
-	return c.Sync(ctx, mysqlCluster, namespace)
+	return mysqlCluster, nil
+}
+
+func (c *Controller) addClusterInWorkQueue(cluster *api.MysqlCluster) {
+	key, err := controllerpkg.KeyFunc(cluster)
+	if err != nil {
+		runtime.HandleError(err)
+		return
+	}
+	c.queue.Add(key)
+}
+
+func (c *Controller) addClusterInReconcileQueue(cluster *api.MysqlCluster, after time.Duration) {
+	key, err := controllerpkg.KeyFunc(cluster)
+	if err != nil {
+		runtime.HandleError(err)
+		return
+	}
+	c.reconcileQueue.AddAfter(key, after)
 }
 
 func init() {
