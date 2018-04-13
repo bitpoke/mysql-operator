@@ -21,8 +21,18 @@ import (
 
 	"github.com/golang/glog"
 
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
+
+type ClusterInfo struct {
+	api.MysqlCluster
+
+	// Master represent the cluster master hostname
+	MasterHostname string
+}
+
+var SavedClusters map[string]ClusterInfo
 
 func (f *cFactory) registerNodesInOrc() error {
 	// Register nodes in orchestrator
@@ -58,10 +68,10 @@ func (f *cFactory) updateClusterMasterFromOrc() error {
 	}
 
 	if len(SavedClusters) == 0 {
-		SavedClusters = make(map[string]Cluster)
+		SavedClusters = make(map[string]ClusterInfo)
 	}
 
-	SavedClusters[f.cluster.Name] = Cluster{
+	SavedClusters[f.cluster.Name] = ClusterInfo{
 		MysqlCluster:   *f.cluster.DeepCopy(),
 		MasterHostname: masterHost,
 	}

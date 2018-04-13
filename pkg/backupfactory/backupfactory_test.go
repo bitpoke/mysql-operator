@@ -18,7 +18,6 @@ package backupfactory
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"testing"
 
@@ -28,51 +27,9 @@ import (
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	fakeMyClient "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/fake"
+
+	tutil "github.com/presslabs/mysql-operator/pkg/util/test"
 )
-
-const (
-	namespace = "default"
-)
-
-func init() {
-
-	// make tests verbose
-	flag.Set("alsologtostderr", "true")
-	flag.Set("v", "5")
-}
-
-func newFakeCluster(myClient *fakeMyClient.Clientset, name string) *api.MysqlCluster {
-	cluster := &api.MysqlCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: api.ClusterSpec{
-			Replicas:   1,
-			SecretName: name,
-		},
-	}
-
-	_, err := myClient.MysqlV1alpha1().MysqlClusters(namespace).Create(cluster)
-	if err != nil {
-		fmt.Println("Failed to create cluster:", err)
-	}
-
-	return cluster
-}
-
-func newFakeBackup(name, clName string) *api.MysqlBackup {
-	return &api.MysqlBackup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: api.BackupSpec{
-			ClusterName:      clName,
-			BackupUri:        "gs://bucket/a.xb.gz",
-			BackupSecretName: name,
-		},
-	}
-}
 
 func getFakeFactory(backup *api.MysqlBackup, k8Client *fake.Clientset,
 	myClient *fakeMyClient.Clientset) *bFactory {
@@ -99,11 +56,15 @@ func TestSync(t *testing.T) {
 	client := fake.NewSimpleClientset()
 	myClient := fakeMyClient.NewSimpleClientset()
 
-	cluster := newFakeCluster(myClient, "test-2")
-	backup := newFakeBackup("test-1", cluster.Name)
+	cluster := tutil.NewFakeCluster("test-2")
+	_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
+	if err != nil {
+		fmt.Println("Failed to create cluster:", err)
+	}
+	backup := tutil.NewFakeBackup("test-1", cluster.Name)
 	f := getFakeFactory(backup, client, myClient)
 
-	err := f.SetDefaults()
+	err = f.SetDefaults()
 	if err != nil {
 		t.Fail()
 	}
@@ -114,7 +75,7 @@ func TestSync(t *testing.T) {
 		t.Fail()
 	}
 
-	_, err = client.BatchV1().Jobs(namespace).Get(f.getJobName(), metav1.GetOptions{})
+	_, err = client.BatchV1().Jobs(tutil.Namespace).Get(f.getJobName(), metav1.GetOptions{})
 	if err != nil {
 		t.Fail()
 		return

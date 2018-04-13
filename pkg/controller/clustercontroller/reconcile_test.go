@@ -14,12 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package backupscontroller
+package clustercontroller
 
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 
 	fakeMyClient "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/fake"
 	informers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions"
+	"github.com/presslabs/mysql-operator/pkg/mysqlcluster"
 	tutil "github.com/presslabs/mysql-operator/pkg/util/test"
 )
 
@@ -48,18 +48,14 @@ func newController(stop chan struct{}, client *fake.Clientset,
 	return New(
 		client,
 		myClient,
-		sharedInformerFactory.Mysql().V1alpha1().MysqlBackups(),
 		sharedInformerFactory.Mysql().V1alpha1().MysqlClusters(),
 		rec,
 		tutil.Namespace,
-		kubeSharedInformerFactory.Batch().V1().Jobs(),
+		kubeSharedInformerFactory.Apps().V1().StatefulSets(),
 	)
 }
 
-// TestBackupCompleteSync
-// Test: a backup already  completed
-// Expect: skip sync-ing
-func TestBackupCompleteSync(t *testing.T) {
+func TestReconcilation(t *testing.T) {
 	client := fake.NewSimpleClientset()
 	myClient := fakeMyClient.NewSimpleClientset()
 	rec := record.NewFakeRecorder(100)
@@ -73,35 +69,28 @@ func TestBackupCompleteSync(t *testing.T) {
 	if err != nil {
 		fmt.Println("Failed to create cluster:", err)
 	}
-	backup := tutil.NewFakeBackup("asd-backup", cluster.Name)
-	backup.Status.Completed = true
 
 	ctx := context.TODO()
-	err = controller.Sync(ctx, backup, tutil.Namespace)
+	err = controller.Reconcile(ctx, cluster)
 	if err != nil {
-		fmt.Println("Sync err: ", err)
+		fmt.Println("Reconcile err: ", err)
 		t.Fail()
 	}
-}
 
-// TestBackupSyncNoClusterName
-// Test: backup without cluster name
-// Expect: sync to fail
-func TestBackupSyncNoClusterName(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	myClient := fakeMyClient.NewSimpleClientset()
-	rec := record.NewFakeRecorder(100)
+	info, ok := mysqlcluster.SavedClusters[cluster.Name]
+	if !ok {
+		fmt.Println("Not a saved cluster")
+		t.Fail()
+	}
 
-	stop := make(chan struct{})
-	defer close(stop)
-	controller := newController(stop, client, myClient, rec)
+	if info.MasterHostname != cluster.GetPodHostName(0) {
+		fmt.Println("Not correct master host")
+		t.Fail()
+	}
 
-	backup := tutil.NewFakeBackup("asd-backup", "")
-	backup.Status.Completed = true
-
-	ctx := context.TODO()
-	err := controller.Sync(ctx, backup, tutil.Namespace)
-	if !strings.Contains(err.Error(), "cluster name is not specified") {
+	_, shutdown := controller.reconcileQueue.Get()
+	if shutdown {
+		fmt.Println("shutdown")
 		t.Fail()
 	}
 }

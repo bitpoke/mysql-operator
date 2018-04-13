@@ -30,19 +30,13 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/util/options"
 )
 
-type Cluster struct {
-	api.MysqlCluster
-
-	// Master represent the cluster master hostname
-	MasterHostname string
-}
-
-var SavedClusters map[string]Cluster
-
 // Interface is for cluster Factory
 type Interface interface {
 	// Sync is the method that tries to sync the cluster.
 	Sync(ctx context.Context) error
+
+	// Reconcile apply some acction to the cluster to keep in sync cluster
+	Reconcile(ctx context.Context) error
 }
 
 // cluster factory
@@ -140,19 +134,6 @@ type action struct {
 	runFn func() error
 }
 
-func (f *cFactory) getActions() []action {
-	return []action{
-		action{
-			name:  "orchestrator-register-nodes",
-			runFn: f.registerNodesInOrc,
-		},
-		action{
-			name:  "orchestrator-get-master",
-			runFn: f.updateClusterMasterFromOrc,
-		},
-	}
-}
-
 func (f *cFactory) Sync(ctx context.Context) error {
 	for _, comp := range f.getComponents() {
 		state, err := comp.syncFn()
@@ -167,16 +148,6 @@ func (f *cFactory) Sync(ctx context.Context) error {
 		switch state {
 		case statusCreated, statusUpdated:
 			f.rec.Event(f.cluster, api.EventNormal, comp.reasonUpdated, "")
-		}
-	}
-
-	for _, action := range f.getActions() {
-		err := action.runFn()
-		if err != nil {
-			glog.Warningf("[action %s]: failed with error: %s", action.name, err)
-			return err
-		} else {
-			glog.V(2).Infof("[action %s]: succeeded.", action.name)
 		}
 	}
 	return nil
@@ -198,4 +169,30 @@ func (f *cFactory) getHostForReplica(no int) string {
 	return fmt.Sprintf("%s-%d.%s.%s", f.cluster.GetNameForResource(api.StatefulSet), no,
 		f.cluster.GetNameForResource(api.HeadlessSVC),
 		f.cluster.Namespace)
+}
+
+func (f *cFactory) getActions() []action {
+	return []action{
+		action{
+			name:  "orchestrator-register-nodes",
+			runFn: f.registerNodesInOrc,
+		},
+		action{
+			name:  "orchestrator-get-master",
+			runFn: f.updateClusterMasterFromOrc,
+		},
+	}
+}
+
+func (f *cFactory) Reconcile(ctx context.Context) error {
+	for _, action := range f.getActions() {
+		err := action.runFn()
+		if err != nil {
+			glog.Warningf("[action %s]: failed with error: %s", action.name, err)
+			return err
+		} else {
+			glog.V(2).Infof("[action %s]: succeeded.", action.name)
+		}
+	}
+	return nil
 }

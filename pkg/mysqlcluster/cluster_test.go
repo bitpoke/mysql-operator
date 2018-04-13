@@ -18,7 +18,6 @@ package mysqlcluster
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"reflect"
 	"strings"
@@ -31,7 +30,7 @@ import (
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	fakeMyClient "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/fake"
-	"github.com/presslabs/mysql-operator/pkg/util/options"
+	tutil "github.com/presslabs/mysql-operator/pkg/util/test"
 )
 
 // The following function are helpers for accessing private members of cluster
@@ -52,28 +51,6 @@ func (f *cFactory) GetComponents() []component {
 	return f.getComponents()
 }
 
-const (
-	DefaultNamespace = "default"
-)
-
-func newFakeCluster(name string) *api.MysqlCluster {
-	return &api.MysqlCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: api.ClusterSpec{
-			Replicas:   1,
-			SecretName: name,
-		},
-	}
-}
-
-func newFakeOption() *options.Options {
-	opt := options.GetOptions()
-	opt.Validate()
-	return opt
-}
-
 func newFakeSecret(name, rootP string) *core.Secret {
 	return &core.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -85,26 +62,15 @@ func newFakeSecret(name, rootP string) *core.Secret {
 	}
 }
 
-var (
-	opt *options.Options
-)
-
-func init() {
-	opt = newFakeOption()
-
-	// make tests verbose
-	flag.Set("alsologtostderr", "true")
-	flag.Set("v", "5")
-}
-
 func getFakeFactory(ns string, cluster *api.MysqlCluster, client *fake.Clientset,
 	myClient *fakeMyClient.Clientset) (*record.FakeRecorder, *cFactory) {
+
+	rec := record.NewFakeRecorder(100)
+	opt := tutil.NewFakeOption()
+
 	if err := cluster.UpdateDefaults(opt); err != nil {
 		panic(err)
 	}
-
-	rec := record.NewFakeRecorder(100)
-	opt := newFakeOption()
 
 	return rec, &cFactory{
 		opt:       opt,
@@ -128,15 +94,19 @@ func assertEqual(t *testing.T, left, right interface{}, msg string) {
 // Test: sync a cluster with a db secret name that does not exists.
 // Expect: to fail cluster sync
 func TestSyncClusterCreationNoSecret(t *testing.T) {
-	ns := DefaultNamespace
+	ns := tutil.Namespace
 	client := fake.NewSimpleClientset()
 	myClient := fakeMyClient.NewSimpleClientset()
 
-	cluster := newFakeCluster("test-1")
+	cluster := tutil.NewFakeCluster("test-1")
+	_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
+	if err != nil {
+		fmt.Println("Failed to create cluster:", err)
+	}
 	_, f := getFakeFactory(ns, cluster, client, myClient)
 
 	ctx := context.TODO()
-	err := f.Sync(ctx)
+	err = f.Sync(ctx)
 
 	if !strings.Contains(err.Error(), "secret 'test-1' failed") {
 		t.Fail()
@@ -147,14 +117,18 @@ func TestSyncClusterCreationNoSecret(t *testing.T) {
 // Test: sync a cluster with all required fields corectly
 // Expect: sync successful, all elements created
 func TestSyncClusterCreationWithSecret(t *testing.T) {
-	ns := DefaultNamespace
+	ns := tutil.Namespace
 	client := fake.NewSimpleClientset()
 	myClient := fakeMyClient.NewSimpleClientset()
 
 	sct := newFakeSecret("test-2", "Asd")
 	client.CoreV1().Secrets(ns).Create(sct)
 
-	cluster := newFakeCluster("test-2")
+	cluster := tutil.NewFakeCluster("test-2")
+	_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
+	if err != nil {
+		fmt.Println("Failed to create cluster:", err)
+	}
 	cluster.Spec.BackupSchedule = "* * * *"
 	_, f := getFakeFactory(ns, cluster, client, myClient)
 
@@ -170,7 +144,6 @@ func TestSyncClusterCreationWithSecret(t *testing.T) {
 		return
 	}
 
-	var err error
 	_, err = client.CoreV1().ConfigMaps(ns).Get(cluster.GetNameForResource(api.ConfigMap), metav1.GetOptions{})
 	if err != nil {
 		t.Fail()

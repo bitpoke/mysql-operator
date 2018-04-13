@@ -25,16 +25,14 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/runtime"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
 	mcfactory "github.com/presslabs/mysql-operator/pkg/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/util/options"
 )
 
 // Sync for add and update.
-func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster, ns string) error {
+func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster) error {
 	glog.Infof("sync cluster: %s", cluster.Name)
 	copyCluster := cluster.DeepCopy()
 	opt := options.GetOptions()
@@ -53,17 +51,17 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster, ns str
 		glog.V(2).Infof("now just update defaults for %s", cluster.Name)
 		c.recorder.Event(copyCluster, api.EventNormal, api.EventReasonInitDefaults,
 			"defaults seted")
-		_, err := c.myClient.Mysql().MysqlClusters(ns).Update(copyCluster)
+		_, err := c.myClient.Mysql().MysqlClusters(cluster.Namespace).Update(copyCluster)
 		return err
 	}
 
 	// create a cluster factory and sync it.
-	clusterFactory := mcfactory.New(copyCluster, opt, c.k8client, c.myClient, ns, c.recorder)
+	clusterFactory := mcfactory.New(copyCluster, opt, c.k8client, c.myClient, cluster.Namespace, c.recorder)
 	if err := clusterFactory.Sync(ctx); err != nil {
 		return fmt.Errorf("failed to set-up the cluster: %s", err)
 	}
 
-	if _, err := c.myClient.Mysql().MysqlClusters(ns).Update(copyCluster); err != nil {
+	if _, err := c.myClient.Mysql().MysqlClusters(cluster.Namespace).Update(copyCluster); err != nil {
 		return err
 	}
 
@@ -90,10 +88,5 @@ func (c *Controller) subresourceUpdated(obj interface{}) {
 		return
 	}
 
-	key, err := controllerpkg.KeyFunc(cluster)
-	if err != nil {
-		runtime.HandleError(err)
-		return
-	}
-	c.queue.Add(key)
+	c.addClusterInWorkQueue(cluster)
 }
