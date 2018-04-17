@@ -48,10 +48,10 @@ func newController(stop chan struct{}, client *fake.Clientset,
 	return New(
 		client,
 		myClient,
-		sharedInformerFactory.Mysql().V1alpha1().MysqlClusters(),
+		kubeSharedInformerFactory,
+		sharedInformerFactory,
 		rec,
 		tutil.Namespace,
-		kubeSharedInformerFactory.Apps().V1().StatefulSets(),
 	)
 }
 

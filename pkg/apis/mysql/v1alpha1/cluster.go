@@ -221,19 +221,23 @@ const (
 	ConfigMap ResourceName = "config-files"
 	// BackupCronJob is the name of cron job
 	BackupCronJob ResourceName = "backup-cron"
+	// MasterService is the name of the service that points to master node
+	MasterService ResourceName = "master-service"
 )
 
 func (c *MysqlCluster) GetNameForResource(name ResourceName) string {
-	switch name {
-	case HeadlessSVC, StatefulSet, ConfigMap, BackupCronJob:
-		return GetNameForResource(name, c.Name)
-	default:
-		return GetNameForResource(name, c.Name)
-	}
+	return GetNameForResource(name, c.Name)
 }
 
 func GetNameForResource(name ResourceName, clusterName string) string {
-	return fmt.Sprintf("%s-mysql", clusterName)
+	switch name {
+	case HeadlessSVC, StatefulSet, ConfigMap, BackupCronJob:
+		return fmt.Sprintf("%s-mysql", clusterName)
+	case MasterService:
+		return fmt.Sprintf("%s-master-mysql", clusterName)
+	default:
+		return fmt.Sprintf("%s-mysql", clusterName)
+	}
 }
 
 func (c *MysqlCluster) GetHealtySlaveHost() string {

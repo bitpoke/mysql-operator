@@ -153,6 +153,8 @@ const (
 	EventReasonSFSUpdated           = "StatefulSetUpdated"
 	EventReasonCronJobFailed        = "CronJobFailed"
 	EventReasonCronJobUpdated       = "CronJobUpdated"
+	EventReasonMasterServiceFailed  = "MasterServiceFailed"
+	EventReasonMasterServiceUpdated = "MasterServiceUpdated"
 )
 
 // Event types

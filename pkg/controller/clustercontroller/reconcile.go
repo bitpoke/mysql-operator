@@ -40,7 +40,7 @@ func (c *Controller) Reconcile(ctx context.Context, cluster *api.MysqlCluster) e
 	copyCluster := cluster.DeepCopy()
 	opt := options.GetOptions()
 
-	clusterFactory := myfactory.New(copyCluster, opt, c.k8client, c.myClient, cluster.Namespace, c.recorder)
+	clusterFactory := myfactory.New(copyCluster, opt, c.k8client, c.myClient, cluster.Namespace, c.recorder, c.podLister)
 	if err := clusterFactory.Reconcile(ctx); err != nil {
 		return fmt.Errorf("failed to reconcile the cluster: %s", err)
 	}
