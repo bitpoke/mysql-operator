@@ -23,6 +23,7 @@ import (
 	"github.com/golang/glog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -46,9 +47,10 @@ type cFactory struct {
 
 	namespace string
 
-	client   kubernetes.Interface
-	myClient ticlientset.Interface
-	rec      record.EventRecorder
+	client    kubernetes.Interface
+	myClient  ticlientset.Interface
+	podLister corelisters.PodLister
+	rec       record.EventRecorder
 
 	configHash string
 	secretHash string
@@ -56,12 +58,14 @@ type cFactory struct {
 
 // New creates a new cluster factory
 func New(cluster *api.MysqlCluster, opt *options.Options, klient kubernetes.Interface,
-	myClient ticlientset.Interface, ns string, rec record.EventRecorder) Interface {
+	myClient ticlientset.Interface, ns string, rec record.EventRecorder,
+	podLister corelisters.PodLister) Interface {
 	return &cFactory{
 		cluster:    cluster,
 		opt:        opt,
 		client:     klient,
 		myClient:   myClient,
+		podLister:  podLister,
 		namespace:  ns,
 		rec:        rec,
 		configHash: "1",
@@ -126,6 +130,13 @@ func (f *cFactory) getComponents() []component {
 			reasonFailed:  api.EventReasonCronJobFailed,
 			reasonUpdated: api.EventReasonCronJobUpdated,
 		},
+		component{
+			alias:         "master-service",
+			name:          f.cluster.GetNameForResource(api.MasterService),
+			syncFn:        f.syncMasterService,
+			reasonFailed:  api.EventReasonMasterServiceFailed,
+			reasonUpdated: api.EventReasonMasterServiceUpdated,
+		},
 	}
 }
 
@@ -179,7 +190,7 @@ func (f *cFactory) getActions() []action {
 		},
 		action{
 			name:  "orchestrator-get-master",
-			runFn: f.updateClusterMasterFromOrc,
+			runFn: f.updateMasterServiceEndpoints,
 		},
 	}
 }

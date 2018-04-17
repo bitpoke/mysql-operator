@@ -26,18 +26,19 @@ import (
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	appsinformers "k8s.io/client-go/informers/apps/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	appslisters "k8s.io/client-go/listers/apps/v1"
+	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
-	ticlientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
-	tiinformers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions/mysql/v1alpha1"
-	mclisters "github.com/presslabs/mysql-operator/pkg/generated/listers/mysql/v1alpha1"
+	myclientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	myinformers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions"
+	mylisters "github.com/presslabs/mysql-operator/pkg/generated/listers/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/util"
 )
 
@@ -56,11 +57,12 @@ type Controller struct {
 	namespace string
 
 	k8client kubernetes.Interface
-	myClient ticlientset.Interface
+	myClient myclientset.Interface
 	recorder record.EventRecorder
 
 	statefulSetLister appslisters.StatefulSetLister
-	clusterLister     mclisters.MysqlClusterLister
+	clusterLister     mylisters.MysqlClusterLister
+	podLister         corelisters.PodLister
 
 	queue       workqueue.RateLimitingInterface
 	workerWg    sync.WaitGroup
@@ -74,15 +76,14 @@ func New(
 	// kubernetes client
 	kubecli kubernetes.Interface,
 	// mysql clientset client
-	myClient ticlientset.Interface,
-	// mysql cluster informer
-	mysqlClusterInformer tiinformers.MysqlClusterInformer,
+	myClient myclientset.Interface,
+	// infomrer factories
+	kubeSharedInformerFactory informers.SharedInformerFactory,
+	mySharedInformerFactory myinformers.SharedInformerFactory,
 	// event recorder
 	eventRecorder record.EventRecorder,
 	// the namespace
 	namespace string,
-	// sfs informer
-	statefulSetInformer appsinformers.StatefulSetInformer,
 
 ) *Controller {
 	ctrl := &Controller{
@@ -91,6 +92,10 @@ func New(
 		myClient:  myClient,
 		recorder:  eventRecorder,
 	}
+
+	statefulSetInformer := kubeSharedInformerFactory.Apps().V1().StatefulSets()
+	podInformer := kubeSharedInformerFactory.Core().V1().Pods()
+	mysqlClusterInformer := mySharedInformerFactory.Mysql().V1alpha1().MysqlClusters()
 
 	// MysqlCluster
 	ctrl.queue = workqueue.NewNamedRateLimitingQueue(
@@ -110,6 +115,9 @@ func New(
 
 	ctrl.statefulSetLister = statefulSetInformer.Lister()
 	ctrl.syncedFuncs = append(ctrl.syncedFuncs, statefulSetInformer.Informer().HasSynced)
+
+	ctrl.podLister = podInformer.Lister()
+	ctrl.syncedFuncs = append(ctrl.syncedFuncs, podInformer.Informer().HasSynced)
 
 	return ctrl
 
@@ -285,10 +293,10 @@ func init() {
 		return New(
 			ctx.KubeClient,
 			ctx.Client,
-			ctx.SharedInformerFactory.Mysql().V1alpha1().MysqlClusters(),
+			ctx.KubeSharedInformerFactory,
+			ctx.SharedInformerFactory,
 			ctx.Recorder,
 			ctx.Namespace,
-			ctx.KubeSharedInformerFactory.Apps().V1().StatefulSets(),
 		).Start
 	})
 }

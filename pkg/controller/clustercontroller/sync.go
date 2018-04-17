@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	mcfactory "github.com/presslabs/mysql-operator/pkg/mysqlcluster"
+	myfactory "github.com/presslabs/mysql-operator/pkg/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/util/options"
 )
 
@@ -56,7 +56,7 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster) error 
 	}
 
 	// create a cluster factory and sync it.
-	clusterFactory := mcfactory.New(copyCluster, opt, c.k8client, c.myClient, cluster.Namespace, c.recorder)
+	clusterFactory := myfactory.New(copyCluster, opt, c.k8client, c.myClient, cluster.Namespace, c.recorder, c.podLister)
 	if err := clusterFactory.Sync(ctx); err != nil {
 		return fmt.Errorf("failed to set-up the cluster: %s", err)
 	}

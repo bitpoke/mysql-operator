@@ -56,3 +56,32 @@ func (f *cFactory) syncHeadlessService() (state string, err error) {
 	state = getStatusFromKVerb(act)
 	return
 }
+
+func (f *cFactory) syncMasterService() (state string, err error) {
+	state = statusUpToDate
+	meta := metav1.ObjectMeta{
+		Name:            f.cluster.GetNameForResource(api.MasterService),
+		Labels:          f.getLabels(map[string]string{}),
+		OwnerReferences: f.getOwnerReferences(),
+		Namespace:       f.namespace,
+	}
+
+	_, act, err := kcore.CreateOrPatchService(f.client, meta,
+		func(in *core.Service) *core.Service {
+			in.Spec.ClusterIP = "None"
+			if len(in.Spec.Ports) != 1 {
+				in.Spec.Ports = make([]core.ServicePort, 1)
+			}
+			in.Spec.Ports[0].Name = MysqlPortName
+			in.Spec.Ports[0].Port = MysqlPort
+			in.Spec.Ports[0].TargetPort = TargetPort
+			in.Spec.Ports[0].Protocol = "TCP"
+
+			return in
+		})
+
+	state = getStatusFromKVerb(act)
+	err = f.updateMasterServiceEndpoints()
+
+	return
+}
