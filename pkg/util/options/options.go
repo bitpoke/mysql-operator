@@ -56,6 +56,26 @@ type Options struct {
 	JobCompleteSuccessGraceTime time.Duration
 }
 
+type pullpolicy v1.PullPolicy
+
+func (pp *pullpolicy) String() string {
+	return string(*pp)
+}
+
+func (pp *pullpolicy) Set(value string) error {
+	*pp = pullpolicy(value)
+	return nil
+}
+
+func (pp *pullpolicy) Type() string {
+	return "v1.PullPolicy"
+}
+
+func newPullPolicyValue(defaultValue v1.PullPolicy, v *v1.PullPolicy) *pullpolicy {
+	*v = defaultValue
+	return (*pullpolicy)(v)
+}
+
 const (
 	defaultMysqlImage    = "percona:5.7"
 	defaultExporterImage = "prom/mysqld-exporter:latest"
@@ -78,8 +98,12 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 		"The image that instrumentate mysql.")
 	fs.StringVar(&o.MetricsExporterImage, "metrics-exporter-image", defaultExporterImage,
 		"The image for mysql metrics exporter.")
-	fs.StringVar(&o.ImagePullSecretName, "pull-secret", "",
+	fs.StringVar(&o.ImagePullSecretName, "image-pull-secret", "",
 		"The secret name for used as pull secret.")
+
+	fs.VarP(newPullPolicyValue(defaultImagePullPolicy, &o.ImagePullPolicy),
+		"image-pull-policy", "", "Set image pull policy.")
+
 	fs.StringVar(&o.OrchestratorUri, "orchestrator-uri", "",
 		"The orchestrator uri")
 	fs.StringVar(&o.OrchestratorTopologyPassword, "orchestrator-topology-password", defaultOrchestratorTopologyUser,
