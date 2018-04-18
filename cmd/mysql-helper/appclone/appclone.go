@@ -45,6 +45,10 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		}
 	}
 
+	if err := deleteLostFound(); err != nil {
+		return fmt.Errorf("removing lost+found: %s", err)
+	}
+
 	if tb.NodeRole() == "master" {
 		initBucket := tb.GetInitBucket()
 		if len(initBucket) == 0 {
@@ -220,4 +224,9 @@ func checkIfDataExists() bool {
 	}
 
 	return true
+}
+
+func deleteLostFound() error {
+	path := fmt.Sprintf("%s/lost+found", tb.DataDir)
+	return os.RemoveAll(path)
 }
