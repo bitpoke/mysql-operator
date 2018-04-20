@@ -16,9 +16,8 @@ func (m *StrToBool) MarshalJSON() ([]byte, error) {
 	a := *m
 	if a {
 		return []byte("true"), nil
-	} else {
-		return []byte("false"), nil
 	}
+	return []byte("false"), nil
 }
 
 func (m *StrToBool) UnmarshalJSON(data []byte) error {
