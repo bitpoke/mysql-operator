@@ -197,6 +197,7 @@ func (f *cFactory) getActions() []action {
 
 func (f *cFactory) Reconcile(ctx context.Context) error {
 	for _, action := range f.getActions() {
+		glog.V(2).Infof("[action %s]: started", action.name)
 		err := action.runFn()
 		if err != nil {
 			glog.Warningf("[action %s]: failed with error: %s", action.name, err)

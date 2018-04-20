@@ -45,10 +45,10 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster) error 
 
 	if !reflect.DeepEqual(cluster.Spec, copyCluster.Spec) {
 		// updating defaults
+		glog.V(2).Infof("now just update defaults for %s", cluster.Name)
 		copyCluster.UpdateStatusCondition(api.ClusterConditionReady,
 			apiv1.ConditionUnknown, "not initialized", "setting defaults")
 
-		glog.V(2).Infof("now just update defaults for %s", cluster.Name)
 		c.recorder.Event(copyCluster, api.EventNormal, api.EventReasonInitDefaults,
 			"defaults seted")
 		_, err := c.myClient.Mysql().MysqlClusters(cluster.Namespace).Update(copyCluster)
@@ -65,6 +65,8 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster) error 
 		return err
 	}
 
+	c.registerClusterInReconcilation(cluster)
+
 	return nil
 }
 
@@ -78,15 +80,25 @@ func (c *Controller) subresourceUpdated(obj interface{}) {
 	}
 
 	if objectMeta == nil {
-		glog.V(2).Infof("Cannot get ObjectMeta for obj: %#v", obj)
+		glog.V(4).Infof("Cannot get ObjectMeta for obj: %#v", obj)
 		return
 	}
 
 	cluster, err := c.instanceForOwnerReference(objectMeta)
 	if err != nil {
-		glog.V(3).Infof("Cannot get cluster for ObjectMeta, err: %s", err)
+		glog.V(4).Infof("Cannot get cluster for ObjectMeta, err: %s", err)
 		return
 	}
 
 	c.addClusterInWorkQueue(cluster)
+}
+
+func (c *Controller) registerClusterInReconcilation(cluster *api.MysqlCluster) {
+	_, loaded := c.clustersSync.LoadOrStore(cluster.Name, true)
+
+	if !loaded {
+		glog.V(2).Infof("Register cluster '%s' in reconcile queue.", cluster.Name)
+		// add once a cluster in reconcile loop
+		c.addClusterInReconcileQueue(cluster, reconcileTime)
+	}
 }

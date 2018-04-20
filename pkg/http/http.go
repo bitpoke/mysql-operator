@@ -17,7 +17,9 @@ limitations under the License.
 package http
 
 import (
-	netHttp "net/http"
+	"io/ioutil"
+	"log"
+	"net/http"
 
 	"github.com/go-martini/martini"
 	"github.com/golang/glog"
@@ -32,12 +34,15 @@ func StartHttpServer() {
 	m := martini.Classic()
 	m.Use(render.Renderer())
 
+	// deactivate default loging
+	m.Map(log.New(ioutil.Discard, "", 0))
+
 	glog.Info("Register endpoints")
 	API.RegisterEndpoints(m)
 
 	go func() {
 		glog.Info("Starting http server")
-		if err := netHttp.ListenAndServe(opt.HttpServeAddr, m); err != nil {
+		if err := http.ListenAndServe(opt.HttpServeAddr, m); err != nil {
 			glog.Fatal(err)
 		}
 	}()

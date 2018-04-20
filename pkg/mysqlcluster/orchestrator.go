@@ -24,6 +24,8 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/reference"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	kutil "github.com/presslabs/mysql-operator/pkg/util/kube"
@@ -38,6 +40,10 @@ type ClusterInfo struct {
 }
 
 var SavedClusters map[string]ClusterInfo
+
+func init() {
+	SavedClusters = make(map[string]ClusterInfo)
+}
 
 func (f *cFactory) registerNodesInOrc() error {
 	// Register nodes in orchestrator
@@ -72,10 +78,6 @@ func (f *cFactory) updateMasterServiceEndpoints() error {
 		}
 	}
 
-	if len(SavedClusters) == 0 {
-		SavedClusters = make(map[string]ClusterInfo)
-	}
-
 	SavedClusters[f.cluster.Name] = ClusterInfo{
 		MysqlCluster:   *f.cluster.DeepCopy(),
 		MasterHostname: masterHost,
@@ -87,6 +89,11 @@ func (f *cFactory) updateMasterServiceEndpoints() error {
 		return nil
 	}
 
+	if len(masterPod.Status.PodIP) == 0 {
+		glog.Errorf("Failed to set master service endpoints, ip for pod %s not set %s", masterPod.Name, err)
+		return nil
+	}
+
 	meta := metav1.ObjectMeta{
 		Name:            f.cluster.GetNameForResource(api.MasterService),
 		Labels:          f.getLabels(map[string]string{}),
@@ -94,22 +101,26 @@ func (f *cFactory) updateMasterServiceEndpoints() error {
 		Namespace:       f.namespace,
 	}
 
-	_, _, err = kutil.CreateOrPatchEndpoints(f.client, meta,
+	_, act, err := kutil.CreateOrPatchEndpoints(f.client, meta,
 		func(in *core.Endpoints) *core.Endpoints {
 			if len(in.Subsets) != 1 {
 				in.Subsets = make([]core.EndpointSubset, 1)
 			}
+
+			ref, _ := reference.GetReference(runtime.NewScheme(), masterPod)
+
 			addresses := []core.EndpointAddress{
 				core.EndpointAddress{
-					IP: masterPod.Status.PodIP,
+					IP:        masterPod.Status.PodIP,
+					TargetRef: ref,
 				},
 			}
 			readyIndex, exists := condIndex(masterPod, core.PodReady)
 			if exists && masterPod.Status.Conditions[readyIndex].Status == core.ConditionTrue {
 				in.Subsets[0].Addresses = addresses
-				in.Subsets[0].NotReadyAddresses = []core.EndpointAddress{}
+				in.Subsets[0].NotReadyAddresses = nil
 			} else {
-				in.Subsets[0].Addresses = []core.EndpointAddress{}
+				in.Subsets[0].Addresses = nil
 				in.Subsets[0].NotReadyAddresses = addresses
 			}
 
@@ -122,6 +133,9 @@ func (f *cFactory) updateMasterServiceEndpoints() error {
 
 			return in
 		})
+
+	glog.Infof("Endpoints for service '%s' were %s.",
+		f.cluster.GetNameForResource(api.MasterService), getStatusFromKVerb(act))
 
 	return err
 }

@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	reconcileTime = 1 * time.Second
+	reconcileTime = 15 * time.Second
 )
 
 func (c *Controller) Reconcile(ctx context.Context, cluster *api.MysqlCluster) error {

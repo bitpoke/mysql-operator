@@ -1,3 +1,6 @@
+extraArgs:
+  - -v=3
+
 orchestrator:
   antiAffinity: soft
   replicas: 1
