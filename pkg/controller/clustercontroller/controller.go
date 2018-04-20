@@ -49,7 +49,7 @@ const (
 	// ControllerName is the name of this controller
 	ControllerName = "mysqlclusterController"
 
-	reconcileWorkers = 3
+	reconcileWorkers = 4
 )
 
 // Controller structure
@@ -67,6 +67,8 @@ type Controller struct {
 	queue       workqueue.RateLimitingInterface
 	workerWg    sync.WaitGroup
 	syncedFuncs []cache.InformerSynced
+
+	clustersSync sync.Map
 
 	reconcileQueue workqueue.DelayingInterface
 }

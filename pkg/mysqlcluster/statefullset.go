@@ -136,7 +136,8 @@ func (f *cFactory) getEnvFor(name string) (env []core.EnvVar) {
 		Name: "MY_NAMESPACE",
 		ValueFrom: &core.EnvVarSource{
 			FieldRef: &core.ObjectFieldSelector{
-				FieldPath: "metadata.namespace",
+				APIVersion: "v1",
+				FieldPath:  "metadata.namespace",
 			},
 		},
 	})
@@ -144,7 +145,8 @@ func (f *cFactory) getEnvFor(name string) (env []core.EnvVar) {
 		Name: "MY_POD_NAME",
 		ValueFrom: &core.EnvVarSource{
 			FieldRef: &core.ObjectFieldSelector{
-				FieldPath: "metadata.name",
+				APIVersion: "v1",
+				FieldPath:  "metadata.name",
 			},
 		},
 	})
@@ -152,7 +154,8 @@ func (f *cFactory) getEnvFor(name string) (env []core.EnvVar) {
 		Name: "MY_POD_IP",
 		ValueFrom: &core.EnvVarSource{
 			FieldRef: &core.ObjectFieldSelector{
-				FieldPath: "status.podIP",
+				APIVersion: "v1",
+				FieldPath:  "status.podIP",
 			},
 		},
 	})
@@ -258,7 +261,6 @@ func (f *cFactory) getEnvFor(name string) (env []core.EnvVar) {
 		})
 	}
 
-	//if len(f.cluster.Spec.GetOrcTopologySecret()) != 0 {
 	return
 }
 

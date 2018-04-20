@@ -17,7 +17,7 @@
   branch = "master"
   name = "github.com/appscode/go"
   packages = ["types"]
-  revision = "f8f2e1c7d2d10789cdd0540468b487d14421dbf9"
+  revision = "0eb2cabe3897bfd0fe615e9849583a88bcc82df4"
 
 [[projects]]
   branch = "master"
@@ -36,7 +36,7 @@
     "core/v1",
     "meta"
   ]
-  revision = "83f1a2ee558a663702929a15ff7cfdfbfef331f1"
+  revision = "c3aa54aedcceb925ba15c7bf4a6c2e456138755e"
 
 [[projects]]
   branch = "master"
@@ -62,8 +62,8 @@
     ".",
     "log"
   ]
-  revision = "26b41036311f2da8242db402557a0dbd09dc83da"
-  version = "v2.6.0"
+  revision = "92cd0815dd1a028a6e69faee9757c7436238e252"
+  version = "v2.6.1"
 
 [[projects]]
   name = "github.com/evanphx/json-patch"
@@ -80,8 +80,8 @@
 [[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "5e9692864e22d02ac79e2fa499cffb00520b4fea"
-  version = "v1.34.0"
+  revision = "ace140f73450505f33e8b8418216792275ae82a7"
+  version = "v1.35.0"
 
 [[projects]]
   name = "github.com/go-martini/martini"
@@ -105,13 +105,13 @@
   branch = "master"
   name = "github.com/go-openapi/spec"
   packages = ["."]
-  revision = "9acd88844bc186c3ec7f318cd3d56f1114b4ab99"
+  revision = "bcff419492eeeb01f76e77d2ebc714dc97b607f5"
 
 [[projects]]
   branch = "master"
   name = "github.com/go-openapi/swag"
   packages = ["."]
-  revision = "ceb469cb0fdf2d792f28d771bc05da6c606f55e5"
+  revision = "811b1089cde9dad18d4d0c2d09fbdbf28dbd27a5"
 
 [[projects]]
   name = "github.com/go-sql-driver/mysql"
@@ -212,8 +212,8 @@
 [[projects]]
   name = "github.com/imdario/mergo"
   packages = ["."]
-  revision = "33882c6bfe701aca0ff1472aa8b4ebd6135a560d"
-  version = "v0.3.3"
+  revision = "9d5f1277e9a8ed20c3684bda8fde67c05628518c"
+  version = "v0.3.4"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"
@@ -312,8 +312,8 @@
 [[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
-  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
-  version = "v1.0.0"
+  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
@@ -334,19 +334,20 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "b2aa35443fbc700ab74c586ae79b81c171851023"
+  revision = "d6449816ce06963d9d136eee5a56fca5b0616e7e"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
     "context",
+    "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
     "lex/httplex"
   ]
-  revision = "b68f30494add4df6bd8ef5e82803f308e7f7c59c"
+  revision = "d41e8174641f662c5a2d1c7a5f9e828788eb8706"
 
 [[projects]]
   branch = "master"
@@ -355,7 +356,7 @@
     "unix",
     "windows"
   ]
-  revision = "f67933eaf9e2f750f58a234209a11ebc1107be38"
+  revision = "a2a45943ae67364d56c5d7d62dee78cff16c8dc8"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -673,11 +674,11 @@
     "pkg/common",
     "pkg/util/proto"
   ]
-  revision = "cd0308977f05a0de033c0e8ce1860b317e360dca"
+  revision = "0f2f0396e266ad24afbd02375ba74c0dda1e3611"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3630b62f3d47a49efbc8a138a65e6893860c88a6616307a392958e7f22e5249f"
+  inputs-digest = "f36030c8a2b14eafa9f93c0e728476ba2d05d0bd668bbd33bcbc042e2f224d96"
   solver-name = "gps-cdcl"
   solver-version = 1
