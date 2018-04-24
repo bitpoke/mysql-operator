@@ -49,6 +49,11 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 				return in
 			}
 
+			f.configHash = new_hash
+			in.ObjectMeta.Annotations = map[string]string{
+				"config_hash": new_hash,
+			}
+
 			if key, ok := in.ObjectMeta.Annotations["config_hash"]; ok {
 				if key == new_hash {
 					glog.V(2).Infof("Skip updating configs, it's up to date: %s",
@@ -57,11 +62,6 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 				} else {
 					glog.Infof("Config hashes doesn't match: %s != %s . Updateing configs.", key, new_hash)
 				}
-			}
-
-			f.configHash = new_hash
-			in.ObjectMeta.Annotations = map[string]string{
-				"config_hash": new_hash,
 			}
 
 			in.Data = map[string]string{
