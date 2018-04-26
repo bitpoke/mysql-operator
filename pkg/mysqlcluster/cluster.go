@@ -192,6 +192,10 @@ func (f *cFactory) getActions() []action {
 			name:  "orchestrator-get-master",
 			runFn: f.updateMasterServiceEndpoints,
 		},
+		action{
+			name:  "orchestrator-auto-ack",
+			runFn: f.autoAcknowledge,
+		},
 	}
 }
 

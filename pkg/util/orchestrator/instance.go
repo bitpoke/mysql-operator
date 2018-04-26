@@ -103,3 +103,23 @@ type Instance struct {
 
 	LastDiscoveryLatency time.Duration
 }
+
+type TopologyRecovery struct {
+	Id                     int64
+	UID                    string
+	SuccessorKey           *InstanceKey
+	SuccessorAlias         string
+	IsActive               bool
+	IsSuccessful           bool
+	AllErrors              []string
+	RecoveryStartTimestamp string
+	RecoveryEndTimestamp   string
+	ProcessingNodeHostname string
+	ProcessingNodeToken    string
+	Acknowledged           bool
+	AcknowledgedAt         string
+	AcknowledgedBy         string
+	AcknowledgedComment    string
+	LastDetectionId        int64
+	RelatedRecoveryId      int64
+}
