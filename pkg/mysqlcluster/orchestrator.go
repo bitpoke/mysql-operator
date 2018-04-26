@@ -19,6 +19,7 @@ package mysqlcluster
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	core "k8s.io/api/core/v1"
@@ -161,6 +162,71 @@ func (f *cFactory) getPodForHostname(hostname string) (*core.Pod, error) {
 
 func condIndex(pod *core.Pod, ty core.PodConditionType) (int, bool) {
 	for i, cond := range pod.Status.Conditions {
+		if cond.Type == ty {
+			return i, true
+		}
+	}
+
+	return 0, false
+}
+
+func (f *cFactory) autoAcknowledge() error {
+	if len(f.cluster.Spec.GetOrcUri()) == 0 {
+		// nothing to do, orchestrator uri not set
+		return nil
+	}
+
+	i, find := condIndexCluster(f.cluster, api.ClusterConditionReady)
+	if !find || f.cluster.Status.Conditions[i].Status != core.ConditionTrue {
+		glog.Warning("[autoAcknowledge]: Cluster is not ready for ack.")
+		return nil
+	}
+
+	if time.Since(f.cluster.Status.Conditions[i].LastTransitionTime.Time).Minutes() < 10 {
+		glog.Warning(
+			"[autoAcknowledge]: Stateful set is not ready more then 10 minutes. Don't ack.",
+		)
+		return nil
+	}
+
+	// proceed with cluster recovery
+	client := orc.NewFromUri(f.cluster.Spec.GetOrcUri())
+	recoveries, err := client.AuditRecovery(f.cluster.Name)
+	if err != nil {
+		return fmt.Errorf("orchestrator audit: %s", err)
+	}
+
+	for _, recovery := range recoveries {
+		if !recovery.Acknowledged {
+			// skip if it's a new recovery, recovery should be older then 10 minutes
+			startTime, err := time.Parse(time.RFC3339, recovery.RecoveryStartTimestamp)
+			if err != nil {
+				glog.Errorf("[autoAcknowledge] Can't parse time: %s for audit recovery: %d",
+					err, recovery.Id,
+				)
+				continue
+			}
+			if time.Since(startTime).Minutes() < 10 {
+				// skip this recovery
+				continue
+			}
+
+			comment := fmt.Sprintf("Statefulset '%s' is healty more then 10 minutes",
+				f.cluster.GetNameForResource(api.StatefulSet),
+			)
+			if err := client.AckRecovery(recovery.Id, comment); err != nil {
+				glog.Errorf("Trying to ack recovery with id %d but failed with error: %s",
+					recovery.Id, err,
+				)
+			}
+		}
+	}
+
+	return nil
+}
+
+func condIndexCluster(r *api.MysqlCluster, ty api.ClusterConditionType) (int, bool) {
+	for i, cond := range r.Status.Conditions {
 		if cond.Type == ty {
 			return i, true
 		}

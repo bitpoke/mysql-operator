@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	"github.com/golang/glog"
 )
@@ -31,6 +32,8 @@ type Orchestrator interface {
 
 	Master(clusterHint string) (*Instance, error)
 	ClusterOSCReplicas(cluster string) ([]Instance, error)
+	AuditRecovery(cluster string) ([]TopologyRecovery, error)
+	AckRecovery(id int64, commnet string) error
 }
 
 type orchestrator struct {
@@ -44,7 +47,7 @@ func NewFromUri(uri string) Orchestrator {
 }
 
 func (o *orchestrator) Discover(host string, port int) error {
-	if err := o.makeGetAPIResponse(fmt.Sprintf("discover/%s/%d", host, port)); err != nil {
+	if err := o.makeGetAPIResponse(fmt.Sprintf("discover/%s/%d", host, port), nil); err != nil {
 		return err
 	}
 
@@ -52,7 +55,7 @@ func (o *orchestrator) Discover(host string, port int) error {
 }
 
 func (o *orchestrator) Forget(host string, port int) error {
-	if err := o.makeGetAPIResponse(fmt.Sprintf("forget/%s/%d", host, port)); err != nil {
+	if err := o.makeGetAPIResponse(fmt.Sprintf("forget/%s/%d", host, port), nil); err != nil {
 		return err
 	}
 
@@ -96,8 +99,13 @@ type APIResponse struct {
 	// Detials json.RawMessage
 }
 
-func (o *orchestrator) makeGetAPIResponse(path string) error {
-	uri := fmt.Sprintf("%s/%s", o.connectUri, path)
+func (o *orchestrator) makeGetAPIResponse(path string, query map[string][]string) error {
+	args := url.Values(query).Encode()
+	if len(args) != 0 {
+		args = "?" + args
+	}
+
+	uri := fmt.Sprintf("%s/%s%s", o.connectUri, path, args)
 	glog.V(2).Infof("Orc request on: %s", uri)
 
 	resp, err := http.Get(uri)
@@ -118,7 +126,8 @@ func (o *orchestrator) makeGetAPIResponse(path string) error {
 	err = json.Unmarshal(body, &apiObj)
 	if err != nil {
 		glog.V(3).Infof("Unmarshal data is: %s", string(body))
-		return fmt.Errorf("unmarshal error: %s", err)
+		glog.Errorf("[makeGetAPIResponse]: Orchestrator unmarshal data error: %s", err)
+		return nil
 	}
 
 	switch apiObj.Code {
@@ -156,4 +165,42 @@ func (o *orchestrator) ClusterOSCReplicas(cluster string) ([]Instance, error) {
 	}
 
 	return insts, nil
+}
+
+func (o *orchestrator) AuditRecovery(cluster string) ([]TopologyRecovery, error) {
+	uri := fmt.Sprintf("%s/audit-recovery/%s", o.connectUri, cluster)
+	glog.V(2).Infof("Orc request on: %s", uri)
+
+	resp, err := http.Get(uri)
+	if err != nil {
+		return nil, fmt.Errorf("http get error: %s", err)
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("http error code: %s", resp.Status)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("io read error: %s", err)
+	}
+
+	var recoveries []TopologyRecovery
+	if err = json.Unmarshal(body, &recoveries); err != nil {
+		glog.V(3).Infof("Unmarshal data is: %s", string(body))
+		return nil, fmt.Errorf("unmarshal error: %s", err)
+	}
+
+	return recoveries, nil
+}
+
+func (o *orchestrator) AckRecovery(id int64, comment string) error {
+	query := map[string][]string{
+		"comment": []string{comment},
+	}
+	if err := o.makeGetAPIResponse(fmt.Sprintf("ack-recovery/%d", id), query); err != nil {
+		return err
+	}
+
+	return nil
 }
