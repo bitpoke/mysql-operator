@@ -15,6 +15,7 @@ import (
 	"github.com/golang/glog"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -140,13 +141,17 @@ func (mgr BackupManager) Backup(process processorFunc) error {
 		}
 		for _, r := range list.APIResources {
 			if strings.ContainsRune(r.Name, '/') {
+				continue // skip subresource
+			}
+			if !sets.NewString(r.Verbs...).HasAll("list", "get") {
 				continue
 			}
+
 			glog.V(3).Infof("Taking backup of %s apiVersion:%s kind:%s", list.GroupVersion, r.Name)
 			mgr.config.GroupVersion = &gv
 			mgr.config.APIPath = "/apis"
 			if gv.Group == core.GroupName {
-				mgr.config.APIPath = "/v1beta1"
+				mgr.config.APIPath = "/api"
 			}
 			client, err := rest.RESTClientFor(mgr.config)
 			if err != nil {

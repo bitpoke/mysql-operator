@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"bytes"
+
 	"github.com/appscode/go/sets"
 )
 
@@ -44,7 +46,7 @@ func (s1 URLSet) Equal(s2 URLSet) bool {
 }
 
 func (us *URLSet) MarshalJSON() ([]byte, error) {
-	var b strings.Builder
+	var b bytes.Buffer
 	b.WriteRune('"')
 	if us != nil {
 		urls := us.Hosts.List()

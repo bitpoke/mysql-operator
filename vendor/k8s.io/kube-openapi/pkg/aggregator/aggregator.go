@@ -335,6 +335,9 @@ func mergeSpecs(dest, source *spec.Swagger, renameModelConflicts, ignorePathConf
 	}
 	for k, v := range source.Definitions {
 		if _, found := dest.Definitions[k]; !found {
+			if dest.Definitions == nil {
+				dest.Definitions = spec.Definitions{}
+			}
 			dest.Definitions[k] = v
 		}
 	}

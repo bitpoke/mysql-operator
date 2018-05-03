@@ -64,31 +64,39 @@
 
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.9.0"
+  version = "kubernetes-1.10.0"
 
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.9.0"
+  version = "kubernetes-1.10.0"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.9.0"
+  version = "kubernetes-1.10.0"
 
 [[override]]
   name = "k8s.io/apiserver"
-  version = "kubernetes-1.9.0"
+  version = "kubernetes-1.10.0"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "v6.0.0"
+  version = "v7.0.0"
 
 [[override]]
   name = "k8s.io/kubernetes"
-  version = "=v1.9.0"
+  version = "=v1.10.0"
+
+[[override]]
+  name = "github.com/appscode/docker-registry-client"
+  branch = "master"
 
 [[override]]
   branch = "release-branch.go1.9"
   name = "golang.org/x/net"
+
+[[override]]
+  name = "github.com/rancher/go-rancher"
+  revision = "09693a8743ba5ee58c58c1b1e8a4abd17af00d45"
 
 [[override]]
   name = "github.com/Azure/azure-sdk-for-go"
