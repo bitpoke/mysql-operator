@@ -158,7 +158,7 @@ Status:
 
 ## Access orchestrator
 To connect to orchestrator dashboard you have to port forward orchestrator port
-3000 to your local machine by using:
+3000 to your local machine by using (ensure it's a healthy pod if using raft):
 
 ```
 kubectl port-forward mysql-operator-orchestrator-0 3000
