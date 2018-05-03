@@ -35,7 +35,9 @@ cleanup
 mkdir -p "${TMP_DIFFROOT}"
 cp -a "${DIFFROOT}"/* "${TMP_DIFFROOT}"
 
-"${SCRIPT_ROOT}/hack/update-codegen.sh"
+# regenerate
+make generate
+
 echo "diffing ${DIFFROOT} against freshly generated codegen"
 ret=0
 diff -Naupr "${DIFFROOT}" "${TMP_DIFFROOT}" || ret=$?
@@ -49,5 +51,5 @@ else
 fi
 
 # smoke test
-echo "Smoke testing oxygen by compiling..."
+echo "Smoke testing operator by compiling..."
 go build ${SCRIPT_ROOT}/pkg/...

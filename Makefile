@@ -21,6 +21,7 @@ endif
 
 HACK_DIR ?= hack
 GOPATH ?= $(HOME)/go
+GOBIN :=${GOPATH}/bin
 GOOS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 GOARCH ?= amd64
 GOFLAGS := -ldflags "-X $(PACKAGE_NAME)/pkg/util.AppGitState=${GIT_STATE} -X $(PACKAGE_NAME)/pkg/util.AppGitCommit=${GIT_COMMIT} -X $(PACKAGE_NAME)/pkg/util.AppVersion=${APP_VERSION}"
@@ -70,15 +71,6 @@ lint:
 		exit 1; \
 	fi
 
-# Code generation targets
-#########################
-.PHONY: generate generate_verify
-generate:
-	GOPATH=$(GOPATH) $(HACK_DIR)/update-codegen.sh
-
-generate_verify:
-	$(HACK_DIR)/verify-codegen.sh
-
 # Cleanup targets
 #################
 .PHONY: clean
@@ -113,3 +105,30 @@ publish: images
 			docker push $(REGISTRY)/$${cmd}:$${tag}; \
 		done ; \
 	done
+
+
+# Code generation targets
+#########################
+
+BOILERPLATE_FILE := hack/boilerplate.go.txt
+APIS_PACKAGES := github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1
+CODEGEN_CMD_PATH := vendor/k8s.io/code-generator/cmd
+
+.PHONY: generate generate_verify generate-all generate-openapi
+generate: generate-all generate-openapi
+
+# this rule will generate defaulter-gen,client-gen,lister-gen,informer-gen,deepcopy-gen
+generate-all:
+	GOPATH=$(GOPATH) $(HACK_DIR)/update-codegen.sh
+
+generate_verify:
+	$(HACK_DIR)/verify-codegen.sh
+
+$(GOBIN)/openapi-gen:
+	go install $(CODEGEN_CMD_PATH)/openapi-gen
+
+generate-openapi: $(GOBIN)/openapi-gen
+	@echo "Generating openapi for ${APIS_PACKAGES}"
+	$(GOBIN)/openapi-gen --input-dirs $(APIS_PACKAGES),k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/api/core/v1 \
+                       --output-package pkg/apis/mysql/v1alpha1 \
+                       --go-header-file=$(BOILERPLATE_FILE)
