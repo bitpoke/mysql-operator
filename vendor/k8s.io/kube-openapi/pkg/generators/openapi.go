@@ -403,7 +403,7 @@ func (g openAPITypeWriter) generate(t *types.Type) error {
 			g.Do("Required: []string{\"$.$\"},\n", strings.Join(required, "\",\""))
 		}
 		g.Do("},\n", nil)
-		if err := g.generateExtensions(t.CommentLines); err != nil {
+		if err := g.generateStructExtensions(t); err != nil {
 			return err
 		}
 		g.Do("},\n", nil)
@@ -428,15 +428,43 @@ func (g openAPITypeWriter) generate(t *types.Type) error {
 	return nil
 }
 
-func (g openAPITypeWriter) generateExtensions(CommentLines []string) error {
-	extensions := parseExtensions(CommentLines)
-	if len(extensions) == 0 {
-		return nil
+func (g openAPITypeWriter) generateStructExtensions(t *types.Type) error {
+	extensions, errors := parseExtensions(t.CommentLines)
+	// Initially, we will only log struct extension errors.
+	if len(errors) > 0 {
+		for e := range errors {
+			glog.V(2).Infof("[%s]: %s\n", t.String(), e)
+		}
 	}
+	// TODO(seans3): Validate struct extensions here.
+	g.emitExtensions(extensions)
+	return nil
+}
+
+func (g openAPITypeWriter) generateMemberExtensions(m *types.Member, parent *types.Type) error {
+	extensions, errors := parseExtensions(m.CommentLines)
+	// Initially, we will only log member extension errors.
+	if len(errors) > 0 {
+		errorPrefix := fmt.Sprintf("[%s] %s:", parent.String(), m.String())
+		for e := range errors {
+			glog.V(2).Infof("%s %s\n", errorPrefix, e)
+		}
+	}
+	// TODO(seans3): Validate member extensions here.
+	// Example: listType extension is only on a Slice.
+	// Example: cross-extension validation - listMapKey only makes sense with listType=map
+	g.emitExtensions(extensions)
+	return nil
+}
+
+func (g openAPITypeWriter) emitExtensions(extensions []extension) {
 	// If any extensions exist, then emit code to create them.
+	if len(extensions) == 0 {
+		return
+	}
 	g.Do("VendorExtensible: spec.VendorExtensible{\nExtensions: spec.Extensions{\n", nil)
 	for _, extension := range extensions {
-		g.Do("\"$.$\": ", extension.name)
+		g.Do("\"$.$\": ", extension.xName)
 		if extension.hasMultipleValues() {
 			g.Do("[]string{\n", nil)
 		}
@@ -448,7 +476,6 @@ func (g openAPITypeWriter) generateExtensions(CommentLines []string) error {
 		}
 	}
 	g.Do("},\n},\n", nil)
-	return nil
 }
 
 // TODO(#44005): Move this validation outside of this generator (probably to policy verifier)
@@ -520,7 +547,7 @@ func (g openAPITypeWriter) generateProperty(m *types.Member, parent *types.Type)
 		return err
 	}
 	g.Do("\"$.$\": {\n", name)
-	if err := g.generateExtensions(m.CommentLines); err != nil {
+	if err := g.generateMemberExtensions(m, parent); err != nil {
 		return err
 	}
 	g.Do("SchemaProps: spec.SchemaProps{\n", nil)

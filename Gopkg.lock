@@ -17,7 +17,7 @@
   branch = "master"
   name = "github.com/appscode/go"
   packages = ["types"]
-  revision = "0eb2cabe3897bfd0fe615e9849583a88bcc82df4"
+  revision = "230e0e4622c682b5d117db8c28a66404ed874ed5"
 
 [[projects]]
   branch = "master"
@@ -36,7 +36,7 @@
     "core/v1",
     "meta"
   ]
-  revision = "c3aa54aedcceb925ba15c7bf4a6c2e456138755e"
+  revision = "72b0ff429fc865cbe6cb23dad00be655b114ec57"
 
 [[projects]]
   branch = "master"
@@ -62,8 +62,8 @@
     ".",
     "log"
   ]
-  revision = "92cd0815dd1a028a6e69faee9757c7436238e252"
-  version = "v2.6.1"
+  revision = "2810ccc68e0ca445fa81ebfa03fbf70aca5c41ae"
+  version = "v2.7.0"
 
 [[projects]]
   name = "github.com/evanphx/json-patch"
@@ -80,8 +80,8 @@
 [[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "ace140f73450505f33e8b8418216792275ae82a7"
-  version = "v1.35.0"
+  revision = "6529cf7c58879c08d927016dde4477f18a0634cb"
+  version = "v1.36.0"
 
 [[projects]]
   name = "github.com/go-martini/martini"
@@ -149,8 +149,8 @@
     "ptypes/duration",
     "ptypes/timestamp"
   ]
-  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
-  version = "v1.0.0"
+  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -334,7 +334,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "d6449816ce06963d9d136eee5a56fca5b0616e7e"
+  revision = "8b1d31080a7692e075c4681cb2458454a1fe0706"
 
 [[projects]]
   branch = "master"
@@ -347,7 +347,7 @@
     "idna",
     "lex/httplex"
   ]
-  revision = "d41e8174641f662c5a2d1c7a5f9e828788eb8706"
+  revision = "640f4622ab692b87c2f3a94265e6f579fe38263d"
 
 [[projects]]
   branch = "master"
@@ -356,7 +356,7 @@
     "unix",
     "windows"
   ]
-  revision = "a2a45943ae67364d56c5d7d62dee78cff16c8dc8"
+  revision = "78d5f264b493f125018180c204871ecf58a2dce1"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -674,11 +674,11 @@
     "pkg/common",
     "pkg/util/proto"
   ]
-  revision = "0f2f0396e266ad24afbd02375ba74c0dda1e3611"
+  revision = "f08db293d3ef80052d6513ece19792642a289fea"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f36030c8a2b14eafa9f93c0e728476ba2d05d0bd668bbd33bcbc042e2f224d96"
+  inputs-digest = "71d0f7d45c78b290fb045d655f38bf4367c5e3447e21dab1fdd21ca59d2f56a1"
   solver-name = "gps-cdcl"
   solver-version = 1

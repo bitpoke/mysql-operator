@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/url"
@@ -46,7 +47,7 @@ func (um URLMap) Equal(s2 URLMap) bool {
 }
 
 func (um *URLMap) MarshalJSON() ([]byte, error) {
-	var b strings.Builder
+	var b bytes.Buffer
 	b.WriteRune('"')
 	if um != nil {
 		names := make([]string, 0, len(um.Hosts))
