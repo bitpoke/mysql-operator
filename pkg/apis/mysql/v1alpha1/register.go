@@ -27,7 +27,7 @@ const (
 	MysqlClusterKind = "MysqlCluster"
 	// MysqlClusterPlural is the plural for mysqlcluster
 	MysqlClusterPlural = "mysqlclusters"
-	groupName          = "mysql.presslabs.net"
+	GroupName          = "mysql.presslabs.net"
 
 	MysqlBackupKind   = "MysqlBackup"
 	MysqlBackupPlural = "mysqlbackups"
@@ -39,12 +39,12 @@ var (
 	// AddToScheme function
 	AddToScheme = SchemeBuilder.AddToScheme
 	// SchemeGroupVersion ..
-	SchemeGroupVersion = schema.GroupVersion{Group: groupName, Version: "v1alpha1"}
+	SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
 	// MysqlClusterCRDName the crd name
-	MysqlClusterCRDName = MysqlClusterPlural + "." + groupName
+	MysqlClusterCRDName = MysqlClusterPlural + "." + GroupName
 
 	// MysqlBackupCRDName the crd name of backup resource
-	MysqlBackupCRDName = MysqlBackupPlural + "." + groupName
+	MysqlBackupCRDName = MysqlBackupPlural + "." + GroupName
 )
 
 // Resource gets an MysqlCluster GroupResource for a specified resource

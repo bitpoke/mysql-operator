@@ -17,6 +17,7 @@ limitations under the License.
 // +k8s:deepcopy-gen=package,register
 // +k8s:conversion-gen=github.com/presslabs/mysql-operator/pkg/apis/mysql
 // +k8s:defaulter-gen=TypeMeta
+// +k8s:openapi-gen=true
 
 // Package v1alpha1 is the v1alpha1 version of the API.
 // +groupName=mysql.presslabs.net

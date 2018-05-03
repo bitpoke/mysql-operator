@@ -113,6 +113,7 @@ publish: images
 BOILERPLATE_FILE := hack/boilerplate.go.txt
 APIS_PACKAGES := github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1
 CODEGEN_CMD_PATH := vendor/k8s.io/code-generator/cmd
+GENERATED_OPENAPI_FILE := pkg/apis/mysql/v1alpha1/openapi_generated.go
 
 .PHONY: generate generate_verify generate-all generate-openapi
 generate: generate-all generate-openapi
@@ -127,8 +128,19 @@ generate_verify:
 $(GOBIN)/openapi-gen:
 	go install $(CODEGEN_CMD_PATH)/openapi-gen
 
-generate-openapi: $(GOBIN)/openapi-gen
+generate-openapi: $(GENERATED_OPENAPI_FILE)
+
+$(GENERATED_OPENAPI_FILE): $(GOBIN)/openapi-gen
 	@echo "Generating openapi for ${APIS_PACKAGES}"
 	$(GOBIN)/openapi-gen --input-dirs $(APIS_PACKAGES),k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/api/core/v1 \
                        --output-package pkg/apis/mysql/v1alpha1 \
                        --go-header-file=$(BOILERPLATE_FILE)
+
+
+# CRD generator
+###############
+
+.PHONEY: generate-yaml
+
+generate-yaml: $(GENERATED_OPENAPI_FILE) hack/crds/main.go
+	go run hack/crds/main.go

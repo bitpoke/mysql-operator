@@ -30,6 +30,7 @@
   name = "github.com/appscode/kutil"
   packages = [
     ".",
+    "apiextensions/v1beta1",
     "apps/v1",
     "batch/v1",
     "batch/v1beta1",
@@ -428,6 +429,17 @@
   version = "kubernetes-1.9.3"
 
 [[projects]]
+  branch = "master"
+  name = "k8s.io/apiextensions-apiserver"
+  packages = [
+    "pkg/apis/apiextensions",
+    "pkg/apis/apiextensions/v1beta1",
+    "pkg/client/clientset/clientset/scheme",
+    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
+  ]
+  revision = "9da85b1a84c0d6a5a1397c7ef69b16386736a5bc"
+
+[[projects]]
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -679,6 +691,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "71d0f7d45c78b290fb045d655f38bf4367c5e3447e21dab1fdd21ca59d2f56a1"
+  inputs-digest = "05de131539a87e698447db775b92dff6ecb762213042aaf3dbe98df02870cea7"
   solver-name = "gps-cdcl"
   solver-version = 1
