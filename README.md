@@ -26,7 +26,7 @@ helm repo add presslabs https://presslabs.github.io/charts
 helm install presslabs/mysql-operator --name mysql-operator
 ```
 
-This chart will deploy the controller along an [orchestrator](https://github.com/github/orchestrator) cluster.
+This chart will deploy the controller along with an [orchestrator](https://github.com/github/orchestrator) cluster.
 
 
 ## Deploying a cluster

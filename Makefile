@@ -139,8 +139,18 @@ $(GENERATED_OPENAPI_FILE): $(GOBIN)/openapi-gen
 
 # CRD generator
 ###############
+CHART_CRD_YAML := hack/charts/mysql-operator/templates/create-crd.yaml
 
-.PHONEY: generate-yaml
+$(CHART_CRD_YAML): $(GENERATED_OPENAPI_FILE) hack/crds/main.go
+	echo "{{- if .Values.installCRDs -}}" > $(CHART_CRD_YAML)
+	go run hack/crds/main.go MysqlCluster --annotations "helm.sh/hook=post-install" >> $(CHART_CRD_YAML)
+	echo -e "\n" >> $(CHART_CRD_YAML)
+	go run hack/crds/main.go MysqlBackup --annotations "helm.sh/hook=post-install" >> $(CHART_CRD_YAML)
+	echo "{{- end }}" >> $(CHART_CRD_YAML)
 
-generate-yaml: $(GENERATED_OPENAPI_FILE) hack/crds/main.go
-	go run hack/crds/main.go
+
+.PHONEY: generate-yaml clean-yaml
+generate-yaml: clean-yaml $(CHART_CRD_YAML)
+
+clean-yaml:
+	rm $(CHART_CRD_YAML)

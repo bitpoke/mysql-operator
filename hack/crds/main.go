@@ -18,11 +18,14 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	kutil "github.com/appscode/kutil/apiextensions/v1beta1"
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/spf13/pflag"
 	extensionsobj "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 var (
@@ -32,8 +35,23 @@ var (
 	backupYamlPath  = "hack/crd-backup.yaml"
 )
 
-func generateCRD(cfg kutil.Config, path string) error {
-	fmt.Printf("Generateing %s resource at %s\n", cfg.Kind, path)
+var crds = []kutil.Config{
+	kutil.Config{
+		Kind:       api.MysqlClusterKind,
+		Plural:     api.MysqlClusterPlural,
+		Singular:   "mysqlcluster",
+		ShortNames: []string{"mysql", "mysql-cluster"},
+	},
+	kutil.Config{
+		Kind:       api.MysqlBackupKind,
+		Plural:     api.MysqlBackupPlural,
+		Singular:   "mysqlbackup",
+		ShortNames: []string{"backup", "mysql-backup"},
+	},
+}
+
+func generateCRD(cfg kutil.Config, w io.Writer) error {
+	fmt.Fprintf(os.Stderr, "Generating '%s' resource...\n", cfg.Kind)
 
 	cfg.SpecDefinitionName = fmt.Sprintf("github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.%s", cfg.Kind)
 	cfg.EnableValidation = true
@@ -43,35 +61,34 @@ func generateCRD(cfg kutil.Config, path string) error {
 	cfg.GetOpenAPIDefinitions = api.GetOpenAPIDefinitions
 
 	crd := kutil.NewCustomResourceDefinition(cfg)
-
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("Fail to create file: %s\n", path)
-	}
-	defer f.Close()
-
-	kutil.MarshallCrd(f, crd, "yaml")
+	kutil.MarshallCrd(w, crd, "yaml")
 	return nil
 }
 
+func initFlags(cfg *kutil.Config, fs *pflag.FlagSet) *pflag.FlagSet {
+	fs.Var(&cfg.Labels, "labels", "Lables")
+	fs.Var(&cfg.Annotations, "annotations", "Annotations")
+	return fs
+}
+
 func main() {
-	err := generateCRD(kutil.Config{
-		Kind:       api.MysqlClusterKind,
-		Plural:     api.MysqlClusterPlural,
-		Singular:   "mysqlcluster",
-		ShortNames: []string{"mysql-cluster"},
-	}, clusterYamlPath)
-	if err != nil {
-		fmt.Errorf("Fail to generate yaml for mysql cluster, err: %s", err)
+	kind := os.Args[1]
+	for _, cfg := range crds {
+		if cfg.Kind == kind {
+			fs := pflag.NewFlagSet("test", pflag.ExitOnError)
+			fs = initFlags(&cfg, fs)
+			if err := fs.Parse(os.Args[2:]); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to parse args: %s", err)
+				return
+			}
+			err := generateCRD(cfg, os.Stdout)
+			if err != nil {
+				fmt.Printf("Fail to generate yaml for %s, err: %s\n", cfg.Kind, err)
+			}
+
+			return
+		}
 	}
 
-	err = generateCRD(kutil.Config{
-		Kind:       api.MysqlBackupKind,
-		Plural:     api.MysqlBackupPlural,
-		Singular:   "mysqlbackup",
-		ShortNames: []string{"mysql-backup"},
-	}, backupYamlPath)
-	if err != nil {
-		fmt.Errorf("Fail to generate yaml for mysql backup, err: %s", err)
-	}
+	fmt.Fprintf(os.Stderr, "Kind '%s' not found!\n", kind)
 }
