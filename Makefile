@@ -125,10 +125,7 @@ CRDS := mysqlcluster mysqlbackup
 CRD_GEN_FILES := $(addprefix $(CHART_TEMPLATE_PATH),$(addsuffix .yaml,$(CRDS)))
 
 $(CRD_GEN_FILES):
-	go run hack/crds/main.go $(basename $(notdir $@)) \
-		--annotations "helm.sh/hook=pre-install" \
-		--labels "chart={{ template \"mysql-operator.chart\" . }}" \
-		>> $@
+	go run hack/crds/main.go $(basename $(notdir $@)) >> $@
 
 
 .PHONEY: generate-yaml clean-yaml
