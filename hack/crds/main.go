@@ -26,15 +26,14 @@ import (
 	"github.com/spf13/pflag"
 	extensionsobj "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
+	"github.com/presslabs/mysql-operator/pkg/apis/mysql"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	myopenapi "github.com/presslabs/mysql-operator/pkg/openapi"
 )
 
 var (
-	group           = "mysql.presslabs.net"
-	version         = "v1alpha1"
-	clusterYamlPath = "hack/crd-cluster.yaml"
-	backupYamlPath  = "hack/crd-backup.yaml"
+	group   = mysql.GroupName
+	version = "v1alpha1"
 )
 
 var crds = []kutil.Config{

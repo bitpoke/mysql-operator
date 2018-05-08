@@ -111,9 +111,7 @@ publish: images
 #########################
 CODEGEN_APIS_VERSIONS := mysql:v1alpha1
 CODEGEN_TOOLS := deepcopy client lister informer openapi
-CODEGEN_APIS_PKG := $(PACKAGE_NAME)/pkg/apis
 CODEGEN_OUTPUT_PKG := $(PACKAGE_NAME)/pkg/generated
-CODEGEN_OPENAPI_PKG := $(PACKAGE_NAME)/pkg/openapi
 include hack/codegen.mk
 
 
