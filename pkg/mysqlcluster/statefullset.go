@@ -110,11 +110,12 @@ func (f *cFactory) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec 
 }
 
 const (
-	containerInitName     = "init-mysql"
-	containerCloneName    = "clone-mysql"
-	containerHelperName   = "helper"
-	containerMysqlName    = "mysql"
-	containerExporterName = "metrics-exporter"
+	containerInitName      = "init-mysql"
+	containerCloneName     = "clone-mysql"
+	containerHelperName    = "helper"
+	containerMysqlName     = "mysql"
+	containerExporterName  = "metrics-exporter"
+	containerHeartBeatName = "pt-heartbeat"
 )
 
 func (f *cFactory) ensureContainer(in core.Container, name, image string, args []string) core.Container {
@@ -285,7 +286,7 @@ func (f *cFactory) ensureInitContainersSpec(in []core.Container) []core.Containe
 }
 
 func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
-	noContainers := 3
+	noContainers := 4
 	if len(in) != noContainers {
 		in = make([]core.Container, noContainers)
 	}
@@ -341,6 +342,7 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 	})
 	in[1] = helper
 
+	// METRICS container
 	exporter := f.ensureContainer(in[2], containerExporterName,
 		f.cluster.Spec.GetMetricsExporterImage(),
 		[]string{
@@ -361,6 +363,21 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 	})
 
 	in[2] = exporter
+
+	// PT-HEARTBEAT container
+	heartbeat := f.ensureContainer(in[3], containerHeartBeatName,
+		f.cluster.Spec.GetHelperImage(),
+		[]string{
+			"pt-heartbeat",
+			"--update",
+			"--check-read-only",
+			"--create-table",
+			fmt.Sprintf("--database %s", HelperDbName),
+			fmt.Sprintf("--defaults-file %s/client.cnf", ConfVolumeMountPath),
+		},
+	)
+
+	in[3] = heartbeat
 
 	return in
 }

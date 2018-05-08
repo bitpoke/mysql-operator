@@ -28,8 +28,8 @@ helm install presslabs/mysql-operator --name mysql-operator
 
 Also you have to install custom resources, by running:
 ```
-kubectl apply -f https://github.com/presslabs/mysql-operator/blob/master/deploy/mysqlcluster.yaml
-kubectl apply -f https://github.com/presslabs/mysql-operator/blob/master/deploy/mysqlbackup.yaml
+kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/deploy/mysqlcluster.yaml
+kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/deploy/mysqlbackup.yaml
 ```
 
 This chart will deploy the controller along with an [orchestrator](https://github.com/github/orchestrator) cluster.
@@ -38,8 +38,8 @@ This chart will deploy the controller along with an [orchestrator](https://githu
 ## Deploying a cluster
 __tl;dr__
 ```shell
-kubectl apply -f https://github.com/presslabs/mysql-operator/blob/master/examples/example-cluster-secret.yaml
-kubectl apply -f https://github.com/presslabs/mysql-operator/blob/master/examples/example-cluster.yaml
+kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/examples/example-cluster-secret.yaml
+kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/examples/example-cluster.yaml
 ```
 
 Before creating a cluster, you need a secret that contains the `ROOT_PASSWORD` key to

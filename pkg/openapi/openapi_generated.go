@@ -570,7 +570,6 @@ func schema_pkg_apis_mysql_v1alpha1_PodSpec(ref common.ReferenceCallback) common
 						},
 					},
 				},
-				Required: []string{"labels", "annotations", "resources", "affinity", "nodeSelector"},
 			},
 		},
 		Dependencies: []string{

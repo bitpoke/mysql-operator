@@ -55,7 +55,7 @@ var (
 	DataDir = mysqlcluster.DataVolumeMountPath
 
 	// ToolsDbName is the name of the tools table
-	ToolsDbName = "tools"
+	ToolsDbName = mysqlcluster.HelperDbName
 	// ToolsTableName is the name of the init table
 	ToolsInitTableName = "init"
 

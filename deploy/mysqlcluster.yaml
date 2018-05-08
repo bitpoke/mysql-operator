@@ -54,12 +54,6 @@ spec:
                 nodeSelector:
                   type: object
                 resources: {}
-              required:
-              - labels
-              - annotations
-              - resources
-              - affinity
-              - nodeSelector
             replicas:
               description: The number of pods. This updates replicas filed Defaults
                 to 0
