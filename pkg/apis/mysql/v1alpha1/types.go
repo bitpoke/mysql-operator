@@ -124,11 +124,11 @@ type PodSpec struct {
 	ImagePullPolicy  apiv1.PullPolicy             `json:"imagePullPolicy,omitempty"`
 	ImagePullSecrets []apiv1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	Labels       map[string]string          `json:"labels"`
-	Annotations  map[string]string          `json:"annotations"`
-	Resources    apiv1.ResourceRequirements `json:"resources"`
-	Affinity     apiv1.Affinity             `json:"affinity"`
-	NodeSelector map[string]string          `json:"nodeSelector"`
+	Labels       map[string]string          `json:"labels,omitempty"`
+	Annotations  map[string]string          `json:"annotations,omitempty"`
+	Resources    apiv1.ResourceRequirements `json:"resources,omitempty"`
+	Affinity     apiv1.Affinity             `json:"affinity,omitempty"`
+	NodeSelector map[string]string          `json:"nodeSelector,omitempty"`
 }
 
 type VolumeSpec struct {

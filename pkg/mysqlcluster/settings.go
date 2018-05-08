@@ -46,6 +46,13 @@ const (
 	ExporterPortName = "prometheus"
 	ExporterPort     = 9104
 	ExporterPath     = "/metrics"
+
+	// HelperDbName represent the database name that is used by operator to
+	// manage the mysql cluster. This database contains a table with
+	// initialization history and table managed by pt-heartbeat. Be aware that
+	// when changeing this value to update the orchestrator chart value for
+	// SlaveLagQuery in hack/charts/mysql-operator/values.yaml.
+	HelperDbName = "sys_operator"
 )
 
 var (
