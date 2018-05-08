@@ -101,6 +101,7 @@ pipeline:
       - GH_PASSWORD
     when:
       branch: master
+      event: push
 
   # publish-mysql-helper:
   #   group: publish
