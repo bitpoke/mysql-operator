@@ -374,33 +374,9 @@ func schema_pkg_apis_mysql_v1alpha1_MysqlBackup(ref common.ReferenceCallback) co
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
-						},
-					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.BackupSpec"),
-						},
-					},
-					"status": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.BackupStatus"),
 						},
 					},
 				},
@@ -408,7 +384,7 @@ func schema_pkg_apis_mysql_v1alpha1_MysqlBackup(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.BackupSpec", "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.BackupStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.BackupSpec"},
 	}
 }
 
@@ -462,33 +438,9 @@ func schema_pkg_apis_mysql_v1alpha1_MysqlCluster(ref common.ReferenceCallback) c
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
-						},
-					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.ClusterSpec"),
-						},
-					},
-					"status": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.ClusterStatus"),
 						},
 					},
 				},
@@ -496,7 +448,7 @@ func schema_pkg_apis_mysql_v1alpha1_MysqlCluster(ref common.ReferenceCallback) c
 			},
 		},
 		Dependencies: []string{
-			"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.ClusterSpec", "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.ClusterStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.ClusterSpec"},
 	}
 }
 

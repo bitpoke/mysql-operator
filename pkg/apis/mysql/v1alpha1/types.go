@@ -27,10 +27,13 @@ import (
 // +resource:path=mysqlcluster
 
 type MysqlCluster struct {
-	metav1.TypeMeta   `json:",inline"`
+	// +k8s:openapi-gen=false
+	metav1.TypeMeta `json:",inline"`
+	// +k8s:openapi-gen=false
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              ClusterSpec   `json:"spec"`
-	Status            ClusterStatus `json:"status,omitempty"`
+	Spec              ClusterSpec `json:"spec"`
+	// +k8s:openapi-gen=false
+	Status ClusterStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -138,10 +141,14 @@ type VolumeSpec struct {
 // +resource:path=mysqlbackup
 
 type MysqlBackup struct {
-	metav1.TypeMeta   `json:",inline"`
+	// +k8s:openapi-gen=false
+	metav1.TypeMeta `json:",inline"`
+	// +k8s:openapi-gen=false
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              BackupSpec   `json:"spec"`
-	Status            BackupStatus `json:"status,omitempty"`
+
+	Spec BackupSpec `json:"spec"`
+	// +k8s:openapi-gen=false
+	Status BackupStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

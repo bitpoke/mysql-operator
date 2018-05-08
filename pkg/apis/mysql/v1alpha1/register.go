@@ -20,6 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/presslabs/mysql-operator/pkg/apis/mysql"
 )
 
 const (
@@ -27,7 +29,6 @@ const (
 	MysqlClusterKind = "MysqlCluster"
 	// MysqlClusterPlural is the plural for mysqlcluster
 	MysqlClusterPlural = "mysqlclusters"
-	GroupName          = "mysql.presslabs.net"
 
 	MysqlBackupKind   = "MysqlBackup"
 	MysqlBackupPlural = "mysqlbackups"
@@ -39,12 +40,12 @@ var (
 	// AddToScheme function
 	AddToScheme = SchemeBuilder.AddToScheme
 	// SchemeGroupVersion ..
-	SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
+	SchemeGroupVersion = schema.GroupVersion{Group: mysql.GroupName, Version: "v1alpha1"}
 	// MysqlClusterCRDName the crd name
-	MysqlClusterCRDName = MysqlClusterPlural + "." + GroupName
+	MysqlClusterCRDName = MysqlClusterPlural + "." + mysql.GroupName
 
 	// MysqlBackupCRDName the crd name of backup resource
-	MysqlBackupCRDName = MysqlBackupPlural + "." + GroupName
+	MysqlBackupCRDName = MysqlBackupPlural + "." + mysql.GroupName
 )
 
 // Resource gets an MysqlCluster GroupResource for a specified resource
