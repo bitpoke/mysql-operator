@@ -20,12 +20,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	kutil "github.com/appscode/kutil/apiextensions/v1beta1"
 	"github.com/spf13/pflag"
 	extensionsobj "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	myopenapi "github.com/presslabs/mysql-operator/pkg/openapi"
 )
 
 var (
@@ -58,7 +60,7 @@ func generateCRD(cfg kutil.Config, w io.Writer) error {
 	cfg.ResourceScope = string(extensionsobj.NamespaceScoped)
 	cfg.Group = group
 	cfg.Version = version
-	cfg.GetOpenAPIDefinitions = api.GetOpenAPIDefinitions
+	cfg.GetOpenAPIDefinitions = myopenapi.GetOpenAPIDefinitions
 
 	crd := kutil.NewCustomResourceDefinition(cfg)
 	kutil.MarshallCrd(w, crd, "yaml")
@@ -74,7 +76,7 @@ func initFlags(cfg *kutil.Config, fs *pflag.FlagSet) *pflag.FlagSet {
 func main() {
 	kind := os.Args[1]
 	for _, cfg := range crds {
-		if cfg.Kind == kind {
+		if strings.ToLower(cfg.Kind) == strings.ToLower(kind) {
 			fs := pflag.NewFlagSet("test", pflag.ExitOnError)
 			fs = initFlags(&cfg, fs)
 			if err := fs.Parse(os.Args[2:]); err != nil {
