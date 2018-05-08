@@ -26,6 +26,12 @@ helm repo add presslabs https://presslabs.github.io/charts
 helm install presslabs/mysql-operator --name mysql-operator
 ```
 
+Also you have to install custom resources, by running:
+```
+kubectl apply -f https://github.com/presslabs/mysql-operator/blob/master/deploy/mysqlcluster.yaml
+kubectl apply -f https://github.com/presslabs/mysql-operator/blob/master/deploy/mysqlbackup.yaml
+```
+
 This chart will deploy the controller along with an [orchestrator](https://github.com/github/orchestrator) cluster.
 
 
@@ -155,7 +161,7 @@ To connect to orchestrator dashboard you have to port forward orchestrator port
 3000 to your local machine by using:
 
 ```
-kubectl port-forward mysql-operator-orchestrator 3000
+kubectl port-forward mysql-operator-orchestrator-0 3000
 ```
 
 

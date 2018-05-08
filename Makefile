@@ -119,18 +119,16 @@ include hack/codegen.mk
 
 # CRD generator
 ###############
-CHART_TEMPLATE_PATH := hack/charts/mysql-operator/templates/
+CHART_TEMPLATE_PATH := deploy/
 CRDS := mysqlcluster mysqlbackup
 
 CRD_GEN_FILES := $(addprefix $(CHART_TEMPLATE_PATH),$(addsuffix .yaml,$(CRDS)))
 
 $(CRD_GEN_FILES):
-	echo "{{- if .Values.installCRDs -}}" > $@
 	go run hack/crds/main.go $(basename $(notdir $@)) \
 		--annotations "helm.sh/hook=pre-install" \
 		--labels "chart={{ template \"mysql-operator.chart\" . }}" \
 		>> $@
-	echo "{{- end }}" >> $@
 
 
 .PHONEY: generate-yaml clean-yaml
