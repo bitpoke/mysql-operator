@@ -50,7 +50,7 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster) error 
 			apiv1.ConditionUnknown, "not initialized", "setting defaults")
 
 		c.recorder.Event(copyCluster, api.EventNormal, api.EventReasonInitDefaults,
-			"defaults seted")
+			"defaults set")
 		_, err := c.myClient.Mysql().MysqlClusters(cluster.Namespace).Update(copyCluster)
 		return err
 	}

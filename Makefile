@@ -109,48 +109,32 @@ publish: images
 
 # Code generation targets
 #########################
-
-BOILERPLATE_FILE := hack/boilerplate.go.txt
-APIS_PACKAGES := github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1
-CODEGEN_CMD_PATH := vendor/k8s.io/code-generator/cmd
-GENERATED_OPENAPI_FILE := pkg/apis/mysql/v1alpha1/openapi_generated.go
-
-.PHONY: generate generate_verify generate-all generate-openapi
-generate: generate-all generate-openapi
-
-# this rule will generate defaulter-gen,client-gen,lister-gen,informer-gen,deepcopy-gen
-generate-all:
-	GOPATH=$(GOPATH) $(HACK_DIR)/update-codegen.sh
-
-generate_verify:
-	$(HACK_DIR)/verify-codegen.sh
-
-$(GOBIN)/openapi-gen:
-	go install $(CODEGEN_CMD_PATH)/openapi-gen
-
-generate-openapi: $(GENERATED_OPENAPI_FILE)
-
-$(GENERATED_OPENAPI_FILE): $(GOBIN)/openapi-gen
-	@echo "Generating openapi for ${APIS_PACKAGES}"
-	$(GOBIN)/openapi-gen --input-dirs $(APIS_PACKAGES),k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/api/core/v1 \
-                       --output-package pkg/apis/mysql/v1alpha1 \
-                       --go-header-file=$(BOILERPLATE_FILE)
+CODEGEN_APIS_VERSIONS := mysql:v1alpha1
+CODEGEN_TOOLS := deepcopy client lister informer openapi
+CODEGEN_APIS_PKG := $(PACKAGE_NAME)/pkg/apis
+CODEGEN_OUTPUT_PKG := $(PACKAGE_NAME)/pkg/generated
+CODEGEN_OPENAPI_PKG := $(PACKAGE_NAME)/pkg/openapi
+include hack/codegen.mk
 
 
 # CRD generator
 ###############
-CHART_CRD_YAML := hack/charts/mysql-operator/templates/create-crd.yaml
+CHART_TEMPLATE_PATH := hack/charts/mysql-operator/templates/
+CRDS := mysqlcluster mysqlbackup
 
-$(CHART_CRD_YAML): $(GENERATED_OPENAPI_FILE) hack/crds/main.go
-	echo "{{- if .Values.installCRDs -}}" > $(CHART_CRD_YAML)
-	go run hack/crds/main.go MysqlCluster --annotations "helm.sh/hook=post-install" >> $(CHART_CRD_YAML)
-	echo -e "\n" >> $(CHART_CRD_YAML)
-	go run hack/crds/main.go MysqlBackup --annotations "helm.sh/hook=post-install" >> $(CHART_CRD_YAML)
-	echo "{{- end }}" >> $(CHART_CRD_YAML)
+CRD_GEN_FILES := $(addprefix $(CHART_TEMPLATE_PATH),$(addsuffix .yaml,$(CRDS)))
+
+$(CRD_GEN_FILES):
+	echo "{{- if .Values.installCRDs -}}" > $@
+	go run hack/crds/main.go $(basename $(notdir $@)) \
+		--annotations "helm.sh/hook=pre-install" \
+		--labels "chart={{ template \"mysql-operator.chart\" . }}" \
+		>> $@
+	echo "{{- end }}" >> $@
 
 
 .PHONEY: generate-yaml clean-yaml
-generate-yaml: clean-yaml $(CHART_CRD_YAML)
+generate-yaml: clean-yaml $(CRD_GEN_FILES)
 
 clean-yaml:
-	rm $(CHART_CRD_YAML)
+	rm -f $(CRD_GEN_FILES)
