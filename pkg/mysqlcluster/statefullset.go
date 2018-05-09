@@ -372,8 +372,9 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 			"--update",
 			"--check-read-only",
 			"--create-table",
-			fmt.Sprintf("--database %s", HelperDbName),
-			fmt.Sprintf("--defaults-file %s/client.cnf", ConfVolumeMountPath),
+			fmt.Sprintf("--database=%s", HelperDbName),
+			"--table=heartbeat",
+			fmt.Sprintf("--defaults-file=%s/client.cnf", ConfVolumeMountPath),
 		},
 	)
 
