@@ -369,12 +369,12 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 		f.cluster.Spec.GetHelperImage(),
 		[]string{
 			"pt-heartbeat",
-			"--update",
+			"--update", "--replace",
 			"--check-read-only",
 			"--create-table",
-			fmt.Sprintf("--database=%s", HelperDbName),
-			"--table=heartbeat",
-			fmt.Sprintf("--defaults-file=%s/client.cnf", ConfVolumeMountPath),
+			"--database", HelperDbName,
+			"--table", "heartbeat",
+			"--defaults-file", fmt.Sprintf("%s/client.cnf", ConfVolumeMountPath),
 		},
 	)
 
@@ -474,7 +474,16 @@ func (f *cFactory) getVolumeMountsFor(name string) []core.VolumeMount {
 				MountPath: DataVolumeMountPath,
 			},
 		}
+
+	case containerHeartBeatName:
+		return []core.VolumeMount{
+			core.VolumeMount{
+				Name:      confVolumeName,
+				MountPath: ConfVolumeMountPath,
+			},
+		}
 	}
+
 	return nil
 }
 
