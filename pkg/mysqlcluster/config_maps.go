@@ -50,9 +50,6 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 			}
 
 			f.configHash = new_hash
-			in.ObjectMeta.Annotations = map[string]string{
-				"config_hash": new_hash,
-			}
 
 			if key, ok := in.ObjectMeta.Annotations["config_hash"]; ok {
 				if key == new_hash {
@@ -64,6 +61,9 @@ func (f *cFactory) syncConfigMysqlMap() (state string, err error) {
 				}
 			}
 
+			in.ObjectMeta.Annotations = map[string]string{
+				"config_hash": new_hash,
+			}
 			in.Data = map[string]string{
 				"my.cnf": data,
 			}
