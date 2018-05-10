@@ -348,6 +348,8 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 		[]string{
 			fmt.Sprintf("--web.listen-address=0.0.0.0:%d", ExporterPort),
 			fmt.Sprintf("--web.telemetry-path=%s", ExporterPath),
+			"--collect.heartbeat",
+			fmt.Sprintf("--collect.heartbeat.database=%s", HelperDbName),
 		},
 	)
 	exporter.Ports = ensureContainerPorts(mysql.Ports, core.ContainerPort{
