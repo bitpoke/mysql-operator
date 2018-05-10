@@ -77,17 +77,6 @@ func TestReconcilation(t *testing.T) {
 		t.Fail()
 	}
 
-	info, ok := mysqlcluster.SavedClusters[cluster.Name]
-	if !ok {
-		fmt.Println("Not a saved cluster")
-		t.Fail()
-	}
-
-	if info.MasterHostname != cluster.GetPodHostName(0) {
-		fmt.Println("Not correct master host")
-		t.Fail()
-	}
-
 	_, shutdown := controller.reconcileQueue.Get()
 	if shutdown {
 		fmt.Println("shutdown")
