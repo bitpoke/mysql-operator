@@ -22,8 +22,6 @@ import (
 
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/render"
-
-	"github.com/presslabs/mysql-operator/pkg/mysqlcluster"
 )
 
 type HttpAPI struct{}
@@ -33,17 +31,6 @@ var API HttpAPI = HttpAPI{}
 // Health api endpoint, returns ok
 func (this *HttpAPI) Health(r render.Render) {
 	r.JSON(http.StatusOK, "OK")
-}
-
-// Master api endpoint to return cluster master hostname
-func (this *HttpAPI) Master(params martini.Params, r render.Render) {
-	clusterName := params["cluster"]
-	clusterInfo, ok := mysqlcluster.SavedClusters[clusterName]
-	if !ok {
-		r.JSON(http.StatusNotFound, "404")
-		return
-	}
-	r.JSON(http.StatusOK, clusterInfo.MasterHostname)
 }
 
 //
@@ -61,5 +48,4 @@ func (this *HttpAPI) registerAPIEndpoint(m *martini.ClassicMartini,
 // RegisterEndpoints define all api endpoints
 func (this *HttpAPI) RegisterEndpoints(m *martini.ClassicMartini) {
 	this.registerAPIEndpoint(m, "health", this.Health)
-	this.registerAPIEndpoint(m, "master/:cluster", this.Master)
 }

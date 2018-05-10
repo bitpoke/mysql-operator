@@ -33,19 +33,6 @@ import (
 	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
 
-type ClusterInfo struct {
-	api.MysqlCluster
-
-	// Master represent the cluster master hostname
-	MasterHostname string
-}
-
-var SavedClusters map[string]ClusterInfo
-
-func init() {
-	SavedClusters = make(map[string]ClusterInfo)
-}
-
 func (f *cFactory) registerNodesInOrc() error {
 	// Register nodes in orchestrator
 	if len(f.cluster.Spec.GetOrcUri()) != 0 {
@@ -77,11 +64,6 @@ func (f *cFactory) updateMasterServiceEndpoints() error {
 				orcClusterName, err,
 			)
 		}
-	}
-
-	SavedClusters[f.cluster.Name] = ClusterInfo{
-		MysqlCluster:   *f.cluster.DeepCopy(),
-		MasterHostname: masterHost,
 	}
 
 	masterPod, err := f.getPodForHostname(masterHost)
