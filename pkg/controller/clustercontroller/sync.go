@@ -65,7 +65,7 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster) error 
 		return err
 	}
 
-	c.registerClusterInReconcilation(cluster)
+	c.registerClusterInReconciliation(cluster)
 
 	return nil
 }
@@ -91,14 +91,4 @@ func (c *Controller) subresourceUpdated(obj interface{}) {
 	}
 
 	c.addClusterInWorkQueue(cluster)
-}
-
-func (c *Controller) registerClusterInReconcilation(cluster *api.MysqlCluster) {
-	_, loaded := c.clustersSync.LoadOrStore(cluster.Name, true)
-
-	if !loaded {
-		glog.V(2).Infof("Register cluster '%s' in reconcile queue.", cluster.Name)
-		// add once a cluster in reconcile loop
-		c.addClusterInReconcileQueue(cluster, reconcileTime)
-	}
 }

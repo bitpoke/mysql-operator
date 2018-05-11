@@ -33,22 +33,6 @@ import (
 	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
 
-func (f *cFactory) registerNodesInOrc() error {
-	// Register nodes in orchestrator
-	if len(f.cluster.Spec.GetOrcUri()) != 0 {
-		// try to discover ready nodes into orchestrator
-		client := orc.NewFromUri(f.cluster.Spec.GetOrcUri())
-		for i := 0; i < int(f.cluster.Status.ReadyNodes); i++ {
-			host := f.getHostForReplica(i)
-			if err := client.Discover(host, MysqlPort); err != nil {
-				glog.Warningf("Failed to register %s with orchestrator: %s", host, err.Error())
-			}
-		}
-	}
-
-	return nil
-}
-
 func (f *cFactory) updateMasterServiceEndpoints() error {
 	masterHost := f.cluster.GetPodHostName(0)
 

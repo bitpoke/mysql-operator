@@ -17,13 +17,7 @@ limitations under the License.
 package orchestrator
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-
-	"github.com/golang/glog"
 )
 
 type Orchestrator interface {
@@ -32,6 +26,9 @@ type Orchestrator interface {
 
 	Master(clusterHint string) (*Instance, error)
 	ClusterOSCReplicas(cluster string) ([]Instance, error)
+
+	Cluster(cluster string) ([]Instance, error)
+
 	AuditRecovery(cluster string) ([]TopologyRecovery, error)
 	AckRecovery(id int64, commnet string) error
 }
@@ -63,132 +60,40 @@ func (o *orchestrator) Forget(host string, port int) error {
 }
 
 func (o *orchestrator) Master(clusterHint string) (*Instance, error) {
-	return o.makeGetInstance(fmt.Sprintf("master/%s", clusterHint))
-}
-
-func (o *orchestrator) makeGetInstance(path string) (*Instance, error) {
-	uri := fmt.Sprintf("%s/%s", o.connectUri, path)
-	glog.V(2).Infof("Orc request on: %s", uri)
-
-	resp, err := http.Get(uri)
-	if err != nil {
-		return nil, fmt.Errorf("http get error: %s", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("http error code: %s", resp.Status)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("io read error: %s", err)
-	}
-
+	path := fmt.Sprintf("master/%s", clusterHint)
 	var inst Instance
-	if err = json.Unmarshal(body, &inst); err != nil {
-		glog.V(3).Infof("Unmarshal data is: %s", string(body))
-		return nil, fmt.Errorf("unmarshal error: %s", err)
+	if err := o.makeGetRequest(path, &inst); err != nil {
+		return nil, err
 	}
 
 	return &inst, nil
 }
 
-type APIResponse struct {
-	Code    string
-	Message string
-	// Detials json.RawMessage
-}
-
-func (o *orchestrator) makeGetAPIResponse(path string, query map[string][]string) error {
-	args := url.Values(query).Encode()
-	if len(args) != 0 {
-		args = "?" + args
-	}
-
-	uri := fmt.Sprintf("%s/%s%s", o.connectUri, path, args)
-	glog.V(2).Infof("Orc request on: %s", uri)
-
-	resp, err := http.Get(uri)
-	if err != nil {
-		return fmt.Errorf("http get failed: %s", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("http error code: %s", resp.Status)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("io read failed: %s", err)
-	}
-
-	var apiObj APIResponse
-	err = json.Unmarshal(body, &apiObj)
-	if err != nil {
-		glog.V(3).Infof("Unmarshal data is: %s", string(body))
-		glog.Errorf("[makeGetAPIResponse]: Orchestrator unmarshal data error: %s", err)
-		return nil
-	}
-
-	switch apiObj.Code {
-	case "OK":
-		return nil
-	case "ERROR":
-		return fmt.Errorf("orc msg: %s", apiObj.Message)
-	}
-
-	return fmt.Errorf("unknown response code from orc. obj: %v ", apiObj)
-}
-
 func (o *orchestrator) ClusterOSCReplicas(cluster string) ([]Instance, error) {
-	uri := fmt.Sprintf("%s/cluster-osc-slaves/%s", o.connectUri, cluster)
-	glog.V(2).Infof("Orc request on: %s", uri)
-
-	resp, err := http.Get(uri)
-	if err != nil {
-		return nil, fmt.Errorf("http get error: %s", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("http error code: %s", resp.Status)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("io read error: %s", err)
-	}
-
+	path := fmt.Sprintf("cluster-osc-slaves/%s", cluster)
 	var insts []Instance
-	if err = json.Unmarshal(body, &insts); err != nil {
-		glog.V(3).Infof("Unmarshal data is: %s", string(body))
-		return nil, fmt.Errorf("unmarshal error: %s", err)
+	if err := o.makeGetRequest(path, &insts); err != nil {
+		return nil, err
+	}
+
+	return insts, nil
+}
+
+func (o *orchestrator) Cluster(cluster string) ([]Instance, error) {
+	path := fmt.Sprintf("cluster/%s", cluster)
+	var insts []Instance
+	if err := o.makeGetRequest(path, &insts); err != nil {
+		return nil, err
 	}
 
 	return insts, nil
 }
 
 func (o *orchestrator) AuditRecovery(cluster string) ([]TopologyRecovery, error) {
-	uri := fmt.Sprintf("%s/audit-recovery/%s", o.connectUri, cluster)
-	glog.V(2).Infof("Orc request on: %s", uri)
-
-	resp, err := http.Get(uri)
-	if err != nil {
-		return nil, fmt.Errorf("http get error: %s", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("http error code: %s", resp.Status)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("io read error: %s", err)
-	}
-
+	path := fmt.Sprintf("audit-recovery/%s", cluster)
 	var recoveries []TopologyRecovery
-	if err = json.Unmarshal(body, &recoveries); err != nil {
-		glog.V(3).Infof("Unmarshal data is: %s", string(body))
-		return nil, fmt.Errorf("unmarshal error: %s", err)
+	if err := o.makeGetRequest(path, &recoveries); err != nil {
+		return nil, err
 	}
 
 	return recoveries, nil

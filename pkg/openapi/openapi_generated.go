@@ -38,6 +38,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.MysqlBackupList":  schema_pkg_apis_mysql_v1alpha1_MysqlBackupList(ref),
 		"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.MysqlCluster":     schema_pkg_apis_mysql_v1alpha1_MysqlCluster(ref),
 		"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.MysqlClusterList": schema_pkg_apis_mysql_v1alpha1_MysqlClusterList(ref),
+		"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.NodeCondition":    schema_pkg_apis_mysql_v1alpha1_NodeCondition(ref),
+		"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.NodeStatus":       schema_pkg_apis_mysql_v1alpha1_NodeStatus(ref),
 		"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.PodSpec":          schema_pkg_apis_mysql_v1alpha1_PodSpec(ref),
 		"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.VolumeSpec":       schema_pkg_apis_mysql_v1alpha1_VolumeSpec(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.APIGroup":                                schema_pkg_apis_meta_v1_APIGroup(ref),
@@ -222,7 +224,7 @@ func schema_pkg_apis_mysql_v1alpha1_ClusterCondition(ref common.ReferenceCallbac
 					},
 					"reason": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Reaseon",
+							Description: "Reason",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -360,12 +362,25 @@ func schema_pkg_apis_mysql_v1alpha1_ClusterStatus(ref common.ReferenceCallback) 
 							},
 						},
 					},
+					"nodes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Nodes contains informations from orchestrator",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.NodeStatus"),
+									},
+								},
+							},
+						},
+					},
 				},
-				Required: []string{"ReadyNodes", "conditions"},
+				Required: []string{"ReadyNodes"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.ClusterCondition"},
+			"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.ClusterCondition", "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.NodeStatus"},
 	}
 }
 
@@ -494,6 +509,69 @@ func schema_pkg_apis_mysql_v1alpha1_MysqlClusterList(ref common.ReferenceCallbac
 		},
 		Dependencies: []string{
 			"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.MysqlCluster", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_mysql_v1alpha1_NodeCondition(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"LastTransitionTime": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"type", "status", "LastTransitionTime"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_mysql_v1alpha1_NodeStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"Name": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"Conditions": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.NodeCondition"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"Name", "Conditions"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.NodeCondition"},
 	}
 }
 
