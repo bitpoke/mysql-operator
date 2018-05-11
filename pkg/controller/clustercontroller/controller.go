@@ -225,6 +225,11 @@ func (c *Controller) workerRecouncile(stopCh <-chan struct{}) {
 				return nil
 			}
 
+			if ok1, ok2 := c.clustersSync.Load(key); !ok1.(bool) && ok2 {
+				// key is removed from map, don't execute reconciliation
+				return nil
+			}
+
 			// process items from queue
 			cluster, err := c.getNextWorkItem(key)
 			if err != nil {
@@ -279,15 +284,6 @@ func (c *Controller) addClusterInWorkQueue(cluster *api.MysqlCluster) {
 		return
 	}
 	c.queue.Add(key)
-}
-
-func (c *Controller) addClusterInReconcileQueue(cluster *api.MysqlCluster, after time.Duration) {
-	key, err := controllerpkg.KeyFunc(cluster)
-	if err != nil {
-		runtime.HandleError(err)
-		return
-	}
-	c.reconcileQueue.AddAfter(key, after)
 }
 
 func init() {

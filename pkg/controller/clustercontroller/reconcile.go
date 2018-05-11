@@ -22,14 +22,16 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"k8s.io/apimachinery/pkg/util/runtime"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
 	myfactory "github.com/presslabs/mysql-operator/pkg/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/util/options"
 )
 
 const (
-	reconcileTime = 15 * time.Second
+	reconcileTime = 5 * time.Second
 )
 
 func (c *Controller) Reconcile(ctx context.Context, cluster *api.MysqlCluster) error {
@@ -41,9 +43,37 @@ func (c *Controller) Reconcile(ctx context.Context, cluster *api.MysqlCluster) e
 	opt := options.GetOptions()
 
 	clusterFactory := myfactory.New(copyCluster, opt, c.k8client, c.myClient, cluster.Namespace, c.recorder, c.podLister)
-	if err := clusterFactory.Reconcile(ctx); err != nil {
+	if err := clusterFactory.ReconcileORC(ctx); err != nil {
 		return fmt.Errorf("failed to reconcile the cluster: %s", err)
 	}
 
 	return nil
+}
+
+func (c *Controller) addClusterInReconcileQueue(cluster *api.MysqlCluster, after time.Duration) {
+	key, err := controllerpkg.KeyFunc(cluster)
+	if err != nil {
+		runtime.HandleError(err)
+		return
+	}
+	c.reconcileQueue.AddAfter(key, after)
+}
+
+func (c *Controller) registerClusterInReconciliation(cluster *api.MysqlCluster) {
+	key, err := controllerpkg.KeyFunc(cluster)
+	if err != nil {
+		runtime.HandleError(err)
+		return
+	}
+	_, loaded := c.clustersSync.LoadOrStore(key, true)
+
+	if !loaded {
+		glog.V(2).Infof("Register cluster '%s' in reconcile queue.", key)
+		// add once a cluster in reconcile loop
+		c.addClusterInReconcileQueue(cluster, reconcileTime)
+	}
+}
+
+func (c *Controller) removeClusterFromReconciliation(key string) {
+	c.clustersSync.Delete(key)
 }

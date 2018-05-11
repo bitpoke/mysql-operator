@@ -94,7 +94,9 @@ type ClusterStatus struct {
 	// ReadyNodes represents number of the nodes that are in ready state
 	ReadyNodes int
 	// Conditions contains the list of the cluster conditions fulfilled
-	Conditions []ClusterCondition `json:"conditions"`
+	Conditions []ClusterCondition `json:"conditions,omitempty"`
+	// Nodes contains informations from orchestrator
+	Nodes []NodeStatus `json:"nodes,omitempty"`
 }
 
 type ClusterCondition struct {
@@ -105,7 +107,7 @@ type ClusterCondition struct {
 
 	// LastTransitionTime
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
-	// Reaseon
+	// Reason
 	Reason string `json:"reason"`
 	// Message
 	Message string `json:"message"`
@@ -114,10 +116,28 @@ type ClusterCondition struct {
 type ClusterConditionType string
 
 const (
-	ClusterConditionReady        ClusterConditionType = "Ready"
-	ClusterConditionInitDefaults ClusterConditionType = "InitDefaults"
+	ClusterConditionReady       ClusterConditionType = "Ready"
+	ClusterConditionConfig                           = "ConfigReady"
+	ClusterConditionFailoverAck                      = "PendingFailoverAck"
+)
 
-	ClusterConditionConfig ClusterConditionType = "ConfigReady"
+type NodeStatus struct {
+	Name       string          `json:"name`
+	Conditions []NodeCondition `json:"conditions,omitempty`
+}
+
+type NodeCondition struct {
+	Type               NodeConditionType     `json:"type"`
+	Status             apiv1.ConditionStatus `json:"status"`
+	LastTransitionTime metav1.Time           `json:"lastTransitionTime`
+}
+
+type NodeConditionType string
+
+const (
+	NodeConditionLagged      NodeConditionType = "Lagged"
+	NodeConditionReplicating                   = "Replicating"
+	NodeConditionMaster                        = "Master"
 )
 
 type PodSpec struct {

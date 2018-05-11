@@ -36,8 +36,8 @@ type Interface interface {
 	// Sync is the method that tries to sync the cluster.
 	Sync(ctx context.Context) error
 
-	// Reconcile apply some acction to the cluster to keep in sync cluster
-	Reconcile(ctx context.Context) error
+	// ReconcileORC sync cluster status with orchestrator
+	ReconcileORC(ctx context.Context) error
 }
 
 // cluster factory
@@ -140,11 +140,6 @@ func (f *cFactory) getComponents() []component {
 	}
 }
 
-type action struct {
-	name  string
-	runFn func() error
-}
-
 func (f *cFactory) Sync(ctx context.Context) error {
 	for _, comp := range f.getComponents() {
 		state, err := comp.syncFn()
@@ -180,35 +175,4 @@ func (f *cFactory) getHostForReplica(no int) string {
 	return fmt.Sprintf("%s-%d.%s.%s", f.cluster.GetNameForResource(api.StatefulSet), no,
 		f.cluster.GetNameForResource(api.HeadlessSVC),
 		f.cluster.Namespace)
-}
-
-func (f *cFactory) getActions() []action {
-	return []action{
-		action{
-			name:  "orchestrator-register-nodes",
-			runFn: f.registerNodesInOrc,
-		},
-		action{
-			name:  "orchestrator-get-master",
-			runFn: f.updateMasterServiceEndpoints,
-		},
-		action{
-			name:  "orchestrator-auto-ack",
-			runFn: f.autoAcknowledge,
-		},
-	}
-}
-
-func (f *cFactory) Reconcile(ctx context.Context) error {
-	for _, action := range f.getActions() {
-		glog.V(2).Infof("[action %s]: started", action.name)
-		err := action.runFn()
-		if err != nil {
-			glog.Warningf("[action %s]: failed with error: %s", action.name, err)
-			return err
-		} else {
-			glog.V(2).Infof("[action %s]: succeeded.", action.name)
-		}
-	}
-	return nil
 }

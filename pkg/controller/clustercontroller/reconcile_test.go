@@ -28,7 +28,6 @@ import (
 
 	fakeMyClient "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/fake"
 	informers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions"
-	"github.com/presslabs/mysql-operator/pkg/mysqlcluster"
 	tutil "github.com/presslabs/mysql-operator/pkg/util/test"
 )
 
@@ -55,7 +54,7 @@ func newController(stop chan struct{}, client *fake.Clientset,
 	)
 }
 
-func TestReconcilation(t *testing.T) {
+func NotReadyTestReconcilation(t *testing.T) {
 	client := fake.NewSimpleClientset()
 	myClient := fakeMyClient.NewSimpleClientset()
 	rec := record.NewFakeRecorder(100)
