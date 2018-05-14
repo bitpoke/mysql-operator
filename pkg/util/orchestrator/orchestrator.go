@@ -44,7 +44,7 @@ func NewFromUri(uri string) Orchestrator {
 }
 
 func (o *orchestrator) Discover(host string, port int) error {
-	if err := o.makeGetAPIResponse(fmt.Sprintf("discover/%s/%d", host, port), nil); err != nil {
+	if err := o.makeGetAPIRequest(fmt.Sprintf("discover/%s/%d", host, port), nil); err != nil {
 		return err
 	}
 
@@ -52,7 +52,7 @@ func (o *orchestrator) Discover(host string, port int) error {
 }
 
 func (o *orchestrator) Forget(host string, port int) error {
-	if err := o.makeGetAPIResponse(fmt.Sprintf("forget/%s/%d", host, port), nil); err != nil {
+	if err := o.makeGetAPIRequest(fmt.Sprintf("forget/%s/%d", host, port), nil); err != nil {
 		return err
 	}
 
@@ -103,7 +103,7 @@ func (o *orchestrator) AckRecovery(id int64, comment string) error {
 	query := map[string][]string{
 		"comment": []string{comment},
 	}
-	if err := o.makeGetAPIResponse(fmt.Sprintf("ack-recovery/%d", id), query); err != nil {
+	if err := o.makeGetAPIRequest(fmt.Sprintf("ack-recovery/%d", id), query); err != nil {
 		return err
 	}
 

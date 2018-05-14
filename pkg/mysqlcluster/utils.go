@@ -17,8 +17,20 @@ limitations under the License.
 package mysqlcluster
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/appscode/kutil"
+	"github.com/golang/glog"
 	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/reference"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	mykutil "github.com/presslabs/mysql-operator/pkg/util/kube"
 )
 
 func ensureProbe(in *core.Probe, ids, ts, ps int32, handler core.Handler) *core.Probe {
@@ -59,4 +71,99 @@ func getStatusFromKVerb(verb kutil.VerbType) string {
 	default:
 		return statusSkip
 	}
+}
+
+func getPodForHostname(client kubernetes.Interface, ns string, lbs map[string]string, hostname string) (*core.Pod, error) {
+	selector := labels.SelectorFromSet(lbs)
+	podList, err := client.CoreV1().Pods(ns).List(metav1.ListOptions{
+		LabelSelector: selector.String(),
+	})
+	//pods, err := f.podLister.List(selector)
+	if err != nil {
+		return nil, fmt.Errorf("listing pods: %s", err)
+	}
+
+	for _, pod := range podList.Items {
+		if strings.Contains(hostname, pod.Name) {
+			return &pod, nil
+		}
+	}
+
+	return nil, fmt.Errorf("pod whith hostname %s not found", hostname)
+}
+
+func podCondIndex(pod *core.Pod, ty core.PodConditionType) (int, bool) {
+	for i, cond := range pod.Status.Conditions {
+		if cond.Type == ty {
+			return i, true
+		}
+	}
+
+	return 0, false
+}
+
+func (f *cFactory) addNodesToService(serviceName string, hosts ...string) error {
+	var pods []*core.Pod
+	for _, host := range hosts {
+		pod, err := getPodForHostname(f.client, f.namespace, f.getLabels(map[string]string{}), host)
+		if err != nil {
+			glog.Errorf("Failed to set master service endpoints: %s", err)
+			continue
+		}
+
+		if len(pod.Status.PodIP) == 0 {
+			glog.Errorf("Failed to set master service endpoints, ip for pod %s not set %s", pod.Name, err)
+			continue
+		}
+		pods = append(pods, pod)
+	}
+
+	meta := metav1.ObjectMeta{
+		Name:            serviceName,
+		Labels:          f.getLabels(map[string]string{}),
+		OwnerReferences: f.getOwnerReferences(),
+		Namespace:       f.namespace,
+	}
+
+	_, act, err := mykutil.CreateOrPatchEndpoints(f.client, meta,
+		func(in *core.Endpoints) *core.Endpoints {
+			if len(in.Subsets) != 1 {
+				in.Subsets = make([]core.EndpointSubset, len(pods))
+			}
+
+			readyAddr := []core.EndpointAddress{}
+			notReadyAddr := []core.EndpointAddress{}
+
+			for _, pod := range pods {
+				ref, _ := reference.GetReference(runtime.NewScheme(), pod)
+				ep := core.EndpointAddress{
+					IP:        pod.Status.PodIP,
+					TargetRef: ref,
+				}
+
+				readyIndex, exists := podCondIndex(pod, core.PodReady)
+				if exists && pod.Status.Conditions[readyIndex].Status == core.ConditionTrue {
+					readyAddr = append(readyAddr, ep)
+				} else {
+					notReadyAddr = append(notReadyAddr, ep)
+				}
+			}
+
+			in.Subsets[0].Addresses = readyAddr
+			in.Subsets[0].NotReadyAddresses = notReadyAddr
+
+			if len(in.Subsets[0].Ports) != 1 {
+				in.Subsets[0].Ports = make([]core.EndpointPort, 1)
+			}
+			in.Subsets[0].Ports[0].Name = MysqlPortName
+			in.Subsets[0].Ports[0].Port = MysqlPort
+			in.Subsets[0].Ports[0].Protocol = "TCP"
+
+			return in
+		})
+
+	glog.Infof("Endpoints for service '%s' were %s.",
+		f.cluster.GetNameForResource(api.MasterService), getStatusFromKVerb(act))
+
+	return err
 }

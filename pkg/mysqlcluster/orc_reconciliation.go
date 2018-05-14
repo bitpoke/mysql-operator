@@ -41,10 +41,15 @@ func (f *cFactory) ReconcileORC(ctx context.Context) error {
 	}
 
 	client := orc.NewFromUri(f.cluster.Spec.GetOrcUri())
-	if insts, err := client.Cluster(f.cluster.Name); err != nil {
+	if insts, err := client.Cluster(f.getClusterAlias()); err == nil {
 		f.updateStatusFromOrc(insts)
 	} else {
+		glog.Errorf("Fail to get cluster from orchestrator: %s. Now tries to register nodes.", err)
 		return f.registerNodesInOrc()
+	}
+
+	if recoveries, err := client.AuditRecovery(f.getClusterAlias()); err == nil {
+		f.updateStatusForRecoveries(recoveries)
 	}
 
 	return nil
@@ -61,34 +66,53 @@ func (f *cFactory) updateStatusFromOrc(insts []orc.Instance) {
 				break
 			}
 		}
-		status := f.cluster.Status.GetNodeStatus(host)
+		i := f.cluster.Status.GetNodeStatusIndex(host)
 
-		if node != nil {
-			status.UpdateNodeCondition(api.NodeConditionLagged, core.ConditionUnknown)
-			status.UpdateNodeCondition(api.NodeConditionReplicating, core.ConditionUnknown)
-			status.UpdateNodeCondition(api.NodeConditionMaster, core.ConditionUnknown)
+		if node == nil {
+			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionUnknown)
+			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionReplicating, core.ConditionUnknown)
+			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionMaster, core.ConditionUnknown)
 
 			return
 		}
 
-		if node.SecondsBehindMaster.Valid && node.SecondsBehindMaster.Int64 <= allowedNodeLagSeconds {
-			status.UpdateNodeCondition(api.NodeConditionLagged, core.ConditionFalse)
+		if !node.SecondsBehindMaster.Valid {
+			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionUnknown)
+		} else if node.SecondsBehindMaster.Int64 <= *f.cluster.Spec.TargetSLO.MaxSlaveLatency {
+			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionFalse)
 		} else { // node is behind master
-			status.UpdateNodeCondition(api.NodeConditionLagged, core.ConditionTrue)
+			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionTrue)
 		}
 
 		if node.Slave_SQL_Running && node.Slave_IO_Running {
-			status.UpdateNodeCondition(api.NodeConditionReplicating, core.ConditionTrue)
+			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionReplicating, core.ConditionTrue)
 		} else {
-			status.UpdateNodeCondition(api.NodeConditionReplicating, core.ConditionFalse)
+			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionReplicating, core.ConditionFalse)
 		}
 
 		if !node.ReadOnly {
-			status.UpdateNodeCondition(api.NodeConditionMaster, core.ConditionTrue)
+			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionMaster, core.ConditionTrue)
 		} else {
-			status.UpdateNodeCondition(api.NodeConditionMaster, core.ConditionFalse)
+			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionMaster, core.ConditionFalse)
 		}
+	}
 
+}
+
+func (f *cFactory) updateStatusForRecoveries(recoveries []orc.TopologyRecovery) {
+	var unack []orc.TopologyRecovery
+	for _, recovery := range recoveries {
+		if !recovery.Acknowledged {
+			unack = append(unack, recovery)
+		}
+	}
+
+	if len(unack) > 0 {
+		f.cluster.UpdateStatusCondition(api.ClusterConditionFailoverAck,
+			core.ConditionTrue, "pending failover exists", fmt.Sprintf("%#v", unack))
+	} else {
+		f.cluster.UpdateStatusCondition(api.ClusterConditionFailoverAck,
+			core.ConditionFalse, "no pending failovers", "no pending ack")
 	}
 }
 

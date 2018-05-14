@@ -81,7 +81,6 @@ func (f *cFactory) syncMasterService() (state string, err error) {
 		})
 
 	state = getStatusFromKVerb(act)
-	err = f.updateMasterServiceEndpoints()
 
 	return
 }

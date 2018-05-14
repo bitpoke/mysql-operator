@@ -189,11 +189,11 @@ func (ns *NodeStatus) UpdateNodeCondition(cType NodeConditionType,
 			} else {
 				newCondition.LastTransitionTime = cond.LastTransitionTime
 			}
-			glog.Infof("Setting lastTransitionTime for mysql backup "+
+			glog.Infof("Setting lastTransitionTime for node "+
 				"%q condition %q to %q", ns.Name, cType, cStatus)
 			ns.Conditions[i] = newCondition
 		} else {
-			glog.Infof("Setting new condition for mysql backup %q, condition %q to %q",
+			glog.Infof("Setting new condition for node %q, condition %q to %q",
 				ns.Name, cType, cStatus)
 			newCondition.LastTransitionTime = metav1.NewTime(t)
 			ns.Conditions = append(ns.Conditions, newCondition)
@@ -211,15 +211,20 @@ func (ns *NodeStatus) condExists(cType NodeConditionType) (int, bool) {
 	return 0, false
 }
 
-func (s *ClusterStatus) GetNodeStatus(name string) *NodeStatus {
-	for _, node := range s.Nodes {
-		if node.Name == name {
-			return &node
+func (s *ClusterStatus) GetNodeStatusIndex(name string) int {
+	for i := 0; i < len(s.Nodes); i++ {
+		if s.Nodes[i].Name == name {
+			return i
 		}
 	}
+	s.Nodes = append(s.Nodes, NodeStatus{Name: name})
+	return s.GetNodeStatusIndex(name)
+}
 
-	return &NodeStatus{
-		Name:       name,
-		Conditions: []NodeCondition{},
+func (ns *NodeStatus) GetCondition(cType NodeConditionType) *NodeCondition {
+	if i, exist := ns.condExists(cType); exist {
+		return &ns.Conditions[i]
 	}
+
+	return nil
 }

@@ -48,6 +48,8 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster) error 
 		glog.V(2).Infof("now just update defaults for %s", cluster.Name)
 		copyCluster.UpdateStatusCondition(api.ClusterConditionReady,
 			apiv1.ConditionUnknown, "not initialized", "setting defaults")
+		copyCluster.UpdateStatusCondition(api.ClusterConditionFailoverAck,
+			apiv1.ConditionUnknown, "not initialized", "setting defaults")
 
 		c.recorder.Event(copyCluster, api.EventNormal, api.EventReasonInitDefaults,
 			"defaults set")

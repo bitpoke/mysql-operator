@@ -18,137 +18,46 @@ package mysqlcluster
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/golang/glog"
 	core "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/reference"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	kutil "github.com/presslabs/mysql-operator/pkg/util/kube"
 	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
+)
+
+const (
+	healtyMoreThanMinutes = 10
 )
 
 func (f *cFactory) updateMasterServiceEndpoints() error {
 	masterHost := f.cluster.GetPodHostName(0)
 
-	if len(f.cluster.Spec.GetOrcUri()) != 0 {
-		// try to discover ready nodes into orchestrator
-		client := orc.NewFromUri(f.cluster.Spec.GetOrcUri())
-		orcClusterName := fmt.Sprintf("%s.%s", f.cluster.Name, f.cluster.Namespace)
-		if inst, err := client.Master(orcClusterName); err == nil {
-			masterHost = inst.Key.Hostname
-		} else {
-			glog.Warningf(
-				"Failed getting master for %s: %s, falling back to default.",
-				orcClusterName, err,
-			)
+	for _, ns := range f.cluster.Status.Nodes {
+		if cond := ns.GetCondition(api.NodeConditionMaster); cond != nil {
+			masterHost = ns.Name
 		}
 	}
 
-	masterPod, err := f.getPodForHostname(masterHost)
-	if err != nil {
-		glog.Errorf("Failed to set master service endpoints: %s", err)
-		return nil
-	}
-
-	if len(masterPod.Status.PodIP) == 0 {
-		glog.Errorf("Failed to set master service endpoints, ip for pod %s not set %s", masterPod.Name, err)
-		return nil
-	}
-
-	meta := metav1.ObjectMeta{
-		Name:            f.cluster.GetNameForResource(api.MasterService),
-		Labels:          f.getLabels(map[string]string{}),
-		OwnerReferences: f.getOwnerReferences(),
-		Namespace:       f.namespace,
-	}
-
-	_, act, err := kutil.CreateOrPatchEndpoints(f.client, meta,
-		func(in *core.Endpoints) *core.Endpoints {
-			if len(in.Subsets) != 1 {
-				in.Subsets = make([]core.EndpointSubset, 1)
-			}
-
-			ref, _ := reference.GetReference(runtime.NewScheme(), masterPod)
-
-			addresses := []core.EndpointAddress{
-				core.EndpointAddress{
-					IP:        masterPod.Status.PodIP,
-					TargetRef: ref,
-				},
-			}
-			readyIndex, exists := condIndex(masterPod, core.PodReady)
-			if exists && masterPod.Status.Conditions[readyIndex].Status == core.ConditionTrue {
-				in.Subsets[0].Addresses = addresses
-				in.Subsets[0].NotReadyAddresses = nil
-			} else {
-				in.Subsets[0].Addresses = nil
-				in.Subsets[0].NotReadyAddresses = addresses
-			}
-
-			if len(in.Subsets[0].Ports) != 1 {
-				in.Subsets[0].Ports = make([]core.EndpointPort, 1)
-			}
-			in.Subsets[0].Ports[0].Name = MysqlPortName
-			in.Subsets[0].Ports[0].Port = MysqlPort
-			in.Subsets[0].Ports[0].Protocol = "TCP"
-
-			return in
-		})
-
-	glog.Infof("Endpoints for service '%s' were %s.",
-		f.cluster.GetNameForResource(api.MasterService), getStatusFromKVerb(act))
-
-	return err
-}
-
-func (f *cFactory) getPodForHostname(hostname string) (*core.Pod, error) {
-	selector := labels.SelectorFromSet(f.getLabels(map[string]string{}))
-	podList, err := f.client.CoreV1().Pods(f.namespace).List(metav1.ListOptions{
-		LabelSelector: selector.String(),
-	})
-	//pods, err := f.podLister.List(selector)
-	if err != nil {
-		return nil, fmt.Errorf("listing pods: %s", err)
-	}
-
-	for _, pod := range podList.Items {
-		if strings.Contains(hostname, pod.Name) {
-			return &pod, nil
-		}
-	}
-
-	return nil, fmt.Errorf("pod whith hostname %s not found", hostname)
-}
-
-func condIndex(pod *core.Pod, ty core.PodConditionType) (int, bool) {
-	for i, cond := range pod.Status.Conditions {
-		if cond.Type == ty {
-			return i, true
-		}
-	}
-
-	return 0, false
+	return f.addNodesToService(f.cluster.GetNameForResource(api.MasterService), masterHost)
 }
 
 func (f *cFactory) autoAcknowledge() error {
-	if len(f.cluster.Spec.GetOrcUri()) == 0 {
-		// nothing to do, orchestrator uri not set
+	// TODO: does not work when cluster does not change more than 10 minutes after failover
+	i, find := condIndexCluster(f.cluster, api.ClusterConditionFailoverAck)
+	if !find || f.cluster.Status.Conditions[i].Status != core.ConditionTrue {
+		glog.V(3).Infof("[autoAcknowledge]: Nothing to do for cluuster %s", f.cluster.Name)
 		return nil
 	}
 
-	i, find := condIndexCluster(f.cluster, api.ClusterConditionReady)
+	i, find = condIndexCluster(f.cluster, api.ClusterConditionReady)
 	if !find || f.cluster.Status.Conditions[i].Status != core.ConditionTrue {
 		glog.Warning("[autoAcknowledge]: Cluster is not ready for ack.")
 		return nil
 	}
 
-	if time.Since(f.cluster.Status.Conditions[i].LastTransitionTime.Time).Minutes() < 10 {
+	if time.Since(f.cluster.Status.Conditions[i].LastTransitionTime.Time).Minutes() < healtyMoreThanMinutes {
 		glog.Warning(
 			"[autoAcknowledge]: Stateful set is not ready more then 10 minutes. Don't ack.",
 		)
@@ -157,14 +66,14 @@ func (f *cFactory) autoAcknowledge() error {
 
 	// proceed with cluster recovery
 	client := orc.NewFromUri(f.cluster.Spec.GetOrcUri())
-	recoveries, err := client.AuditRecovery(f.cluster.Name)
+	recoveries, err := client.AuditRecovery(f.getClusterAlias())
 	if err != nil {
 		return fmt.Errorf("orchestrator audit: %s", err)
 	}
 
 	for _, recovery := range recoveries {
 		if !recovery.Acknowledged {
-			// skip if it's a new recovery, recovery should be older then 10 minutes
+			// skip if it's a new recovery, recovery should be older then <healtyMoreThanMinutes> minutes
 			startTime, err := time.Parse(time.RFC3339, recovery.RecoveryStartTimestamp)
 			if err != nil {
 				glog.Errorf("[autoAcknowledge] Can't parse time: %s for audit recovery: %d",
@@ -172,7 +81,7 @@ func (f *cFactory) autoAcknowledge() error {
 				)
 				continue
 			}
-			if time.Since(startTime).Minutes() < 10 {
+			if time.Since(startTime).Minutes() < healtyMoreThanMinutes {
 				// skip this recovery
 				continue
 			}
