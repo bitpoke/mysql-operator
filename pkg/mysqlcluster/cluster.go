@@ -156,6 +156,12 @@ func (f *cFactory) Sync(ctx context.Context) error {
 			f.rec.Event(f.cluster, api.EventNormal, comp.reasonUpdated, "")
 		}
 	}
+	if err := f.updateMasterServiceEndpoints(); err != nil {
+		return fmt.Errorf("cluster sync: %s", err)
+	}
+	if err := f.autoAcknowledge(); err != nil {
+		return fmt.Errorf("cluster sync: %s", err)
+	}
 	return nil
 }
 
@@ -175,4 +181,8 @@ func (f *cFactory) getHostForReplica(no int) string {
 	return fmt.Sprintf("%s-%d.%s.%s", f.cluster.GetNameForResource(api.StatefulSet), no,
 		f.cluster.GetNameForResource(api.HeadlessSVC),
 		f.cluster.Namespace)
+}
+
+func (f *cFactory) getClusterAlias() string {
+	return fmt.Sprintf("%s.%s", f.cluster.Name, f.cluster.Namespace)
 }

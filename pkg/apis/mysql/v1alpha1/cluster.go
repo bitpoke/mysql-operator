@@ -42,7 +42,8 @@ const (
 )
 
 var (
-	opt *options.Options
+	opt                    *options.Options
+	defaultMaxSlaveLatency int64 = 20
 )
 
 func init() {
@@ -78,6 +79,10 @@ func (c *ClusterSpec) UpdateDefaults(opt *options.Options, cluster *MysqlCluster
 
 	if len(c.MysqlConf) == 0 {
 		c.MysqlConf = make(MysqlConf)
+	}
+
+	if c.TargetSLO.MaxSlaveLatency != nil {
+		c.TargetSLO.MaxSlaveLatency = &defaultMaxSlaveLatency
 	}
 
 	// configure mysql based on:

@@ -86,6 +86,9 @@ type ClusterSpec struct {
 	// PVC extra specifiaction
 	// +optional
 	VolumeSpec `json:"volumeSpec,omitempty"`
+
+	// TargetSLO
+	TargetSLO TargetSLO `json:"targetSLO,omitempty`
 }
 
 type MysqlConf map[string]string
@@ -153,6 +156,10 @@ type PodSpec struct {
 
 type VolumeSpec struct {
 	apiv1.PersistentVolumeClaimSpec `json:",inline"`
+}
+
+type TargetSLO struct {
+	MaxSlaveLatency *int64 `json:"maxSlaveLatency,omitempty`
 }
 
 // +genclient

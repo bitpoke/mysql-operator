@@ -32,3 +32,9 @@ spec:
   #   resources:
   #     requests:
   #       storage: 1Gi
+
+  ## Specify service objectives
+  ## If thoses SLO are not fulfilled by cluster node then that node is
+  ## removed from scheme
+  # targetSLO:
+  #   maxSlaveLatency: 10s

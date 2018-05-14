@@ -81,15 +81,13 @@ func (o *orchestrator) makeGetRequest(path string, out interface{}) error {
 	return nil
 }
 
-func (o *orchestrator) makeGetAPIResponse(path string, query map[string][]string) error {
+func (o *orchestrator) makeGetAPIRequest(path string, query map[string][]string) error {
 	args := url.Values(query).Encode()
 	if len(args) != 0 {
 		args = "?" + args
 	}
 
-	uri := fmt.Sprintf("%s/%s%s", o.connectUri, path, args)
-	glog.V(2).Infof("Orc request on: %s", uri)
-
+	path = fmt.Sprintf("%s%s", path, args)
 	var apiObj struct {
 		Code    string
 		Message string

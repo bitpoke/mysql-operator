@@ -47,6 +47,10 @@ func (c *Controller) Reconcile(ctx context.Context, cluster *api.MysqlCluster) e
 		return fmt.Errorf("failed to reconcile the cluster: %s", err)
 	}
 
+	if _, err := c.myClient.Mysql().MysqlClusters(cluster.Namespace).Update(copyCluster); err != nil {
+		return err
+	}
+
 	return nil
 }
 
