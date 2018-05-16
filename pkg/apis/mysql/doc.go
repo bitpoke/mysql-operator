@@ -17,5 +17,5 @@ limitations under the License.
 package mysql
 
 const (
-	GroupName = "mysql.presslabs.net"
+	GroupName = "mysql.presslabs.org"
 )

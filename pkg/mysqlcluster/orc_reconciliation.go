@@ -19,6 +19,7 @@ package mysqlcluster
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/golang/glog"
 	core "k8s.io/api/core/v1"
@@ -28,7 +29,7 @@ import (
 )
 
 const (
-	allowedNodeLagSeconds = 30
+	healtyMoreThanMinutes = 10
 )
 
 // ReconcileORC function is called in a loop and should update cluster status
@@ -50,6 +51,20 @@ func (f *cFactory) ReconcileORC(ctx context.Context) error {
 
 	if recoveries, err := client.AuditRecovery(f.getClusterAlias()); err == nil {
 		f.updateStatusForRecoveries(recoveries)
+		toAck := f.getRecoveriesToAck(recoveries)
+
+		comment := fmt.Sprintf("Statefulset '%s' is healty more then 10 minutes",
+			f.cluster.GetNameForResource(api.StatefulSet),
+		)
+
+		// acknowledge recoveries
+		for _, r := range toAck {
+			if err := client.AckRecovery(r.Id, comment); err != nil {
+				glog.Errorf("Trying to ack recovery with id %d but failed with error: %s",
+					r.Id, err,
+				)
+			}
+		}
 	}
 
 	return nil
@@ -57,7 +72,7 @@ func (f *cFactory) ReconcileORC(ctx context.Context) error {
 
 func (f *cFactory) updateStatusFromOrc(insts []orc.Instance) {
 	for i := 0; i < int(f.cluster.Spec.Replicas); i++ {
-		host := f.getHostForReplica(i)
+		host := f.cluster.GetPodHostName(i)
 		// select instance from orchestrator
 		var node *orc.Instance
 		for _, inst := range insts {
@@ -76,9 +91,9 @@ func (f *cFactory) updateStatusFromOrc(insts []orc.Instance) {
 			return
 		}
 
-		if !node.SecondsBehindMaster.Valid {
+		if !node.SlaveLagSeconds.Valid {
 			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionUnknown)
-		} else if node.SecondsBehindMaster.Int64 <= *f.cluster.Spec.TargetSLO.MaxSlaveLatency {
+		} else if node.SlaveLagSeconds.Int64 <= *f.cluster.Spec.MaxSlaveLatency {
 			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionFalse)
 		} else { // node is behind master
 			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionTrue)
@@ -96,7 +111,6 @@ func (f *cFactory) updateStatusFromOrc(insts []orc.Instance) {
 			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionMaster, core.ConditionFalse)
 		}
 	}
-
 }
 
 func (f *cFactory) updateStatusForRecoveries(recoveries []orc.TopologyRecovery) {
@@ -109,10 +123,10 @@ func (f *cFactory) updateStatusForRecoveries(recoveries []orc.TopologyRecovery) 
 
 	if len(unack) > 0 {
 		f.cluster.UpdateStatusCondition(api.ClusterConditionFailoverAck,
-			core.ConditionTrue, "pending failover exists", fmt.Sprintf("%#v", unack))
+			core.ConditionTrue, "pendingFailoverAckExists", fmt.Sprintf("%#v", unack))
 	} else {
 		f.cluster.UpdateStatusCondition(api.ClusterConditionFailoverAck,
-			core.ConditionFalse, "no pending failovers", "no pending ack")
+			core.ConditionFalse, "noPendingFailoverAckExists", "no pending ack")
 	}
 }
 
@@ -121,11 +135,60 @@ func (f *cFactory) registerNodesInOrc() error {
 	// try to discover ready nodes into orchestrator
 	client := orc.NewFromUri(f.cluster.Spec.GetOrcUri())
 	for i := 0; i < int(f.cluster.Status.ReadyNodes); i++ {
-		host := f.getHostForReplica(i)
+		host := f.cluster.GetPodHostName(i)
 		if err := client.Discover(host, MysqlPort); err != nil {
 			glog.Warningf("Failed to register %s with orchestrator: %s", host, err.Error())
 		}
 	}
 
 	return nil
+}
+
+func (f *cFactory) getRecoveriesToAck(recoveries []orc.TopologyRecovery) (toAck []orc.TopologyRecovery) {
+	if len(recoveries) == 0 {
+		return
+	}
+
+	i, find := condIndexCluster(f.cluster, api.ClusterConditionReady)
+	if !find || f.cluster.Status.Conditions[i].Status != core.ConditionTrue {
+		glog.Warning("[getRecoveriesToAck]: Cluster is not ready for ack.")
+		return
+	}
+
+	if time.Since(f.cluster.Status.Conditions[i].LastTransitionTime.Time).Minutes() < healtyMoreThanMinutes {
+		glog.Warning(
+			"[getRecoveriesToAck]: Stateful set is not ready more then 10 minutes. Don't ack.",
+		)
+		return
+	}
+
+	for _, recovery := range recoveries {
+		if !recovery.Acknowledged {
+			// skip if it's a new recovery, recovery should be older then <healtyMoreThanMinutes> minutes
+			startTime, err := time.Parse(time.RFC3339, recovery.RecoveryStartTimestamp)
+			if err != nil {
+				glog.Errorf("[autoAcknowledge] Can't parse time: %s for audit recovery: %d",
+					err, recovery.Id,
+				)
+				continue
+			}
+			if time.Since(startTime).Minutes() < healtyMoreThanMinutes {
+				// skip this recovery
+				continue
+			}
+
+			toAck = append(toAck, recovery)
+		}
+	}
+	return
+}
+
+func condIndexCluster(r *api.MysqlCluster, ty api.ClusterConditionType) (int, bool) {
+	for i, cond := range r.Status.Conditions {
+		if cond.Type == ty {
+			return i, true
+		}
+	}
+
+	return 0, false
 }

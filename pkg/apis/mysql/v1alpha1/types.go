@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	apiv1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -87,8 +87,11 @@ type ClusterSpec struct {
 	// +optional
 	VolumeSpec `json:"volumeSpec,omitempty"`
 
-	// TargetSLO
-	TargetSLO TargetSLO `json:"targetSLO,omitempty`
+	// MaxSlaveLatency represents the allowed latency for a slave node in
+	// seconds. If this threshold if reached then the node is removed from
+	// service until he self heals. Defaults to 20s
+	// +optional
+	MaxSlaveLatency *int64 `json:"maxSlaveLatency,omitempty`
 }
 
 type MysqlConf map[string]string
@@ -106,7 +109,7 @@ type ClusterCondition struct {
 	// type of cluster condition, values in (\"Ready\")
 	Type ClusterConditionType `json:"type"`
 	// Status of the condition, one of (\"True\", \"False\", \"Unknown\")
-	Status apiv1.ConditionStatus `json:"status"`
+	Status core.ConditionStatus `json:"status"`
 
 	// LastTransitionTime
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
@@ -130,9 +133,9 @@ type NodeStatus struct {
 }
 
 type NodeCondition struct {
-	Type               NodeConditionType     `json:"type"`
-	Status             apiv1.ConditionStatus `json:"status"`
-	LastTransitionTime metav1.Time           `json:"lastTransitionTime`
+	Type               NodeConditionType    `json:"type"`
+	Status             core.ConditionStatus `json:"status"`
+	LastTransitionTime metav1.Time          `json:"lastTransitionTime`
 }
 
 type NodeConditionType string
@@ -144,22 +147,18 @@ const (
 )
 
 type PodSpec struct {
-	ImagePullPolicy  apiv1.PullPolicy             `json:"imagePullPolicy,omitempty"`
-	ImagePullSecrets []apiv1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+	ImagePullPolicy  core.PullPolicy             `json:"imagePullPolicy,omitempty"`
+	ImagePullSecrets []core.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	Labels       map[string]string          `json:"labels,omitempty"`
-	Annotations  map[string]string          `json:"annotations,omitempty"`
-	Resources    apiv1.ResourceRequirements `json:"resources,omitempty"`
-	Affinity     apiv1.Affinity             `json:"affinity,omitempty"`
-	NodeSelector map[string]string          `json:"nodeSelector,omitempty"`
+	Labels       map[string]string         `json:"labels,omitempty"`
+	Annotations  map[string]string         `json:"annotations,omitempty"`
+	Resources    core.ResourceRequirements `json:"resources,omitempty"`
+	Affinity     core.Affinity             `json:"affinity,omitempty"`
+	NodeSelector map[string]string         `json:"nodeSelector,omitempty"`
 }
 
 type VolumeSpec struct {
-	apiv1.PersistentVolumeClaimSpec `json:",inline"`
-}
-
-type TargetSLO struct {
-	MaxSlaveLatency *int64 `json:"maxSlaveLatency,omitempty`
+	core.PersistentVolumeClaimSpec `json:",inline"`
 }
 
 // +genclient
@@ -203,7 +202,7 @@ type BackupCondition struct {
 	// type of cluster condition, values in (\"Ready\")
 	Type BackupConditionType `json:"type"`
 	// Status of the condition, one of (\"True\", \"False\", \"Unknown\")
-	Status apiv1.ConditionStatus `json:"status"`
+	Status core.ConditionStatus `json:"status"`
 
 	// LastTransitionTime
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`

@@ -78,6 +78,10 @@ func (o *orchestrator) makeGetRequest(path string, out interface{}) error {
 		return NewOrcError(resp)
 	}
 
+	if resp.StatusCode >= 500 {
+		return NewOrcError(resp)
+	}
+
 	return nil
 }
 

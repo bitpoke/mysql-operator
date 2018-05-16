@@ -128,7 +128,7 @@ func (f *cFactory) addNodesToService(serviceName string, hosts ...string) error 
 	_, act, err := mykutil.CreateOrPatchEndpoints(f.client, meta,
 		func(in *core.Endpoints) *core.Endpoints {
 			if len(in.Subsets) != 1 {
-				in.Subsets = make([]core.EndpointSubset, len(pods))
+				in.Subsets = make([]core.EndpointSubset, 1)
 			}
 
 			readyAddr := []core.EndpointAddress{}

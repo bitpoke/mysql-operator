@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/presslabs/mysql-operator/pkg/util/options"
-	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
 
 const (
@@ -81,8 +80,8 @@ func (c *ClusterSpec) UpdateDefaults(opt *options.Options, cluster *MysqlCluster
 		c.MysqlConf = make(MysqlConf)
 	}
 
-	if c.TargetSLO.MaxSlaveLatency != nil {
-		c.TargetSLO.MaxSlaveLatency = &defaultMaxSlaveLatency
+	if c.MaxSlaveLatency == nil {
+		c.MaxSlaveLatency = &defaultMaxSlaveLatency
 	}
 
 	// configure mysql based on:
@@ -228,6 +227,8 @@ const (
 	BackupCronJob ResourceName = "backup-cron"
 	// MasterService is the name of the service that points to master node
 	MasterService ResourceName = "master-service"
+	// HealtyNodes is the name of a service that continas all healty nodes
+	HealtyNodesService ResourceName = "healty-nodes-service"
 )
 
 func (c *MysqlCluster) GetNameForResource(name ResourceName) string {
@@ -240,6 +241,8 @@ func GetNameForResource(name ResourceName, clusterName string) string {
 		return fmt.Sprintf("%s-mysql", clusterName)
 	case MasterService:
 		return fmt.Sprintf("%s-master-mysql", clusterName)
+	case HealtyNodesService:
+		return fmt.Sprintf("%s-mysql-ready", clusterName)
 	default:
 		return fmt.Sprintf("%s-mysql", clusterName)
 	}
@@ -251,32 +254,28 @@ func (c *MysqlCluster) GetHealtySlaveHost() string {
 		glog.V(2).Infof("[GetHealtySlaveHost]: The slave host is: %s", c.GetPodHostName(0))
 		return c.GetPodHostName(0)
 	}
-	host := c.GetPodHostName(c.Status.ReadyNodes - 1)
 
-	if len(c.Spec.GetOrcUri()) != 0 {
-		glog.V(2).Info("[GetHealtySlaveHost]: Use orchestrator to get slave host.")
-		client := orc.NewFromUri(c.Spec.GetOrcUri())
-		replicas, err := client.ClusterOSCReplicas(c.Name)
-		if err != nil {
-			glog.Errorf("[GetHealtySlaveHost] orc failed with: %s", err)
-			return host
+	for _, node := range c.Status.Nodes {
+		master := node.GetCondition(NodeConditionMaster)
+		replicating := node.GetCondition(NodeConditionReplicating)
+		lagged := node.GetCondition(NodeConditionLagged)
+		if master == nil || replicating == nil || lagged == nil {
+			continue
 		}
-		for _, r := range replicas {
-			if r.SecondsBehindMaster.Valid && r.SecondsBehindMaster.Int64 <= 5 {
-				glog.V(2).Infof("[GetHealtySlaveHost]: Using orc we choses: %s",
-					r.Key.Hostname)
-				host = r.Key.Hostname
-			}
+		if master.Status == core.ConditionFalse &&
+			replicating.Status == core.ConditionTrue &&
+			lagged.Status == core.ConditionFalse {
+			return node.Name
 		}
 	}
-
-	glog.V(2).Infof("[GetHealtySlaveHost]: The slave host is: %s", host)
-	return host
+	glog.Warning("[GetHealtySlaveHost]: return a not healty slave node")
+	return c.GetPodHostName(c.Status.ReadyNodes - 1)
 }
 
 func (c *MysqlCluster) GetPodHostName(p int) string {
-	pod := fmt.Sprintf("%s-%d", c.GetNameForResource(StatefulSet), p)
-	return fmt.Sprintf("%s.%s", pod, c.GetNameForResource(HeadlessSVC))
+	return fmt.Sprintf("%s-%d.%s.%s", c.GetNameForResource(StatefulSet), p,
+		c.GetNameForResource(HeadlessSVC),
+		c.Namespace)
 }
 
 func (c *MysqlCluster) GetLabels() map[string]string {

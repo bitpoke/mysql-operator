@@ -29,9 +29,9 @@ $(CODEGEN_BINS): $(CODEGEN_SRC)
 	go build -o $@ ./vendor/k8s.io/code-generator/cmd/$(notdir $@)/main.go
 
 .PHONY: generate generate_verify clean-generated $(patsubst %,gen-%,$(CODEGEN_TOOLS)) $(patsubst %,gen-%-verify,$(CODEGEN_TOOLS))
-generate: $(patsubst %,gen-%,$(CODEGEN_TOOLS))
+generate: $(patsubst %,gen-%,$(CODEGEN_TOOLS)) gen-crds
 
-generate_verify: $(patsubst %,gen-%-verify,$(CODEGEN_TOOLS))
+generate_verify: $(patsubst %,gen-%-verify,$(CODEGEN_TOOLS)) gen-crds-verify
 	@echo "Smoke test by builing"
 	go build $(PACKAGE_NAME)/pkg/...
 
