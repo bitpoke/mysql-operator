@@ -20,12 +20,11 @@ import (
 	"fmt"
 )
 
-type Orchestrator interface {
+type Interface interface {
 	Discover(host string, port int) error
 	Forget(host string, port int) error
 
 	Master(clusterHint string) (*Instance, error)
-	ClusterOSCReplicas(cluster string) ([]Instance, error)
 
 	Cluster(cluster string) ([]Instance, error)
 
@@ -37,7 +36,7 @@ type orchestrator struct {
 	connectUri string
 }
 
-func NewFromUri(uri string) Orchestrator {
+func NewFromUri(uri string) Interface {
 	return &orchestrator{
 		connectUri: uri,
 	}
@@ -67,16 +66,6 @@ func (o *orchestrator) Master(clusterHint string) (*Instance, error) {
 	}
 
 	return &inst, nil
-}
-
-func (o *orchestrator) ClusterOSCReplicas(cluster string) ([]Instance, error) {
-	path := fmt.Sprintf("cluster-osc-slaves/%s", cluster)
-	var insts []Instance
-	if err := o.makeGetRequest(path, &insts); err != nil {
-		return nil, err
-	}
-
-	return insts, nil
 }
 
 func (o *orchestrator) Cluster(cluster string) ([]Instance, error) {

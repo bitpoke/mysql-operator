@@ -23,12 +23,12 @@ import (
 	"github.com/golang/glog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	ticlientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
 	"github.com/presslabs/mysql-operator/pkg/util/options"
+	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
 
 // Interface is for cluster Factory
@@ -47,10 +47,11 @@ type cFactory struct {
 
 	namespace string
 
-	client    kubernetes.Interface
-	myClient  ticlientset.Interface
-	podLister corelisters.PodLister
-	rec       record.EventRecorder
+	client   kubernetes.Interface
+	myClient ticlientset.Interface
+	rec      record.EventRecorder
+
+	orcClient orc.Interface
 
 	configHash string
 	secretHash string
@@ -58,18 +59,17 @@ type cFactory struct {
 
 // New creates a new cluster factory
 func New(cluster *api.MysqlCluster, opt *options.Options, klient kubernetes.Interface,
-	myClient ticlientset.Interface, ns string, rec record.EventRecorder,
-	podLister corelisters.PodLister) Interface {
+	myClient ticlientset.Interface, ns string, rec record.EventRecorder) Interface {
 	return &cFactory{
 		cluster:    cluster,
 		opt:        opt,
 		client:     klient,
 		myClient:   myClient,
-		podLister:  podLister,
 		namespace:  ns,
 		rec:        rec,
 		configHash: "1",
 		secretHash: "1",
+		orcClient:  orc.NewFromUri(cluster.Spec.GetOrcUri()),
 	}
 }
 

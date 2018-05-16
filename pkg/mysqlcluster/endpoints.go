@@ -32,7 +32,8 @@ func (f *cFactory) updateMasterServiceEndpoints() error {
 	masterHost := f.cluster.GetPodHostName(0)
 
 	for _, ns := range f.cluster.Status.Nodes {
-		if cond := ns.GetCondition(api.NodeConditionMaster); cond != nil && cond.Status == core.ConditionTrue {
+		if cond := ns.GetCondition(api.NodeConditionMaster); cond != nil &&
+			cond.Status == core.ConditionTrue {
 			masterHost = ns.Name
 		}
 	}
@@ -44,14 +45,17 @@ func (f *cFactory) updateHealtyNodesServiceEndpoints() error {
 	var hNodes []string
 	for i := 0; i < len(f.cluster.Status.Nodes); i++ {
 		ns := f.cluster.Status.Nodes[i]
+
 		master := ns.GetCondition(api.NodeConditionMaster)
 		replicating := ns.GetCondition(api.NodeConditionReplicating)
 		lagged := ns.GetCondition(api.NodeConditionLagged)
 		if master == nil || replicating == nil || lagged == nil {
 			continue
 		}
+
 		isLagged := lagged.Status == core.ConditionTrue &&
-			time.Since(lagged.LastTransitionTime.Time).Seconds() > float64(*f.cluster.Spec.MaxSlaveLatency)*allowedLagCycles
+			time.Since(lagged.LastTransitionTime.Time).Seconds() >
+				float64(*f.cluster.Spec.MaxSlaveLatency)*allowedLagCycles
 
 		if master.Status == core.ConditionTrue || master.Status == core.ConditionFalse &&
 			replicating.Status == core.ConditionTrue && !isLagged {
@@ -60,7 +64,8 @@ func (f *cFactory) updateHealtyNodesServiceEndpoints() error {
 	}
 
 	if len(hNodes) > 0 {
-		return f.addNodesToService(f.cluster.GetNameForResource(api.HealtyNodesService), hNodes...)
+		return f.addNodesToService(f.cluster.GetNameForResource(api.HealtyNodesService),
+			hNodes...)
 	}
 
 	return nil
