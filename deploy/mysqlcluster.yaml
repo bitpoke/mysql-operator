@@ -3,9 +3,9 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   creationTimestamp: null
-  name: mysqlclusters.mysql.presslabs.net
+  name: mysqlclusters.mysql.presslabs.org
 spec:
-  group: mysql.presslabs.net
+  group: mysql.presslabs.org
   names:
     kind: MysqlCluster
     plural: mysqlclusters
@@ -19,6 +19,12 @@ spec:
       properties:
         spec:
           properties:
+            MaxSlaveLatency:
+              description: MaxSlaveLatency represents the allowed latency for a slave
+                node in seconds. If this threshold if reached then the node is removed
+                from service until he self heals. Defaults to 20s
+              format: int64
+              type: integer
             backupSchedule:
               description: Specify under crontab format interval to take backups leave
                 it empty to deactivate the backup process Defaults to ""

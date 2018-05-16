@@ -137,6 +137,13 @@ func (f *cFactory) getComponents() []component {
 			reasonFailed:  api.EventReasonMasterServiceFailed,
 			reasonUpdated: api.EventReasonMasterServiceUpdated,
 		},
+		component{
+			alias:         "healty-service",
+			name:          f.cluster.GetNameForResource(api.HealtyNodesService),
+			syncFn:        f.syncHealtyNodesService,
+			reasonFailed:  api.EventReasonHealtyNodesServiceFailed,
+			reasonUpdated: api.EventReasonHealtyNodesServiceUpdated,
+		},
 	}
 }
 
@@ -156,12 +163,16 @@ func (f *cFactory) Sync(ctx context.Context) error {
 			f.rec.Event(f.cluster, api.EventNormal, comp.reasonUpdated, "")
 		}
 	}
+
+	// update master endpoints
 	if err := f.updateMasterServiceEndpoints(); err != nil {
-		return fmt.Errorf("cluster sync: %s", err)
+		return fmt.Errorf("cluster sync master endpoints: %s", err)
 	}
-	if err := f.autoAcknowledge(); err != nil {
-		return fmt.Errorf("cluster sync: %s", err)
+
+	if err := f.updateHealtyNodesServiceEndpoints(); err != nil {
+		return fmt.Errorf("cluster sync ready endpoints: %s", err)
 	}
+
 	return nil
 }
 
@@ -175,12 +186,6 @@ func (f *cFactory) getOwnerReferences(ors ...[]metav1.OwnerReference) []metav1.O
 		}
 	}
 	return rs
-}
-
-func (f *cFactory) getHostForReplica(no int) string {
-	return fmt.Sprintf("%s-%d.%s.%s", f.cluster.GetNameForResource(api.StatefulSet), no,
-		f.cluster.GetNameForResource(api.HeadlessSVC),
-		f.cluster.Namespace)
 }
 
 func (f *cFactory) getClusterAlias() string {

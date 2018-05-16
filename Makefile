@@ -107,14 +107,6 @@ publish: images
 	done
 
 
-# Code generation targets
-#########################
-CODEGEN_APIS_VERSIONS := mysql:v1alpha1
-CODEGEN_TOOLS := deepcopy client lister informer openapi
-CODEGEN_OUTPUT_PKG := $(PACKAGE_NAME)/pkg/generated
-include hack/codegen.mk
-
-
 # CRD generator
 ###############
 CHART_TEMPLATE_PATH := deploy/
@@ -125,9 +117,25 @@ CRD_GEN_FILES := $(addprefix $(CHART_TEMPLATE_PATH),$(addsuffix .yaml,$(CRDS)))
 $(CRD_GEN_FILES):
 	go run hack/crds/main.go $(basename $(notdir $@)) >> $@
 
+.PHONY: gen-crds gen-crds-verify gen-crds-clean
+gen-crds: gen-crds-clean hack/crds/main.go $(CRD_GEN_FILES)
 
-.PHONEY: generate-yaml clean-yaml
-generate-yaml: clean-yaml $(CRD_GEN_FILES)
+gen-crds-verify: SHELL := /bin/bash
+gen-crds-verify: $(addsuffix -verify,$(CRD_GEN_FILES))
+	@echo "Verifying generated CRDs"
 
-clean-yaml:
+$(addsuffix -verify,$(CRD_GEN_FILES)):
+	$(eval FILE := $(subst -verify,,$@))
+	$(eval CRD := $(basename $(notdir $@)))
+	diff -Naupr $(FILE) <(go run hack/crds/main.go $(CRD))
+
+gen-crds-clean:
 	rm -f $(CRD_GEN_FILES)
+
+
+# Code generation targets
+#########################
+CODEGEN_APIS_VERSIONS := mysql:v1alpha1
+CODEGEN_TOOLS := deepcopy client lister informer openapi
+CODEGEN_OUTPUT_PKG := $(PACKAGE_NAME)/pkg/generated
+include hack/codegen.mk

@@ -110,6 +110,15 @@ func (in *ClusterSpec) DeepCopyInto(out *ClusterSpec) {
 	}
 	in.PodSpec.DeepCopyInto(&out.PodSpec)
 	in.VolumeSpec.DeepCopyInto(&out.VolumeSpec)
+	if in.MaxSlaveLatency != nil {
+		in, out := &in.MaxSlaveLatency, &out.MaxSlaveLatency
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int64)
+			**out = **in
+		}
+	}
 	return
 }
 
