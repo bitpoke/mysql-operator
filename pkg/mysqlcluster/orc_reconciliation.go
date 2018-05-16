@@ -37,19 +37,18 @@ const (
 // orchestrator.
 func (f *cFactory) ReconcileORC(ctx context.Context) error {
 	glog.Infof("Orchestrator reconciliation for cluster %s started...", f.cluster.Name)
-	if len(f.cluster.Spec.GetOrcUri()) == 0 {
+	if f.orcClient == nil {
 		return fmt.Errorf("orchestrator is not configured")
 	}
 
-	client := orc.NewFromUri(f.cluster.Spec.GetOrcUri())
-	if insts, err := client.Cluster(f.getClusterAlias()); err == nil {
+	if insts, err := f.orcClient.Cluster(f.getClusterAlias()); err == nil {
 		f.updateStatusFromOrc(insts)
 	} else {
 		glog.Errorf("Fail to get cluster from orchestrator: %s. Now tries to register nodes.", err)
 		return f.registerNodesInOrc()
 	}
 
-	if recoveries, err := client.AuditRecovery(f.getClusterAlias()); err == nil {
+	if recoveries, err := f.orcClient.AuditRecovery(f.getClusterAlias()); err == nil {
 		f.updateStatusForRecoveries(recoveries)
 		toAck := f.getRecoveriesToAck(recoveries)
 
@@ -59,7 +58,7 @@ func (f *cFactory) ReconcileORC(ctx context.Context) error {
 
 		// acknowledge recoveries
 		for _, r := range toAck {
-			if err := client.AckRecovery(r.Id, comment); err != nil {
+			if err := f.orcClient.AckRecovery(r.Id, comment); err != nil {
 				glog.Errorf("Trying to ack recovery with id %d but failed with error: %s",
 					r.Id, err,
 				)
@@ -133,10 +132,9 @@ func (f *cFactory) updateStatusForRecoveries(recoveries []orc.TopologyRecovery) 
 func (f *cFactory) registerNodesInOrc() error {
 	// Register nodes in orchestrator
 	// try to discover ready nodes into orchestrator
-	client := orc.NewFromUri(f.cluster.Spec.GetOrcUri())
 	for i := 0; i < int(f.cluster.Status.ReadyNodes); i++ {
 		host := f.cluster.GetPodHostName(i)
-		if err := client.Discover(host, MysqlPort); err != nil {
+		if err := f.orcClient.Discover(host, MysqlPort); err != nil {
 			glog.Warningf("Failed to register %s with orchestrator: %s", host, err.Error())
 		}
 	}

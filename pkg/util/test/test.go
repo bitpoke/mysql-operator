@@ -41,7 +41,8 @@ func init() {
 func NewFakeCluster(name string) *api.MysqlCluster {
 	return &api.MysqlCluster{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: Namespace,
 		},
 		Spec: api.ClusterSpec{
 			Replicas:   1,
