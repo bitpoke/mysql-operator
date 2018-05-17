@@ -85,10 +85,10 @@ func (f *cFactory) syncMasterService() (state string, err error) {
 	return
 }
 
-func (f *cFactory) syncHealtyNodesService() (state string, err error) {
+func (f *cFactory) syncHealthyNodesService() (state string, err error) {
 	state = statusUpToDate
 	meta := metav1.ObjectMeta{
-		Name:            f.cluster.GetNameForResource(api.HealtyNodesService),
+		Name:            f.cluster.GetNameForResource(api.HealthyNodesService),
 		Labels:          f.getLabels(map[string]string{}),
 		OwnerReferences: f.getOwnerReferences(),
 		Namespace:       f.namespace,

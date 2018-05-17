@@ -63,9 +63,11 @@ func (o *FakeOrc) AddInstance(cluster string, host string, master bool, sls int6
 	o.Clusters[cluster] = []Instance{inst}
 }
 
-func (o *FakeOrc) AddRecoveries(cluster string, id int64) {
+func (o *FakeOrc) AddRecoveries(cluster string, id int64, ack bool) {
 	tr := TopologyRecovery{
-		Id: id,
+		Id:                     id,
+		Acknowledged:           ack,
+		RecoveryStartTimestamp: "2018-05-16T13:15:05Z",
 	}
 	rs, ok := o.Recoveries[cluster]
 	if ok {

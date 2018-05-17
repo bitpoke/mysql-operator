@@ -19,10 +19,12 @@ package mysqlcluster
 import (
 	"context"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/record"
 
@@ -82,20 +84,67 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 			It("should update status", func() {
 				orcClient.AddInstance("asd.default", "asd-mysql-0.asd-mysql.default",
 					true, -1, false)
+				orcClient.AddRecoveries("asd.default", 1, true)
 				Ω(factory.ReconcileORC(ctx)).Should(Succeed())
 				Expect(cluster.Status.Nodes[0].GetCondition(api.NodeConditionMaster).Status).To(
 					Equal(core.ConditionTrue))
+
+				Expect(getCCond(
+					cluster.Status.Conditions, api.ClusterConditionFailoverAck).Status).To(
+					Equal(core.ConditionFalse))
 			})
+
 			It("should have pending recoveries", func() {
 				orcClient.AddInstance("asd.default", "asd-mysql-0.asd-mysql.default",
 					true, -1, false)
-				orcClient.AddRecoveries("asd.default", 11)
+				orcClient.AddRecoveries("asd.default", 11, false)
 				Ω(factory.ReconcileORC(ctx)).Should(Succeed())
-				Expect(cluster.Status.Conditions[0].Type == api.ClusterConditionFailoverAck).To(
-					Equal(true))
-				Expect(cluster.Status.Conditions[0].Status).To(
+				Expect(getCCond(
+					cluster.Status.Conditions, api.ClusterConditionFailoverAck).Status).To(
 					Equal(core.ConditionTrue))
 			})
+
+			It("should have pending recoveries but cluster not ready enough", func() {
+				orcClient.AddInstance("asd.default", "asd-mysql-0.asd-mysql.default",
+					true, -1, false)
+				orcClient.AddRecoveries("asd.default", 111, false)
+				cluster.UpdateStatusCondition(api.ClusterConditionReady, core.ConditionTrue, "", "")
+				Ω(factory.ReconcileORC(ctx)).Should(Succeed())
+				Expect(getCCond(
+					cluster.Status.Conditions, api.ClusterConditionFailoverAck).Status).To(
+					Equal(core.ConditionTrue))
+				Expect(orcClient.CheckAck(111)).To(Equal(false))
+			})
+
+			It("should have pending recoveries that will be recovered", func() {
+				orcClient.AddInstance("asd.default", "asd-mysql-0.asd-mysql.default",
+					true, -1, false)
+				orcClient.AddRecoveries("asd.default", 112, false)
+				min20, _ := time.ParseDuration("-20m")
+				cluster.Status.Conditions = []api.ClusterCondition{
+					api.ClusterCondition{
+						Type:               api.ClusterConditionReady,
+						Status:             core.ConditionTrue,
+						LastTransitionTime: meta.NewTime(time.Now().Add(min20)),
+					},
+				}
+
+				Ω(factory.ReconcileORC(ctx)).Should(Succeed())
+				Expect(getCCond(
+					cluster.Status.Conditions, api.ClusterConditionFailoverAck).Status).To(
+					Equal(core.ConditionTrue))
+				Expect(orcClient.CheckAck(112)).To(Equal(true))
+			})
+
 		})
 	})
 })
+
+func getCCond(conds []api.ClusterCondition, cType api.ClusterConditionType) *api.ClusterCondition {
+	for _, c := range conds {
+		if c.Type == cType {
+			return &c
+		}
+	}
+	return nil
+}
