@@ -227,8 +227,8 @@ const (
 	BackupCronJob ResourceName = "backup-cron"
 	// MasterService is the name of the service that points to master node
 	MasterService ResourceName = "master-service"
-	// HealtyNodes is the name of a service that continas all healty nodes
-	HealtyNodesService ResourceName = "healty-nodes-service"
+	// HealthyNodes is the name of a service that continas all healthy nodes
+	HealthyNodesService ResourceName = "healthy-nodes-service"
 )
 
 func (c *MysqlCluster) GetNameForResource(name ResourceName) string {
@@ -241,17 +241,17 @@ func GetNameForResource(name ResourceName, clusterName string) string {
 		return fmt.Sprintf("%s-mysql", clusterName)
 	case MasterService:
 		return fmt.Sprintf("%s-master-mysql", clusterName)
-	case HealtyNodesService:
+	case HealthyNodesService:
 		return fmt.Sprintf("%s-mysql-ready", clusterName)
 	default:
 		return fmt.Sprintf("%s-mysql", clusterName)
 	}
 }
 
-func (c *MysqlCluster) GetHealtySlaveHost() string {
+func (c *MysqlCluster) GetHealthySlaveHost() string {
 	if c.Status.ReadyNodes < 1 {
-		glog.Warning("[GetHealtySlaveHost]: no ready nodes yet!")
-		glog.V(2).Infof("[GetHealtySlaveHost]: The slave host is: %s", c.GetPodHostName(0))
+		glog.Warning("[GetHealthySlaveHost]: no ready nodes yet!")
+		glog.V(2).Infof("[GetHealthySlaveHost]: The slave host is: %s", c.GetPodHostName(0))
 		return c.GetPodHostName(0)
 	}
 
@@ -268,7 +268,7 @@ func (c *MysqlCluster) GetHealtySlaveHost() string {
 			return node.Name
 		}
 	}
-	glog.Warning("[GetHealtySlaveHost]: return a not healty slave node")
+	glog.Warning("[GetHealthySlaveHost]: return a not healthy slave node")
 	return c.GetPodHostName(c.Status.ReadyNodes - 1)
 }
 

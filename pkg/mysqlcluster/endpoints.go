@@ -41,7 +41,7 @@ func (f *cFactory) updateMasterServiceEndpoints() error {
 	return f.addNodesToService(f.cluster.GetNameForResource(api.MasterService), masterHost)
 }
 
-func (f *cFactory) updateHealtyNodesServiceEndpoints() error {
+func (f *cFactory) updateHealthyNodesServiceEndpoints() error {
 	var hNodes []string
 	for i := 0; i < len(f.cluster.Status.Nodes); i++ {
 		ns := f.cluster.Status.Nodes[i]
@@ -64,7 +64,7 @@ func (f *cFactory) updateHealtyNodesServiceEndpoints() error {
 	}
 
 	if len(hNodes) > 0 {
-		return f.addNodesToService(f.cluster.GetNameForResource(api.HealtyNodesService),
+		return f.addNodesToService(f.cluster.GetNameForResource(api.HealthyNodesService),
 			hNodes...)
 	}
 

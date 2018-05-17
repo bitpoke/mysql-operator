@@ -138,11 +138,11 @@ func (f *cFactory) getComponents() []component {
 			reasonUpdated: api.EventReasonMasterServiceUpdated,
 		},
 		component{
-			alias:         "healty-service",
-			name:          f.cluster.GetNameForResource(api.HealtyNodesService),
-			syncFn:        f.syncHealtyNodesService,
-			reasonFailed:  api.EventReasonHealtyNodesServiceFailed,
-			reasonUpdated: api.EventReasonHealtyNodesServiceUpdated,
+			alias:         "healthy-service",
+			name:          f.cluster.GetNameForResource(api.HealthyNodesService),
+			syncFn:        f.syncHealthyNodesService,
+			reasonFailed:  api.EventReasonHealthyNodesServiceFailed,
+			reasonUpdated: api.EventReasonHealthyNodesServiceUpdated,
 		},
 	}
 }
@@ -169,7 +169,7 @@ func (f *cFactory) Sync(ctx context.Context) error {
 		return fmt.Errorf("cluster sync master endpoints: %s", err)
 	}
 
-	if err := f.updateHealtyNodesServiceEndpoints(); err != nil {
+	if err := f.updateHealthyNodesServiceEndpoints(); err != nil {
 		return fmt.Errorf("cluster sync ready endpoints: %s", err)
 	}
 

@@ -165,13 +165,14 @@ func (f *cFactory) getRecoveriesToAck(recoveries []orc.TopologyRecovery) (toAck 
 			// skip if it's a new recovery, recovery should be older then <healtyMoreThanMinutes> minutes
 			startTime, err := time.Parse(time.RFC3339, recovery.RecoveryStartTimestamp)
 			if err != nil {
-				glog.Errorf("[autoAcknowledge] Can't parse time: %s for audit recovery: %d",
+				glog.Errorf("[getRecoveriesToAck] Can't parse time: %s for audit recovery: %d",
 					err, recovery.Id,
 				)
 				continue
 			}
 			if time.Since(startTime).Minutes() < healtyMoreThanMinutes {
 				// skip this recovery
+				glog.Errorf("[getRecoveriesToAck] recovery to soon")
 				continue
 			}
 
