@@ -486,6 +486,12 @@
   version = "kubernetes-1.10.1"
 
 [[projects]]
+  branch = "master"
+  name = "k8s.io/apiserver"
+  packages = ["pkg/util/logs"]
+  revision = "2ee95e8ed1ee3d89902c0d7465695e0527ca7dca"
+
+[[projects]]
   name = "k8s.io/client-go"
   packages = [
     "discovery",
