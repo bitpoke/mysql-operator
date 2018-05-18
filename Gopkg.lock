@@ -21,12 +21,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/appscode/jsonpatch"
-  packages = ["."]
-  revision = "1359b374de83fa14fd58ab10aa8ea4935f84d249"
-
-[[projects]]
-  branch = "master"
   name = "github.com/appscode/kutil"
   packages = [
     ".",
@@ -34,10 +28,9 @@
     "apps/v1",
     "batch/v1",
     "batch/v1beta1",
-    "core/v1",
-    "meta"
+    "core/v1"
   ]
-  revision = "72b0ff429fc865cbe6cb23dad00be655b114ec57"
+  revision = "7de9bdd06e30d7ad4df3452d6188a36134bcddee"
 
 [[projects]]
   branch = "master"
@@ -65,12 +58,6 @@
   ]
   revision = "2810ccc68e0ca445fa81ebfa03fbf70aca5c41ae"
   version = "v2.7.0"
-
-[[projects]]
-  name = "github.com/evanphx/json-patch"
-  packages = ["."]
-  revision = "afac545df32f2287a079e2dfb7ba2745a643747e"
-  version = "v3.0.0"
 
 [[projects]]
   name = "github.com/ghodss/yaml"
@@ -158,17 +145,6 @@
   name = "github.com/google/btree"
   packages = ["."]
   revision = "e89373fe6b4a7413d7acd6da1725b83ef713e6e4"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/google/go-cmp"
-  packages = [
-    "cmp",
-    "cmp/internal/diff",
-    "cmp/internal/function",
-    "cmp/internal/value"
-  ]
-  revision = "5411ab924f9ffa6566244a9e504bc347edacffd3"
 
 [[projects]]
   branch = "master"
@@ -271,14 +247,8 @@
 [[projects]]
   name = "github.com/onsi/ginkgo"
   packages = [
+    ".",
     "config",
-    "ginkgo",
-    "ginkgo/convert",
-    "ginkgo/interrupthandler",
-    "ginkgo/nodot",
-    "ginkgo/testrunner",
-    "ginkgo/testsuite",
-    "ginkgo/watch",
     "internal/codelocation",
     "internal/containernode",
     "internal/failer",
@@ -286,6 +256,10 @@
     "internal/remote",
     "internal/spec",
     "internal/spec_iterator",
+    "internal/specrunner",
+    "internal/suite",
+    "internal/testingtproxy",
+    "internal/writer",
     "reporters",
     "reporters/stenographer",
     "reporters/stenographer/support/go-colorable",
@@ -339,12 +313,6 @@
   version = "v0.8.0"
 
 [[projects]]
-  name = "github.com/sergi/go-diff"
-  packages = ["diffmatchpatch"]
-  revision = "1744e2970ca51c86172c8190fadad617561ed6e7"
-  version = "v1.0.0"
-
-[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
@@ -361,21 +329,6 @@
   packages = ["."]
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
   version = "v1.0.1"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/yudai/gojsondiff"
-  packages = [
-    ".",
-    "formatter"
-  ]
-  revision = "e21612694bdd50975f93cd5eaccb457477128e28"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/yudai/golcs"
-  packages = ["."]
-  revision = "ecda9a501e8220fae3b4b600c3db4b0ba22cfc68"
 
 [[projects]]
   branch = "master"
@@ -752,6 +705,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0b6cf463558a53d3fc670c5cdb5d25b14b378dc1dba37a757c6401208f321597"
+  inputs-digest = "6bbdf9d7ee7abfa4dd01fd0e4177a91552678357a3da9f33776d121892c86850"
   solver-name = "gps-cdcl"
   solver-version = 1

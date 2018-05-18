@@ -61,13 +61,13 @@ def version():
 
 
 def fmt():
-    libbuild.ungroup_go_imports('*.go', 'apiextensions', 'apps', 'batch', 'certificates', 'core', 'discovery', 'extensions', 'meta', 'rbac', 'storage', 'tools')
-    die(call('goimports -w *.go apiextensions apps batch certificates core discovery extensions meta rbac storage tools'))
-    call('gofmt -s -w *.go apiextensions apps batch certificates core discovery extensions meta rbac storage tools')
+    libbuild.ungroup_go_imports('*.go', 'apiextensions', 'apps', 'batch', 'certificates', 'core', 'discovery', 'extensions', 'meta', 'openapi', 'rbac', 'storage', 'tools')
+    die(call('goimports -w *.go apiextensions apps batch certificates core discovery extensions meta openapi rbac storage tools'))
+    call('gofmt -s -w *.go apiextensions apps batch certificates core discovery extensions meta openapi rbac storage tools')
 
 
 def vet():
-    call('go vet ./apiextensions/... ./apps/... ./batch/... ./certificates/... ./core/... ./discovery/... ./extensions/... ./meta/... ./rbac/... ./storage/... ./tools/...')
+    call('go vet ./apiextensions/... ./apps/... ./batch/... ./certificates/... ./core/... ./discovery/... ./extensions/... ./meta/... ./openapi/... ./rbac/... ./storage/... ./tools/...')
 
 
 def lint():
@@ -80,6 +80,7 @@ def lint():
     call('golint ./discovery/...')
     call('golint ./extensions/...')
     call('golint ./meta/...')
+    call('golint ./openapi/...')
     call('golint ./rbac/...')
     call('golint ./storage/...')
     call('golint ./tools/...')
