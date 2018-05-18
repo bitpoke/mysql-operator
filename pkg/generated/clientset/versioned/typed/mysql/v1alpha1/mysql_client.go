@@ -28,7 +28,7 @@ type MysqlV1alpha1Interface interface {
 	MysqlClustersGetter
 }
 
-// MysqlV1alpha1Client is used to interact with features provided by the mysql.presslabs.net group.
+// MysqlV1alpha1Client is used to interact with features provided by the mysql.presslabs.org group.
 type MysqlV1alpha1Client struct {
 	restClient rest.Interface
 }

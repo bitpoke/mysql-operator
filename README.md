@@ -48,7 +48,7 @@ at [examples/example-cluster-secret.yaml](examples/example-cluster-secret.yaml))
 just a simple yaml file that defines it (an example can be found at [examples/example-cluster.yaml](examples/example-cluster.yaml):
 
 ```yaml
-apiVersion: mysql.presslabs.net/v1alpha1
+apiVersion: mysql.presslabs.org/v1alpha1
 kind: MysqlCluster
 metadata:
   name: my-cluster
@@ -125,7 +125,7 @@ data:
 Requesting a backup is easy — you just need to create a backup object with the following structure:
 
 ```yaml
-apiVersion: mysql.presslabs.net/v1alpha1
+apiVersion: mysql.presslabs.org/v1alpha1
 kind: MysqlBackup
 metadata:
   name: my-cluster-backup

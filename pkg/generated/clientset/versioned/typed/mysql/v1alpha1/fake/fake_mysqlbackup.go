@@ -31,9 +31,9 @@ type FakeMysqlBackups struct {
 	ns   string
 }
 
-var mysqlbackupsResource = schema.GroupVersionResource{Group: "mysql.presslabs.net", Version: "v1alpha1", Resource: "mysqlbackups"}
+var mysqlbackupsResource = schema.GroupVersionResource{Group: "mysql.presslabs.org", Version: "v1alpha1", Resource: "mysqlbackups"}
 
-var mysqlbackupsKind = schema.GroupVersionKind{Group: "mysql.presslabs.net", Version: "v1alpha1", Kind: "MysqlBackup"}
+var mysqlbackupsKind = schema.GroupVersionKind{Group: "mysql.presslabs.org", Version: "v1alpha1", Kind: "MysqlBackup"}
 
 // Get takes name of the mysqlBackup, and returns the corresponding mysqlBackup object, and an error if there is any.
 func (c *FakeMysqlBackups) Get(name string, options v1.GetOptions) (result *v1alpha1.MysqlBackup, err error) {

@@ -1,4 +1,4 @@
-apiVersion: mysql.presslabs.net/v1alpha1
+apiVersion: mysql.presslabs.org/v1alpha1
 kind: MysqlCluster
 metadata:
   name: foob2
