@@ -91,7 +91,7 @@ type ClusterSpec struct {
 	// seconds. If set then the node with a latency grater than this is removed
 	// from service.
 	// +optional
-	MaxSlaveLatency *int64 `json:"maxSlaveLatency,omitempty`
+	MaxSlaveLatency *int64 `json:"maxSlaveLatency,omitempty"`
 }
 
 type MysqlConf map[string]string

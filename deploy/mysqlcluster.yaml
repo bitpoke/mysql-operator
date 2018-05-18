@@ -19,12 +19,6 @@ spec:
       properties:
         spec:
           properties:
-            MaxSlaveLatency:
-              description: MaxSlaveLatency represents the allowed latency for a slave
-                node in seconds. If set then the node with a latency grater than this
-                is removed from service.
-              format: int64
-              type: integer
             backupSchedule:
               description: Specify under crontab format interval to take backups leave
                 it empty to deactivate the backup process Defaults to ""
@@ -39,6 +33,12 @@ spec:
               description: A bucket URI that contains a xtrabackup to initialize the
                 mysql database.
               type: string
+            maxSlaveLatency:
+              description: MaxSlaveLatency represents the allowed latency for a slave
+                node in seconds. If set then the node with a latency grater than this
+                is removed from service.
+              format: int64
+              type: integer
             mysqlConf:
               description: A map[string]string that will be passed to my.cnf file.
               type: object
