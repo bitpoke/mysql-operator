@@ -329,7 +329,7 @@ func schema_pkg_apis_mysql_v1alpha1_ClusterSpec(ref common.ReferenceCallback) co
 							Ref:         ref("github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.VolumeSpec"),
 						},
 					},
-					"MaxSlaveLatency": {
+					"maxSlaveLatency": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MaxSlaveLatency represents the allowed latency for a slave node in seconds. If set then the node with a latency grater than this is removed from service.",
 							Type:        []string{"integer"},
