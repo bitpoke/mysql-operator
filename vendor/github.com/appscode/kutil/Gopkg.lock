@@ -16,8 +16,8 @@
 [[projects]]
   name = "github.com/Azure/azure-sdk-for-go"
   packages = ["arm/containerregistry"]
-  revision = "509eea43b93cec2f3f17acbe2578ef58703923f8"
-  version = "v11.1.1-beta"
+  revision = "f111fc2fa3861c5fdced76cae4c9c71821969577"
+  version = "v12.4.0-beta"
 
 [[projects]]
   branch = "master"
@@ -1402,6 +1402,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2fe10fddaf2482b8185a84dfd4d589588fbad0ceb81b2e172e8e4168b70cd7f6"
+  inputs-digest = "0656f963e50a4fb26c76e6745ab21b56a07ee733768ccef051425ff9541b2341"
   solver-name = "gps-cdcl"
   solver-version = 1

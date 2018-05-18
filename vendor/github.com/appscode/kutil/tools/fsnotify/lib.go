@@ -34,6 +34,8 @@ func (w *Watcher) Run(stopCh <-chan struct{}) error {
 	go func() {
 		for {
 			select {
+			case <-stopCh:
+				return
 			case event := <-watcher.Events:
 				log.Debugln("file watcher event: --------------------------------------", event)
 
