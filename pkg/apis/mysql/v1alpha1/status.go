@@ -39,7 +39,7 @@ func (c *MysqlCluster) UpdateStatusCondition(condType ClusterConditionType,
 	t := time.Now()
 
 	if len(c.Status.Conditions) == 0 {
-		glog.Infof("Setting lastTransitionTime for mysql cluster "+
+		glog.V(1).Infof("Setting lastTransitionTime for mysql cluster "+
 			"%q condition %q to %v", c.Name, condType, t)
 		newCondition.LastTransitionTime = metav1.NewTime(t)
 		c.Status.Conditions = []ClusterCondition{newCondition}
@@ -47,18 +47,18 @@ func (c *MysqlCluster) UpdateStatusCondition(condType ClusterConditionType,
 		if i, exist := c.condExists(condType); exist {
 			cond := c.Status.Conditions[i]
 			if cond.Status != newCondition.Status {
-				glog.Infof("Found status change for mysql cluster "+
+				glog.V(1).Infof("Found status change for mysql cluster "+
 					"%q condition %q: %q -> %q; setting lastTransitionTime to %v",
 					c.Name, condType, cond.Status, status, t)
 				newCondition.LastTransitionTime = metav1.NewTime(t)
 			} else {
 				newCondition.LastTransitionTime = cond.LastTransitionTime
 			}
-			glog.Infof("Setting lastTransitionTime for mysql cluster "+
+			glog.V(1).Infof("Setting lastTransitionTime for mysql cluster "+
 				"%q condition %q to %q", c.Name, condType, status)
 			c.Status.Conditions[i] = newCondition
 		} else {
-			glog.Infof("Setting new condition for mysql cluster %q, condition %q to %q",
+			glog.V(1).Infof("Setting new condition for mysql cluster %q, condition %q to %q",
 				c.Name, condType, status)
 			newCondition.LastTransitionTime = metav1.NewTime(t)
 			c.Status.Conditions = append(c.Status.Conditions, newCondition)
@@ -100,7 +100,7 @@ func (c *MysqlBackup) UpdateStatusCondition(condType BackupConditionType,
 	t := time.Now()
 
 	if len(c.Status.Conditions) == 0 {
-		glog.Infof("Setting lastTransitionTime for mysql backup "+
+		glog.V(1).Infof("Setting lastTransitionTime for mysql backup "+
 			"%q condition %q to %v", c.Name, condType, t)
 		newCondition.LastTransitionTime = metav1.NewTime(t)
 		c.Status.Conditions = []BackupCondition{newCondition}
@@ -108,18 +108,18 @@ func (c *MysqlBackup) UpdateStatusCondition(condType BackupConditionType,
 		if i, exist := c.condExists(condType); exist {
 			cond := c.Status.Conditions[i]
 			if cond.Status != newCondition.Status {
-				glog.Infof("Found status change for mysql backup "+
+				glog.V(1).Infof("Found status change for mysql backup "+
 					"%q condition %q: %q -> %q; setting lastTransitionTime to %v",
 					c.Name, condType, cond.Status, status, t)
 				newCondition.LastTransitionTime = metav1.NewTime(t)
 			} else {
 				newCondition.LastTransitionTime = cond.LastTransitionTime
 			}
-			glog.Infof("Setting lastTransitionTime for mysql backup "+
+			glog.V(1).Infof("Setting lastTransitionTime for mysql backup "+
 				"%q condition %q to %q", c.Name, condType, status)
 			c.Status.Conditions[i] = newCondition
 		} else {
-			glog.Infof("Setting new condition for mysql backup %q, condition %q to %q",
+			glog.V(1).Infof("Setting new condition for mysql backup %q, condition %q to %q",
 				c.Name, condType, status)
 			newCondition.LastTransitionTime = metav1.NewTime(t)
 			c.Status.Conditions = append(c.Status.Conditions, newCondition)
@@ -176,7 +176,7 @@ func (ns *NodeStatus) UpdateNodeCondition(cType NodeConditionType,
 	t := time.Now()
 
 	if len(ns.Conditions) == 0 {
-		glog.Infof("Setting lastTransitionTime for node "+
+		glog.V(1).Infof("Setting lastTransitionTime for node "+
 			"%q condition %q to %v", ns.Name, cType, t)
 		newCondition.LastTransitionTime = metav1.NewTime(t)
 		ns.Conditions = []NodeCondition{newCondition}
@@ -184,18 +184,18 @@ func (ns *NodeStatus) UpdateNodeCondition(cType NodeConditionType,
 		if i, exist := ns.condExists(cType); exist {
 			cond := ns.Conditions[i]
 			if cond.Status != newCondition.Status {
-				glog.Infof("Found status change for node "+
+				glog.V(1).Infof("Found status change for node "+
 					"%q condition %q: %q -> %q; setting lastTransitionTime to %v",
 					ns.Name, cType, cond.Status, cStatus, t)
 				newCondition.LastTransitionTime = metav1.NewTime(t)
 			} else {
 				newCondition.LastTransitionTime = cond.LastTransitionTime
 			}
-			glog.Infof("Setting lastTransitionTime for node "+
+			glog.V(1).Infof("Setting lastTransitionTime for node "+
 				"%q condition %q to %q", ns.Name, cType, cStatus)
 			ns.Conditions[i] = newCondition
 		} else {
-			glog.Infof("Setting new condition for node %q, condition %q to %q",
+			glog.V(1).Infof("Setting new condition for node %q, condition %q to %q",
 				ns.Name, cType, cStatus)
 			newCondition.LastTransitionTime = metav1.NewTime(t)
 			ns.Conditions = append(ns.Conditions, newCondition)

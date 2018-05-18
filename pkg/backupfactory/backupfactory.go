@@ -96,7 +96,7 @@ func (f *bFactory) ensurePodSpec(in core.PodSpec) core.PodSpec {
 	in.Containers[0].ImagePullPolicy = core.PullIfNotPresent
 	in.Containers[0].Args = []string{
 		"take-backup-to",
-		f.cluster.GetHealthySlaveHost(),
+		f.cluster.GetBackupCandidate(),
 		f.backup.Spec.BackupUri,
 	}
 

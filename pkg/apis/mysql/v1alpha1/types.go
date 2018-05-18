@@ -88,8 +88,8 @@ type ClusterSpec struct {
 	VolumeSpec `json:"volumeSpec,omitempty"`
 
 	// MaxSlaveLatency represents the allowed latency for a slave node in
-	// seconds. If this threshold if reached then the node is removed from
-	// service until he self heals. Defaults to 20s
+	// seconds. If set then the node with a latency grater than this is removed
+	// from service.
 	// +optional
 	MaxSlaveLatency *int64 `json:"maxSlaveLatency,omitempty`
 }

@@ -36,8 +36,8 @@ type Interface interface {
 	// Sync is the method that tries to sync the cluster.
 	Sync(ctx context.Context) error
 
-	// ReconcileORC sync cluster status with orchestrator
-	ReconcileORC(ctx context.Context) error
+	// SyncOrchestratorStatus brings info from orchestrator on resource status
+	SyncOrchestratorStatus(ctx context.Context) error
 }
 
 // cluster factory

@@ -43,7 +43,7 @@ func (c *Controller) Reconcile(ctx context.Context, cluster *api.MysqlCluster) e
 	opt := options.GetOptions()
 
 	clusterFactory := myfactory.New(copyCluster, opt, c.k8client, c.myClient, cluster.Namespace, c.recorder)
-	if err := clusterFactory.ReconcileORC(ctx); err != nil {
+	if err := clusterFactory.SyncOrchestratorStatus(ctx); err != nil {
 		return fmt.Errorf("failed to reconcile the cluster: %s", err)
 	}
 

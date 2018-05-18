@@ -29,13 +29,14 @@ import (
 )
 
 const (
-	healtyMoreThanMinutes = 10
+	healtyMoreThanMinutes        = 10
+	defaultMaxSlaveLatency int64 = 30
 )
 
-// ReconcileORC function is called in a loop and should update cluster status
+// SyncOrchestratorStatus function is called in a loop and should update cluster status
 // with latest information from orchestrator or to register the new nodes into
 // orchestrator.
-func (f *cFactory) ReconcileORC(ctx context.Context) error {
+func (f *cFactory) SyncOrchestratorStatus(ctx context.Context) error {
 	glog.Infof("Orchestrator reconciliation for cluster %s started...", f.cluster.Name)
 	if f.orcClient == nil {
 		return fmt.Errorf("orchestrator is not configured")
@@ -71,7 +72,7 @@ func (f *cFactory) ReconcileORC(ctx context.Context) error {
 
 func (f *cFactory) updateStatusFromOrc(insts []orc.Instance) {
 	for i := 0; i < int(f.cluster.Spec.Replicas); i++ {
-		host := f.cluster.GetPodHostName(i)
+		host := f.cluster.GetPodHostname(i)
 		// select instance from orchestrator
 		var node *orc.Instance
 		for _, inst := range insts {
@@ -90,9 +91,14 @@ func (f *cFactory) updateStatusFromOrc(insts []orc.Instance) {
 			return
 		}
 
+		maxSlaveLatency := defaultMaxSlaveLatency
+		if f.cluster.Spec.MaxSlaveLatency != nil {
+			maxSlaveLatency = *f.cluster.Spec.MaxSlaveLatency
+		}
+
 		if !node.SlaveLagSeconds.Valid {
 			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionUnknown)
-		} else if node.SlaveLagSeconds.Int64 <= *f.cluster.Spec.MaxSlaveLatency {
+		} else if node.SlaveLagSeconds.Int64 <= maxSlaveLatency {
 			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionFalse)
 		} else { // node is behind master
 			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionTrue)
@@ -122,7 +128,7 @@ func (f *cFactory) updateStatusForRecoveries(recoveries []orc.TopologyRecovery) 
 
 	if len(unack) > 0 {
 		f.cluster.UpdateStatusCondition(api.ClusterConditionFailoverAck,
-			core.ConditionTrue, "pendingFailoverAckExists", fmt.Sprintf("%#v", unack))
+			core.ConditionTrue, "pendingFailoverAckExists", fmt.Sprintf("%v", unack))
 	} else {
 		f.cluster.UpdateStatusCondition(api.ClusterConditionFailoverAck,
 			core.ConditionFalse, "noPendingFailoverAckExists", "no pending ack")
@@ -133,7 +139,7 @@ func (f *cFactory) registerNodesInOrc() error {
 	// Register nodes in orchestrator
 	// try to discover ready nodes into orchestrator
 	for i := 0; i < int(f.cluster.Status.ReadyNodes); i++ {
-		host := f.cluster.GetPodHostName(i)
+		host := f.cluster.GetPodHostname(i)
 		if err := f.orcClient.Discover(host, MysqlPort); err != nil {
 			glog.Warningf("Failed to register %s with orchestrator: %s", host, err.Error())
 		}
