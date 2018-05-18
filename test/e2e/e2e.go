@@ -27,7 +27,6 @@ import (
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
-
 	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apiserver/pkg/util/logs"
 
@@ -35,7 +34,20 @@ import (
 	"github.com/presslabs/mysql-operator/test/e2e/framework/ginkgowrapper"
 )
 
+const (
+	operatorNamespace = "mysql-operator"
+	releaseName       = "operator"
+)
+
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
+	ginkgo.By("Create operator namespace")
+	// client, _, err := framework.KubernetesClients()
+	// gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	// _, err = framework.CreateTestingNS(operatorNamespace, client, map[string]string{})
+	// gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	ginkgo.By("Install operator")
+	HelmInstallChart(releaseName)
 	// ginkgo node 1
 	return nil
 
@@ -50,6 +62,17 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	// Run on all Ginkgo nodes
 	framework.Logf("Running AfterSuite actions on all node")
 	framework.RunCleanupActions()
+
+	ginkgo.By("Remove poperator release.")
+	HelmDeleteRelease(releaseName)
+
+	ginkgo.By("Delete operator namespace")
+	client, _, err := framework.KubernetesClients()
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	if err := framework.DeleteNS(client, operatorNamespace, framework.DefaultNamespaceDeletionTimeout); err != nil {
+		framework.Failf(fmt.Sprintf("Can't delete namespace: %s", err))
+	}
+
 }, func() {
 	// Run only Ginkgo on node 1
 	framework.Logf("Running AfterSuite actions on node 1")
