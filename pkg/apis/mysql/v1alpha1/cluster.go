@@ -41,8 +41,7 @@ const (
 )
 
 var (
-	opt                    *options.Options
-	defaultMaxSlaveLatency int64 = 20
+	opt *options.Options
 )
 
 func init() {
@@ -78,10 +77,6 @@ func (c *ClusterSpec) UpdateDefaults(opt *options.Options, cluster *MysqlCluster
 
 	if len(c.MysqlConf) == 0 {
 		c.MysqlConf = make(MysqlConf)
-	}
-
-	if c.MaxSlaveLatency == nil {
-		c.MaxSlaveLatency = &defaultMaxSlaveLatency
 	}
 
 	// configure mysql based on:
@@ -237,24 +232,20 @@ func (c *MysqlCluster) GetNameForResource(name ResourceName) string {
 
 func GetNameForResource(name ResourceName, clusterName string) string {
 	switch name {
-	case HeadlessSVC, StatefulSet, ConfigMap, BackupCronJob:
+	case StatefulSet, ConfigMap, BackupCronJob, HealthyNodesService:
 		return fmt.Sprintf("%s-mysql", clusterName)
 	case MasterService:
-		return fmt.Sprintf("%s-master-mysql", clusterName)
-	case HealthyNodesService:
-		return fmt.Sprintf("%s-mysql-ready", clusterName)
+		return fmt.Sprintf("%s-mysql-master", clusterName)
+	case HeadlessSVC:
+		return fmt.Sprintf("%s-mysql-nodes", clusterName)
 	default:
 		return fmt.Sprintf("%s-mysql", clusterName)
 	}
 }
 
-func (c *MysqlCluster) GetHealthySlaveHost() string {
-	if c.Status.ReadyNodes < 1 {
-		glog.Warning("[GetHealthySlaveHost]: no ready nodes yet!")
-		glog.V(2).Infof("[GetHealthySlaveHost]: The slave host is: %s", c.GetPodHostName(0))
-		return c.GetPodHostName(0)
-	}
-
+// GetBackupCandidate returns the hostname of the first not-lagged and
+// replicating slave node, else returns the master node.
+func (c *MysqlCluster) GetBackupCandidate() string {
 	for _, node := range c.Status.Nodes {
 		master := node.GetCondition(NodeConditionMaster)
 		replicating := node.GetCondition(NodeConditionReplicating)
@@ -268,11 +259,11 @@ func (c *MysqlCluster) GetHealthySlaveHost() string {
 			return node.Name
 		}
 	}
-	glog.Warning("[GetHealthySlaveHost]: return a not healthy slave node")
-	return c.GetPodHostName(c.Status.ReadyNodes - 1)
+	glog.Warning("No healthy slave node found so returns the master node: %s.", c.GetPodHostname(0))
+	return c.GetPodHostname(0)
 }
 
-func (c *MysqlCluster) GetPodHostName(p int) string {
+func (c *MysqlCluster) GetPodHostname(p int) string {
 	return fmt.Sprintf("%s-%d.%s.%s", c.GetNameForResource(StatefulSet), p,
 		c.GetNameForResource(HeadlessSVC),
 		c.Namespace)

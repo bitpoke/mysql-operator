@@ -75,17 +75,17 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 
 	Describe("Update status from orc", func() {
 		Context("cluster does not exists in orc", func() {
-			It("should register intro orc", func() {
+			It("should register into orc", func() {
 				cluster.Status.ReadyNodes = 1
-				Ω(factory.ReconcileORC(ctx)).Should(Succeed())
-				Expect(orcClient.CheckDiscovered("asd-mysql-0.asd-mysql.default")).To(Equal(true))
+				Ω(factory.SyncOrchestratorStatus(ctx)).Should(Succeed())
+				Expect(orcClient.CheckDiscovered("asd-mysql-0.asd-mysql-nodes.default")).To(Equal(true))
 			})
 
 			It("should update status", func() {
-				orcClient.AddInstance("asd.default", "asd-mysql-0.asd-mysql.default",
+				orcClient.AddInstance("asd.default", cluster.GetPodHostname(0),
 					true, -1, false)
 				orcClient.AddRecoveries("asd.default", 1, true)
-				Ω(factory.ReconcileORC(ctx)).Should(Succeed())
+				Ω(factory.SyncOrchestratorStatus(ctx)).Should(Succeed())
 				Expect(cluster.Status.Nodes[0].GetCondition(api.NodeConditionMaster).Status).To(
 					Equal(core.ConditionTrue))
 
@@ -95,21 +95,21 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 			})
 
 			It("should have pending recoveries", func() {
-				orcClient.AddInstance("asd.default", "asd-mysql-0.asd-mysql.default",
+				orcClient.AddInstance("asd.default", cluster.GetPodHostname(0),
 					true, -1, false)
 				orcClient.AddRecoveries("asd.default", 11, false)
-				Ω(factory.ReconcileORC(ctx)).Should(Succeed())
+				Ω(factory.SyncOrchestratorStatus(ctx)).Should(Succeed())
 				Expect(getCCond(
 					cluster.Status.Conditions, api.ClusterConditionFailoverAck).Status).To(
 					Equal(core.ConditionTrue))
 			})
 
 			It("should have pending recoveries but cluster not ready enough", func() {
-				orcClient.AddInstance("asd.default", "asd-mysql-0.asd-mysql.default",
+				orcClient.AddInstance("asd.default", cluster.GetPodHostname(0),
 					true, -1, false)
 				orcClient.AddRecoveries("asd.default", 111, false)
 				cluster.UpdateStatusCondition(api.ClusterConditionReady, core.ConditionTrue, "", "")
-				Ω(factory.ReconcileORC(ctx)).Should(Succeed())
+				Ω(factory.SyncOrchestratorStatus(ctx)).Should(Succeed())
 				Expect(getCCond(
 					cluster.Status.Conditions, api.ClusterConditionFailoverAck).Status).To(
 					Equal(core.ConditionTrue))
@@ -117,7 +117,7 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 			})
 
 			It("should have pending recoveries that will be recovered", func() {
-				orcClient.AddInstance("asd.default", "asd-mysql-0.asd-mysql.default",
+				orcClient.AddInstance("asd.default", cluster.GetPodHostname(0),
 					true, -1, false)
 				orcClient.AddRecoveries("asd.default", 112, false)
 				min20, _ := time.ParseDuration("-20m")
@@ -129,7 +129,7 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 					},
 				}
 
-				Ω(factory.ReconcileORC(ctx)).Should(Succeed())
+				Ω(factory.SyncOrchestratorStatus(ctx)).Should(Succeed())
 				Expect(getCCond(
 					cluster.Status.Conditions, api.ClusterConditionFailoverAck).Status).To(
 					Equal(core.ConditionTrue))
