@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	kcore "github.com/appscode/kutil/core/v1"
 	. "github.com/onsi/ginkgo"
 	"k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -93,15 +94,7 @@ func podRunningAndReady(c clientset.Interface, podName, namespace string) wait.C
 		if err != nil {
 			return false, err
 		}
-		switch pod.Status.Phase {
-		case v1.PodFailed, v1.PodSucceeded:
-			return false, fmt.Errorf("pod failed or succeeded")
-		case v1.PodRunning:
-			// TODO: fix this when needed
-			// return podutil.IsPodReady(pod), nil
-			return true, nil
-		}
-		return false, nil
+		return kcore.PodRunningAndReady(*pod)
 	}
 }
 
