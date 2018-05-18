@@ -65,7 +65,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"k8s.io/apimachinery/pkg/apis/meta/v1.List":                                    schema_pkg_apis_meta_v1_List(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta":                                schema_pkg_apis_meta_v1_ListMeta(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.ListOptions":                             schema_pkg_apis_meta_v1_ListOptions(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.MicroTime":                               v1.MicroTime{}.OpenAPIDefinition(),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.MicroTime":                               schema_pkg_apis_meta_v1_MicroTime(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta":                              schema_pkg_apis_meta_v1_ObjectMeta(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.OwnerReference":                          schema_pkg_apis_meta_v1_OwnerReference(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.Patch":                                   schema_pkg_apis_meta_v1_Patch(ref),
@@ -75,7 +75,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"k8s.io/apimachinery/pkg/apis/meta/v1.Status":                                  schema_pkg_apis_meta_v1_Status(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.StatusCause":                             schema_pkg_apis_meta_v1_StatusCause(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.StatusDetails":                           schema_pkg_apis_meta_v1_StatusDetails(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.Time":                                    v1.Time{}.OpenAPIDefinition(),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.Time":                                    schema_pkg_apis_meta_v1_Time(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.Timestamp":                               schema_pkg_apis_meta_v1_Timestamp(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.TypeMeta":                                schema_pkg_apis_meta_v1_TypeMeta(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.WatchEvent":                              schema_pkg_apis_meta_v1_WatchEvent(ref),
@@ -1679,7 +1679,7 @@ func schema_pkg_apis_meta_v1_ListOptions(ref common.ReferenceCallback) common.Op
 					},
 					"timeoutSeconds": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Timeout for the list/watch call.",
+							Description: "Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.",
 							Type:        []string{"integer"},
 							Format:      "int64",
 						},
@@ -1702,6 +1702,17 @@ func schema_pkg_apis_meta_v1_ListOptions(ref common.ReferenceCallback) common.Op
 			},
 		},
 		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_meta_v1_MicroTime(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type:   v1.MicroTime{}.OpenAPISchemaType(),
+				Format: v1.MicroTime{}.OpenAPISchemaFormat(),
+			},
+		},
 	}
 }
 
@@ -2171,6 +2182,17 @@ func schema_pkg_apis_meta_v1_StatusDetails(ref common.ReferenceCallback) common.
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.StatusCause"},
+	}
+}
+
+func schema_pkg_apis_meta_v1_Time(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type:   v1.Time{}.OpenAPISchemaType(),
+				Format: v1.Time{}.OpenAPISchemaFormat(),
+			},
+		},
 	}
 }
 
