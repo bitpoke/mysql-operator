@@ -64,6 +64,7 @@ func (f *cFactory) SyncOrchestratorStatus(ctx context.Context) error {
 					r.Id, err,
 				)
 			}
+			f.rec.Event(f.cluster, "RecoveryAcked", "acked", fmt.Sprintf("Recovery with id %d was acked.", r.Id))
 		}
 	}
 
@@ -81,12 +82,11 @@ func (f *cFactory) updateStatusFromOrc(insts []orc.Instance) {
 				break
 			}
 		}
-		i := f.cluster.Status.GetNodeStatusIndex(host)
 
 		if node == nil {
-			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionUnknown)
-			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionReplicating, core.ConditionUnknown)
-			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionMaster, core.ConditionUnknown)
+			f.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionUnknown)
+			f.updateNodeCondition(host, api.NodeConditionReplicating, core.ConditionUnknown)
+			f.updateNodeCondition(host, api.NodeConditionMaster, core.ConditionUnknown)
 
 			return
 		}
@@ -97,23 +97,23 @@ func (f *cFactory) updateStatusFromOrc(insts []orc.Instance) {
 		}
 
 		if !node.SlaveLagSeconds.Valid {
-			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionUnknown)
+			f.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionUnknown)
 		} else if node.SlaveLagSeconds.Int64 <= maxSlaveLatency {
-			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionFalse)
+			f.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionFalse)
 		} else { // node is behind master
-			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionLagged, core.ConditionTrue)
+			f.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionTrue)
 		}
 
 		if node.Slave_SQL_Running && node.Slave_IO_Running {
-			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionReplicating, core.ConditionTrue)
+			f.updateNodeCondition(host, api.NodeConditionReplicating, core.ConditionTrue)
 		} else {
-			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionReplicating, core.ConditionFalse)
+			f.updateNodeCondition(host, api.NodeConditionReplicating, core.ConditionFalse)
 		}
 
 		if !node.ReadOnly {
-			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionMaster, core.ConditionTrue)
+			f.updateNodeCondition(host, api.NodeConditionMaster, core.ConditionTrue)
 		} else {
-			f.cluster.Status.Nodes[i].UpdateNodeCondition(api.NodeConditionMaster, core.ConditionFalse)
+			f.updateNodeCondition(host, api.NodeConditionMaster, core.ConditionFalse)
 		}
 	}
 }
@@ -196,4 +196,37 @@ func condIndexCluster(r *api.MysqlCluster, ty api.ClusterConditionType) (int, bo
 	}
 
 	return 0, false
+}
+
+func (f *cFactory) updateNodeCondition(host string, cType api.NodeConditionType, status core.ConditionStatus) {
+	i := f.cluster.Status.GetNodeStatusIndex(host)
+	changed := f.cluster.Status.Nodes[i].UpdateNodeCondition(cType, status)
+	if !changed {
+		return
+	}
+
+	pod, err := getPodForHostname(f.client, f.namespace, f.getLabels(map[string]string{}), host)
+	if err != nil {
+		glog.Errorf("Can't get pod for hostname %s, error: %s", host, err)
+		return
+	}
+
+	switch cType {
+	case api.NodeConditionMaster:
+		if status == core.ConditionTrue {
+			f.rec.Event(pod, "PromoteMaster", "orc", "")
+		} else if status == core.ConditionFalse {
+			f.rec.Event(pod, "DemoteMaster", "orc", "")
+		}
+	case api.NodeConditionLagged:
+		if status == core.ConditionTrue {
+			f.rec.Event(pod, "LagDetected", "orc", "")
+		}
+	case api.NodeConditionReplicating:
+		if status == core.ConditionTrue {
+			f.rec.Event(pod, "ReplicationRunning", "orc", "")
+		} else if status == core.ConditionFalse {
+			f.rec.Event(pod, "ReplicationStopped", "orc", "")
+		}
+	}
 }

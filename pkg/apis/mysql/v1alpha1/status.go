@@ -166,13 +166,14 @@ const (
 )
 
 func (ns *NodeStatus) UpdateNodeCondition(cType NodeConditionType,
-	cStatus core.ConditionStatus) {
+	cStatus core.ConditionStatus) bool {
 
 	newCondition := NodeCondition{
 		Type:   cType,
 		Status: cStatus,
 	}
 
+	changed := false
 	t := time.Now()
 
 	if len(ns.Conditions) == 0 {
@@ -180,6 +181,7 @@ func (ns *NodeStatus) UpdateNodeCondition(cType NodeConditionType,
 			"%q condition %q to %v", ns.Name, cType, t)
 		newCondition.LastTransitionTime = metav1.NewTime(t)
 		ns.Conditions = []NodeCondition{newCondition}
+		changed = true
 	} else {
 		if i, exist := ns.condExists(cType); exist {
 			cond := ns.Conditions[i]
@@ -188,6 +190,7 @@ func (ns *NodeStatus) UpdateNodeCondition(cType NodeConditionType,
 					"%q condition %q: %q -> %q; setting lastTransitionTime to %v",
 					ns.Name, cType, cond.Status, cStatus, t)
 				newCondition.LastTransitionTime = metav1.NewTime(t)
+				changed = true
 			} else {
 				newCondition.LastTransitionTime = cond.LastTransitionTime
 			}
@@ -199,8 +202,11 @@ func (ns *NodeStatus) UpdateNodeCondition(cType NodeConditionType,
 				ns.Name, cType, cStatus)
 			newCondition.LastTransitionTime = metav1.NewTime(t)
 			ns.Conditions = append(ns.Conditions, newCondition)
+			changed = true
 		}
 	}
+
+	return changed
 }
 
 func (ns *NodeStatus) condExists(cType NodeConditionType) (int, bool) {

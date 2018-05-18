@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	ticlientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	myclientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
 	"github.com/presslabs/mysql-operator/pkg/util/options"
 	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
@@ -48,7 +48,7 @@ type cFactory struct {
 	namespace string
 
 	client   kubernetes.Interface
-	myClient ticlientset.Interface
+	myClient myclientset.Interface
 	rec      record.EventRecorder
 
 	orcClient orc.Interface
@@ -59,7 +59,7 @@ type cFactory struct {
 
 // New creates a new cluster factory
 func New(cluster *api.MysqlCluster, opt *options.Options, klient kubernetes.Interface,
-	myClient ticlientset.Interface, ns string, rec record.EventRecorder) Interface {
+	myClient myclientset.Interface, ns string, rec record.EventRecorder) Interface {
 	return &cFactory{
 		cluster:    cluster,
 		opt:        opt,

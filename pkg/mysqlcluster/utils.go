@@ -73,7 +73,7 @@ func getStatusFromKVerb(verb kutil.VerbType) string {
 	}
 }
 
-func getPodForHostname(client kubernetes.Interface, ns string, lbs map[string]string, hostname string) (*core.Pod, error) {
+func getPodForHostname(client kubernetes.Interface, ns string, lbs labels.Set, hostname string) (*core.Pod, error) {
 	selector := labels.SelectorFromSet(lbs)
 	podList, err := client.CoreV1().Pods(ns).List(metav1.ListOptions{
 		LabelSelector: selector.String(),
