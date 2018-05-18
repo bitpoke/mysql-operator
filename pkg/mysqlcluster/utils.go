@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/appscode/kutil"
+	kcore "github.com/appscode/kutil/core/v1"
 	"github.com/golang/glog"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,7 +31,6 @@ import (
 	"k8s.io/client-go/tools/reference"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	mykutil "github.com/presslabs/mysql-operator/pkg/util/kube"
 )
 
 func ensureProbe(in *core.Probe, ids, ts, ps int32, handler core.Handler) *core.Probe {
@@ -125,7 +125,7 @@ func (f *cFactory) addNodesToService(serviceName string, hosts ...string) error 
 		Namespace:       f.namespace,
 	}
 
-	_, act, err := mykutil.CreateOrPatchEndpoints(f.client, meta,
+	_, act, err := kcore.CreateOrPatchEndpoints(f.client, meta,
 		func(in *core.Endpoints) *core.Endpoints {
 			if len(in.Subsets) != 1 {
 				in.Subsets = make([]core.EndpointSubset, 1)
