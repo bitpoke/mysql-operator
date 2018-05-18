@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	kcore "github.com/appscode/kutil/core/v1"
 	. "github.com/onsi/ginkgo"
 	"k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
+	myclientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
 	"github.com/presslabs/mysql-operator/test/e2e/framework/ginkgowrapper"
 )
 
@@ -51,6 +53,7 @@ func CreateTestingNS(baseName string, c clientset.Interface, labels map[string]s
 		return nil, err
 	}
 
+	Logf("Namespace: %s creeated!", got.Name)
 	return got, nil
 }
 
@@ -83,6 +86,23 @@ func LoadConfig() (*restclient.Config, error) {
 	return clientcmd.NewDefaultClientConfig(*c, &clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: TestContext.KubeHost}}).ClientConfig()
 }
 
+func KubernetesClients() (clientset.Interface, myclientset.Interface, error) {
+	config, err := LoadConfig()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	c, err := clientset.NewForConfig(config)
+	if err != nil {
+		return nil, nil, err
+	}
+	myC, err := myclientset.NewForConfig(config)
+	if err != nil {
+		return nil, nil, err
+	}
+	return c, myC, nil
+}
+
 func waitTimeoutForPodReadyInNamespace(c clientset.Interface, podName, namespace string, timeout time.Duration) error {
 	return wait.PollImmediate(Poll, timeout, podRunningAndReady(c, podName, namespace))
 }
@@ -93,15 +113,7 @@ func podRunningAndReady(c clientset.Interface, podName, namespace string) wait.C
 		if err != nil {
 			return false, err
 		}
-		switch pod.Status.Phase {
-		case v1.PodFailed, v1.PodSucceeded:
-			return false, fmt.Errorf("pod failed or succeeded")
-		case v1.PodRunning:
-			// TODO: fix this when needed
-			// return podutil.IsPodReady(pod), nil
-			return true, nil
-		}
-		return false, nil
+		return kcore.PodRunningAndReady(*pod)
 	}
 }
 

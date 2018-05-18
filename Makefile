@@ -143,3 +143,11 @@ CODEGEN_APIS_VERSIONS := mysql:v1alpha1
 CODEGEN_TOOLS := deepcopy client lister informer openapi
 CODEGEN_OUTPUT_PKG := $(PACKAGE_NAME)/pkg/generated
 include hack/codegen.mk
+
+
+# E2E tests
+###########
+
+e2e-minikube: images
+	go test ./test/e2e -v \
+		--kubernetes-config ~/.kube/config --kubernetes-context minikube
