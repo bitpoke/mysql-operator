@@ -85,6 +85,8 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 				orcClient.AddInstance("asd.default", cluster.GetPodHostname(0),
 					true, -1, false)
 				orcClient.AddRecoveries("asd.default", 1, true)
+				factory.createPod("asd-mysql-0")
+
 				Ω(factory.SyncOrchestratorStatus(ctx)).Should(Succeed())
 				Expect(cluster.Status.Nodes[0].GetCondition(api.NodeConditionMaster).Status).To(
 					Equal(core.ConditionTrue))
@@ -92,6 +94,12 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 				Expect(getCCond(
 					cluster.Status.Conditions, api.ClusterConditionFailoverAck).Status).To(
 					Equal(core.ConditionFalse))
+
+				var event string
+				Ω(rec.Events).Should(Receive(&event))
+				Expect(event).To(ContainSubstring("ReplicationStopped"))
+				Ω(rec.Events).Should(Receive(&event))
+				Expect(event).To(ContainSubstring("PromoteMaster"))
 			})
 
 			It("should have pending recoveries", func() {
@@ -134,6 +142,10 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 					cluster.Status.Conditions, api.ClusterConditionFailoverAck).Status).To(
 					Equal(core.ConditionTrue))
 				Expect(orcClient.CheckAck(112)).To(Equal(true))
+
+				var event string
+				Ω(rec.Events).Should(Receive(&event))
+				Expect(event).To(ContainSubstring("RecoveryAcked"))
 			})
 
 		})
@@ -147,4 +159,13 @@ func getCCond(conds []api.ClusterCondition, cType api.ClusterConditionType) *api
 		}
 	}
 	return nil
+}
+
+func (f *cFactory) createPod(name string) {
+	f.client.CoreV1().Pods(tutil.Namespace).Create(&core.Pod{
+		ObjectMeta: meta.ObjectMeta{
+			Name:   name,
+			Labels: f.getLabels(map[string]string{}),
+		},
+	})
 }
