@@ -48,7 +48,7 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=mysql.presslabs.net, Version=v1alpha1
+	// Group=mysql.presslabs.org, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("mysqlbackups"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Mysql().V1alpha1().MysqlBackups().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("mysqlclusters"):

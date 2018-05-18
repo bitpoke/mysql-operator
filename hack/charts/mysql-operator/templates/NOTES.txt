@@ -1,7 +1,7 @@
 You can create a new cluster by issuing:
 
 cat <<EOF | kubectl apply -f-
-apiVersion: mysql.presslabs.net/v1alpha1
+apiVersion: mysql.presslabs.org/v1alpha1
 kind: MysqlCluster
 metadata:
   name: my-cluster

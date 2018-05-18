@@ -31,9 +31,9 @@ type FakeMysqlClusters struct {
 	ns   string
 }
 
-var mysqlclustersResource = schema.GroupVersionResource{Group: "mysql.presslabs.net", Version: "v1alpha1", Resource: "mysqlclusters"}
+var mysqlclustersResource = schema.GroupVersionResource{Group: "mysql.presslabs.org", Version: "v1alpha1", Resource: "mysqlclusters"}
 
-var mysqlclustersKind = schema.GroupVersionKind{Group: "mysql.presslabs.net", Version: "v1alpha1", Kind: "MysqlCluster"}
+var mysqlclustersKind = schema.GroupVersionKind{Group: "mysql.presslabs.org", Version: "v1alpha1", Kind: "MysqlCluster"}
 
 // Get takes name of the mysqlCluster, and returns the corresponding mysqlCluster object, and an error if there is any.
 func (c *FakeMysqlClusters) Get(name string, options v1.GetOptions) (result *v1alpha1.MysqlCluster, err error) {
