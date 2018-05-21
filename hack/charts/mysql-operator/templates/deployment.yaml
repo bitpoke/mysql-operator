@@ -19,6 +19,7 @@ spec:
         app: {{ template "mysql-operator.name" . }}
         release: {{ .Release.Name }}
     spec:
+      serviceAccountName: {{ template "mysql-operator.serviceAccountName" . }}
       containers:
         - name: mysql-operator
           image: "{{ .Values.image }}"

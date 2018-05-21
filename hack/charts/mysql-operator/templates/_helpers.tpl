@@ -42,3 +42,14 @@ Redefine orchestrator.fullname so that we can properly address it
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "mysql-operator.serviceAccountName" -}}
+{{- if .Values.rbac.create -}}
+    {{ include "mysql-operator.fullname" . }}
+{{- else -}}
+    {{ default "default" .Values.rbac.serviceAccountName }}
+{{- end -}}
+{{- end -}}
