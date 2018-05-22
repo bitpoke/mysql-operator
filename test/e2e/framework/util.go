@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
+	myclientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
 	"github.com/presslabs/mysql-operator/test/e2e/framework/ginkgowrapper"
 )
 
@@ -52,6 +53,7 @@ func CreateTestingNS(baseName string, c clientset.Interface, labels map[string]s
 		return nil, err
 	}
 
+	Logf("Namespace: %s creeated!", got.Name)
 	return got, nil
 }
 
@@ -82,6 +84,23 @@ func LoadConfig() (*restclient.Config, error) {
 	}
 
 	return clientcmd.NewDefaultClientConfig(*c, &clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: TestContext.KubeHost}}).ClientConfig()
+}
+
+func KubernetesClients() (clientset.Interface, myclientset.Interface, error) {
+	config, err := LoadConfig()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	c, err := clientset.NewForConfig(config)
+	if err != nil {
+		return nil, nil, err
+	}
+	myC, err := myclientset.NewForConfig(config)
+	if err != nil {
+		return nil, nil, err
+	}
+	return c, myC, nil
 }
 
 func waitTimeoutForPodReadyInNamespace(c clientset.Interface, podName, namespace string, timeout time.Duration) error {

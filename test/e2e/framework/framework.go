@@ -49,7 +49,8 @@ type Framework struct {
 
 func NewFramework(baseName string) *Framework {
 	f := &Framework{
-		BaseName: baseName,
+		BaseName:              baseName,
+		SkipNamespaceCreation: false,
 	}
 
 	BeforeEach(f.BeforeEach)
@@ -66,13 +67,8 @@ func (f *Framework) BeforeEach() {
 
 	if f.ClientSet == nil {
 		By("Creating a kubernetes client")
-		config, err := LoadConfig()
-		Expect(err).NotTo(HaveOccurred())
-
-		f.ClientSet, err = clientset.NewForConfig(config)
-		Expect(err).NotTo(HaveOccurred())
-
-		f.MyClientSet, err = myclientset.NewForConfig(config)
+		var err error
+		f.ClientSet, f.MyClientSet, err = KubernetesClients()
 		Expect(err).NotTo(HaveOccurred())
 
 	}
@@ -90,8 +86,10 @@ func (f *Framework) BeforeEach() {
 
 // AfterEach deletes the namespace, after reading its events.
 func (f *Framework) AfterEach() {
+	By("Run cleanup actions")
 	RemoveCleanupAction(f.cleanupHandle)
 
+	By("Delete testing namespace")
 	if err := DeleteNS(f.ClientSet, f.Namespace.Name, DefaultNamespaceDeletionTimeout); err != nil {
 		Failf(fmt.Sprintf("Can't delete namespace: %s", err))
 	}
