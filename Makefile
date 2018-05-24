@@ -110,15 +110,15 @@ publish: images
 # CRD generator
 ###############
 CHART_TEMPLATE_PATH := deploy/
-CRDS := mysqlcluster mysqlbackup
+CRDS := mysqlclusters.mysql.presslabs.org mysqlbackups.mysql.presslabs.org
 
 CRD_GEN_FILES := $(addprefix $(CHART_TEMPLATE_PATH),$(addsuffix .yaml,$(CRDS)))
 
 $(CRD_GEN_FILES):
-	go run hack/crds/main.go $(basename $(notdir $@)) >> $@
+	bin/gen-crds-yaml_linux_amd64 --crd $(basename $(notdir $@)) >> $(@:.mysql.presslabs.org.yaml=.yaml)
 
 .PHONY: gen-crds gen-crds-verify gen-crds-clean
-gen-crds: gen-crds-clean hack/crds/main.go $(CRD_GEN_FILES)
+gen-crds: gen-crds-clean $(CRD_GEN_FILES)
 
 gen-crds-verify: SHELL := /bin/bash
 gen-crds-verify: $(addsuffix -verify,$(CRD_GEN_FILES))
@@ -127,7 +127,7 @@ gen-crds-verify: $(addsuffix -verify,$(CRD_GEN_FILES))
 $(addsuffix -verify,$(CRD_GEN_FILES)):
 	$(eval FILE := $(subst -verify,,$@))
 	$(eval CRD := $(basename $(notdir $@)))
-	diff -Naupr $(FILE) <(go run hack/crds/main.go $(CRD))
+	diff -Naupr $(FILE) <(bin/gen-crds-yaml_linux_amd64 --crd $(CRD))
 
 gen-crds-clean:
 	rm -f $(CRD_GEN_FILES)
