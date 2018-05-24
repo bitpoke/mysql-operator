@@ -11,9 +11,11 @@ spec:
     plural: mysqlclusters
     shortNames:
     - mysql
-    - mysql-cluster
+    - cluster
     singular: mysqlcluster
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:

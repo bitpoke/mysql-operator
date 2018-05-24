@@ -11,9 +11,10 @@ spec:
     plural: mysqlbackups
     shortNames:
     - backup
-    - mysql-backup
     singular: mysqlbackup
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:

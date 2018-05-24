@@ -21,3 +21,7 @@ var (
 	AppGitCommit = ""
 	AppVersion   = "canary"
 )
+
+func GetVersion() string {
+	return AppVersion
+}
