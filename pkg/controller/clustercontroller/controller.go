@@ -27,6 +27,7 @@ import (
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	appslisters "k8s.io/client-go/listers/apps/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
@@ -37,6 +38,7 @@ import (
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
 	myclientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	myinformers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions"
 	mylisters "github.com/presslabs/mysql-operator/pkg/generated/listers/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/util"
 	"github.com/presslabs/mysql-operator/pkg/util/kube"
@@ -62,6 +64,9 @@ type Controller struct {
 	recorder  record.EventRecorder
 	CRDClient apiext_clientset.Interface
 
+	KubeSharedInformerFactory informers.SharedInformerFactory
+	SharedInformerFactory     myinformers.SharedInformerFactory
+
 	statefulSetLister appslisters.StatefulSetLister
 	clusterLister     mylisters.MysqlClusterLister
 	podLister         corelisters.PodLister
@@ -78,12 +83,14 @@ type Controller struct {
 // New returns a new controller
 func New(ctx *controllerpkg.Context) *Controller {
 	ctrl := &Controller{
-		namespace:   ctx.Namespace,
-		k8client:    ctx.KubeClient,
-		myClient:    ctx.Client,
-		recorder:    ctx.Recorder,
-		InstallCRDs: ctx.InstallCRDs,
-		CRDClient:   ctx.CRDClient,
+		namespace:                 ctx.Namespace,
+		k8client:                  ctx.KubeClient,
+		myClient:                  ctx.Client,
+		recorder:                  ctx.Recorder,
+		InstallCRDs:               ctx.InstallCRDs,
+		CRDClient:                 ctx.CRDClient,
+		KubeSharedInformerFactory: ctx.KubeSharedInformerFactory,
+		SharedInformerFactory:     ctx.SharedInformerFactory,
 	}
 
 	statefulSetInformer := ctx.KubeSharedInformerFactory.Apps().V1().StatefulSets()
@@ -134,6 +141,10 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 	if err := kube.WaitForCRD(c.CRDClient, api.ResourceMysqlClusterCRD); err != nil {
 		return fmt.Errorf("crd does not exists: %s", err)
 	}
+
+	glog.V(4).Infof("Starting shared informer factory")
+	c.SharedInformerFactory.Start(stopCh)
+	c.KubeSharedInformerFactory.Start(stopCh)
 
 	for i := 0; i < workers; i++ {
 		c.workerWg.Add(1)
