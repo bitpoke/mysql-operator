@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	batchlisters "k8s.io/client-go/listers/batch/v1"
 	"k8s.io/client-go/tools/cache"
@@ -36,7 +37,8 @@ import (
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
-	ticlientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	myclientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	myinformers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions"
 	mysqllisters "github.com/presslabs/mysql-operator/pkg/generated/listers/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/util"
 	"github.com/presslabs/mysql-operator/pkg/util/kube"
@@ -56,9 +58,12 @@ type Controller struct {
 	InstallCRDs bool
 
 	k8client  kubernetes.Interface
-	myClient  ticlientset.Interface
+	myClient  myclientset.Interface
 	recorder  record.EventRecorder
 	CRDClient apiext_clientset.Interface
+
+	KubeSharedInformerFactory informers.SharedInformerFactory
+	SharedInformerFactory     myinformers.SharedInformerFactory
 
 	jobLister     batchlisters.JobLister
 	backupsLister mysqllisters.MysqlBackupLister
@@ -74,12 +79,14 @@ type Controller struct {
 // New returns a new controller
 func New(ctx *controllerpkg.Context) *Controller {
 	ctrl := &Controller{
-		namespace:   ctx.Namespace,
-		k8client:    ctx.KubeClient,
-		myClient:    ctx.Client,
-		recorder:    ctx.Recorder,
-		InstallCRDs: ctx.InstallCRDs,
-		CRDClient:   ctx.CRDClient,
+		namespace:                 ctx.Namespace,
+		k8client:                  ctx.KubeClient,
+		myClient:                  ctx.Client,
+		recorder:                  ctx.Recorder,
+		InstallCRDs:               ctx.InstallCRDs,
+		CRDClient:                 ctx.CRDClient,
+		KubeSharedInformerFactory: ctx.KubeSharedInformerFactory,
+		SharedInformerFactory:     ctx.SharedInformerFactory,
 	}
 
 	backupInformer := ctx.SharedInformerFactory.Mysql().V1alpha1().MysqlBackups()
@@ -126,6 +133,10 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 	if err := kube.WaitForCRD(c.CRDClient, api.ResourceMysqlBackupCRD); err != nil {
 		return fmt.Errorf("crd does not exists: %s", err)
 	}
+
+	glog.V(4).Infof("Starting shared informer factory")
+	c.SharedInformerFactory.Start(stopCh)
+	c.KubeSharedInformerFactory.Start(stopCh)
 
 	for i := 0; i < workers; i++ {
 		c.workerWg.Add(1)

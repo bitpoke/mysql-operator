@@ -114,9 +114,7 @@ func RunController(opts *options.MysqlControllerOptions, stopCh <-chan struct{})
 				}
 			}(n, fn)
 		}
-		glog.V(4).Infof("Starting shared informer factory")
-		ctx.SharedInformerFactory.Start(stopCh)
-		ctx.KubeSharedInformerFactory.Start(stopCh)
+
 		wg.Wait()
 		glog.Fatalf("Control loops exited")
 	}
