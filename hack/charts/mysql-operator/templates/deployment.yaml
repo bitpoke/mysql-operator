@@ -44,6 +44,9 @@ spec:
             {{- range $arg := .Values.extraArgs }}
             - {{ $arg }}
             {{- end }}
+            {{- if .Values.installCRDs }}
+            - --install-crds
+            {{- end }}
           resources:
             {{ toYaml .Values.resources | nindent 12 }}
           livenessProbe:
