@@ -23,22 +23,23 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	apiext_clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	batchinformers "k8s.io/client-go/informers/batch/v1"
 	"k8s.io/client-go/kubernetes"
 	batchlisters "k8s.io/client-go/listers/batch/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
 	ticlientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
-	tiinformers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions/mysql/v1alpha1"
 	mysqllisters "github.com/presslabs/mysql-operator/pkg/generated/listers/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/util"
+	"github.com/presslabs/mysql-operator/pkg/util/kube"
 )
 
 const (
@@ -51,11 +52,13 @@ const (
 
 // Controller structure
 type Controller struct {
-	namespace string
+	namespace   string
+	InstallCRDs bool
 
-	k8client kubernetes.Interface
-	myClient ticlientset.Interface
-	recorder record.EventRecorder
+	k8client  kubernetes.Interface
+	myClient  ticlientset.Interface
+	recorder  record.EventRecorder
+	CRDClient apiext_clientset.Interface
 
 	jobLister     batchlisters.JobLister
 	backupsLister mysqllisters.MysqlBackupLister
@@ -69,29 +72,20 @@ type Controller struct {
 }
 
 // New returns a new controller
-func New(
-	// kubernetes client
-	k8client kubernetes.Interface,
-	// clientset client
-	myClient ticlientset.Interface,
-	// mysql backups informer
-	backupInformer tiinformers.MysqlBackupInformer,
-	// mysql clusters informer
-	clusterInformer tiinformers.MysqlClusterInformer,
-	// event recorder
-	eventRecorder record.EventRecorder,
-	// the namespace
-	namespace string,
-	// job informer
-	jobInformer batchinformers.JobInformer,
-
-) *Controller {
+func New(ctx *controllerpkg.Context) *Controller {
 	ctrl := &Controller{
-		namespace: namespace,
-		k8client:  k8client,
-		myClient:  myClient,
-		recorder:  eventRecorder,
+		namespace:   ctx.Namespace,
+		k8client:    ctx.KubeClient,
+		myClient:    ctx.Client,
+		recorder:    ctx.Recorder,
+		InstallCRDs: ctx.InstallCRDs,
+		CRDClient:   ctx.CRDClient,
 	}
+
+	backupInformer := ctx.SharedInformerFactory.Mysql().V1alpha1().MysqlBackups()
+	clusterInformer := ctx.SharedInformerFactory.Mysql().V1alpha1().MysqlClusters()
+	jobInformer := ctx.KubeSharedInformerFactory.Batch().V1().Jobs()
+
 	// queues
 	ctrl.queue = workqueue.NewNamedRateLimitingQueue(
 		workqueue.DefaultControllerRateLimiter(), "mysqlbackup")
@@ -120,6 +114,17 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 
 	if !cache.WaitForCacheSync(stopCh, c.syncedFuncs...) {
 		return fmt.Errorf("error waiting for informer cache to sync")
+	}
+
+	if c.InstallCRDs {
+		if err := kube.InstallCRD(c.CRDClient, api.ResourceMysqlBackupCRD); err != nil {
+			glog.Fatalf(err.Error())
+			return fmt.Errorf("fail to create crd: %s", err)
+		}
+	}
+
+	if err := kube.WaitForCRD(c.CRDClient, api.ResourceMysqlBackupCRD); err != nil {
+		return fmt.Errorf("crd does not exists: %s", err)
 	}
 
 	for i := 0; i < workers; i++ {
@@ -264,14 +269,6 @@ func (c *Controller) deleteJobWithKey(ctx context.Context, key string) error {
 
 func init() {
 	controllerpkg.Register(ControllerName, func(ctx *controllerpkg.Context) controllerpkg.Interface {
-		return New(
-			ctx.KubeClient,
-			ctx.Client,
-			ctx.SharedInformerFactory.Mysql().V1alpha1().MysqlBackups(),
-			ctx.SharedInformerFactory.Mysql().V1alpha1().MysqlClusters(),
-			ctx.Recorder,
-			ctx.Namespace,
-			ctx.KubeSharedInformerFactory.Batch().V1().Jobs(),
-		).Start
+		return New(ctx).Start
 	})
 }

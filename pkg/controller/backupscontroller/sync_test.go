@@ -18,90 +18,67 @@ package backupscontroller
 
 import (
 	"context"
-	"fmt"
-	"strings"
-	"testing"
-	"time"
 
-	kubeinformers "k8s.io/client-go/informers"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	apiext_fake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/record"
 
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	fakeMyClient "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/fake"
-	informers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions"
 	tutil "github.com/presslabs/mysql-operator/pkg/util/test"
 )
 
-func newController(stop chan struct{}, client *fake.Clientset,
-	myClient *fakeMyClient.Clientset,
-	rec *record.FakeRecorder,
-) *Controller {
-
-	sharedInformerFactory := informers.NewSharedInformerFactory(
-		myClient, time.Second)
-	kubeSharedInformerFactory := kubeinformers.NewSharedInformerFactory(
-		client, time.Second)
-
-	sharedInformerFactory.Start(stop)
-	kubeSharedInformerFactory.Start(stop)
-
-	return New(
-		client,
-		myClient,
-		sharedInformerFactory.Mysql().V1alpha1().MysqlBackups(),
-		sharedInformerFactory.Mysql().V1alpha1().MysqlClusters(),
-		rec,
-		tutil.Namespace,
-		kubeSharedInformerFactory.Batch().V1().Jobs(),
+var _ = Describe("Test backup controller", func() {
+	var (
+		client     *fake.Clientset
+		myClient   *fakeMyClient.Clientset
+		crdClient  *apiext_fake.Clientset
+		rec        *record.FakeRecorder
+		cluster    *api.MysqlCluster
+		backup     *api.MysqlBackup
+		ctx        context.Context
+		controller *Controller
+		stop       chan struct{}
 	)
-}
 
-// TestBackupCompleteSync
-// Test: a backup already  completed
-// Expect: skip sync-ing
-func TestBackupCompleteSync(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	myClient := fakeMyClient.NewSimpleClientset()
-	rec := record.NewFakeRecorder(100)
+	BeforeEach(func() {
+		client = fake.NewSimpleClientset()
+		myClient = fakeMyClient.NewSimpleClientset()
+		crdClient = apiext_fake.NewSimpleClientset()
+		rec = record.NewFakeRecorder(100)
+		ctx = context.TODO()
+		cluster = tutil.NewFakeCluster("asd")
+		backup = tutil.NewFakeBackup("asd-backup", cluster.Name)
+		stop = make(chan struct{})
+		controller = newBackupController(stop, client, myClient, crdClient, rec)
+	})
 
-	stop := make(chan struct{})
-	defer close(stop)
-	controller := newController(stop, client, myClient, rec)
+	AfterEach(func() {
+		close(stop)
+	})
 
-	cluster := tutil.NewFakeCluster("asd")
-	_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
-	if err != nil {
-		fmt.Println("Failed to create cluster:", err)
-	}
-	backup := tutil.NewFakeBackup("asd-backup", cluster.Name)
-	backup.Status.Completed = true
+	Describe("Controller syncing a backup", func() {
+		Context("backup and cluster", func() {
+			It("syncing a backup that is complet shuld be skiped", func() {
+				_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
+				Expect(err).To(Succeed())
 
-	ctx := context.TODO()
-	err = controller.Sync(ctx, backup, tutil.Namespace)
-	if err != nil {
-		fmt.Println("Sync err: ", err)
-		t.Fail()
-	}
-}
+				backup.Status.Completed = true
 
-// TestBackupSyncNoClusterName
-// Test: backup without cluster name
-// Expect: sync to fail
-func TestBackupSyncNoClusterName(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	myClient := fakeMyClient.NewSimpleClientset()
-	rec := record.NewFakeRecorder(100)
+				err = controller.Sync(ctx, backup, tutil.Namespace)
+				Expect(err).To(Succeed())
+			})
+			It("should fail because cluster name is not specified", func() {
+				_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
+				Expect(err).To(Succeed())
 
-	stop := make(chan struct{})
-	defer close(stop)
-	controller := newController(stop, client, myClient, rec)
+				backup.Spec.ClusterName = ""
+				err = controller.Sync(ctx, backup, tutil.Namespace)
+				Expect(err.Error()).To(ContainSubstring("cluster name is not specified"))
+			})
+		})
+	})
 
-	backup := tutil.NewFakeBackup("asd-backup", "")
-	backup.Status.Completed = true
-
-	ctx := context.TODO()
-	err := controller.Sync(ctx, backup, tutil.Namespace)
-	if !strings.Contains(err.Error(), "cluster name is not specified") {
-		t.Fail()
-	}
-}
+})

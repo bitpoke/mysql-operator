@@ -31,7 +31,7 @@ func (c *Controller) instanceForOwnerReference(objectMeta *metav1.ObjectMeta) (*
 		return nil, fmt.Errorf("resource does not have a controller.")
 	}
 
-	if owner.Kind != api.MysqlBackupKind || owner.APIVersion != api.SchemeGroupVersion.String() {
+	if owner.Kind != api.ResourceKindMysqlBackup || owner.APIVersion != api.SchemeGroupVersion.String() {
 		return nil, fmt.Errorf("reference is not a mysql backup resource")
 	}
 

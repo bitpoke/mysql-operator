@@ -37,7 +37,7 @@ const (
 // with latest information from orchestrator or to register the new nodes into
 // orchestrator.
 func (f *cFactory) SyncOrchestratorStatus(ctx context.Context) error {
-	glog.Infof("Orchestrator reconciliation for cluster %s started...", f.cluster.Name)
+	glog.Infof("Orchestrator reconciliation for cluster '%s' started...", f.cluster.Name)
 	if f.orcClient == nil {
 		return fmt.Errorf("orchestrator is not configured")
 	}

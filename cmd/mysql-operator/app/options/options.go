@@ -37,6 +37,8 @@ type MysqlControllerOptions struct {
 
 	// The number of workers
 	NoWorkers int
+
+	InstallCRDs bool
 }
 
 const (
@@ -49,7 +51,8 @@ const (
 	defaultLeaderElectionRenewDeadline = 10 * time.Second
 	defaultLeaderElectionRetryPeriod   = 2 * time.Second
 
-	defaultNoWorkers = 5
+	defaultNoWorkers   = 5
+	defaultInstallCRDs = false
 )
 
 func NewControllerOptions() *MysqlControllerOptions {
@@ -99,6 +102,8 @@ func (s *MysqlControllerOptions) AddFlags(fs *pflag.FlagSet) {
 
 	fs.IntVar(&s.NoWorkers, "workers", defaultNoWorkers, "The number of workers that"+
 		" process events.")
+
+	fs.BoolVar(&s.InstallCRDs, "install-crds", defaultInstallCRDs, "Whether or not to install CRDs.")
 
 }
 

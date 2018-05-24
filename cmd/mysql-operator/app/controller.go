@@ -26,6 +26,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 	"k8s.io/api/core/v1"
+	apiext_clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -157,6 +158,11 @@ func buildControllerContext(opts *options.MysqlControllerOptions) (*controller.C
 		return nil, nil, fmt.Errorf("error creating kubernetes client: %s", err.Error())
 	}
 
+	crdcl, err := apiext_clientset.NewForConfig(kubeCfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error creating kubernetes CRD client: %s", err.Error())
+	}
+
 	// Create event broadcaster
 	// Add mysql types to the default Kubernetes Scheme so Events can be
 	// logged properly
@@ -180,6 +186,8 @@ func buildControllerContext(opts *options.MysqlControllerOptions) (*controller.C
 		KubeSharedInformerFactory: kubeSharedInformerFactory,
 		SharedInformerFactory:     sharedInformerFactory,
 		Namespace:                 opts.Namespace,
+		InstallCRDs:               opts.InstallCRDs,
+		CRDClient:                 crdcl,
 	}, kubeCfg, nil
 }
 

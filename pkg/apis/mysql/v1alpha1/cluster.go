@@ -53,7 +53,7 @@ func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
 	trueVar := true
 	return metav1.OwnerReference{
 		APIVersion: SchemeGroupVersion.String(),
-		Kind:       MysqlClusterKind,
+		Kind:       ResourceKindMysqlCluster,
 		Name:       c.Name,
 		UID:        c.UID,
 		Controller: &trueVar,

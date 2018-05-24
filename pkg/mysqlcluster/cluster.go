@@ -60,7 +60,7 @@ type cFactory struct {
 // New creates a new cluster factory
 func New(cluster *api.MysqlCluster, opt *options.Options, klient kubernetes.Interface,
 	myClient myclientset.Interface, ns string, rec record.EventRecorder) Interface {
-	return &cFactory{
+	f := &cFactory{
 		cluster:    cluster,
 		opt:        opt,
 		client:     klient,
@@ -69,8 +69,12 @@ func New(cluster *api.MysqlCluster, opt *options.Options, klient kubernetes.Inte
 		rec:        rec,
 		configHash: "1",
 		secretHash: "1",
-		orcClient:  orc.NewFromUri(cluster.Spec.GetOrcUri()),
 	}
+	if len(cluster.Spec.GetOrcUri()) != 0 {
+		f.orcClient = orc.NewFromUri(cluster.Spec.GetOrcUri())
+	}
+
+	return f
 }
 
 const (

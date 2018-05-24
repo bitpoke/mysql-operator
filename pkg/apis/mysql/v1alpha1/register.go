@@ -24,16 +24,6 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/apis/mysql"
 )
 
-const (
-	// MysqlClusterKind is the kind of the crd that will be created.
-	MysqlClusterKind = "MysqlCluster"
-	// MysqlClusterPlural is the plural for mysqlcluster
-	MysqlClusterPlural = "mysqlclusters"
-
-	MysqlBackupKind   = "MysqlBackup"
-	MysqlBackupPlural = "mysqlbackups"
-)
-
 var (
 	// SchemeBuilder the scheme builder
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
@@ -41,11 +31,6 @@ var (
 	AddToScheme = SchemeBuilder.AddToScheme
 	// SchemeGroupVersion ..
 	SchemeGroupVersion = schema.GroupVersion{Group: mysql.GroupName, Version: "v1alpha1"}
-	// MysqlClusterCRDName the crd name
-	MysqlClusterCRDName = MysqlClusterPlural + "." + mysql.GroupName
-
-	// MysqlBackupCRDName the crd name of backup resource
-	MysqlBackupCRDName = MysqlBackupPlural + "." + mysql.GroupName
 )
 
 // Resource gets an MysqlCluster GroupResource for a specified resource

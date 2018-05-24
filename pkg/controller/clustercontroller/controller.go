@@ -23,10 +23,10 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	apiext_clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	appslisters "k8s.io/client-go/listers/apps/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
@@ -37,9 +37,9 @@ import (
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
 	myclientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
-	myinformers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions"
 	mylisters "github.com/presslabs/mysql-operator/pkg/generated/listers/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/util"
+	"github.com/presslabs/mysql-operator/pkg/util/kube"
 )
 
 const (
@@ -54,11 +54,13 @@ const (
 
 // Controller structure
 type Controller struct {
-	namespace string
+	namespace   string
+	InstallCRDs bool
 
-	k8client kubernetes.Interface
-	myClient myclientset.Interface
-	recorder record.EventRecorder
+	k8client  kubernetes.Interface
+	myClient  myclientset.Interface
+	recorder  record.EventRecorder
+	CRDClient apiext_clientset.Interface
 
 	statefulSetLister appslisters.StatefulSetLister
 	clusterLister     mylisters.MysqlClusterLister
@@ -74,30 +76,19 @@ type Controller struct {
 }
 
 // New returns a new controller
-func New(
-	// kubernetes client
-	kubecli kubernetes.Interface,
-	// mysql clientset client
-	myClient myclientset.Interface,
-	// infomrer factories
-	kubeSharedInformerFactory informers.SharedInformerFactory,
-	mySharedInformerFactory myinformers.SharedInformerFactory,
-	// event recorder
-	eventRecorder record.EventRecorder,
-	// the namespace
-	namespace string,
-
-) *Controller {
+func New(ctx *controllerpkg.Context) *Controller {
 	ctrl := &Controller{
-		namespace: namespace,
-		k8client:  kubecli,
-		myClient:  myClient,
-		recorder:  eventRecorder,
+		namespace:   ctx.Namespace,
+		k8client:    ctx.KubeClient,
+		myClient:    ctx.Client,
+		recorder:    ctx.Recorder,
+		InstallCRDs: ctx.InstallCRDs,
+		CRDClient:   ctx.CRDClient,
 	}
 
-	statefulSetInformer := kubeSharedInformerFactory.Apps().V1().StatefulSets()
-	podInformer := kubeSharedInformerFactory.Core().V1().Pods()
-	mysqlClusterInformer := mySharedInformerFactory.Mysql().V1alpha1().MysqlClusters()
+	statefulSetInformer := ctx.KubeSharedInformerFactory.Apps().V1().StatefulSets()
+	podInformer := ctx.KubeSharedInformerFactory.Core().V1().Pods()
+	mysqlClusterInformer := ctx.SharedInformerFactory.Mysql().V1alpha1().MysqlClusters()
 
 	// MysqlCluster
 	ctrl.queue = workqueue.NewNamedRateLimitingQueue(
@@ -131,6 +122,17 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 
 	if !cache.WaitForCacheSync(stopCh, c.syncedFuncs...) {
 		return fmt.Errorf("error waiting for informer cache to sync")
+	}
+
+	if c.InstallCRDs {
+		if err := kube.InstallCRD(c.CRDClient, api.ResourceMysqlClusterCRD); err != nil {
+			glog.Fatalf(err.Error())
+			return fmt.Errorf("fail to create crd: %s", err)
+		}
+	}
+
+	if err := kube.WaitForCRD(c.CRDClient, api.ResourceMysqlClusterCRD); err != nil {
+		return fmt.Errorf("crd does not exists: %s", err)
 	}
 
 	for i := 0; i < workers; i++ {
@@ -288,13 +290,6 @@ func (c *Controller) addClusterInWorkQueue(cluster *api.MysqlCluster) {
 
 func init() {
 	controllerpkg.Register(ControllerName, func(ctx *controllerpkg.Context) controllerpkg.Interface {
-		return New(
-			ctx.KubeClient,
-			ctx.Client,
-			ctx.KubeSharedInformerFactory,
-			ctx.SharedInformerFactory,
-			ctx.Recorder,
-			ctx.Namespace,
-		).Start
+		return New(ctx).Start
 	})
 }
