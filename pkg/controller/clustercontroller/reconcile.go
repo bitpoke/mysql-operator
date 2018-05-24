@@ -30,7 +30,7 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/util/options"
 )
 
-const (
+var (
 	reconcileTime = 5 * time.Second
 )
 

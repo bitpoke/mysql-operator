@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	apiext_clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
@@ -44,4 +45,10 @@ type Context struct {
 	// Namespace is a namespace to operate within. This should be used when
 	// constructing SharedIndexInformers for the informer factory.
 	Namespace string
+
+	// InstallCRDs specifies if to install or not CRDs
+	InstallCRDs bool
+
+	// CRDClient is the clientset for Custom Resource Definitions
+	CRDClient apiext_clientset.Interface
 }

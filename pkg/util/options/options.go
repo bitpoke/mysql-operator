@@ -119,6 +119,7 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&o.HttpServeAddr, "http-serve-addr", defaultHttpServeAddr,
 		"The address for http server.")
+
 }
 
 var instance *Options

@@ -14,87 +14,87 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package clustercontroller
+package backupscontroller
 
 import (
 	"context"
-	"fmt"
+	"testing"
 	"time"
-
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/tools/record"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	apiext_fake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
 	fakeMyClient "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/fake"
 	informers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions"
-	"github.com/presslabs/mysql-operator/pkg/util/options"
-	tutil "github.com/presslabs/mysql-operator/pkg/util/test"
 )
 
-var _ = Describe("Test cluster reconciliation queue", func() {
+func TestBackupController(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Test backups controller")
+}
+
+var _ = Describe("Test backup controller", func() {
 	var (
-		client     *fake.Clientset
-		myClient   *fakeMyClient.Clientset
+		client    *fake.Clientset
+		myClient  *fakeMyClient.Clientset
+		crdClient *apiext_fake.Clientset
+
 		rec        *record.FakeRecorder
-		cluster    *api.MysqlCluster
 		ctx        context.Context
 		controller *Controller
 		stop       chan struct{}
-		opt        *options.Options
 	)
 
 	BeforeEach(func() {
-		opt = options.GetOptions()
 		client = fake.NewSimpleClientset()
 		myClient = fakeMyClient.NewSimpleClientset()
+		crdClient = apiext_fake.NewSimpleClientset()
 		rec = record.NewFakeRecorder(100)
 		ctx = context.TODO()
-		cluster = tutil.NewFakeCluster("asd")
 		stop = make(chan struct{})
-		controller = newController(stop, client, myClient, rec)
-		// for fast tests, else reconcileTime will be ~5s
-		reconcileTime = 10 * time.Millisecond
+		controller = newBackupController(stop, client, myClient, crdClient, rec)
+		controller.syncedFuncs = []cache.InformerSynced{func() bool { return true }}
 	})
 
 	AfterEach(func() {
 		close(stop)
 	})
 
-	Describe("Reconcile a cluster", func() {
-		Context("cluster not ready", func() {
-			It("reconciliation should fail, orc not configured", func() {
-				_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
-				Expect(err).To(Succeed())
-
-				opt.OrchestratorUri = ""
-				err = controller.Reconcile(ctx, cluster)
-				Expect(err).ToNot(Succeed())
-
-				// Expect to arrive element on reconciliation queue
-				e, shutdown := controller.reconcileQueue.Get()
-				Expect(shutdown).To(Equal(false))
-				Expect(e).To(Equal(fmt.Sprintf("%s/asd", tutil.Namespace)))
+	Describe("Test controller functionality", func() {
+		Context("At controller startup, crds are not installed", func() {
+			It("crd backup should be installed", func() {
+				go controller.Start(0, stop)
+				Eventually(func() error {
+					_, err := crdClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get(
+						api.ResourceMysqlBackupCRDName, metav1.GetOptions{})
+					return err
+				}).Should(Succeed())
 			})
-			It("reconciliation should succeed", func() {
-				opt.OrchestratorUri = "/devnull"
-				_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
-				Expect(err).To(Succeed())
+			It("crd should not be installed", func() {
+				controller.InstallCRDs = false
+				go controller.Start(0, stop)
+				Eventually(func() error {
+					_, err := crdClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get(
+						api.ResourceMysqlBackupCRDName, metav1.GetOptions{})
+					return err
+				}).ShouldNot(Succeed())
 
-				err = controller.Reconcile(ctx, cluster)
-				Expect(err).To(Succeed())
 			})
 		})
 	})
 
 })
 
-func newController(stop chan struct{}, client *fake.Clientset,
-	myClient *fakeMyClient.Clientset,
+func newBackupController(stop chan struct{}, client *fake.Clientset,
+	myClient *fakeMyClient.Clientset, crdClient *apiext_fake.Clientset,
 	rec *record.FakeRecorder,
 ) *Controller {
 
@@ -112,5 +112,7 @@ func newController(stop chan struct{}, client *fake.Clientset,
 		KubeSharedInformerFactory: kubeSharedInformerFactory,
 		SharedInformerFactory:     sharedInformerFactory,
 		Recorder:                  rec,
+		InstallCRDs:               true,
+		CRDClient:                 crdClient,
 	})
 }

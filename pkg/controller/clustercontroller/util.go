@@ -31,7 +31,7 @@ func (c *Controller) instanceForOwnerReference(objectMeta *metav1.ObjectMeta) (*
 		return nil, fmt.Errorf("resource does not have a controller.")
 	}
 
-	if owner.Kind != api.MysqlClusterKind || owner.APIVersion != api.SchemeGroupVersion.String() {
+	if owner.Kind != api.ResourceKindMysqlCluster || owner.APIVersion != api.SchemeGroupVersion.String() {
 		return nil, fmt.Errorf("reference is not mysql cluster resource")
 	}
 
