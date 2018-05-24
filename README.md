@@ -26,12 +26,7 @@ helm repo add presslabs https://presslabs.github.io/charts
 helm install presslabs/mysql-operator --name mysql-operator
 ```
 
-Also you have to install custom resources, by running:
-```
-kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/deploy/mysqlcluster.yaml
-kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/deploy/mysqlbackup.yaml
-```
-
+For more information about chart values see chart [README](hack/charts/mysql-operator/README.md).
 This chart will deploy the controller along with an [orchestrator](https://github.com/github/orchestrator) cluster.
 
 
