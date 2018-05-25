@@ -61,7 +61,7 @@ var _ = Describe("Test backup controller", func() {
 
 	Describe("Controller syncing a backup", func() {
 		Context("backup and cluster", func() {
-			It("syncing a backup that is complet shuld be skiped", func() {
+			It("syncing a backup that is complete should be skipped", func() {
 				_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
 				Expect(err).To(Succeed())
 

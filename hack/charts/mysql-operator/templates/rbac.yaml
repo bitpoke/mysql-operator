@@ -35,7 +35,8 @@ rules:
   - apiGroups: ["apiextensions.k8s.io"]
     resources:
       - customresourcedefinitions
-    verbs: ["*"]
+    # deletion of a crd is not allowed
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
   {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
