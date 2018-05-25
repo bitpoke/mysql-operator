@@ -39,7 +39,7 @@ import (
 	controllerpkg "github.com/presslabs/mysql-operator/pkg/controller"
 	myclientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
 	myinformers "github.com/presslabs/mysql-operator/pkg/generated/informers/externalversions"
-	mysqllisters "github.com/presslabs/mysql-operator/pkg/generated/listers/mysql/v1alpha1"
+	mylisters "github.com/presslabs/mysql-operator/pkg/generated/listers/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/util"
 	"github.com/presslabs/mysql-operator/pkg/util/kube"
 )
@@ -66,8 +66,8 @@ type Controller struct {
 	SharedInformerFactory     myinformers.SharedInformerFactory
 
 	jobLister     batchlisters.JobLister
-	backupsLister mysqllisters.MysqlBackupLister
-	clusterLister mysqllisters.MysqlClusterLister
+	backupsLister mylisters.MysqlBackupLister
+	clusterLister mylisters.MysqlClusterLister
 
 	queue       workqueue.RateLimitingInterface
 	workerWg    sync.WaitGroup
