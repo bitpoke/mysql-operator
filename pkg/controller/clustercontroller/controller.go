@@ -127,17 +127,15 @@ func New(ctx *controllerpkg.Context) *Controller {
 func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 	glog.Info("Starting controller ...")
 
-	if !cache.WaitForCacheSync(stopCh, c.syncedFuncs...) {
-		return fmt.Errorf("error waiting for informer cache to sync")
-	}
-
 	if c.InstallCRDs {
+		glog.V(3).Info("Installing mysql crd...")
 		if err := kube.InstallCRD(c.CRDClient, api.ResourceMysqlClusterCRD); err != nil {
 			glog.Fatalf(err.Error())
 			return fmt.Errorf("fail to create crd: %s", err)
 		}
 	}
 
+	glog.V(3).Info("Wait for mysql crd...")
 	if err := kube.WaitForCRD(c.CRDClient, api.ResourceMysqlClusterCRD); err != nil {
 		return fmt.Errorf("crd does not exists: %s", err)
 	}
@@ -145,6 +143,10 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 	glog.V(4).Infof("Starting shared informer factory")
 	c.SharedInformerFactory.Start(stopCh)
 	c.KubeSharedInformerFactory.Start(stopCh)
+
+	if !cache.WaitForCacheSync(stopCh, c.syncedFuncs...) {
+		return fmt.Errorf("error waiting for informer cache to sync")
+	}
 
 	for i := 0; i < workers; i++ {
 		c.workerWg.Add(1)

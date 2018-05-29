@@ -111,11 +111,12 @@ publish: images
 ###############
 CHART_TEMPLATE_PATH := deploy/
 CRDS := mysqlclusters.mysql.presslabs.org mysqlbackups.mysql.presslabs.org
+GROUP_NAME := mysql.presslabs.org
 
 CRD_GEN_FILES := $(addprefix $(CHART_TEMPLATE_PATH),$(addsuffix .yaml,$(CRDS)))
 
 $(CRD_GEN_FILES):
-	bin/gen-crds-yaml_$(GOOS)_$(GOARCH) --crd $(basename $(notdir $@)) >> $(@:.mysql.presslabs.org.yaml=.yaml)
+	bin/gen-crds-yaml_$(GOOS)_$(GOARCH) --crd $(basename $(notdir $@)) > $(@:.$(GROUP_NAME).yaml=.yaml)
 
 .PHONY: gen-crds gen-crds-verify gen-crds-clean
 gen-crds: gen-crds-clean $(CRD_GEN_FILES)
@@ -124,10 +125,10 @@ gen-crds-verify: SHELL := /bin/bash
 gen-crds-verify: $(addsuffix -verify,$(CRD_GEN_FILES))
 	@echo "Verifying generated CRDs"
 
-$(addsuffix -verify,$(CRD_GEN_FILES)):
+$(addsuffix -verify,$(CRD_GEN_FILES)): bin/gen-crds-yaml_$(GOOS)_$(GOARCH)
 	$(eval FILE := $(subst -verify,,$@))
 	$(eval CRD := $(basename $(notdir $@)))
-	diff -Naupr $(FILE) <(bin/gen-crds-yaml_$(GOOS)_$(GOARCH) --crd $(CRD))
+	diff -Naupr $(FILE:.$(GROUP_NAME).yaml=.yaml) <(bin/gen-crds-yaml_$(GOOS)_$(GOARCH) --crd $(CRD))
 
 gen-crds-clean:
 	rm -f $(CRD_GEN_FILES)
