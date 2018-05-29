@@ -21,15 +21,20 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
+	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiext_clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apiserver/pkg/util/logs"
 
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/util/kube"
 	"github.com/presslabs/mysql-operator/test/e2e/framework"
 	"github.com/presslabs/mysql-operator/test/e2e/framework/ginkgowrapper"
 )
@@ -48,12 +53,33 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 
 	ginkgo.By("Install operator")
 	HelmInstallChart(releaseName)
+
+	waitForCRDs()
 	// ginkgo node 1
 	return nil
 
 }, func(data []byte) {
 	// all other nodes
 })
+
+// wait for crds to be ready, crds are installed by operator
+func waitForCRDs() {
+	kubeCfg, err := framework.LoadConfig()
+	gomega.Expect(err).To(gomega.Succeed())
+
+	crdcl, err := apiext_clientset.NewForConfig(kubeCfg)
+	gomega.Expect(err).To(gomega.Succeed())
+
+	crds := []*apiext.CustomResourceDefinition{
+		api.ResourceMysqlClusterCRD,
+		api.ResourceMysqlBackupCRD,
+	}
+	for _, crd := range crds {
+		gomega.Eventually(func() error {
+			return kube.WaitForCRD(crdcl, crd)
+		}, 30*time.Second, 2*time.Second).Should(gomega.Succeed())
+	}
+}
 
 // Similar to SynchornizedBeforeSuite, we want to run some operations only once (such as collecting cluster logs).
 // Here, the order of functions is reversed; first, the function which runs everywhere,
@@ -63,7 +89,7 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	framework.Logf("Running AfterSuite actions on all node")
 	framework.RunCleanupActions()
 
-	ginkgo.By("Remove poperator release.")
+	ginkgo.By("Remove operator release")
 	HelmDeleteRelease(releaseName)
 
 	ginkgo.By("Delete operator namespace")
