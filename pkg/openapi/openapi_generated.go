@@ -176,6 +176,13 @@ func schema_pkg_apis_mysql_v1alpha1_BackupStatus(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"backupUri": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BackupUri represent the fully uri to the backup location",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"conditions": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
