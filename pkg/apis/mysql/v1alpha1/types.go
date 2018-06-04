@@ -216,6 +216,9 @@ type BackupStatus struct {
 	// Complete marks the backup in final state
 	Completed bool `json:"completed"`
 
+	// BackupUri represent the fully uri to the backup location
+	BackupUri string `json:"backupUri,omitempty"`
+
 	Conditions []BackupCondition `json:"conditions"`
 }
 
