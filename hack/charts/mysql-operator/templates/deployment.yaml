@@ -47,6 +47,9 @@ spec:
             {{- if .Values.installCRDs }}
             - --install-crds
             {{- end }}
+            {{- if .Values.rbac.create }}
+            - --backup-service-account-name={{ template "mysql-operator.serviceAccountName" . }}-backups
+            {{- end }}
           resources:
             {{ toYaml .Values.resources | nindent 12 }}
           livenessProbe:

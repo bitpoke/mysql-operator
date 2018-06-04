@@ -1,6 +1,9 @@
 extraArgs:
   - -v=3
 
+rbac:
+  create: true
+
 orchestrator:
   topologyPassword: password1
   antiAffinity: soft

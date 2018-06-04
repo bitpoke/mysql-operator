@@ -65,6 +65,7 @@ func (f *cFactory) ensurePodTemplate(spec core.PodSpec) core.PodSpec {
 	}
 
 	spec.RestartPolicy = core.RestartPolicyOnFailure
+	spec.ServiceAccountName = f.opt.BackupSchedulerServiceAccountName
 
 	spec.Containers[0].Name = "schedule-backup"
 	spec.Containers[0].Image = f.cluster.Spec.GetHelperImage()
