@@ -27,6 +27,10 @@ import (
 	tb "github.com/presslabs/mysql-operator/cmd/mysql-helper/util"
 )
 
+const (
+	ncatIdleTimeout = "30"
+)
+
 func RunTakeBackupCommand(stopCh <-chan struct{}, srcHost, destBucket string) error {
 	glog.Infof("Take backup from '%s' to bucket '%s' started...", srcHost, destBucket)
 	destBucket = normalizeBucketUri(destBucket)
@@ -35,7 +39,7 @@ func RunTakeBackupCommand(stopCh <-chan struct{}, srcHost, destBucket string) er
 
 func pushBackupFromTo(srcHost, destBucket string) error {
 	// TODO: document each func
-	ncat := exec.Command("ncat", "--recv-only", srcHost, tb.BackupPort)
+	ncat := exec.Command("ncat", "-i", ncatIdleTimeout, "--recv-only", srcHost, tb.BackupPort)
 
 	gzip := exec.Command("gzip", "-c")
 
