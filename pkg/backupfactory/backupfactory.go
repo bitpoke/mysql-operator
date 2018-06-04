@@ -68,6 +68,13 @@ func (f *bFactory) Sync(ctx context.Context) error {
 			f.backup.AsOwnerReference(),
 		},
 	}
+
+	if len(f.GetBackupUri()) == 0 {
+		glog.Errorf("The backupUri for backupt: '%s' and cluster: '%s' not specified,"+
+			" neither in backup or cluster!", f.backup.Name, f.cluster.Name)
+		return fmt.Errorf("backupUri not specified")
+	}
+
 	_, _, err := kbatch.CreateOrPatchJob(f.k8Client, meta, func(in *batch.Job) *batch.Job {
 		if len(in.Spec.Template.Spec.Containers) == 0 {
 			in.Spec.Template.Spec = f.ensurePodSpec(in.Spec.Template.Spec)
@@ -97,15 +104,15 @@ func (f *bFactory) ensurePodSpec(in core.PodSpec) core.PodSpec {
 	in.Containers[0].Args = []string{
 		"take-backup-to",
 		f.cluster.GetBackupCandidate(),
-		f.backup.Spec.BackupUri,
+		f.GetBackupUri(),
 	}
 
-	if len(f.backup.Spec.BackupSecretName) != 0 {
+	if len(f.GetBackupSecretName()) != 0 {
 		in.Containers[0].EnvFrom = []core.EnvFromSource{
 			core.EnvFromSource{
 				SecretRef: &core.SecretEnvSource{
 					LocalObjectReference: core.LocalObjectReference{
-						Name: f.backup.Spec.BackupSecretName,
+						Name: f.GetBackupSecretName(),
 					},
 				},
 			},
@@ -124,23 +131,29 @@ func (f *bFactory) SetDefaults() error {
 	f.backup.UpdateStatusCondition(api.BackupComplete, core.ConditionUnknown, "set defaults",
 		"First initialization of backup")
 
-	if len(f.backup.Spec.BackupUri) == 0 {
-		if len(f.cluster.Spec.BackupUri) > 0 {
-			f.backup.Spec.BackupUri = getBucketUri(
-				f.cluster.Name, f.cluster.Spec.BackupUri)
-		} else {
-			return fmt.Errorf("backupUri not specified, neither in cluster")
-		}
-	}
-
-	if len(f.backup.Spec.BackupSecretName) == 0 {
-		f.backup.Spec.BackupSecretName = f.cluster.Spec.BackupSecretName
-	}
-
 	// mark backup as not in final state
 	f.backup.Status.Completed = false
 
+	// update status backup uri
+	f.backup.Status.BackupUri = f.GetBackupUri()
+
 	return nil
+}
+
+func (f *bFactory) GetBackupUri() string {
+	if len(f.backup.Status.BackupUri) > 0 {
+		return f.backup.Status.BackupUri
+	}
+
+	if len(f.backup.Spec.BackupUri) > 0 {
+		return f.backup.Spec.BackupUri
+	}
+
+	if len(f.cluster.Spec.BackupUri) > 0 {
+		return getBucketUri(f.cluster.Name, f.cluster.Spec.BackupUri)
+	}
+
+	return ""
 }
 
 func getBucketUri(cluster, bucket string) string {
@@ -151,6 +164,14 @@ func getBucketUri(cluster, bucket string) string {
 	return bucket + fmt.Sprintf(
 		"/%s-%s.xbackup.gz", cluster, t.Format("2006-01-02T15:04:05"),
 	)
+}
+
+func (f *bFactory) GetBackupSecretName() string {
+	if len(f.backup.Spec.BackupSecretName) > 0 {
+		return f.backup.Spec.BackupSecretName
+	}
+
+	return f.cluster.Spec.BackupSecretName
 }
 
 func (f *bFactory) updateStatus(job *batch.Job) {

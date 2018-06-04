@@ -59,9 +59,7 @@ func NewFakeBackup(name, clName string) *api.MysqlBackup {
 			Namespace: Namespace,
 		},
 		Spec: api.BackupSpec{
-			ClusterName:      clName,
-			BackupUri:        "gs://bucket/a.xb.gz",
-			BackupSecretName: name,
+			ClusterName: clName,
 		},
 	}
 }

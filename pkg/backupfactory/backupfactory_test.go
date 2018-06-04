@@ -18,9 +18,10 @@ package backupfactory
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	// core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -31,16 +32,18 @@ import (
 	tutil "github.com/presslabs/mysql-operator/pkg/util/test"
 )
 
+func TestBackupFactory(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Test backups factory")
+}
+
 func getFakeFactory(backup *api.MysqlBackup, k8Client *fake.Clientset,
 	myClient *fakeMyClient.Clientset) *bFactory {
 
 	cluster, err := myClient.MysqlV1alpha1().MysqlClusters(backup.Namespace).Get(
 		backup.Spec.ClusterName, metav1.GetOptions{})
 
-	if err != nil {
-		fmt.Println("Failed to get cluster:", err)
-	}
-
+	Expect(err).To(Succeed())
 	return &bFactory{
 		backup:   backup,
 		cluster:  cluster,
@@ -49,40 +52,67 @@ func getFakeFactory(backup *api.MysqlBackup, k8Client *fake.Clientset,
 	}
 }
 
-// TestSync
-// Test: sync a backup for a cluster
-// Expect: sync successful, job created
-func TestSync(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	myClient := fakeMyClient.NewSimpleClientset()
+var _ = Describe("Test backup factory", func() {
+	var (
+		client   *fake.Clientset
+		myClient *fakeMyClient.Clientset
 
-	cluster := tutil.NewFakeCluster("test-2")
-	_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
-	if err != nil {
-		fmt.Println("Failed to create cluster:", err)
-	}
-	backup := tutil.NewFakeBackup("test-1", cluster.Name)
-	f := getFakeFactory(backup, client, myClient)
+		ctx context.Context
+	)
 
-	err = f.SetDefaults()
-	if err != nil {
-		t.Fail()
-	}
+	BeforeEach(func() {
+		client = fake.NewSimpleClientset()
+		myClient = fakeMyClient.NewSimpleClientset()
 
-	ctx := context.TODO()
-	err = f.Sync(ctx)
-	if err != nil {
-		t.Fail()
-	}
+		ctx = context.TODO()
+	})
 
-	_, err = client.BatchV1().Jobs(tutil.Namespace).Get(f.getJobName(), metav1.GetOptions{})
-	if err != nil {
-		t.Fail()
-		return
-	}
+	Describe("Test a simple sync", func() {
+		Context("A backup is created but not initialized", func() {
+			It("sync should be successful", func() {
+				cluster := tutil.NewFakeCluster("test-cluster-1")
+				backup := tutil.NewFakeBackup("test-backup-1", cluster.Name)
 
-	err = f.Sync(ctx)
-	if err != nil {
-		t.Fail()
-	}
-}
+				cluster.Spec.BackupUri = "gs://some-bucket/"
+				_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
+				Expect(err).To(Succeed())
+
+				f := getFakeFactory(backup, client, myClient)
+				Expect(f.SetDefaults()).To(Succeed())
+				Expect(backup.Status.BackupUri).To(ContainSubstring("gs://some-bucket"))
+				Expect(f.Sync(ctx)).To(Succeed())
+
+				_, err = client.BatchV1().Jobs(tutil.Namespace).Get(
+					f.getJobName(), metav1.GetOptions{})
+				Expect(err).To(Succeed())
+				Expect(f.Sync(ctx)).To(Succeed())
+			})
+
+			It("sync a backup with init bucket uri", func() {
+				cluster := tutil.NewFakeCluster("test-cluster-1")
+				backup := tutil.NewFakeBackup("test-backup-1", cluster.Name)
+
+				backup.Spec.BackupUri = "gs://other-backup/test.gz"
+				cluster.Spec.BackupUri = "gs://some-bucket/"
+				_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
+				Expect(err).To(Succeed())
+
+				f := getFakeFactory(backup, client, myClient)
+				Expect(f.SetDefaults()).To(Succeed())
+				Expect(backup.Status.BackupUri).To(ContainSubstring("gs://other-backup"))
+				Expect(f.Sync(ctx)).To(Succeed())
+			})
+			It("sync a backup with no bucket uri", func() {
+				cluster := tutil.NewFakeCluster("test-cluster-1")
+				backup := tutil.NewFakeBackup("test-backup-1", cluster.Name)
+
+				_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
+				Expect(err).To(Succeed())
+
+				f := getFakeFactory(backup, client, myClient)
+				Expect(f.SetDefaults()).To(Succeed())
+				Expect(f.Sync(ctx)).ToNot(Succeed())
+			})
+		})
+	})
+})
