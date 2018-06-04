@@ -134,11 +134,56 @@ pipeline:
 #      - KUBECONFIG=/go/.kube/config
 #    commands:
 #      - sleep 1
-#
-#services:
-#  minikube:
-#    image: gcr.io/pl-infra/drone-minikube:v1.9.0
-#    privileged: true
-#    secrets:
-#      - GOOGLE_CREDENTIALS
 
+
+  start-kubernetes:
+    image: mydind
+    privileged: true
+    secrets:
+      - GOOGLE_CREDENTIALS
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    secrets:
+      - source: QUAY_TOKEN
+        target: DOCKER_PASSWORD
+    environment:
+      - NUM_NODES=1
+      - KUBECTL_DIR=/go/kubeadm-dind-cluster
+    commands:
+      # register container into kubeadm-dind-net network
+      # - docker network connect kubeadm-dind-net $HOSTNAME
+      - ./hack/e2e-tests/dind-cluster-v1.10.sh up
+      - export PATH=/go/kubeadm-dind-cluster:$PATH
+      - kubectl get nodes
+      - sleep 60
+
+  e2e-tests:
+    image: e2e-tests
+    environment:
+      - APP_VERSION=${DRONE_TAG}
+    commands:
+      # register container into kubeadm-dind-net network
+      - sleep 60
+      #- docker network connect kubeadm-dind-net $HOSTNAME
+      - export PATH=/go/kubeadm-dind-cluster:$PATH
+
+      - helm init
+      - go test ./test/e2e -v --kubernetes-config /go/.kubeadm-dind-cluster --kubernetes-context dind
+
+  stop-kubernetes:
+    image: mydind
+    privileged: true
+    secrets:
+      - GOOGLE_CREDENTIALS
+    environment:
+      - NUM_NODES=1
+      - KUBECTL_DIR=/go/.kubeadm-dind-cluster
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    secrets:
+      - source: QUAY_TOKEN
+        target: DOCKER_PASSWORD
+    commands:
+      - ./hack/e2e-tests/dind-cluster-v1.10.sh down
+    when:
+      status: [ success, failure ]
