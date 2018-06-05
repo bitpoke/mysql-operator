@@ -31,6 +31,8 @@ CMDS     := $(shell find ./cmd/ -maxdepth 1 -type d -exec basename {} \; | grep 
 BIN_CMDS := $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
 DOCKER_BIN_CMDS := $(patsubst %, $(HACK_DIR)/docker/%/%, $(CMDS))
 
+DOCKER_IMAGES := mysql-operator mysql-helper
+
 .DEFAULT_GOAL := bin/mysql-operator_$(GOOS)_$(GOARCH)
 
 # Code building targets
@@ -82,14 +84,14 @@ clean:
 .PHONY: install-docker
 install-docker : $(patsubst %, bin/%_linux_amd64, $(CMDS))
 	set -e;
-		for cmd in $(CMDS); do \
+		for cmd in $(DOCKER_IMAGES); do \
 			install -m 755 bin/$${cmd}_linux_amd64 $(HACK_DIR)/docker/$${cmd}/$${cmd} ; \
 		done
 
 .PHONY: images
 images: install-docker
 	set -e;
-	for cmd in $(CMDS); do \
+	for cmd in $(DOCKER_IMAGES); do \
 		docker build \
 			--build-arg VCS_REF=$(GIT_COMMIT) \
 			--build-arg APP_VERSION=$(APP_VERSION) \
@@ -99,7 +101,7 @@ images: install-docker
 
 publish: images
 	set -e; \
-	for cmd in $(CMDS); do \
+	for cmd in $(DOCKER_IMAGES); do \
 		for tag in $(IMAGE_TAGS); do \
 			docker tag $(REGISTRY)/$${cmd}:$(BUILD_TAG) $(REGISTRY)/$${cmd}:$${tag}; \
 			docker push $(REGISTRY)/$${cmd}:$${tag}; \
