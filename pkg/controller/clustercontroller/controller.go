@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/robfig/cron"
 	apiext_clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -78,6 +79,7 @@ type Controller struct {
 	clustersSync sync.Map
 
 	reconcileQueue workqueue.DelayingInterface
+	cron           *cron.Cron
 }
 
 // New returns a new controller
@@ -91,6 +93,7 @@ func New(ctx *controllerpkg.Context) *Controller {
 		CRDClient:                 ctx.CRDClient,
 		KubeSharedInformerFactory: ctx.KubeSharedInformerFactory,
 		SharedInformerFactory:     ctx.SharedInformerFactory,
+		cron: cron.New(),
 	}
 
 	statefulSetInformer := ctx.KubeSharedInformerFactory.Apps().V1().StatefulSets()
