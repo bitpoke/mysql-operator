@@ -280,6 +280,12 @@
   version = "v0.8.0"
 
 [[projects]]
+  name = "github.com/robfig/cron"
+  packages = ["."]
+  revision = "b41be1df696709bb6395fe435af20370037c0b4c"
+  version = "v1.1"
+
+[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
@@ -420,8 +426,11 @@
   packages = [
     "pkg/apis/apiextensions",
     "pkg/apis/apiextensions/v1beta1",
+    "pkg/client/clientset/clientset",
+    "pkg/client/clientset/clientset/fake",
     "pkg/client/clientset/clientset/scheme",
-    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
+    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1",
+    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1/fake"
   ]
   revision = "4347b330d0ff094db860f2f75fa725b4f4b53618"
   version = "kubernetes-1.10.1"
@@ -688,6 +697,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "453d2c7be2c6bbbe8c1ac55f6de00e3f1e65d54de46019c4b257506a24ecab8d"
+  inputs-digest = "34c9620e82786302253bdfa5632b8afef89be647f12613c06ebdd5e855a6b993"
   solver-name = "gps-cdcl"
   solver-version = 1
