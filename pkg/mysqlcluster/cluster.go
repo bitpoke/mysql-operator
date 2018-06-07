@@ -128,13 +128,6 @@ func (f *cFactory) getComponents() []component {
 			reasonUpdated: api.EventReasonSFSUpdated,
 		},
 		component{
-			alias:         "backup-cron-job",
-			name:          f.cluster.GetNameForResource(api.BackupCronJob),
-			syncFn:        f.syncBackupCronJob,
-			reasonFailed:  api.EventReasonCronJobFailed,
-			reasonUpdated: api.EventReasonCronJobUpdated,
-		},
-		component{
 			alias:         "master-service",
 			name:          f.cluster.GetNameForResource(api.MasterService),
 			syncFn:        f.syncMasterService,

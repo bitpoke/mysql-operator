@@ -18,11 +18,12 @@ package clustercontroller
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
 	"github.com/golang/glog"
-	//"github.com/robfig/cron"
+	"github.com/wgliang/cron"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -57,6 +58,11 @@ func (c *Controller) registerClusterInBackupCron(cluster *api.MysqlCluster) erro
 		return nil
 	}
 
+	schedule, err := cron.Parse(cluster.Spec.BackupSchedule)
+	if err != nil {
+		return fmt.Errorf("fail to parse schedule: %s", err)
+	}
+
 	lockJobRegister.Lock()
 	defer lockJobRegister.Unlock()
 
@@ -64,21 +70,30 @@ func (c *Controller) registerClusterInBackupCron(cluster *api.MysqlCluster) erro
 		j, ok := entry.Job.(job)
 		if ok && j.Name == cluster.Name && j.Namespace == cluster.Namespace {
 			glog.V(3).Infof("Cluster %s already added to cron.", cluster.Name)
+			if !reflect.DeepEqual(entry.Schedule, schedule) {
+				glog.Infof("Update cluster '%s' scheduler to: %s",
+					cluster.Name, cluster.Spec.BackupSchedule)
+				c.cron.Remove(cluster.Name)
+				break
+			}
 			return nil
 		}
 	}
 
-	return c.cron.AddJob(cluster.Spec.BackupSchedule, job{
+	c.cron.Schedule(schedule, job{
 		Name:          cluster.Name,
 		Namespace:     cluster.Namespace,
 		myClient:      c.myClient,
 		BackupRunning: new(bool),
 		lock:          new(sync.Mutex),
-	})
+	}, cluster.Name)
+
+	return nil
 }
 
 func (j job) Run() {
 	backupName := fmt.Sprintf("%s-auto-backup-%s", j.Name, time.Now().Format("2006-01-02t15-04-05"))
+	glog.Infof("Schedul backup job started. Creating backup %s..", backupName)
 
 	// Wrap backup creation to ensure that lock is released when backup is
 	// created

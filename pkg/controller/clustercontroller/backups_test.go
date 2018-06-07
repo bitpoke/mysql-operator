@@ -26,7 +26,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/robfig/cron"
+	"github.com/wgliang/cron"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -114,12 +114,14 @@ var _ = Describe("Test cluster reconciliation queue", func() {
 					BackupRunning: new(bool),
 					lock:          new(sync.Mutex),
 				}
-				go j.Run()
+
 				go j.Run()
 
-				Eventually(func() *bool {
-					return j.BackupRunning
-				}).Should(PointTo(Equal(true)))
+				Eventually(func() bool {
+					j.lock.Lock() // avoid a data race
+					defer j.lock.Unlock()
+					return *j.BackupRunning
+				}).Should(Equal(true))
 				Eventually(func() []api.MysqlBackup {
 					bs, _ := myClient.Mysql().MysqlBackups(j.Namespace).List(metav1.ListOptions{})
 					return bs.Items
@@ -131,9 +133,11 @@ var _ = Describe("Test cluster reconciliation queue", func() {
 				_, err := myClient.Mysql().MysqlBackups(j.Namespace).Update(&backup)
 				Expect(err).To(Succeed())
 
-				Eventually(func() *bool {
-					return j.BackupRunning
-				}).Should(PointTo(Equal(false)))
+				Eventually(func() bool {
+					j.lock.Lock() // avoid a data race
+					defer j.lock.Unlock()
+					return *j.BackupRunning
+				}).Should(Equal(false))
 			})
 		})
 	})

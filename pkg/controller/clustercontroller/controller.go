@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/robfig/cron"
+	"github.com/wgliang/cron"
 	apiext_clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -151,6 +151,9 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 		return fmt.Errorf("error waiting for informer cache to sync")
 	}
 
+	// start cron
+	c.cron.Start()
+
 	for i := 0; i < workers; i++ {
 		c.workerWg.Add(1)
 		go wait.Until(func() { c.workerController(stopCh) }, workerPeriodTime, stopCh)
@@ -165,6 +168,7 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 	glog.V(2).Info("Shutting down controller.")
 	c.queue.ShutDown()
 	c.reconcileQueue.ShutDown()
+	c.cron.Stop()
 	glog.V(2).Info("Wait for workers to exit...")
 	c.workerWg.Wait()
 	glog.V(2).Info("Workers exited.")
