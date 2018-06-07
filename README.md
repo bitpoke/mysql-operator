@@ -18,6 +18,11 @@ The main goals of this operator are:
 
 The operator is to be considered alpha and not suited for critical production workloads. We (Presslabs) sucessfully use it at the moment for some non-critical production workloads.
 
+## Contributing
+
+We welcome all contributions in the form of new issues for feature requests, bugs or directly pull requests. We are open to discuss ideas to improve the operator and would also love to find out where and how it is used. The discussion related to the project should happen on [Gitter](https://gitter.im/PressLabs/mysql-operator). 
+The current developers of the project can be reached via [email](mailto:ping@presslabs.com) too.
+
 ## Controller deploy
 
 To deploy this controller, use the provided helm chart, by running:
