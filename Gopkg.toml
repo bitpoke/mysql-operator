@@ -34,3 +34,9 @@ required = [
   name = "k8s.io/gengo"
   revision = "b58fc7edb82e0c6ffc9b8aef61813c7261b785d4"
 
+
+# this is used until remove functionality is added to
+# https://github.com/robfig/cron
+[[constraint]]
+  name = "github.com/wgliang/cron"
+  revision = "79834306f6432d41449e7003710d866ceea9b40c"

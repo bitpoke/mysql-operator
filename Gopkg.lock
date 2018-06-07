@@ -27,7 +27,6 @@
     "apiextensions/v1beta1",
     "apps/v1",
     "batch/v1",
-    "batch/v1beta1",
     "core/v1"
   ]
   revision = "7de9bdd06e30d7ad4df3452d6188a36134bcddee"
@@ -253,6 +252,8 @@
   packages = [
     ".",
     "format",
+    "gstruct",
+    "gstruct/errors",
     "internal/assertion",
     "internal/asyncassertion",
     "internal/oraclematcher",
@@ -280,12 +281,6 @@
   version = "v0.8.0"
 
 [[projects]]
-  name = "github.com/robfig/cron"
-  packages = ["."]
-  revision = "b41be1df696709bb6395fe435af20370037c0b4c"
-  version = "v1.1"
-
-[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
@@ -302,6 +297,11 @@
   packages = ["."]
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
   version = "v1.0.1"
+
+[[projects]]
+  name = "github.com/wgliang/cron"
+  packages = ["."]
+  revision = "79834306f6432d41449e7003710d866ceea9b40c"
 
 [[projects]]
   branch = "master"
@@ -697,6 +697,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "34c9620e82786302253bdfa5632b8afef89be647f12613c06ebdd5e855a6b993"
+  inputs-digest = "792615aa0482073098c32a699edca8392eccd230ce17e01e259cacc59885a159"
   solver-name = "gps-cdcl"
   solver-version = 1
