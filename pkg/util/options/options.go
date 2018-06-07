@@ -53,8 +53,7 @@ type Options struct {
 	OrchestratorTopologyPassword string
 	OrchestratorTopologyUser     string
 
-	JobCompleteSuccessGraceTime       time.Duration
-	BackupSchedulerServiceAccountName string
+	JobCompleteSuccessGraceTime time.Duration
 
 	HttpServeAddr string
 }
@@ -89,8 +88,6 @@ const (
 	defaultOrchestratorTopologyPassword = ""
 
 	defaultHttpServeAddr = ":80"
-
-	defaultBackupSchedServiceAccountName = "default"
 )
 
 var (
@@ -122,11 +119,6 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&o.HttpServeAddr, "http-serve-addr", defaultHttpServeAddr,
 		"The address for http server.")
-
-	fs.StringVar(&o.BackupSchedulerServiceAccountName, "backup-service-account-name",
-		defaultBackupSchedServiceAccountName, "Specify the service account for backup scheduler. "+
-			"This accounts should have permissions to create backups.")
-
 }
 
 var instance *Options

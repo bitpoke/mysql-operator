@@ -161,10 +161,4 @@ func TestSyncClusterCreationWithSecret(t *testing.T) {
 		t.Fail()
 		return
 	}
-
-	_, err = client.BatchV1beta1().CronJobs(ns).Get(cluster.GetNameForResource(api.StatefulSet), metav1.GetOptions{})
-	if err != nil {
-		t.Fail()
-		return
-	}
 }

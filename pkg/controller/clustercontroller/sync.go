@@ -69,6 +69,7 @@ func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster) error 
 	}
 
 	c.registerClusterInReconciliation(cluster)
+	c.registerClusterInBackupCron(cluster)
 
 	return nil
 }

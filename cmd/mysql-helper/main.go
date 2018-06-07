@@ -29,7 +29,6 @@ import (
 	"github.com/presslabs/mysql-operator/cmd/mysql-helper/appclone"
 	"github.com/presslabs/mysql-operator/cmd/mysql-helper/appconf"
 	"github.com/presslabs/mysql-operator/cmd/mysql-helper/apphelper"
-	"github.com/presslabs/mysql-operator/cmd/mysql-helper/appschedulebackup"
 	"github.com/presslabs/mysql-operator/cmd/mysql-helper/apptakebackup"
 	"github.com/presslabs/mysql-operator/pkg/util/logs"
 )
@@ -102,27 +101,6 @@ func main() {
 		},
 	}
 	cmd.AddCommand(takeBackupCmd)
-
-	var backupNamespace string
-	scheduleBackupCmd := &cobra.Command{
-		Use:   "schedule-backup",
-		Short: "Schedule a backup for cluster",
-		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return fmt.Errorf("require cluster name")
-			}
-			return nil
-		},
-		Run: func(cmd *cobra.Command, args []string) {
-			err := appschedulebackup.RunCommand(stopCh, backupNamespace, args[0])
-			if err != nil {
-				glog.Fatalf("Schduler command failed with error: %s .", err)
-			}
-		},
-	}
-	scheduleBackupCmd.Flags().StringVar(&backupNamespace, "namespace", "default",
-		"Specify the namespace where to create backups.")
-	cmd.AddCommand(scheduleBackupCmd)
 
 	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 	flag.CommandLine.Parse([]string{})

@@ -151,8 +151,6 @@ const (
 	EventReasonServiceUpdated             = "HLServiceUpdated"
 	EventReasonSFSFailed                  = "StatefulSetFailed"
 	EventReasonSFSUpdated                 = "StatefulSetUpdated"
-	EventReasonCronJobFailed              = "CronJobFailed"
-	EventReasonCronJobUpdated             = "CronJobUpdated"
 	EventReasonMasterServiceFailed        = "MasterServiceFailed"
 	EventReasonMasterServiceUpdated       = "MasterServiceUpdated"
 	EventReasonHealthyNodesServiceFailed  = "HealthyNodesServiceFailed"
