@@ -29,13 +29,9 @@ const (
 )
 
 func (f *cFactory) updateMasterServiceEndpoints() error {
-	masterHost := f.cluster.GetPodHostname(0)
-
-	for _, ns := range f.cluster.Status.Nodes {
-		if cond := ns.GetCondition(api.NodeConditionMaster); cond != nil &&
-			cond.Status == core.ConditionTrue {
-			masterHost = ns.Name
-		}
+	masterHost := f.getMasterHost()
+	if err := f.updatePodLabels(masterHost); err != nil {
+		return err
 	}
 
 	return f.addNodesToService(f.cluster.GetNameForResource(api.MasterService), masterHost)

@@ -167,3 +167,17 @@ func (f *cFactory) addNodesToService(serviceName string, hosts ...string) error 
 
 	return err
 }
+
+// Returns name of current master host in a cluster
+func (f *cFactory) getMasterHost() string {
+	masterHost := f.cluster.GetPodHostname(0)
+
+	for _, ns := range f.cluster.Status.Nodes {
+		if cond := ns.GetCondition(api.NodeConditionMaster); cond != nil &&
+			cond.Status == core.ConditionTrue {
+			masterHost = ns.Name
+		}
+	}
+
+	return masterHost
+}
