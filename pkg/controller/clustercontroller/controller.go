@@ -195,6 +195,13 @@ func (c *Controller) workerController(stopCh <-chan struct{}) {
 
 			// process items from queue
 			cluster, err := c.getNextWorkItem(key)
+			if err != nil && k8errors.IsNotFound(err) {
+				// If the cluster has disappeared, do not re-queue
+				glog.Infof("Removing issuer %q from processing queue", key)
+				c.queue.Forget(obj)
+				return nil
+			}
+
 			if err != nil {
 				return fmt.Errorf("failed to get cluster: %s", err)
 			}
@@ -248,6 +255,11 @@ func (c *Controller) workerRecouncile(stopCh <-chan struct{}) {
 			// process items from queue
 			cluster, err := c.getNextWorkItem(key)
 			if err != nil {
+				if k8errors.IsNotFound(err) {
+					// key was removed from map, don't reconcile.
+					glog.Infof("Removing issuer %q from reconcile queue", key)
+					return nil
+				}
 				return fmt.Errorf("failed to get cluster: %s", err)
 			}
 
@@ -283,7 +295,7 @@ func (c *Controller) getNextWorkItem(key string) (*api.MysqlCluster, error) {
 	if err != nil {
 		if k8errors.IsNotFound(err) {
 			glog.Errorf("resource not found: %s", err)
-			return nil, fmt.Errorf("issuer %q in work queue no longer exists", key)
+			return nil, err
 		}
 
 		return nil, err
