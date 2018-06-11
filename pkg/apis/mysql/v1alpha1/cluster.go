@@ -259,7 +259,7 @@ func (c *MysqlCluster) GetBackupCandidate() string {
 			return node.Name
 		}
 	}
-	glog.Warning("No healthy slave node found so returns the master node: %s.", c.GetPodHostname(0))
+	glog.Warningf("No healthy slave node found so returns the master node: %s.", c.GetPodHostname(0))
 	return c.GetPodHostname(0)
 }
 

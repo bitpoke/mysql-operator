@@ -72,23 +72,18 @@ func (f *cFactory) SyncOrchestratorStatus(ctx context.Context) error {
 }
 
 func (f *cFactory) updateStatusFromOrc(insts []orc.Instance) {
-	for i := 0; i < int(f.cluster.Spec.Replicas); i++ {
-		host := f.cluster.GetPodHostname(i)
-		// select instance from orchestrator
-		var node *orc.Instance
-		for _, inst := range insts {
-			if inst.Key.Hostname == host {
-				node = &inst
-				break
+	updatedNodes := []string{}
+	for _, node := range insts {
+		host := node.Key.Hostname
+		updatedNodes = append(updatedNodes, host)
+
+		if !node.IsUpToDate {
+			if !node.IsLastCheckValid {
+				f.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionUnknown)
+				f.updateNodeCondition(host, api.NodeConditionReplicating, core.ConditionUnknown)
+				f.updateNodeCondition(host, api.NodeConditionMaster, core.ConditionUnknown)
 			}
-		}
-
-		if node == nil {
-			f.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionUnknown)
-			f.updateNodeCondition(host, api.NodeConditionReplicating, core.ConditionUnknown)
-			f.updateNodeCondition(host, api.NodeConditionMaster, core.ConditionUnknown)
-
-			return
+			continue
 		}
 
 		maxSlaveLatency := defaultMaxSlaveLatency
@@ -116,6 +111,8 @@ func (f *cFactory) updateStatusFromOrc(insts []orc.Instance) {
 			f.updateNodeCondition(host, api.NodeConditionMaster, core.ConditionFalse)
 		}
 	}
+
+	f.removeNodeConditionNotIn(updatedNodes)
 }
 
 func (f *cFactory) updateStatusForRecoveries(recoveries []orc.TopologyRecovery) {
@@ -227,6 +224,23 @@ func (f *cFactory) updateNodeCondition(host string, cType api.NodeConditionType,
 			f.rec.Event(pod, "ReplicationRunning", "orc", "")
 		} else if status == core.ConditionFalse {
 			f.rec.Event(pod, "ReplicationStopped", "orc", "")
+		}
+	}
+}
+
+func (f *cFactory) removeNodeConditionNotIn(hosts []string) {
+	for _, ns := range f.cluster.Status.Nodes {
+		updated := false
+		for _, h := range hosts {
+			if h == ns.Name {
+				updated = true
+			}
+		}
+
+		if !updated {
+			f.updateNodeCondition(ns.Name, api.NodeConditionLagged, core.ConditionUnknown)
+			f.updateNodeCondition(ns.Name, api.NodeConditionReplicating, core.ConditionUnknown)
+			f.updateNodeCondition(ns.Name, api.NodeConditionMaster, core.ConditionUnknown)
 		}
 	}
 }

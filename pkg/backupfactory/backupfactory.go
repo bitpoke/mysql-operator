@@ -88,7 +88,7 @@ func (f *bFactory) Sync(ctx context.Context) error {
 }
 
 func (f *bFactory) getJobName() string {
-	return fmt.Sprintf("%s-%s-backup", f.backup.Name, f.backup.Spec.ClusterName)
+	return fmt.Sprintf("%s-backupjob", f.backup.Name)
 }
 
 func (f *bFactory) ensurePodSpec(in core.PodSpec) core.PodSpec {
