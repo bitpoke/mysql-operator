@@ -60,7 +60,7 @@ func (c *Controller) registerClusterInBackupCron(cluster *api.MysqlCluster) erro
 
 	schedule, err := cron.Parse(cluster.Spec.BackupSchedule)
 	if err != nil {
-		return fmt.Errorf("fail to parse schedule: %s", err)
+		return fmt.Errorf("failed to parse schedule: %s", err)
 	}
 
 	lockJobRegister.Lock()

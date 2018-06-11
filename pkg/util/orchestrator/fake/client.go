@@ -34,7 +34,7 @@ func New() *FakeOrc {
 	return &FakeOrc{}
 }
 
-func (o *FakeOrc) AddInstance(cluster string, host string, master bool, sls int64, slaveR bool) {
+func (o *FakeOrc) AddInstance(cluster, host string, master bool, sls int64, slaveR, upToDate bool) {
 	valid := true
 	if sls < 0 {
 		valid = false
@@ -52,6 +52,8 @@ func (o *FakeOrc) AddInstance(cluster string, host string, master bool, sls int6
 		ClusterName:       cluster,
 		Slave_SQL_Running: slaveR,
 		Slave_IO_Running:  slaveR,
+		IsUpToDate:        upToDate,
+		IsLastCheckValid:  upToDate,
 	}
 	if o.Clusters == nil {
 		o.Clusters = make(map[string][]Instance)
@@ -61,6 +63,25 @@ func (o *FakeOrc) AddInstance(cluster string, host string, master bool, sls int6
 		o.Clusters[cluster] = append(clusters, inst)
 	}
 	o.Clusters[cluster] = []Instance{inst}
+}
+
+func (o *FakeOrc) RemoveInstance(cluster, host string) {
+	instances, ok := o.Clusters[cluster]
+	if !ok {
+		return
+	}
+	index := -1
+	for i, inst := range instances {
+		if inst.Key.Hostname == host {
+			index = i
+		}
+	}
+
+	if index == -1 {
+		return
+	}
+
+	o.Clusters[cluster] = append(instances[:index], instances[index+1:]...)
 }
 
 func (o *FakeOrc) AddRecoveries(cluster string, id int64, ack bool) {

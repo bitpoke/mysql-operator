@@ -83,7 +83,7 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 
 			It("should update status", func() {
 				orcClient.AddInstance("asd.default", cluster.GetPodHostname(0),
-					true, -1, false)
+					true, -1, false, true)
 				orcClient.AddRecoveries("asd.default", 1, true)
 				factory.createPod("asd-mysql-0")
 
@@ -104,7 +104,7 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 
 			It("should have pending recoveries", func() {
 				orcClient.AddInstance("asd.default", cluster.GetPodHostname(0),
-					true, -1, false)
+					true, -1, false, true)
 				orcClient.AddRecoveries("asd.default", 11, false)
 				Ω(factory.SyncOrchestratorStatus(ctx)).Should(Succeed())
 				Expect(getCCond(
@@ -114,7 +114,7 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 
 			It("should have pending recoveries but cluster not ready enough", func() {
 				orcClient.AddInstance("asd.default", cluster.GetPodHostname(0),
-					true, -1, false)
+					true, -1, false, true)
 				orcClient.AddRecoveries("asd.default", 111, false)
 				cluster.UpdateStatusCondition(api.ClusterConditionReady, core.ConditionTrue, "", "")
 				Ω(factory.SyncOrchestratorStatus(ctx)).Should(Succeed())
@@ -126,7 +126,7 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 
 			It("should have pending recoveries that will be recovered", func() {
 				orcClient.AddInstance("asd.default", cluster.GetPodHostname(0),
-					true, -1, false)
+					true, -1, false, true)
 				orcClient.AddRecoveries("asd.default", 112, false)
 				min20, _ := time.ParseDuration("-20m")
 				cluster.Status.Conditions = []api.ClusterCondition{
@@ -146,6 +146,31 @@ var _ = Describe("Mysql cluster reconcilation", func() {
 				var event string
 				Ω(rec.Events).Should(Receive(&event))
 				Expect(event).To(ContainSubstring("RecoveryAcked"))
+			})
+
+			It("node not uptodate in orc", func() {
+				orcClient.AddInstance("asd.default", cluster.GetPodHostname(0),
+					true, -1, false, false)
+				Ω(factory.SyncOrchestratorStatus(ctx)).Should(Succeed())
+
+				Expect(cluster.Status.Nodes[0].GetCondition(api.NodeConditionMaster).Status).To(
+					Equal(core.ConditionUnknown))
+			})
+
+			It("node not in orc", func() {
+				orcClient.AddInstance("asd.default", cluster.GetPodHostname(0),
+					true, -1, false, true)
+				Ω(factory.SyncOrchestratorStatus(ctx)).Should(Succeed())
+
+				Expect(cluster.Status.Nodes[0].GetCondition(api.NodeConditionMaster).Status).To(
+					Equal(core.ConditionTrue))
+
+				orcClient.RemoveInstance("asd.default", cluster.GetPodHostname(0))
+				Ω(factory.SyncOrchestratorStatus(ctx)).Should(Succeed())
+
+				Expect(cluster.Status.Nodes[0].GetCondition(api.NodeConditionMaster).Status).To(
+					Equal(core.ConditionUnknown))
+
 			})
 
 		})
