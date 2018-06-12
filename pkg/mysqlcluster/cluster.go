@@ -170,6 +170,9 @@ func (f *cFactory) Sync(ctx context.Context) error {
 		return fmt.Errorf("cluster sync ready endpoints: %s", err)
 	}
 
+	if err := f.updatePodLabels(); err != nil {
+		return fmt.Errorf("cluster sync pod labeling: %s", err)
+	}
 	return nil
 }
 

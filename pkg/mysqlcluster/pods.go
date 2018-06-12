@@ -26,12 +26,14 @@ import (
 )
 
 // Set K8S labels indicating role pods: Master or Replica
-func (f *cFactory) updatePodLabels(masterHost string) error {
+func (f *cFactory) updatePodLabels() error {
+	masterHost := f.getMasterHost()
+
 	for _, ns := range f.cluster.Status.Nodes {
 		pod, err := getPodForHostname(f.client, f.namespace, f.getLabels(map[string]string{}), ns.Name)
 		if err != nil {
 			glog.Errorf("Failed to update pod labels: %s", err)
-			continue
+			return err
 		}
 
 		labels := pod.GetLabels()
@@ -43,6 +45,7 @@ func (f *cFactory) updatePodLabels(masterHost string) error {
 			desiredVal = "master"
 		}
 
+		glog.Infof("Inspecting pod: %s, label: %s, desired: %s", pod.Name, val, desiredVal)
 		if !exists || val != desiredVal {
 			labels["role"] = desiredVal
 			glog.Infof("Updating labels for Pod: %s", pod.Name)
@@ -53,11 +56,13 @@ func (f *cFactory) updatePodLabels(masterHost string) error {
 				OwnerReferences: pod.GetOwnerReferences(),
 				Namespace:       pod.GetNamespace(),
 			}
-			kcore.CreateOrPatchPod(f.client, meta,
+			_, act, err := kcore.CreateOrPatchPod(f.client, meta,
 				func(in *core.Pod) *core.Pod {
 					in.Labels = labels
 					return in
 				})
+			glog.Infof("Pod %s was %s", pod.Name, getStatusFromKVerb(act))
+			return err
 		}
 	}
 
