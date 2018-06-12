@@ -30,9 +30,6 @@ const (
 
 func (f *cFactory) updateMasterServiceEndpoints() error {
 	masterHost := f.getMasterHost()
-	if err := f.updatePodLabels(masterHost); err != nil {
-		return err
-	}
 
 	return f.addNodesToService(f.cluster.GetNameForResource(api.MasterService), masterHost)
 }

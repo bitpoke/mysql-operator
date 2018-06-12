@@ -107,12 +107,12 @@ func (f *cFactory) addNodesToService(serviceName string, hosts ...string) error 
 	for _, host := range hosts {
 		pod, err := getPodForHostname(f.client, f.namespace, f.getLabels(map[string]string{}), host)
 		if err != nil {
-			glog.Errorf("Failed to set master service endpoints: %s", err)
+			glog.Errorf("Failed to set %s service endpoints: %s", serviceName, err)
 			continue
 		}
 
 		if len(pod.Status.PodIP) == 0 {
-			glog.Errorf("Failed to set master service endpoints, ip for pod %s not set %s", pod.Name, err)
+			glog.Errorf("Failed to set %s service endpoints, ip for pod %s not set %s", serviceName, pod.Name, err)
 			continue
 		}
 		pods = append(pods, pod)
@@ -162,8 +162,7 @@ func (f *cFactory) addNodesToService(serviceName string, hosts ...string) error 
 			return in
 		})
 
-	glog.Infof("Endpoints for service '%s' were %s.",
-		f.cluster.GetNameForResource(api.MasterService), getStatusFromKVerb(act))
+	glog.Infof("Endpoints for service '%s' were %s.", serviceName, getStatusFromKVerb(act))
 
 	return err
 }
