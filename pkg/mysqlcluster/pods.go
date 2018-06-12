@@ -45,7 +45,8 @@ func (f *cFactory) updatePodLabels() error {
 			desiredVal = "master"
 		}
 
-		glog.Infof("Inspecting pod: %s, label: %s, desired: %s", pod.Name, val, desiredVal)
+		glog.V(2).Infof("Inspecting pod: %s, label: %s, desired: %s", pod.Name, val, desiredVal)
+
 		if !exists || val != desiredVal {
 			labels["role"] = desiredVal
 			glog.Infof("Updating labels for Pod: %s", pod.Name)
