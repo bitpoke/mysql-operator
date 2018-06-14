@@ -21,6 +21,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"strconv"
@@ -68,8 +69,10 @@ var (
 
 	NameOfStatefulSet = api.StatefulSet
 
-	HelperProbePath = mysqlcluster.HelperProbePath
-	HelperProbePort = mysqlcluster.HelperProbePort
+	// http server config
+	ServerPort       = mysqlcluster.HelperServerPort
+	ServerProbePath  = mysqlcluster.HelperServerProbePath
+	ServerBackupPath = "/xtbackup"
 )
 
 const (
@@ -283,4 +286,15 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 	return out.Close()
+}
+
+func MaxClients(h http.Handler, n int) http.Handler {
+	sema := make(chan struct{}, n)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sema <- struct{}{}
+		defer func() { <-sema }()
+
+		h.ServeHTTP(w, r)
+	})
 }
