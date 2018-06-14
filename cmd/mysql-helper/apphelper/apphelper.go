@@ -17,12 +17,7 @@ limitations under the License.
 package apphelper
 
 import (
-	"context"
 	"fmt"
-	"net/http"
-	"os"
-	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -87,12 +82,10 @@ func RunRunCommand(stopCh <-chan struct{}) error {
 	}
 	glog.V(2).Info("Configured read only flag...")
 
-	// start http server for readiness probe
-	// here the server is ready to accept traffic
-	httpServer(stopCh)
+	srv := NewServer(stopCh)
+	glog.V(2).Info("Starting http server...")
 
-	// now serve backups
-	return startServeBackups()
+	return srv.ListenAndServe()
 }
 
 func configureOrchestratorUser() error {
@@ -132,47 +125,6 @@ func configureExporterUser() error {
 	}
 
 	return nil
-}
-
-func startServeBackups() error {
-	glog.Infof("Serve backups command.")
-
-	xtrabackup_cmd := []string{"xtrabackup", "--backup", "--slave-info", "--stream=xbstream",
-		"--host=127.0.0.1", fmt.Sprintf("--user=%s", tb.GetReplUser()),
-		fmt.Sprintf("--password=%s", tb.GetReplPass())}
-
-	ncat := exec.Command("ncat", "--listen", "--keep-open", "--send-only", "--max-conns=1",
-		tb.BackupPort, "-c", strings.Join(xtrabackup_cmd, " "))
-
-	ncat.Stderr = os.Stderr
-
-	return ncat.Run()
-
-}
-
-func httpServer(stop <-chan struct{}) {
-	mux := http.NewServeMux()
-
-	// Add health endpoint
-	mux.HandleFunc(tb.HelperProbePath, func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
-	})
-
-	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", tb.HelperProbePort),
-		Handler: mux,
-	}
-
-	// Shutdown gracefully the http server
-	go func() {
-		<-stop // wait for stop signal
-		if err := srv.Shutdown(context.Background()); err != nil {
-			glog.Errorf("Failed to stop probe server, err: %s", err)
-		}
-	}()
-	go func() {
-		glog.Fatal(srv.ListenAndServe())
-	}()
 }
 
 func waitForMysqlReady() error {

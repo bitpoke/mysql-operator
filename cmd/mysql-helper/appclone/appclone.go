@@ -18,6 +18,7 @@ package appclone
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -149,33 +150,22 @@ func cloneFromBucket(initBucket string) error {
 
 func cloneFromSource(host string) error {
 	glog.Infof("Cloning from node: %s", host)
-	// ncat --recv-only {host} {port}
-	// connects to host and get data from there
-	ncat := exec.Command("ncat", "--recv-only", host, tb.BackupPort)
+
+	resp, err := http.Get(fmt.Sprintf("http://%s:%d%s", host, tb.ServerPort, tb.ServerBackupPath))
+	if err != nil {
+		return fmt.Errorf("fail to get backup: %s", err)
+	}
 
 	// xbstream -x -C {mysql data target dir}
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
 	xbstream := exec.Command("xbstream", "-x", "-C", tb.DataDir)
 
-	ncat.Stderr = os.Stderr
+	xbstream.Stdin = resp.Body
 	xbstream.Stderr = os.Stderr
-
-	var err error
-	if xbstream.Stdin, err = ncat.StdoutPipe(); err != nil {
-		return fmt.Errorf("set pipe, error: %s", err)
-	}
-
-	if err := ncat.Start(); err != nil {
-		return fmt.Errorf("ncat start error: %s", err)
-	}
 
 	if err := xbstream.Start(); err != nil {
 		return fmt.Errorf("xbstream start error: %s", err)
-	}
-
-	if err := ncat.Wait(); err != nil {
-		return fmt.Errorf("ncat wait error: %s", err)
 	}
 
 	if err := xbstream.Wait(); err != nil {

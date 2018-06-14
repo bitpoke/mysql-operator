@@ -340,8 +340,8 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 	// HELPER container
 	helper.ReadinessProbe = ensureProbe(helper.ReadinessProbe, 5, 5, 10, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
-			Path:   HelperProbePath,
-			Port:   intstr.FromInt(HelperProbePort),
+			Path:   HelperServerProbePath,
+			Port:   intstr.FromInt(HelperServerPort),
 			Scheme: core.URISchemeHTTP,
 		},
 	})

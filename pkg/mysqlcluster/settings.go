@@ -40,8 +40,8 @@ const (
 	// change
 	ConfigVersion = "2018-03-23:12:33"
 
-	HelperProbePath = "/health"
-	HelperProbePort = 8001
+	HelperServerPort      = 8088
+	HelperServerProbePath = "/health"
 
 	ExporterPortName = "prometheus"
 	ExporterPort     = 9104
