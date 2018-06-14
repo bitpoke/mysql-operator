@@ -107,6 +107,34 @@ func (f *bFactory) ensurePodSpec(in core.PodSpec) core.PodSpec {
 		f.GetBackupUri(),
 	}
 
+	boolTrue := true
+	in.Containers[0].Env = []core.EnvVar{
+		core.EnvVar{
+			Name: "MYSQL_BACKUP_USER",
+			ValueFrom: &core.EnvVarSource{
+				SecretKeyRef: &core.SecretKeySelector{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: f.cluster.Spec.SecretName,
+					},
+					Key:      "BACKUP_USER",
+					Optional: &boolTrue,
+				},
+			},
+		},
+		core.EnvVar{
+			Name: "MYSQL_BACKUP_PASSWORD",
+			ValueFrom: &core.EnvVarSource{
+				SecretKeyRef: &core.SecretKeySelector{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: f.cluster.Spec.SecretName,
+					},
+					Key:      "BACKUP_PASSWORD",
+					Optional: &boolTrue,
+				},
+			},
+		},
+	}
+
 	if len(f.GetBackupSecretName()) != 0 {
 		in.Containers[0].EnvFrom = []core.EnvFromSource{
 			core.EnvFromSource{

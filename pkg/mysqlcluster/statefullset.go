@@ -261,6 +261,31 @@ func (f *cFactory) getEnvFor(name string) (env []core.EnvVar) {
 				},
 			},
 		})
+	case containerCloneName:
+		env = append(env, core.EnvVar{
+			Name: "MYSQL_BACKUP_USER",
+			ValueFrom: &core.EnvVarSource{
+				SecretKeyRef: &core.SecretKeySelector{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: f.cluster.Spec.SecretName,
+					},
+					Key:      "BACKUP_USER",
+					Optional: &boolTrue,
+				},
+			},
+		})
+		env = append(env, core.EnvVar{
+			Name: "MYSQL_BACKUP_PASSWORD",
+			ValueFrom: &core.EnvVarSource{
+				SecretKeyRef: &core.SecretKeySelector{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: f.cluster.Spec.SecretName,
+					},
+					Key:      "BACKUP_PASSWORD",
+					Optional: &boolTrue,
+				},
+			},
+		})
 	}
 
 	return
