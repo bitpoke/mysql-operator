@@ -69,6 +69,14 @@ func (f *cFactory) syncClusterSecret() (state string, err error) {
 			in.Data["ORC_TOPOLOGY_USER"] = []byte(f.opt.OrchestratorTopologyUser)
 			in.Data["ORC_TOPOLOGY_PASSWORD"] = []byte(f.opt.OrchestratorTopologyPassword)
 
+			if len(in.Data["BACKUP_USER"]) == 0 {
+				in.Data["BACKUP_USER"] = []byte(util.RandomString(rStrLen))
+			}
+
+			if len(in.Data["BACKUP_PASSWORD"]) == 0 {
+				in.Data["BACKUP_PASSWORD"] = []byte(util.RandomString(rStrLen))
+			}
+
 			hash, err := hashstructure.Hash(in.Data, nil)
 			if err != nil {
 				glog.Errorf("Can't compute the hash for db secret: %s", err)

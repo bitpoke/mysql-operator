@@ -63,6 +63,11 @@ func (s *server) healthHandle(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) serveBackupHandle(w http.ResponseWriter, r *http.Request) {
 
+	if !s.isAuthenticated(r) {
+		http.Error(w, "Not authenticated!", http.StatusForbidden)
+		return
+	}
+
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streamming unsupported!", http.StatusInternalServerError)
@@ -106,4 +111,9 @@ func (s *server) serveBackupHandle(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "xtrabackup failed", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (s *server) isAuthenticated(r *http.Request) bool {
+	user, pass, ok := r.BasicAuth()
+	return ok && user == tb.GetBackupUser() && pass == tb.GetBackupPass()
 }

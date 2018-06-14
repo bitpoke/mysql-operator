@@ -171,6 +171,16 @@ func GetInitBucket() string {
 	return getEnvValue("INIT_BUCKET_URI")
 }
 
+// GetBackupAccessUser returns the basic auth credentials to access backup
+func GetBackupUser() string {
+	return getEnvValue("MYSQL_BACKUP_USER")
+}
+
+// GetBackupAccessUser returns the basic auth credentials to access backup
+func GetBackupPass() string {
+	return getEnvValue("MYSQL_BACKUP_PASSWORD")
+}
+
 // GetMasterHost returns the master host
 func GetMasterHost() string {
 	orcUri := getOrcUri()
@@ -297,4 +307,25 @@ func MaxClients(h http.Handler, n int) http.Handler {
 
 		h.ServeHTTP(w, r)
 	})
+}
+
+func RequestABackup(host, path string) (io.Reader, error) {
+	glog.Infof("Initiate a backup from: %s path: %s", host, path)
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d%s", host, ServerPort, path), nil)
+	if err != nil {
+		return nil, fmt.Errorf("fail to create request: %s", err)
+	}
+
+	// set authentification user and password
+	req.SetBasicAuth(GetBackupUser(), GetBackupPass())
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil || resp.StatusCode != 200 {
+		return nil, fmt.Errorf("fail to get backup: %s, code: %s", err, resp.Status)
+	}
+
+	return resp.Body, nil
 }

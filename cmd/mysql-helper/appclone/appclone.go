@@ -18,7 +18,6 @@ package appclone
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -151,7 +150,7 @@ func cloneFromBucket(initBucket string) error {
 func cloneFromSource(host string) error {
 	glog.Infof("Cloning from node: %s", host)
 
-	resp, err := http.Get(fmt.Sprintf("http://%s:%d%s", host, tb.ServerPort, tb.ServerBackupPath))
+	backupBody, err := tb.RequestABackup(host, tb.ServerBackupPath)
 	if err != nil {
 		return fmt.Errorf("fail to get backup: %s", err)
 	}
@@ -161,7 +160,7 @@ func cloneFromSource(host string) error {
 	// data target dir
 	xbstream := exec.Command("xbstream", "-x", "-C", tb.DataDir)
 
-	xbstream.Stdin = resp.Body
+	xbstream.Stdin = backupBody
 	xbstream.Stderr = os.Stderr
 
 	if err := xbstream.Start(); err != nil {

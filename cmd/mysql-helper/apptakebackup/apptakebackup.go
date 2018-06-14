@@ -18,7 +18,6 @@ package apptakebackup
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -39,9 +38,10 @@ func RunTakeBackupCommand(stopCh <-chan struct{}, srcHost, destBucket string) er
 }
 
 func pushBackupFromTo(srcHost, destBucket string) error {
-	resp, err := http.Get(fmt.Sprintf("http://%s:%d%s", srcHost, tb.ServerPort, tb.ServerBackupPath))
+
+	backupBody, err := tb.RequestABackup(srcHost, tb.ServerBackupPath)
 	if err != nil {
-		return fmt.Errorf("fail to get backup: %s", err)
+		return fmt.Errorf("getting backup: %s", err)
 	}
 
 	gzip := exec.Command("gzip", "-c")
@@ -49,7 +49,7 @@ func pushBackupFromTo(srcHost, destBucket string) error {
 	rclone := exec.Command("rclone",
 		fmt.Sprintf("--config=%s", tb.RcloneConfigFile), "rcat", destBucket)
 
-	gzip.Stdin = resp.Body
+	gzip.Stdin = backupBody
 	gzip.Stderr = os.Stderr
 	rclone.Stderr = os.Stderr
 
