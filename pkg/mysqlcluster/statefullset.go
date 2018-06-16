@@ -116,6 +116,7 @@ const (
 	containerMysqlName     = "mysql"
 	containerExporterName  = "metrics-exporter"
 	containerHeartBeatName = "pt-heartbeat"
+	containerKillerName    = "pt-kill"
 )
 
 func (f *cFactory) ensureContainer(in core.Container, name, image string, args []string) core.Container {
@@ -287,6 +288,10 @@ func (f *cFactory) ensureInitContainersSpec(in []core.Container) []core.Containe
 
 func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 	noContainers := 4
+	if f.cluster.Spec.QueryLimits != nil {
+		noContainers += 1
+	}
+
 	if len(in) != noContainers {
 		in = make([]core.Container, noContainers)
 	}
@@ -381,6 +386,23 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 	)
 
 	in[3] = heartbeat
+
+	if f.cluster.Spec.QueryLimits != nil {
+		command := []string{
+			"pt-kill",
+			"--wait-after-kill=1",
+			// host need to be specified, see pt-kill bug: https://jira.percona.com/browse/PT-1223
+			"--host=127.0.0.1",
+			fmt.Sprintf("--defaults-file=%s/client.cnf", ConfVolumeMountPath),
+		}
+		command = append(command, f.cluster.Spec.QueryLimits.GetOptions()...)
+
+		killer := f.ensureContainer(in[4], containerKillerName,
+			f.cluster.Spec.GetHelperImage(),
+			command,
+		)
+		in[4] = killer
+	}
 
 	return in
 }
@@ -477,7 +499,7 @@ func (f *cFactory) getVolumeMountsFor(name string) []core.VolumeMount {
 			},
 		}
 
-	case containerHeartBeatName:
+	case containerHeartBeatName, containerKillerName:
 		return []core.VolumeMount{
 			core.VolumeMount{
 				Name:      confVolumeName,

@@ -41,6 +41,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.NodeCondition":    schema_pkg_apis_mysql_v1alpha1_NodeCondition(ref),
 		"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.NodeStatus":       schema_pkg_apis_mysql_v1alpha1_NodeStatus(ref),
 		"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.PodSpec":          schema_pkg_apis_mysql_v1alpha1_PodSpec(ref),
+		"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.QueryLimits":      schema_pkg_apis_mysql_v1alpha1_QueryLimits(ref),
 		"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.VolumeSpec":       schema_pkg_apis_mysql_v1alpha1_VolumeSpec(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.APIGroup":                                schema_pkg_apis_meta_v1_APIGroup(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.APIGroupList":                            schema_pkg_apis_meta_v1_APIGroupList(ref),
@@ -343,11 +344,17 @@ func schema_pkg_apis_mysql_v1alpha1_ClusterSpec(ref common.ReferenceCallback) co
 							Format:      "int64",
 						},
 					},
+					"queryLimits": {
+						SchemaProps: spec.SchemaProps{
+							Description: "QueryLimits represents limits for a query",
+							Ref:         ref("github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.QueryLimits"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.PodSpec", "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.VolumeSpec"},
+			"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.PodSpec", "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.QueryLimits", "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.VolumeSpec"},
 	}
 }
 
@@ -666,6 +673,88 @@ func schema_pkg_apis_mysql_v1alpha1_PodSpec(ref common.ReferenceCallback) common
 		},
 		Dependencies: []string{
 			"k8s.io/api/core/v1.Affinity", "k8s.io/api/core/v1.LocalObjectReference", "k8s.io/api/core/v1.ResourceRequirements"},
+	}
+}
+
+func schema_pkg_apis_mysql_v1alpha1_QueryLimits(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"maxIdleTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxIdleTime match queries that have benn idle for longer then this time. (--idle-time flag)",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"maxQueryTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxQueryTime match queries that have been running for longer then this time. (--busy-time flag)",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"kill": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kill represents the mode of which the matching queries in each class will be killed, (the --victims flag). Can be one of oldest|all|all-but-oldest",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"killMode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KillMode can be: `connection` or `query`, when it's used `connection` means that when a query is matched the connection is killed (using --kill flag) and if it's used `query` means that the query is killed (using --kill-query flag)",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"ignoreDb": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IgnoreDb is the lost of tatabase that are ignored by pt-kill (--ignore-db flag)",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"ignoreCommands": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IgnoreCommands",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"ignoreUser": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IgnoreUser",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
 	}
 }
 

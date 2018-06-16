@@ -60,6 +60,7 @@ case "$1" in
     *)
         echo "Usage: $0 {files-config|clone|config-and-serve}"
         echo "Now runs your command."
+        echo "$@"
 
         exec "$@"
 esac
