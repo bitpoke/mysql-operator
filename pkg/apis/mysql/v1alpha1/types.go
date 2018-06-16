@@ -85,13 +85,17 @@ type ClusterSpec struct {
 
 	// PVC extra specifiaction
 	// +optional
-	VolumeSpec `json:"volumeSpec,omitempty"`
+	VolumeSpec VolumeSpec `json:"volumeSpec,omitempty"`
 
 	// MaxSlaveLatency represents the allowed latency for a slave node in
 	// seconds. If set then the node with a latency grater than this is removed
 	// from service.
 	// +optional
 	MaxSlaveLatency *int64 `json:"maxSlaveLatency,omitempty"`
+
+	// QueryLimits represents limits for a query
+	// +optional
+	QueryLimits *QueryLimits `json:"queryLimits,omitempty"`
 }
 
 type MysqlConf map[string]string
@@ -159,6 +163,40 @@ type PodSpec struct {
 
 type VolumeSpec struct {
 	core.PersistentVolumeClaimSpec `json:",inline"`
+}
+
+type QueryLimits struct {
+	// MaxIdleTime match queries that have benn idle for longer then this time.
+	// (--idle-time flag)
+	// + optional
+	MaxIdleTime *int `json:"maxIdleTime,omitempty"`
+
+	// MaxQueryTime match queries that have been running for longer then this
+	// time. (--busy-time flag)
+	// +optional
+	MaxQueryTime *int `json:"maxQueryTime,omitempty"`
+
+	// Kill represents the mode of which the matching queries in each class will
+	// be killed, (the --victims flag). Can be one of oldest|all|all-but-oldest
+	// +optional
+	Kill *string `json:"kill,omitempty"`
+
+	// KillMode can be: `connection` or `query`, when it's used `connection`
+	// means that when a query is matched the connection is killed (using --kill
+	// flag) and if it's used `query` means that the query is killed (using
+	// --kill-query flag)
+	KillMode string `json:"killMode,omitempty"`
+
+	// IgnoreDb is the lost of tatabase that are ignored by pt-kill (--ignore-db
+	// flag)
+	// +optional
+	IgnoreDb []string `json:"ignoreDb,omitempty"`
+
+	// IgnoreCommands
+	IgnoreCommand []string `json:"ignoreCommands,omitempty"`
+
+	//IgnoreUser
+	IgnoreUser []string `json:"ignoreUser,omitempty"`
 }
 
 // +genclient

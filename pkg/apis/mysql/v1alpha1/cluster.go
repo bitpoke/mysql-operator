@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/golang/glog"
 	apiv1 "k8s.io/api/core/v1"
@@ -274,4 +275,44 @@ func (c *MysqlCluster) GetLabels() map[string]string {
 		"app":           "mysql-operator",
 		"mysql_cluster": c.Name,
 	}
+}
+
+func (ql *QueryLimits) GetOptions() []string {
+	options := []string{
+		"--print",
+	}
+	if ql.MaxIdleTime != nil {
+		options = append(options, "--idle-time", fmt.Sprintf("%d", *ql.MaxIdleTime))
+	}
+
+	if ql.MaxQueryTime != nil {
+		options = append(options, "--busy-time", fmt.Sprintf("%d", *ql.MaxQueryTime))
+	}
+
+	if ql.Kill != nil {
+		options = append(options, "--victims", *ql.Kill)
+	}
+
+	switch ql.KillMode {
+	case "connection":
+		options = append(options, "--kill")
+	case "query":
+		options = append(options, "--kill-query")
+	default:
+		options = append(options, "--kill-query")
+	}
+
+	if len(ql.IgnoreDb) > 0 {
+		options = append(options, "--ignore-db", strings.Join(ql.IgnoreDb, "|"))
+	}
+
+	if len(ql.IgnoreCommand) > 0 {
+		options = append(options, "--ignore-command", strings.Join(ql.IgnoreCommand, "|"))
+	}
+
+	if len(ql.IgnoreUser) > 0 {
+		options = append(options, "--ignore-user", strings.Join(ql.IgnoreUser, "|"))
+	}
+
+	return options
 }
