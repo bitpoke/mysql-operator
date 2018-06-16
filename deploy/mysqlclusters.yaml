@@ -62,6 +62,45 @@ spec:
                 nodeSelector:
                   type: object
                 resources: {}
+            queryLimits:
+              properties:
+                ignoreCommands:
+                  description: IgnoreCommands
+                  items:
+                    type: string
+                  type: array
+                ignoreDb:
+                  description: IgnoreDb is the lost of tatabase that are ignored by
+                    pt-kill (--ignore-db flag)
+                  items:
+                    type: string
+                  type: array
+                ignoreUser:
+                  description: IgnoreUser
+                  items:
+                    type: string
+                  type: array
+                kill:
+                  description: Kill represents the mode of which the matching queries
+                    in each class will be killed, (the --victims flag). Can be one
+                    of oldest|all|all-but-oldest
+                  type: string
+                killMode:
+                  description: 'KillMode can be: `connection` or `query`, when it''s
+                    used `connection` means that when a query is matched the connection
+                    is killed (using --kill flag) and if it''s used `query` means
+                    that the query is killed (using --kill-query flag)'
+                  type: string
+                maxIdleTime:
+                  description: MaxIdleTime match queries that have benn idle for longer
+                    then this time. (--idle-time flag)
+                  format: int32
+                  type: integer
+                maxQueryTime:
+                  description: MaxQueryTime match queries that have been running for
+                    longer then this time. (--busy-time flag)
+                  format: int32
+                  type: integer
             replicas:
               description: The number of pods. This updates replicas filed Defaults
                 to 0

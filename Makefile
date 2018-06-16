@@ -133,7 +133,7 @@ $(addsuffix -verify,$(CRD_GEN_FILES)): bin/gen-crds-yaml_$(GOOS)_$(GOARCH)
 	diff -Naupr $(FILE:.$(GROUP_NAME).yaml=.yaml) <(bin/gen-crds-yaml_$(GOOS)_$(GOARCH) --crd $(CRD))
 
 gen-crds-clean:
-	rm -f $(CRD_GEN_FILES)
+	rm -f $(CRD_GEN_FILES:.$(GROUP_NAME).yaml=.yaml)
 
 
 # Code generation targets
