@@ -159,8 +159,8 @@ const (
 
 // Event types
 const (
-	EventNormal  = "Normal"
-	EventWarning = "Warning"
+	EventNormal  = core.EventTypeNormal
+	EventWarning = core.EventTypeWarning
 )
 
 func (ns *NodeStatus) UpdateNodeCondition(cType NodeConditionType,

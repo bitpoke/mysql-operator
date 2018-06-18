@@ -64,7 +64,8 @@ func (f *cFactory) SyncOrchestratorStatus(ctx context.Context) error {
 					r.Id, err,
 				)
 			}
-			f.rec.Event(f.cluster, "RecoveryAcked", "acked", fmt.Sprintf("Recovery with id %d was acked.", r.Id))
+			f.rec.Event(f.cluster, core.EventTypeNormal, "RecoveryAcked",
+				fmt.Sprintf("Recovery with id %d was acked.", r.Id))
 		}
 	}
 
@@ -211,19 +212,19 @@ func (f *cFactory) updateNodeCondition(host string, cType api.NodeConditionType,
 	switch cType {
 	case api.NodeConditionMaster:
 		if status == core.ConditionTrue {
-			f.rec.Event(pod, "PromoteMaster", "orc", "")
+			f.rec.Event(pod, core.EventTypeWarning, "PromoteMaster", "Promoted as master by orchestrator")
 		} else if status == core.ConditionFalse {
-			f.rec.Event(pod, "DemoteMaster", "orc", "")
+			f.rec.Event(pod, core.EventTypeWarning, "DemoteMaster", "Demoted as master by orchestrator")
 		}
 	case api.NodeConditionLagged:
 		if status == core.ConditionTrue {
-			f.rec.Event(pod, "LagDetected", "orc", "")
+			f.rec.Event(pod, core.EventTypeNormal, "LagDetected", "This node has lag. Lag was detected.")
 		}
 	case api.NodeConditionReplicating:
 		if status == core.ConditionTrue {
-			f.rec.Event(pod, "ReplicationRunning", "orc", "")
+			f.rec.Event(pod, core.EventTypeNormal, "ReplicationRunning", "Replication is running")
 		} else if status == core.ConditionFalse {
-			f.rec.Event(pod, "ReplicationStopped", "orc", "")
+			f.rec.Event(pod, core.EventTypeWarning, "ReplicationStopped", "Replication is stopped")
 		}
 	}
 }
