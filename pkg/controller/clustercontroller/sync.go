@@ -33,7 +33,7 @@ import (
 
 // Sync for add and update.
 func (c *Controller) Sync(ctx context.Context, cluster *api.MysqlCluster) error {
-	glog.Infof("sync cluster: %s", cluster.Name)
+	glog.Infof("Syncing cluster: %s", cluster.Name)
 	copyCluster := cluster.DeepCopy()
 	opt := options.GetOptions()
 

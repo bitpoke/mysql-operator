@@ -264,7 +264,7 @@ func (c *Controller) workerRecouncile(stopCh <-chan struct{}) {
 			if err != nil {
 				if k8errors.IsNotFound(err) {
 					// key was removed from map, don't reconcile.
-					glog.Infof("Removing issuer %q from reconcile queue", key)
+					glog.Infof("Cluster %q is not found!", key)
 					return nil
 				}
 				return fmt.Errorf("failed to get cluster: %s", err)

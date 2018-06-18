@@ -51,9 +51,6 @@ type job struct {
 }
 
 func (c *Controller) registerClusterInBackupCron(cluster *api.MysqlCluster) error {
-	glog.Infof("Register cluster into cronjob: %s, crontab: %s",
-		cluster.Name, cluster.Spec.BackupSchedule)
-
 	if len(cluster.Spec.BackupSchedule) == 0 {
 		return nil
 	}
@@ -62,6 +59,9 @@ func (c *Controller) registerClusterInBackupCron(cluster *api.MysqlCluster) erro
 	if err != nil {
 		return fmt.Errorf("failed to parse schedule: %s", err)
 	}
+
+	glog.V(2).Infof("Register cluster into cronjob: %s, crontab: %s",
+		cluster.Name, cluster.Spec.BackupSchedule)
 
 	lockJobRegister.Lock()
 	defer lockJobRegister.Unlock()
