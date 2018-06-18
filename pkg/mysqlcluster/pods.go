@@ -33,7 +33,7 @@ func (f *cFactory) updatePodLabels() error {
 		pod, err := getPodForHostname(f.client, f.namespace, f.getLabels(map[string]string{}), ns.Name)
 		if err != nil {
 			glog.Errorf("Failed to update pod labels: %s", err)
-			return err
+			continue
 		}
 
 		labels := pod.GetLabels()
@@ -48,7 +48,6 @@ func (f *cFactory) updatePodLabels() error {
 		glog.V(2).Infof("Inspecting pod: %s, label: %s, desired: %s", pod.Name, val, desiredVal)
 
 		if !exists || val != desiredVal {
-			labels["role"] = desiredVal
 			glog.Infof("Updating labels for Pod: %s", pod.Name)
 
 			meta := metav1.ObjectMeta{
@@ -57,13 +56,19 @@ func (f *cFactory) updatePodLabels() error {
 				OwnerReferences: pod.GetOwnerReferences(),
 				Namespace:       pod.GetNamespace(),
 			}
+
 			_, act, err := kcore.CreateOrPatchPod(f.client, meta,
 				func(in *core.Pod) *core.Pod {
-					in.Labels = labels
+					in.Labels["role"] = desiredVal
 					return in
 				})
+
+			if err != nil {
+				glog.Errorf("Error while updating pod label: %s", err)
+			}
+
 			glog.Infof("Pod %s was %s", pod.Name, getStatusFromKVerb(act))
-			return err
+
 		}
 	}
 

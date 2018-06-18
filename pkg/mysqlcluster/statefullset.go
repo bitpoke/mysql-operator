@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	kapps "github.com/appscode/kutil/apps/v1"
-	"github.com/golang/glog"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,7 +81,6 @@ func (f *cFactory) syncStatefulSet() (state string, err error) {
 	}
 
 	state = getStatusFromKVerb(act)
-	glog.V(3).Infof("SFS synced state: %s", state)
 	return
 }
 

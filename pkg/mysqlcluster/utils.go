@@ -118,6 +118,12 @@ func (f *cFactory) addNodesToService(serviceName string, hosts ...string) error 
 		pods = append(pods, pod)
 	}
 
+	if len(pods) == 0 {
+		// no need to create endpoints, because will fail without addresses
+		glog.V(3).Infof("Nothing to do for hosts: %v, pods not found!", hosts)
+		return nil
+	}
+
 	meta := metav1.ObjectMeta{
 		Name:            serviceName,
 		Labels:          f.getLabels(map[string]string{}),
