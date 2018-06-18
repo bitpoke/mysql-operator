@@ -38,7 +38,7 @@ func (c *Controller) Reconcile(ctx context.Context, cluster *api.MysqlCluster) e
 	// ensure that cluster will be reconciled
 	defer c.addClusterInReconcileQueue(cluster, reconcileTime)
 
-	glog.V(1).Infof("reconcile cluster: %s", cluster.Name)
+	glog.V(1).Infof("Reconciling cluster: %s", cluster.Name)
 	copyCluster := cluster.DeepCopy()
 	opt := options.GetOptions()
 

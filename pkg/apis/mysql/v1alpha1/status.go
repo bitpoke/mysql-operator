@@ -47,7 +47,7 @@ func (c *MysqlCluster) UpdateStatusCondition(condType ClusterConditionType,
 		if i, exist := c.condExists(condType); exist {
 			cond := c.Status.Conditions[i]
 			if cond.Status != newCondition.Status {
-				glog.V(4).Infof("Found status change for mysql cluster "+
+				glog.V(3).Infof("Found status change for mysql cluster "+
 					"%q condition %q: %q -> %q; setting lastTransitionTime to %v",
 					c.Name, condType, cond.Status, status, t)
 				newCondition.LastTransitionTime = metav1.NewTime(t)
