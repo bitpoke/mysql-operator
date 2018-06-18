@@ -31,6 +31,7 @@ import (
 	"k8s.io/client-go/tools/reference"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
 
 func ensureProbe(in *core.Probe, ids, ts, ps int32, handler core.Handler) *core.Probe {
@@ -185,4 +186,15 @@ func (f *cFactory) getMasterHost() string {
 	}
 
 	return masterHost
+}
+
+// getRecoveryTextMsg returns a string human readable for cluster recoveries
+func getRecoveryTextMsg(acks []orc.TopologyRecovery) string {
+	text := ""
+	for _, a := range acks {
+		text += fmt.Sprintf(" {id: %d, uid: %s, success: %t, time: %s}",
+			a.Id, a.UID, a.IsSuccessful, a.RecoveryStartTimestamp)
+	}
+
+	return fmt.Sprintf("[%s]", text)
 }

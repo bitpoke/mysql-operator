@@ -125,8 +125,9 @@ func (f *cFactory) updateStatusForRecoveries(recoveries []orc.TopologyRecovery) 
 	}
 
 	if len(unack) > 0 {
+		msg := getRecoveryTextMsg(unack)
 		f.cluster.UpdateStatusCondition(api.ClusterConditionFailoverAck,
-			core.ConditionTrue, "pendingFailoverAckExists", fmt.Sprintf("%v", unack))
+			core.ConditionTrue, "pendingFailoverAckExists", msg)
 	} else {
 		f.cluster.UpdateStatusCondition(api.ClusterConditionFailoverAck,
 			core.ConditionFalse, "noPendingFailoverAckExists", "no pending ack")
@@ -147,6 +148,7 @@ func (f *cFactory) registerNodesInOrc() error {
 }
 
 func (f *cFactory) getRecoveriesToAck(recoveries []orc.TopologyRecovery) (toAck []orc.TopologyRecovery) {
+	// TODO: check for recoveries that need acknowledge, by excluding already acked recoveries
 	if len(recoveries) == 0 {
 		return
 	}
