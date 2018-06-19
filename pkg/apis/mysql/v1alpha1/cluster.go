@@ -287,16 +287,12 @@ func (ql *QueryLimits) GetOptions() []string {
 		"--busy-time", fmt.Sprintf("%d", ql.MaxQueryTime),
 	}
 
-	if ql.KillMode != nil {
-		switch *ql.KillMode {
-		case "connection":
-			options = append(options, "--kill")
-		case "query":
-			options = append(options, "--kill-query")
-		default:
-			options = append(options, "--kill-query")
-		}
-	} else {
+	switch ql.KillMode {
+	case "connection":
+		options = append(options, "--kill")
+	case "query":
+		options = append(options, "--kill-query")
+	default:
 		options = append(options, "--kill-query")
 	}
 
@@ -304,8 +300,8 @@ func (ql *QueryLimits) GetOptions() []string {
 		options = append(options, "--idle-time", fmt.Sprintf("%d", *ql.MaxIdleTime))
 	}
 
-	if ql.Kill != nil {
-		options = append(options, "--victims", *ql.Kill)
+	if len(ql.Kill) != 0 {
+		options = append(options, "--victims", ql.Kill)
 	}
 
 	if len(ql.IgnoreDb) > 0 {
