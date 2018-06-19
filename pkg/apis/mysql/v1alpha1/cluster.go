@@ -280,26 +280,32 @@ func (c *MysqlCluster) GetLabels() map[string]string {
 func (ql *QueryLimits) GetOptions() []string {
 	options := []string{
 		"--print",
+		// The purpose of this is to give blocked queries a chance to execute,
+		// so we don’t kill a query that’s blocking a bunch of others, and then
+		// kill the others immediately afterwards.
+		"--wait-after-kill=1",
+		"--busy-time", fmt.Sprintf("%d", ql.MaxQueryTime),
 	}
+
+	if ql.KillMode != nil {
+		switch *ql.KillMode {
+		case "connection":
+			options = append(options, "--kill")
+		case "query":
+			options = append(options, "--kill-query")
+		default:
+			options = append(options, "--kill-query")
+		}
+	} else {
+		options = append(options, "--kill-query")
+	}
+
 	if ql.MaxIdleTime != nil {
 		options = append(options, "--idle-time", fmt.Sprintf("%d", *ql.MaxIdleTime))
 	}
 
-	if ql.MaxQueryTime != nil {
-		options = append(options, "--busy-time", fmt.Sprintf("%d", *ql.MaxQueryTime))
-	}
-
 	if ql.Kill != nil {
 		options = append(options, "--victims", *ql.Kill)
-	}
-
-	switch ql.KillMode {
-	case "connection":
-		options = append(options, "--kill")
-	case "query":
-		options = append(options, "--kill-query")
-	default:
-		options = append(options, "--kill-query")
 	}
 
 	if len(ql.IgnoreDb) > 0 {

@@ -63,27 +63,30 @@ spec:
                   type: object
                 resources: {}
             queryLimits:
+              description: 'QueryLimits represents the pt-kill parameters, more info
+                can be found here: https://www.percona.com/doc/percona-toolkit/LATEST/pt-kill.html'
               properties:
                 ignoreCommands:
-                  description: IgnoreCommands
+                  description: IgnoreCommands the list of commands to be ignored.
                   items:
                     type: string
                   type: array
                 ignoreDb:
-                  description: IgnoreDb is the lost of tatabase that are ignored by
-                    pt-kill (--ignore-db flag)
+                  description: IgnoreDb is the list of database that are ignored by
+                    pt-kill (--ignore-db flag).
                   items:
                     type: string
                   type: array
                 ignoreUser:
-                  description: IgnoreUser
+                  description: IgnoreUser the list of users to be ignored.
                   items:
                     type: string
                   type: array
                 kill:
                   description: Kill represents the mode of which the matching queries
                     in each class will be killed, (the --victims flag). Can be one
-                    of oldest|all|all-but-oldest
+                    of oldest|all|all-but-oldest. By default, the matching query with
+                    the highest Time value is killed (the oldest query.
                   type: string
                 killMode:
                   description: 'KillMode can be: `connection` or `query`, when it''s
@@ -92,15 +95,18 @@ spec:
                     that the query is killed (using --kill-query flag)'
                   type: string
                 maxIdleTime:
-                  description: MaxIdleTime match queries that have benn idle for longer
-                    then this time. (--idle-time flag)
+                  description: MaxIdleTime match queries that have been idle for longer
+                    then this time, in seconds. (--idle-time flag)
                   format: int32
                   type: integer
                 maxQueryTime:
                   description: MaxQueryTime match queries that have been running for
-                    longer then this time. (--busy-time flag)
+                    longer then this time, in seconds. This field is required. (--busy-time
+                    flag)
                   format: int32
                   type: integer
+              required:
+              - maxQueryTime
             replicas:
               description: The number of pods. This updates replicas filed Defaults
                 to 0

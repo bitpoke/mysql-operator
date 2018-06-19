@@ -390,7 +390,6 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 	if f.cluster.Spec.QueryLimits != nil {
 		command := []string{
 			"pt-kill",
-			"--wait-after-kill=1",
 			// host need to be specified, see pt-kill bug: https://jira.percona.com/browse/PT-1223
 			"--host=127.0.0.1",
 			fmt.Sprintf("--defaults-file=%s/client.cnf", ConfVolumeMountPath),

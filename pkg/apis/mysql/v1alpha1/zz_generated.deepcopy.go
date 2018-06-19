@@ -393,17 +393,17 @@ func (in *QueryLimits) DeepCopyInto(out *QueryLimits) {
 			**out = **in
 		}
 	}
-	if in.MaxQueryTime != nil {
-		in, out := &in.MaxQueryTime, &out.MaxQueryTime
+	if in.Kill != nil {
+		in, out := &in.Kill, &out.Kill
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(string)
 			**out = **in
 		}
 	}
-	if in.Kill != nil {
-		in, out := &in.Kill, &out.Kill
+	if in.KillMode != nil {
+		in, out := &in.KillMode, &out.KillMode
 		if *in == nil {
 			*out = nil
 		} else {

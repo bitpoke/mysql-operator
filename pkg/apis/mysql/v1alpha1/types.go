@@ -165,19 +165,22 @@ type VolumeSpec struct {
 	core.PersistentVolumeClaimSpec `json:",inline"`
 }
 
+// QueryLimits represents the pt-kill parameters, more info can be found
+// here: https://www.percona.com/doc/percona-toolkit/LATEST/pt-kill.html
 type QueryLimits struct {
-	// MaxIdleTime match queries that have benn idle for longer then this time.
-	// (--idle-time flag)
+	// MaxIdleTime match queries that have been idle for longer then this time,
+	// in seconds. (--idle-time flag)
 	// + optional
 	MaxIdleTime *int `json:"maxIdleTime,omitempty"`
 
 	// MaxQueryTime match queries that have been running for longer then this
-	// time. (--busy-time flag)
-	// +optional
-	MaxQueryTime *int `json:"maxQueryTime,omitempty"`
+	// time, in seconds. This field is required. (--busy-time flag)
+	MaxQueryTime int `json:"maxQueryTime"`
 
 	// Kill represents the mode of which the matching queries in each class will
-	// be killed, (the --victims flag). Can be one of oldest|all|all-but-oldest
+	// be killed, (the --victims flag). Can be one of oldest|all|all-but-oldest.
+	// By default, the matching query with the highest Time value is killed (the
+	// oldest query.
 	// +optional
 	Kill *string `json:"kill,omitempty"`
 
@@ -185,17 +188,20 @@ type QueryLimits struct {
 	// means that when a query is matched the connection is killed (using --kill
 	// flag) and if it's used `query` means that the query is killed (using
 	// --kill-query flag)
-	KillMode string `json:"killMode,omitempty"`
+	// +optional
+	KillMode *string `json:"killMode,omitempty"`
 
-	// IgnoreDb is the lost of tatabase that are ignored by pt-kill (--ignore-db
-	// flag)
+	// IgnoreDb is the list of database that are ignored by pt-kill (--ignore-db
+	// flag).
 	// +optional
 	IgnoreDb []string `json:"ignoreDb,omitempty"`
 
-	// IgnoreCommands
+	// IgnoreCommands the list of commands to be ignored.
+	// +optional
 	IgnoreCommand []string `json:"ignoreCommands,omitempty"`
 
-	//IgnoreUser
+	// IgnoreUser the list of users to be ignored.
+	// +optional
 	IgnoreUser []string `json:"ignoreUser,omitempty"`
 }
 
