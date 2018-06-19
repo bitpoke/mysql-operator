@@ -292,11 +292,6 @@ func (c *Controller) getNextWorkItem(key string) (*api.MysqlCluster, error) {
 		return nil, fmt.Errorf("invalid resource key: %s", key)
 	}
 
-	if namespace != c.namespace {
-		return nil, fmt.Errorf("received object with namespace '%s' that is not in working namespace '%s`",
-			namespace, c.namespace)
-	}
-
 	mysqlCluster, err := c.clusterLister.MysqlClusters(namespace).Get(name)
 
 	if err != nil {
