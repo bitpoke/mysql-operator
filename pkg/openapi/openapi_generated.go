@@ -680,24 +680,25 @@ func schema_pkg_apis_mysql_v1alpha1_QueryLimits(ref common.ReferenceCallback) co
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
+				Description: "QueryLimits represents the pt-kill parameters, more info can be found here: https://www.percona.com/doc/percona-toolkit/LATEST/pt-kill.html",
 				Properties: map[string]spec.Schema{
 					"maxIdleTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxIdleTime match queries that have benn idle for longer then this time. (--idle-time flag)",
+							Description: "MaxIdleTime match queries that have been idle for longer then this time, in seconds. (--idle-time flag)",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
 					"maxQueryTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxQueryTime match queries that have been running for longer then this time. (--busy-time flag)",
+							Description: "MaxQueryTime match queries that have been running for longer then this time, in seconds. This field is required. (--busy-time flag)",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
 					"kill": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Kill represents the mode of which the matching queries in each class will be killed, (the --victims flag). Can be one of oldest|all|all-but-oldest",
+							Description: "Kill represents the mode of which the matching queries in each class will be killed, (the --victims flag). Can be one of oldest|all|all-but-oldest. By default, the matching query with the highest Time value is killed (the oldest query.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -711,7 +712,7 @@ func schema_pkg_apis_mysql_v1alpha1_QueryLimits(ref common.ReferenceCallback) co
 					},
 					"ignoreDb": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IgnoreDb is the lost of tatabase that are ignored by pt-kill (--ignore-db flag)",
+							Description: "IgnoreDb is the list of database that are ignored by pt-kill (--ignore-db flag).",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -725,7 +726,7 @@ func schema_pkg_apis_mysql_v1alpha1_QueryLimits(ref common.ReferenceCallback) co
 					},
 					"ignoreCommands": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IgnoreCommands",
+							Description: "IgnoreCommands the list of commands to be ignored.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -739,7 +740,7 @@ func schema_pkg_apis_mysql_v1alpha1_QueryLimits(ref common.ReferenceCallback) co
 					},
 					"ignoreUser": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IgnoreUser",
+							Description: "IgnoreUser the list of users to be ignored.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -752,6 +753,7 @@ func schema_pkg_apis_mysql_v1alpha1_QueryLimits(ref common.ReferenceCallback) co
 						},
 					},
 				},
+				Required: []string{"maxQueryTime"},
 			},
 		},
 		Dependencies: []string{},
