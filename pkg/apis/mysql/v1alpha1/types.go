@@ -182,14 +182,14 @@ type QueryLimits struct {
 	// By default, the matching query with the highest Time value is killed (the
 	// oldest query.
 	// +optional
-	Kill *string `json:"kill,omitempty"`
+	Kill string `json:"kill,omitempty"`
 
 	// KillMode can be: `connection` or `query`, when it's used `connection`
 	// means that when a query is matched the connection is killed (using --kill
 	// flag) and if it's used `query` means that the query is killed (using
 	// --kill-query flag)
 	// +optional
-	KillMode *string `json:"killMode,omitempty"`
+	KillMode string `json:"killMode,omitempty"`
 
 	// IgnoreDb is the list of database that are ignored by pt-kill (--ignore-db
 	// flag).
