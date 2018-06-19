@@ -25,7 +25,7 @@ import (
 	"os/exec"
 
 	"github.com/golang/glog"
-	tb "github.com/presslabs/mysql-operator/cmd/mysql-helper/util"
+	"github.com/presslabs/mysql-operator/cmd/mysql-helper/util"
 )
 
 type server struct {
@@ -36,14 +36,14 @@ func NewServer(stop <-chan struct{}) *server {
 	mux := http.NewServeMux()
 	srv := &server{
 		Server: http.Server{
-			Addr:    fmt.Sprintf(":%d", tb.ServerPort),
+			Addr:    fmt.Sprintf(":%d", util.ServerPort),
 			Handler: mux,
 		},
 	}
 
 	// Add handle functions
-	mux.HandleFunc(tb.ServerProbePath, srv.healthHandle)
-	mux.Handle(tb.ServerBackupPath, tb.MaxClients(http.HandlerFunc(srv.serveBackupHandle), 1))
+	mux.HandleFunc(util.ServerProbeEndpoint, srv.healthHandler)
+	mux.Handle(util.ServerBackupEndpoint, util.MaxClients(http.HandlerFunc(srv.backupHandler), 1))
 
 	// Shutdown gracefully the http server
 	go func() {
@@ -56,12 +56,12 @@ func NewServer(stop <-chan struct{}) *server {
 	return srv
 }
 
-func (s *server) healthHandle(w http.ResponseWriter, r *http.Request) {
+func (s *server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
 
-func (s *server) serveBackupHandle(w http.ResponseWriter, r *http.Request) {
+func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !s.isAuthenticated(r) {
 		http.Error(w, "Not authenticated!", http.StatusForbidden)
@@ -78,8 +78,8 @@ func (s *server) serveBackupHandle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 
 	xtrabackup := exec.Command("xtrabackup", "--backup", "--slave-info", "--stream=xbstream",
-		"--host=127.0.0.1", fmt.Sprintf("--user=%s", tb.GetReplUser()),
-		fmt.Sprintf("--password=%s", tb.GetReplPass()))
+		"--host=127.0.0.1", fmt.Sprintf("--user=%s", util.GetReplUser()),
+		fmt.Sprintf("--password=%s", util.GetReplPass()))
 
 	xtrabackup.Stderr = os.Stderr
 
@@ -115,5 +115,5 @@ func (s *server) serveBackupHandle(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) isAuthenticated(r *http.Request) bool {
 	user, pass, ok := r.BasicAuth()
-	return ok && user == tb.GetBackupUser() && pass == tb.GetBackupPass()
+	return ok && user == util.GetBackupUser() && pass == util.GetBackupPass()
 }
