@@ -150,7 +150,7 @@ func cloneFromBucket(initBucket string) error {
 func cloneFromSource(host string) error {
 	glog.Infof("Cloning from node: %s", host)
 
-	backupBody, err := tb.RequestABackup(host, tb.ServerBackupPath)
+	backupBody, err := tb.RequestABackup(host, tb.ServerBackupEndpoint)
 	if err != nil {
 		return fmt.Errorf("fail to get backup: %s", err)
 	}

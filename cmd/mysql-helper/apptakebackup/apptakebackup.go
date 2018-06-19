@@ -24,7 +24,7 @@ import (
 
 	"github.com/golang/glog"
 
-	tb "github.com/presslabs/mysql-operator/cmd/mysql-helper/util"
+	"github.com/presslabs/mysql-operator/cmd/mysql-helper/util"
 )
 
 const (
@@ -39,7 +39,7 @@ func RunTakeBackupCommand(stopCh <-chan struct{}, srcHost, destBucket string) er
 
 func pushBackupFromTo(srcHost, destBucket string) error {
 
-	backupBody, err := tb.RequestABackup(srcHost, tb.ServerBackupPath)
+	backupBody, err := util.RequestABackup(srcHost, util.ServerBackupEndpoint)
 	if err != nil {
 		return fmt.Errorf("getting backup: %s", err)
 	}
@@ -47,7 +47,7 @@ func pushBackupFromTo(srcHost, destBucket string) error {
 	gzip := exec.Command("gzip", "-c")
 
 	rclone := exec.Command("rclone",
-		fmt.Sprintf("--config=%s", tb.RcloneConfigFile), "rcat", destBucket)
+		fmt.Sprintf("--config=%s", util.RcloneConfigFile), "rcat", destBucket)
 
 	gzip.Stdin = backupBody
 	gzip.Stderr = os.Stderr

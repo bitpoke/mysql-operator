@@ -70,9 +70,9 @@ var (
 	NameOfStatefulSet = api.StatefulSet
 
 	// http server config
-	ServerPort       = mysqlcluster.HelperServerPort
-	ServerProbePath  = mysqlcluster.HelperServerProbePath
-	ServerBackupPath = "/xtbackup"
+	ServerPort           = mysqlcluster.HelperServerPort
+	ServerProbeEndpoint  = mysqlcluster.HelperServerProbePath
+	ServerBackupEndpoint = "/xbackup"
 )
 
 const (
@@ -309,10 +309,10 @@ func MaxClients(h http.Handler, n int) http.Handler {
 	})
 }
 
-func RequestABackup(host, path string) (io.Reader, error) {
-	glog.Infof("Initiate a backup from: %s path: %s", host, path)
+func RequestABackup(host, endpoint string) (io.Reader, error) {
+	glog.Infof("Initiate a backup from: %s endpoint: %s", host, endpoint)
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d%s", host, ServerPort, path), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d%s", host, ServerPort, endpoint), nil)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create request: %s", err)
 	}
