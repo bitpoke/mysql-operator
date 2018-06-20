@@ -161,7 +161,7 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 
 	for i := 0; i < reconcileWorkers; i++ {
 		c.workerWg.Add(1)
-		go wait.Until(func() { c.workerRecouncile(stopCh) }, workerPeriodTime, stopCh)
+		go wait.Until(func() { c.workerReconcile(stopCh) }, workerPeriodTime, stopCh)
 	}
 
 	<-stopCh
@@ -231,13 +231,13 @@ func (c *Controller) workerController(stopCh <-chan struct{}) {
 	}
 }
 
-func (c *Controller) workerRecouncile(stopCh <-chan struct{}) {
+func (c *Controller) workerReconcile(stopCh <-chan struct{}) {
 	defer c.workerWg.Done()
 	ctx, cancel := context.WithCancel(context.Background())
 	ctx = util.ContextWithStopCh(ctx, stopCh)
 	defer cancel()
 
-	glog.V(2).Info("Starting recouncile worker.")
+	glog.V(2).Info("Starting reconcile worker.")
 
 	for {
 		obj, shutdown := c.reconcileQueue.Get()
@@ -254,7 +254,7 @@ func (c *Controller) workerRecouncile(stopCh <-chan struct{}) {
 				return nil
 			}
 
-			if ok1, ok2 := c.clustersSync.Load(key); !ok1.(bool) && ok2 {
+			if value, exists := c.clustersSync.Load(key); exists && !value.(bool) {
 				// key is removed from map, don't execute reconciliation
 				return nil
 			}
@@ -264,7 +264,8 @@ func (c *Controller) workerRecouncile(stopCh <-chan struct{}) {
 			if err != nil {
 				if k8errors.IsNotFound(err) {
 					// key was removed from map, don't reconcile.
-					glog.Infof("Cluster %q is not found!", key)
+					glog.Infof("Removing issuer %q from reconcile queue", key)
+					c.removeClusterFromReconciliation(key)
 					return nil
 				}
 				return fmt.Errorf("failed to get cluster: %s", err)
