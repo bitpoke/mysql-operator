@@ -31,7 +31,6 @@ import (
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiext_clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apiserver/pkg/util/logs"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/util/kube"
@@ -112,8 +111,6 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 // This function is called on each Ginkgo node in parallel mode.
 func RunE2ETests(t *testing.T) {
 	runtimeutils.ReallyCrash = true
-	logs.InitLogs()
-	defer logs.FlushLogs()
 
 	gomega.RegisterFailHandler(ginkgowrapper.Fail)
 	// Disable skipped tests unless they are explicitly requested.
