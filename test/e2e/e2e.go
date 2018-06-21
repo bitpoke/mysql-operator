@@ -36,6 +36,8 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/util/kube"
 	"github.com/presslabs/mysql-operator/test/e2e/framework"
 	"github.com/presslabs/mysql-operator/test/e2e/framework/ginkgowrapper"
+
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 const (
