@@ -103,87 +103,49 @@ pipeline:
       branch: master
       event: push
 
-  # publish-mysql-helper:
-  #   group: publish
-  #   image: plugins/docker
-  #   mirror: https://mirror.gcr.io
-  #   registry: gcr.io
-  #   repo: gcr.io/pl-infra/mysql-helper
-  #   dockerfile: hack/docker/mysql-helper/Dockerfile
-  #   username: _json_key
-  #   tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
-  #   force_tag: true
-  #   build_args:
-  #     - release="${DRONE_COMMIT_SHA:0:7}"
-  #   secrets:
-  #     - source: GOOGLE_CREDENTIALS
-  #       target: DOCKER_PASSWORD
-  #   when:
-  #     event: push
 
-#  e2e-tests:
-#    image: gcr.io/pl-infra/kluster-mysql-helper:latest
-#    pull: true
-#    secrets:
-#      - GOOGLE_CREDENTIALS
-#      - GOOGLE_PROJECT_ID
-#      - TITANIUM_TEST_GS_CREDENTIALS
-#    environment:
-#      - TITANIUM_IMAGE_TAG=${DRONE_COMMIT_SHA:0:7}
-#      - OPERATOR_IMAGE=gcr.io/pl-infra/mysql-operator:${DRONE_COMMIT_SHA:0:7}
-#      - KUBECONFIG=/go/.kube/config
-#    commands:
-#      - sleep 1
-
+# end to end testing
 
   start-kubernetes:
-    image: mydind
-    privileged: true
+    image: quay.io/presslabs/kluster-toolbox
     secrets:
       - GOOGLE_CREDENTIALS
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
     environment:
-      - NUM_NODES=1
-      - KUBECTL_DIR=/go/kubeadm-dind-cluster
+      - CLUSTER_NAME=mysql-op-x${DRONE_COMMIT_SHA:0:7}
+      - KUBECONFIG=/go/.kube/config
+      - HELM_HOME=/go/.helm/
     commands:
-      # register container into kubeadm-dind-net network
-      # - docker network connect kubeadm-dind-net $HOSTNAME
-      - ./hack/e2e-tests/dind-cluster-v1.10.sh up
-      - export PATH=/go/kubeadm-dind-cluster:$PATH
-      - kubectl get nodes
-      - sleep 60
+      - setup-credentials-helper.sh
+      - gcloud container clusters create $CLUSTER_NAME
+          --zone europe-west3-b --project testing-reactor
+          --preemptible --cluster-version 1.10.4-gke.2
+      # initialize cluster
+      - kubectl create serviceaccount -n kube-system tiller
+      - kubectl create clusterrolebinding tiller-crule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+      - helm init --service-account tiller
 
   e2e-tests:
     image: e2e-tests
     environment:
       - APP_VERSION=${DRONE_TAG}
+      - KUBECONFIG=/go/.kube/config
+      - HELM_HOME=/go/.helm/
+      - CLUSTER_NAME=mysql-op-x${DRONE_COMMIT_SHA:0:7}
     commands:
-      # register container into kubeadm-dind-net network
-      - sleep 60
-      #- docker network connect kubeadm-dind-net $HOSTNAME
-      - export PATH=/go/kubeadm-dind-cluster:$PATH
-
-      - helm init
-      - go test ./test/e2e -v --kubernetes-config /go/.kubeadm-dind-cluster --kubernetes-context dind
+      - go test ./test/e2e -v --kubernetes-config /go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
+            --operator-image quay.io/presslabs/mysql-operator:latest
+            --helper-image quay.io/presslabs/mysql-helper:latest
 
   stop-kubernetes:
-    image: mydind
-    privileged: true
+    image: quay.io/presslabs/kluster-toolbox
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
-      - NUM_NODES=1
-      - KUBECTL_DIR=/go/.kubeadm-dind-cluster
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
+      - CLUSTER_NAME=mysql-op-x${DRONE_COMMIT_SHA:0:7}
+      - KUBECONFIG=/go/.kube/config
     commands:
-      - ./hack/e2e-tests/dind-cluster-v1.10.sh down
+      - setup-credentials-helper.sh
+      - gcloud container clusters delete $CLUSTER_NAME --quiet --zone europe-west3-b --project testing-reactor
+     
     when:
       status: [ success, failure ]
