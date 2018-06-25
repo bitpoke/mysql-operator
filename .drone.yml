@@ -12,7 +12,7 @@ pipeline:
       - make build
       - make install-docker
     when:
-      event: push
+      event: [push, pull_request]
 
   build:
     image: golang:1.9
@@ -106,6 +106,22 @@ pipeline:
 
 # end to end testing
 
+  publish-helper:
+    group: publish
+    image: plugins/docker
+    registry: quay.io
+    repo: quay.io/presslabs/mysql-e2e-tests
+    username: presslabs+drone
+    dockerfile: hack/docker/mysql-e2e-tests/Dockerfile
+    context: hack/docker/mysql-e2e-tests
+    tags: ["${DRONE_BRANCH/master/latest}"]
+    secrets:
+      - source: QUAY_TOKEN
+        target: DOCKER_PASSWORD
+    when:
+      event: push
+
+
   start-kubernetes:
     image: quay.io/presslabs/kluster-toolbox
     secrets:
@@ -123,9 +139,13 @@ pipeline:
       - kubectl create serviceaccount -n kube-system tiller
       - kubectl create clusterrolebinding tiller-crule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
       - helm init --service-account tiller
+    when:
+      # branch: master
+      event: push
 
   e2e-tests:
-    image: e2e-tests
+    # this image is build when running make images
+    image: quay.io/presslabs/mysql-e2e-tests:build
     environment:
       - APP_VERSION=${DRONE_TAG}
       - KUBECONFIG=/go/.kube/config
@@ -133,8 +153,11 @@ pipeline:
       - CLUSTER_NAME=mysql-op-x${DRONE_COMMIT_SHA:0:7}
     commands:
       - go test ./test/e2e -v --kubernetes-config /go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
-            --operator-image quay.io/presslabs/mysql-operator:latest
-            --helper-image quay.io/presslabs/mysql-helper:latest
+            --operator-image quay.io/presslabs/mysql-operator:${DRONE_BRANCH/master/latest}
+            --helper-image quay.io/presslabs/mysql-helper:${DRONE_BRANCH/master/latest}
+    when:
+      # branch: master
+      event: push
 
   stop-kubernetes:
     image: quay.io/presslabs/kluster-toolbox
@@ -149,3 +172,6 @@ pipeline:
      
     when:
       status: [ success, failure ]
+      # branch: master
+      event: push
+
