@@ -46,17 +46,11 @@ const (
 )
 
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
-	ginkgo.By("Create operator namespace")
-	// client, _, err := framework.KubernetesClients()
-	// gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	// _, err = framework.CreateTestingNS(operatorNamespace, client, map[string]string{})
-	// gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
+	// ginkgo node 1
 	ginkgo.By("Install operator")
 	HelmInstallChart(releaseName)
 
 	waitForCRDs()
-	// ginkgo node 1
 	return nil
 
 }, func(data []byte) {
