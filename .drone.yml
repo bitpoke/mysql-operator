@@ -12,7 +12,16 @@ pipeline:
       - make build
       - make install-docker
     when:
-      event: [push, pull_request]
+      event: push
+
+  build:
+    image: golang:1.9
+    environment:
+      - APP_VERSION=${DRONE_BRANCH/master/latest}
+    commands:
+      - make full-test
+    when:
+      event: pull_request
 
   build:
     image: golang:1.9
@@ -106,7 +115,7 @@ pipeline:
 
 # end to end testing
 
-  publish-helper:
+  publish-e2e-image:
     group: publish
     image: plugins/docker
     registry: quay.io
@@ -114,11 +123,12 @@ pipeline:
     username: presslabs+drone
     dockerfile: hack/docker/mysql-e2e-tests/Dockerfile
     context: hack/docker/mysql-e2e-tests
-    tags: ["${DRONE_BRANCH/master/latest}"]
+    tags: ["${DRONE_BRANCH}", "latest"]
     secrets:
       - source: QUAY_TOKEN
         target: DOCKER_PASSWORD
     when:
+      # branch: master
       event: push
 
 
@@ -145,7 +155,7 @@ pipeline:
 
   e2e-tests:
     # this image is build when running make images
-    image: quay.io/presslabs/mysql-e2e-tests:build
+    image: quay.io/presslabs/mysql-e2e-tests:latest
     environment:
       - APP_VERSION=${DRONE_TAG}
       - KUBECONFIG=/go/.kube/config
