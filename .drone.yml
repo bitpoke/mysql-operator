@@ -128,7 +128,7 @@ pipeline:
       - source: QUAY_TOKEN
         target: DOCKER_PASSWORD
     when:
-      # branch: master
+      branch: master
       event: push
 
 
@@ -148,13 +148,14 @@ pipeline:
       # initialize cluster
       - kubectl create serviceaccount -n kube-system tiller
       - kubectl create clusterrolebinding tiller-crule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-      - helm init --service-account tiller
+      - helm init --service-account tiller --wait
+      - helm repo add presslabs https://presslabs.github.io/charts
+      - helm dependency update hack/charts/mysql-operator
     when:
       # branch: master
       event: push
 
   e2e-tests:
-    # this image is build when running make images
     image: quay.io/presslabs/mysql-e2e-tests:latest
     environment:
       - APP_VERSION=${DRONE_TAG}
