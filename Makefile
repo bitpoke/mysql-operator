@@ -31,7 +31,7 @@ CMDS     := $(shell find ./cmd/ -maxdepth 1 -type d -exec basename {} \; | grep 
 BIN_CMDS := $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
 DOCKER_BIN_CMDS := $(patsubst %, $(HACK_DIR)/docker/%/%, $(CMDS))
 
-DOCKER_IMAGES := mysql-operator mysql-helper
+DOCKER_IMAGES := mysql-operator mysql-helper mysql-e2e-tests
 
 .DEFAULT_GOAL := bin/mysql-operator_$(GOOS)_$(GOARCH)
 
@@ -84,9 +84,10 @@ clean:
 ######################
 .PHONY: install-docker
 install-docker : $(patsubst %, bin/%_linux_amd64, $(CMDS))
-	set -e;
+	set -e; \
 		for cmd in $(DOCKER_IMAGES); do \
-			install -m 755 bin/$${cmd}_linux_amd64 $(HACK_DIR)/docker/$${cmd}/$${cmd} ; \
+			bin_file=bin/$${cmd}_linux_amd64; \
+			[ -f $${bin_file} ] && install -m 755 $${bin_file} $(HACK_DIR)/docker/$${cmd}/$${cmd} || true ; \
 		done
 
 .PHONY: images
