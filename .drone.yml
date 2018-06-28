@@ -5,6 +5,7 @@ workspace:
 pipeline:
   build:
     image: golang:1.9
+    group: build
     environment:
       - APP_VERSION=${DRONE_BRANCH/master/latest}
     commands:
@@ -16,6 +17,7 @@ pipeline:
 
   build:
     image: golang:1.9
+    group: build
     environment:
       - APP_VERSION=${DRONE_BRANCH/master/latest}
     commands:
@@ -25,6 +27,7 @@ pipeline:
 
   build:
     image: golang:1.9
+    group: build
     environment:
       - APP_VERSION=${DRONE_TAG}
     commands:
@@ -134,17 +137,18 @@ pipeline:
 
   start-kubernetes:
     image: quay.io/presslabs/kluster-toolbox
+    group: build
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
-      - CLUSTER_NAME=mysql-op-x${DRONE_COMMIT_SHA:0:7}
+      - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
       - KUBECONFIG=/go/.kube/config
       - HELM_HOME=/go/.helm/
     commands:
       - setup-credentials-helper.sh
       - gcloud container clusters create $CLUSTER_NAME
           --zone europe-west3-b --project testing-reactor
-          --preemptible --cluster-version 1.10.4-gke.2
+          --preemptible --cluster-version 1.10
       # initialize cluster
       - kubectl create serviceaccount -n kube-system tiller
       - kubectl create clusterrolebinding tiller-crule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
@@ -161,7 +165,7 @@ pipeline:
       - APP_VERSION=${DRONE_TAG}
       - KUBECONFIG=/go/.kube/config
       - HELM_HOME=/go/.helm/
-      - CLUSTER_NAME=mysql-op-x${DRONE_COMMIT_SHA:0:7}
+      - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
     commands:
       - go test ./test/e2e -v --kubernetes-config /go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
             --operator-image quay.io/presslabs/mysql-operator:${DRONE_BRANCH/master/latest}

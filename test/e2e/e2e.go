@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	kutil_pf "github.com/appscode/kutil/tools/portforward"
 	"github.com/golang/glog"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
@@ -31,6 +32,7 @@ import (
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiext_clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
+	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/util/kube"
@@ -43,28 +45,25 @@ import (
 const (
 	operatorNamespace = "mysql-operator"
 	releaseName       = "operator"
+
+	orchestratorPort = 3000
 )
+
+var orcTunnel *kutil_pf.Tunnel
 
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	// ginkgo node 1
 	ginkgo.By("Install operator")
 	HelmInstallChart(releaseName)
 
-	waitForCRDs()
-	return nil
-
-}, func(data []byte) {
-	// all other nodes
-})
-
-// wait for crds to be ready, crds are installed by operator
-func waitForCRDs() {
 	kubeCfg, err := framework.LoadConfig()
 	gomega.Expect(err).To(gomega.Succeed())
 
 	crdcl, err := apiext_clientset.NewForConfig(kubeCfg)
 	gomega.Expect(err).To(gomega.Succeed())
 
+	// Wait for CRDs to be ready
+	ginkgo.By("Wait for CRDs")
 	crds := []*apiext.CustomResourceDefinition{
 		api.ResourceMysqlClusterCRD,
 		api.ResourceMysqlBackupCRD,
@@ -74,7 +73,27 @@ func waitForCRDs() {
 			return kube.WaitForCRD(crdcl, crd)
 		}, 30*time.Second, 2*time.Second).Should(gomega.Succeed())
 	}
-}
+
+	// Create a tunnel, port-forward orchestrator port to local port
+	ginkgo.By("Port-forward orchestrator")
+
+	client := core.NewForConfigOrDie(kubeCfg).RESTClient()
+	orcTunnel = kutil_pf.NewTunnel(client, kubeCfg, operatorNamespace,
+		fmt.Sprintf("%s-orchestrator-0", releaseName),
+		orchestratorPort,
+	)
+	if err := orcTunnel.ForwardPort(); err != nil {
+		ginkgo.Fail(fmt.Sprintf("Fail to set port forwarding to orchestrator: %s", err))
+	}
+
+	// set orchestrator port to chossen port by tunnel
+	framework.OrchestratorPort = orcTunnel.Local
+
+	return nil
+
+}, func(data []byte) {
+	// all other nodes
+})
 
 // Similar to SynchornizedBeforeSuite, we want to run some operations only once (such as collecting cluster logs).
 // Here, the order of functions is reversed; first, the function which runs everywhere,
@@ -83,6 +102,9 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	// Run on all Ginkgo nodes
 	framework.Logf("Running AfterSuite actions on all node")
 	framework.RunCleanupActions()
+
+	ginkgo.By("Stop port-forwarding orchestrator")
+	orcTunnel.Close()
 
 	ginkgo.By("Remove operator release")
 	HelmDeleteRelease(releaseName)
