@@ -149,6 +149,9 @@ include hack/codegen.mk
 # E2E tests
 ###########
 
-e2e-minikube: images
+KUBECONFIG ?= ~/.kube/config
+K8S_CONTEXT ?= minikube
+
+e2e-local: images
 	go test ./test/e2e -v \
-		--kubernetes-config ~/.kube/config --kubernetes-context minikube
+		--kubernetes-config $(KUBECONFIG) --kubernetes-context $(K8S_CONTEXT)

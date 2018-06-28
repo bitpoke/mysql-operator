@@ -34,7 +34,8 @@
     "apps/v1",
     "batch/v1",
     "core/v1",
-    "policy/v1beta1"
+    "policy/v1beta1",
+    "tools/portforward"
   ]
   revision = "29cc626ee27b0e4de4904256dd37145c2f2a0da1"
   source = "https://github.com/presslabs/kutil.git"
@@ -56,6 +57,15 @@
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/docker/spdystream"
+  packages = [
+    ".",
+    "spdy"
+  ]
+  revision = "bc6354cbbc295e925e4c611ffe90c1f287ee54db"
 
 [[projects]]
   name = "github.com/emicklei/go-restful"
@@ -502,6 +512,8 @@
     "pkg/util/diff",
     "pkg/util/errors",
     "pkg/util/framer",
+    "pkg/util/httpstream",
+    "pkg/util/httpstream/spdy",
     "pkg/util/intstr",
     "pkg/util/json",
     "pkg/util/mergepatch",
@@ -516,6 +528,7 @@
     "pkg/version",
     "pkg/watch",
     "third_party/forked/golang/json",
+    "third_party/forked/golang/netutil",
     "third_party/forked/golang/reflect"
   ]
   revision = "302974c03f7e50f16561ba237db776ab93594ef6"
@@ -668,9 +681,11 @@
     "tools/leaderelection/resourcelock",
     "tools/metrics",
     "tools/pager",
+    "tools/portforward",
     "tools/record",
     "tools/reference",
     "transport",
+    "transport/spdy",
     "util/buffer",
     "util/cert",
     "util/flowcontrol",
@@ -738,6 +753,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bf644848725311e301ab621c06a945b12dfd88d13d9e0735d57ce2800aae081e"
+  inputs-digest = "30724a602072b4fa69c5bbb3e9fdaf2b53865c11025949fff7978434d499aa2a"
   solver-name = "gps-cdcl"
   solver-version = 1

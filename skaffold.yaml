@@ -15,7 +15,7 @@ deploy:
     releases:
     - name: test
       chartPath: hack/charts/mysql-operator
-      valuesFilePath: hack/e2e-tests/mysql-operator-values.yaml
+      valuesFilePath: test/e2e-values.yaml
       values:
         image: quay.io/presslabs/mysql-operator
         helperImage: quay.io/presslabs/mysql-helper
