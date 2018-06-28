@@ -20,31 +20,40 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	myclientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
+	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
 
 const (
 	maxKubectlExecRetries           = 5
 	DefaultNamespaceDeletionTimeout = 10 * time.Minute
+	orchestratorURITemplate         = "http://localhost:%d/api"
+	TIMEOUT                         = 120 * time.Second
+	POLLING                         = 2 * time.Second
 )
 
+var OrchestratorPort = 3000
+
 type Framework struct {
-	BaseName string
+	BaseName  string
+	Namespace *core.Namespace
 
 	ClientSet   clientset.Interface
 	MyClientSet myclientset.Interface
 
-	Namespace *v1.Namespace
-
-	cleanupHandle CleanupActionHandle
-
+	cleanupHandle         CleanupActionHandle
 	SkipNamespaceCreation bool
+
+	OrcClient orc.Interface
 }
 
 func NewFramework(baseName string) *Framework {
@@ -82,6 +91,9 @@ func (f *Framework) BeforeEach() {
 
 		f.Namespace = namespace
 	}
+
+	f.OrcClient = orc.NewFromUri(fmt.Sprintf(orchestratorURITemplate, OrchestratorPort))
+
 }
 
 // AfterEach deletes the namespace, after reading its events.
@@ -95,11 +107,25 @@ func (f *Framework) AfterEach() {
 	}
 }
 
-func (f *Framework) CreateNamespace(baseName string, labels map[string]string) (*v1.Namespace, error) {
+func (f *Framework) CreateNamespace(baseName string, labels map[string]string) (*core.Namespace, error) {
 	return CreateTestingNS(baseName, f.ClientSet, labels)
 }
 
 // WaitForPodReady waits for the pod to flip to ready in the namespace.
 func (f *Framework) WaitForPodReady(podName string) error {
 	return waitTimeoutForPodReadyInNamespace(f.ClientSet, podName, f.Namespace.Name, PodStartTimeout)
+}
+
+func (f *Framework) ClusterEventuallyCondition(cluster *api.MysqlCluster, condType api.ClusterConditionType, status core.ConditionStatus) {
+	Eventually(func() []api.ClusterCondition {
+		c, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
+		if err != nil {
+			return nil
+		}
+		return c.Status.Conditions
+	}, TIMEOUT, POLLING).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+		"Type":   Equal(condType),
+		"Status": Equal(status),
+	})))
+
 }

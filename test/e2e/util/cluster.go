@@ -17,6 +17,8 @@ limitations under the License.
 package util
 
 import (
+	"fmt"
+
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -56,4 +58,8 @@ func NewClusterSecret(name, ns, pw string) *core.Secret {
 			"ROOT_PASSWORD": pw,
 		},
 	}
+}
+
+func OrcClusterName(cluster *api.MysqlCluster) string {
+	return fmt.Sprintf("%s.%s", cluster.Name, cluster.Namespace)
 }

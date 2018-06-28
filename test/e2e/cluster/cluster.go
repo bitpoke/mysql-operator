@@ -21,10 +21,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 	"github.com/presslabs/mysql-operator/test/e2e/framework"
 	tutil "github.com/presslabs/mysql-operator/test/e2e/util"
 )
@@ -38,11 +40,14 @@ var _ = Describe("Mysql cluster tests", func() {
 	f := framework.NewFramework("mysql-clusters")
 
 	It("create a cluster", func() {
-		testCreateACluster(f)
+		cluster := testCreateACluster(f)
+		testClusterIsInOrchestartor(f, cluster)
+		testClusterEndpoints(f, cluster)
 	})
+
 })
 
-func testCreateACluster(f *framework.Framework) {
+func testCreateACluster(f *framework.Framework) *api.MysqlCluster {
 	pw := "rootPassword"
 	secret := tutil.NewClusterSecret("test1", f.Namespace.Name, pw)
 	_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
@@ -51,18 +56,52 @@ func testCreateACluster(f *framework.Framework) {
 	cluster := tutil.NewCluster("test1", f.Namespace.Name)
 	cluster.Spec.Replicas = 1
 
-	_, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Create(cluster)
+	cl, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Create(cluster)
 	Expect(err).NotTo(HaveOccurred())
 
-	Eventually(func() bool {
-		c, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
+	f.ClusterEventuallyCondition(cluster, api.ClusterConditionReady, core.ConditionTrue)
+
+	return cl
+}
+
+// tests if the cluster is in orchestrator and is properly configured
+func testClusterIsInOrchestartor(f *framework.Framework, cluster *api.MysqlCluster) {
+	cluster, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+
+	Eventually(func() []orc.Instance {
+		insts, err := f.OrcClient.Cluster(tutil.OrcClusterName(cluster))
 		if err != nil {
-			return false
+			return nil
 		}
-		cond := tutil.ClusterCondition(c, api.ClusterConditionReady)
-		if cond == nil {
-			return false
-		}
-		return cond.Status == core.ConditionTrue
-	}, TIMEOUT, POLLING).Should(Equal(true))
+
+		return insts
+
+	}, TIMEOUT, POLLING).Should(ConsistOf(MatchFields(IgnoreExtras, Fields{
+		"Key": Equal(orc.InstanceKey{
+			Hostname: cluster.GetPodHostname(0),
+			Port:     3306,
+		}),
+		"GTIDMode":      Equal("ON"),
+		"IsUpToDate":    Equal(true),
+		"Binlog_format": Equal("ROW"),
+		"ReadOnly":      Equal(false),
+	})))
+}
+
+// checks for cluster endpoints to exists when cluster is ready
+func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster) {
+	// master service
+	master_ep := cluster.GetNameForResource(api.MasterService)
+	endpoints, err := f.ClientSet.CoreV1().Endpoints(cluster.Namespace).Get(master_ep, meta.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(endpoints.Subsets[0].Addresses).To(HaveLen(1))
+	Expect(endpoints.Subsets[0].NotReadyAddresses).To(HaveLen(0))
+
+	// healty nodes service
+	hnodes_ep := cluster.GetNameForResource(api.HealthyNodesService)
+	endpoints, err = f.ClientSet.CoreV1().Endpoints(cluster.Namespace).Get(hnodes_ep, meta.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(endpoints.Subsets[0].Addresses).To(HaveLen(cluster.Status.ReadyNodes))
+	Expect(endpoints.Subsets[0].NotReadyAddresses).To(HaveLen(int(cluster.Spec.Replicas) - cluster.Status.ReadyNodes))
 }
