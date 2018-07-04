@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gtypes "github.com/onsi/gomega/types"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -40,34 +41,85 @@ var _ = Describe("Mysql cluster tests", func() {
 	f := framework.NewFramework("mysql-clusters")
 
 	It("create a cluster", func() {
-		cluster := testCreateACluster(f)
+		pw := "rootPassword"
+		secret := tutil.NewClusterSecret("test1", f.Namespace.Name, pw)
+		_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
+		Expect(err).NotTo(HaveOccurred())
+
+		cluster := tutil.NewCluster("test1", f.Namespace.Name)
+		cluster.Spec.Replicas = 1
+
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Create(cluster)
+		Expect(err).NotTo(HaveOccurred())
+
+		testCreateACluster(f, cluster)
 		testClusterIsInOrchestartor(f, cluster)
 		testClusterEndpoints(f, cluster)
 	})
 
+	It("scale cluster up", func() {
+		pw := "rootPassword2"
+		secret := tutil.NewClusterSecret("scale-up", f.Namespace.Name, pw)
+		_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
+		Expect(err).NotTo(HaveOccurred())
+
+		cluster := tutil.NewCluster("scale-up", f.Namespace.Name)
+		cluster.Spec.Replicas = 1
+
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Create(cluster)
+		Expect(err).NotTo(HaveOccurred())
+
+		testCreateACluster(f, cluster)
+
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		// scale up the cluster
+		cluster.Spec.Replicas = 2
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Update(cluster)
+		Expect(err).NotTo(HaveOccurred())
+
+		testCreateACluster(f, cluster)
+		testClusterIsInOrchestartor(f, cluster)
+		//testClusterEndpoints(f, cluster)
+	})
+
 })
 
-func testCreateACluster(f *framework.Framework) *api.MysqlCluster {
-	pw := "rootPassword"
-	secret := tutil.NewClusterSecret("test1", f.Namespace.Name, pw)
-	_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
-	Expect(err).NotTo(HaveOccurred())
-
-	cluster := tutil.NewCluster("test1", f.Namespace.Name)
-	cluster.Spec.Replicas = 1
-
-	cl, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Create(cluster)
-	Expect(err).NotTo(HaveOccurred())
-
+func testCreateACluster(f *framework.Framework, cluster *api.MysqlCluster) {
 	f.ClusterEventuallyCondition(cluster, api.ClusterConditionReady, core.ConditionTrue)
-
-	return cl
+	f.ClusterEventuallyCondition(cluster, api.ClusterConditionFailoverAck, core.ConditionFalse)
 }
 
 // tests if the cluster is in orchestrator and is properly configured
 func testClusterIsInOrchestartor(f *framework.Framework, cluster *api.MysqlCluster) {
 	cluster, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
+
+	consistOfNodes := []gtypes.GomegaMatcher{
+		MatchFields(IgnoreExtras, Fields{
+			"Key": Equal(orc.InstanceKey{
+				Hostname: cluster.GetPodHostname(0),
+				Port:     3306,
+			}),
+			"GTIDMode":      Equal("ON"),
+			"IsUpToDate":    Equal(true),
+			"Binlog_format": Equal("ROW"),
+			"ReadOnly":      Equal(false),
+		}), // master node
+	}
+	for i := 1; i < int(cluster.Spec.Replicas); i++ {
+		consistOfNodes = append(consistOfNodes, MatchFields(IgnoreExtras, Fields{
+			"Key": Equal(orc.InstanceKey{
+				Hostname: cluster.GetPodHostname(i),
+				Port:     3306,
+			}),
+			"GTIDMode":      Equal("ON"),
+			"IsUpToDate":    Equal(true),
+			"Binlog_format": Equal("ROW"),
+			"ReadOnly":      Equal(true),
+		})) // slave node
+	}
 
 	Eventually(func() []orc.Instance {
 		insts, err := f.OrcClient.Cluster(tutil.OrcClusterName(cluster))
@@ -77,31 +129,36 @@ func testClusterIsInOrchestartor(f *framework.Framework, cluster *api.MysqlClust
 
 		return insts
 
-	}, TIMEOUT, POLLING).Should(ConsistOf(MatchFields(IgnoreExtras, Fields{
-		"Key": Equal(orc.InstanceKey{
-			Hostname: cluster.GetPodHostname(0),
-			Port:     3306,
-		}),
-		"GTIDMode":      Equal("ON"),
-		"IsUpToDate":    Equal(true),
-		"Binlog_format": Equal("ROW"),
-		"ReadOnly":      Equal(false),
-	})))
+	}, TIMEOUT, POLLING).Should(ConsistOf(consistOfNodes))
 }
 
 // checks for cluster endpoints to exists when cluster is ready
 func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster) {
+	cluster, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+
+	getAddrForSVC := func(name string, ready bool) func() []core.EndpointAddress {
+		return func() []core.EndpointAddress {
+			endpoints, err := f.ClientSet.CoreV1().Endpoints(cluster.Namespace).Get(name, meta.GetOptions{})
+			if err != nil {
+				return nil
+			}
+
+			if ready {
+				return endpoints.Subsets[0].Addresses
+			}
+			return endpoints.Subsets[0].NotReadyAddresses
+		}
+	}
+
 	// master service
 	master_ep := cluster.GetNameForResource(api.MasterService)
-	endpoints, err := f.ClientSet.CoreV1().Endpoints(cluster.Namespace).Get(master_ep, meta.GetOptions{})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(endpoints.Subsets[0].Addresses).To(HaveLen(1))
-	Expect(endpoints.Subsets[0].NotReadyAddresses).To(HaveLen(0))
+	Eventually(getAddrForSVC(master_ep, true)).Should(HaveLen(1))
+	Eventually(getAddrForSVC(master_ep, false)).Should(HaveLen(0))
 
 	// healty nodes service
 	hnodes_ep := cluster.GetNameForResource(api.HealthyNodesService)
-	endpoints, err = f.ClientSet.CoreV1().Endpoints(cluster.Namespace).Get(hnodes_ep, meta.GetOptions{})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(endpoints.Subsets[0].Addresses).To(HaveLen(cluster.Status.ReadyNodes))
-	Expect(endpoints.Subsets[0].NotReadyAddresses).To(HaveLen(int(cluster.Spec.Replicas) - cluster.Status.ReadyNodes))
+	Eventually(getAddrForSVC(hnodes_ep, true)).Should(HaveLen(cluster.Status.ReadyNodes))
+	Eventually(getAddrForSVC(hnodes_ep, false)).Should(
+		HaveLen(int(cluster.Spec.Replicas) - cluster.Status.ReadyNodes))
 }
