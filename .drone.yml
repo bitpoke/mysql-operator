@@ -179,7 +179,7 @@ pipeline:
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
-      - CLUSTER_NAME=mysql-op-x${DRONE_COMMIT_SHA:0:7}
+      - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
       - KUBECONFIG=/go/.kube/config
     commands:
       - setup-credentials-helper.sh
