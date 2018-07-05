@@ -92,9 +92,9 @@ func configureOrchestratorUser() error {
 	query := fmt.Sprintf(`
     SET @@SESSION.SQL_LOG_BIN = 0;
     GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO '%[1]s'@'%%' IDENTIFIED BY '%[2]s';
-    GRANT SELECT ON meta.* TO '%[1]s'@'%%';
+    GRANT SELECT ON %[3]s.* TO '%[1]s'@'%%';
     GRANT SELECT ON mysql.slave_master_info TO '%[1]s'@'%%';
-    `, tb.GetOrcUser(), tb.GetOrcPass())
+    `, tb.GetOrcUser(), tb.GetOrcPass(), tb.ToolsDbName)
 
 	if err := tb.RunQuery(query); err != nil {
 		return fmt.Errorf("failed to configure orchestrator (user/pass/access), err: %s", err)
