@@ -812,6 +812,13 @@ func schema_pkg_apis_mysql_v1alpha1_VolumeSpec(ref common.ReferenceCallback) com
 							Format:      "",
 						},
 					},
+					"cleanupGracePeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CleanupGracePeriod specifies wait time in seconds before cleaning up persistent volume claims of a pod. Cleanup ensures that (1) space is returned to the storage layer after a cluster is deleted/scaled. It also ensures that mysql pods start replication with a clean volume. Default value of 0 means volume claims are not touched.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},

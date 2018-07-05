@@ -51,6 +51,8 @@ import (
 	// Register all available controllers
 	_ "github.com/presslabs/mysql-operator/pkg/controller/backupscontroller"
 	_ "github.com/presslabs/mysql-operator/pkg/controller/clustercontroller"
+
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 const controllerAgentName = "mysql-controller"

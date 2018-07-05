@@ -163,6 +163,13 @@ type PodSpec struct {
 
 type VolumeSpec struct {
 	core.PersistentVolumeClaimSpec `json:",inline"`
+	// CleanupGracePeriod specifies wait time in seconds before cleaning up
+	// persistent volume claims of a pod. Cleanup ensures that (1) space is
+	// returned to the storage layer after a cluster is deleted/scaled.
+	// It also ensures that mysql pods start replication with a clean volume.
+	// Default value of 0 means volume claims are not touched.
+	// + optional
+	CleanupGracePeriod int `json:"cleanupGracePeriod,omitempty"`
 }
 
 // QueryLimits represents the pt-kill parameters, more info can be found
