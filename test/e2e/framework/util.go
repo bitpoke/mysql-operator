@@ -33,7 +33,10 @@ func CreateTestingNS(baseName string, c clientset.Interface, labels map[string]s
 	}
 	namespaceObj := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("e2e-tests-%v-", baseName),
+			// use a short name because long names produce long hostnames but
+			// maximum allowed length by mysql is 60.
+			// https://dev.mysql.com/doc/refman/8.0/en/change-master-to.html
+			GenerateName: fmt.Sprintf("e2e-%v-", baseName),
 			Namespace:    "",
 			Labels:       labels,
 		},

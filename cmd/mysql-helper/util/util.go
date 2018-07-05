@@ -263,8 +263,8 @@ func RunQuery(q string) (err error) {
 		return
 	}
 
+	glog.V(4).Infof("Running query: %s", q)
 	if _, err := db.Query(q); err != nil {
-		glog.V(2).Infof("QUERY: %s", q)
 		glog.Warningf("Could not query mysql: %s", err)
 		return err
 	}

@@ -38,7 +38,7 @@ const (
 )
 
 var _ = Describe("Mysql cluster tests", func() {
-	f := framework.NewFramework("mysql-clusters")
+	f := framework.NewFramework("mc-1")
 
 	It("create a cluster", func() {
 		pw := "rootPassword"
