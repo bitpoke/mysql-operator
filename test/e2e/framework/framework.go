@@ -102,23 +102,28 @@ func (f *Framework) AfterEach() {
 	RemoveCleanupAction(f.cleanupHandle)
 
 	By("Delete testing namespace")
-	if err := DeleteNS(f.ClientSet, f.Namespace.Name, DefaultNamespaceDeletionTimeout); err != nil {
+	err := DeleteNS(f.ClientSet, f.Namespace.Name, DefaultNamespaceDeletionTimeout)
+	if err != nil {
 		Failf(fmt.Sprintf("Can't delete namespace: %s", err))
 	}
 }
 
-func (f *Framework) CreateNamespace(baseName string, labels map[string]string) (*core.Namespace, error) {
+func (f *Framework) CreateNamespace(baseName string, labels map[string]string) (
+	*core.Namespace, error) {
 	return CreateTestingNS(baseName, f.ClientSet, labels)
 }
 
 // WaitForPodReady waits for the pod to flip to ready in the namespace.
 func (f *Framework) WaitForPodReady(podName string) error {
-	return waitTimeoutForPodReadyInNamespace(f.ClientSet, podName, f.Namespace.Name, PodStartTimeout)
+	return waitTimeoutForPodReadyInNamespace(f.ClientSet, podName,
+		f.Namespace.Name, PodStartTimeout)
 }
 
-func (f *Framework) ClusterEventuallyCondition(cluster *api.MysqlCluster, condType api.ClusterConditionType, status core.ConditionStatus) {
+func (f *Framework) ClusterEventuallyCondition(cluster *api.MysqlCluster,
+	condType api.ClusterConditionType, status core.ConditionStatus) {
 	Eventually(func() []api.ClusterCondition {
-		c, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
+		c, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(
+			cluster.Name, meta.GetOptions{})
 		if err != nil {
 			return nil
 		}
@@ -128,4 +133,26 @@ func (f *Framework) ClusterEventuallyCondition(cluster *api.MysqlCluster, condTy
 		"Status": Equal(status),
 	})))
 
+}
+
+func (f *Framework) NodeEventuallyCondition(cluster *api.MysqlCluster, nodeName string,
+	condType api.NodeConditionType, status core.ConditionStatus) {
+	Eventually(func() []api.NodeCondition {
+		cluster, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(cluster.Namespace).Get(
+			cluster.Name, meta.GetOptions{})
+		if err != nil {
+			return nil
+		}
+
+		for _, ns := range cluster.Status.Nodes {
+			if ns.Name == nodeName {
+				return ns.Conditions
+			}
+		}
+
+		return nil
+	}, TIMEOUT, POLLING).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+		"Type":   Equal(condType),
+		"Status": Equal(status),
+	})))
 }
