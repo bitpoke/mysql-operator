@@ -90,7 +90,7 @@ func getPodForHostname(client kubernetes.Interface, ns string, lbs labels.Set, h
 		}
 	}
 
-	return nil, fmt.Errorf("pod whith hostname %s not found", hostname)
+	return nil, fmt.Errorf("pod with hostname %s not found", hostname)
 }
 
 func podCondIndex(pod *core.Pod, ty core.PodConditionType) (int, bool) {

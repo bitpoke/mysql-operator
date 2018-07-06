@@ -153,5 +153,5 @@ KUBECONFIG ?= ~/.kube/config
 K8S_CONTEXT ?= minikube
 
 e2e-local: images
-	go test ./test/e2e -v $(G_ARGS)\
+	go test ./test/e2e -v $(G_ARGS) -timeout 20m\
 		--kubernetes-config $(KUBECONFIG) --kubernetes-context $(K8S_CONTEXT)
