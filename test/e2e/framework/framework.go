@@ -21,14 +21,11 @@ import (
 	"time"
 
 	core "k8s.io/api/core/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	myclientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
 	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
@@ -37,8 +34,6 @@ const (
 	maxKubectlExecRetries           = 5
 	DefaultNamespaceDeletionTimeout = 10 * time.Minute
 	orchestratorURITemplate         = "http://localhost:%d/api"
-	TIMEOUT                         = 120 * time.Second
-	POLLING                         = 2 * time.Second
 )
 
 var OrchestratorPort = 3000
@@ -117,42 +112,4 @@ func (f *Framework) CreateNamespace(baseName string, labels map[string]string) (
 func (f *Framework) WaitForPodReady(podName string) error {
 	return waitTimeoutForPodReadyInNamespace(f.ClientSet, podName,
 		f.Namespace.Name, PodStartTimeout)
-}
-
-func (f *Framework) ClusterEventuallyCondition(cluster *api.MysqlCluster,
-	condType api.ClusterConditionType, status core.ConditionStatus) {
-	Eventually(func() []api.ClusterCondition {
-		c, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(
-			cluster.Name, meta.GetOptions{})
-		if err != nil {
-			return nil
-		}
-		return c.Status.Conditions
-	}, TIMEOUT, POLLING).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-		"Type":   Equal(condType),
-		"Status": Equal(status),
-	})))
-
-}
-
-func (f *Framework) NodeEventuallyCondition(cluster *api.MysqlCluster, nodeName string,
-	condType api.NodeConditionType, status core.ConditionStatus) {
-	Eventually(func() []api.NodeCondition {
-		cluster, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(cluster.Namespace).Get(
-			cluster.Name, meta.GetOptions{})
-		if err != nil {
-			return nil
-		}
-
-		for _, ns := range cluster.Status.Nodes {
-			if ns.Name == nodeName {
-				return ns.Conditions
-			}
-		}
-
-		return nil
-	}, TIMEOUT, POLLING).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-		"Type":   Equal(condType),
-		"Status": Equal(status),
-	})))
 }

@@ -54,10 +54,10 @@ var _ = Describe("Mysql cluster tests", func() {
 
 		testCreateACluster(f, cluster)
 		testClusterIsInOrchestartor(f, cluster)
-		testClusterEndpoints(f, cluster)
+		testClusterEndpoints(f, cluster, []int{0}, []int{0})
 	})
 
-	It("scale cluster up", func() {
+	It("scale up a cluster", func() {
 		pw := "rootPassword2"
 		secret := tutil.NewClusterSecret("scale-up", f.Namespace.Name, pw)
 		_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
@@ -81,7 +81,7 @@ var _ = Describe("Mysql cluster tests", func() {
 
 		testCreateACluster(f, cluster)
 		testClusterIsInOrchestartor(f, cluster)
-		testClusterEndpoints(f, cluster)
+		testClusterEndpoints(f, cluster, []int{0}, []int{0, 1})
 	})
 
 	It("failover cluster", func() {
@@ -107,7 +107,65 @@ var _ = Describe("Mysql cluster tests", func() {
 
 		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(0), api.NodeConditionMaster, core.ConditionUnknown)
 		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(1), api.NodeConditionMaster, core.ConditionTrue)
-		testClusterEndpoints(f, cluster)
+
+		// after some time node 0 should be up and should be slave
+		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(0), api.NodeConditionMaster, core.ConditionFalse)
+		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(0), api.NodeConditionReplicating, core.ConditionTrue)
+
+		testClusterEndpoints(f, cluster, []int{1}, []int{0, 1})
+	})
+
+	It("scale down a cluster", func() {
+		pw := "rootPassword4"
+		secret := tutil.NewClusterSecret("scale-down", f.Namespace.Name, pw)
+		_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
+		Expect(err).NotTo(HaveOccurred())
+
+		cluster := tutil.NewCluster("scale-down", f.Namespace.Name)
+		cluster.Spec.Replicas = 2
+
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Create(cluster)
+		Expect(err).NotTo(HaveOccurred())
+
+		testCreateACluster(f, cluster)
+		testClusterIsInOrchestartor(f, cluster)
+
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		// scale down the cluster
+		cluster.Spec.Replicas = 1
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Update(cluster)
+		Expect(err).NotTo(HaveOccurred())
+
+		testCreateAClusterWithPendingAck(f, cluster)
+	})
+
+	It("slave latency", func() {
+		pw := "rootPassword6"
+		secret := tutil.NewClusterSecret("latency", f.Namespace.Name, pw)
+		_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
+		Expect(err).NotTo(HaveOccurred())
+
+		cluster := tutil.NewCluster("latency", f.Namespace.Name)
+		cluster.Spec.Replicas = 2
+		one := int64(1)
+		cluster.Spec.MaxSlaveLatency = &one
+
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Create(cluster)
+		Expect(err).NotTo(HaveOccurred())
+
+		testCreateACluster(f, cluster)
+		testClusterIsInOrchestartor(f, cluster)
+
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		f.ExecSQLOnNode(cluster, 1, "root", pw, "STOP SLAVE;")
+
+		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(1), api.NodeConditionReplicating, core.ConditionFalse)
+		// node 1 should not be in healty service
+		testClusterEndpoints(f, cluster, []int{0}, []int{0})
 	})
 
 })
@@ -120,6 +178,16 @@ func testCreateACluster(f *framework.Framework, cluster *api.MysqlCluster) {
 
 	f.ClusterEventuallyCondition(cluster, api.ClusterConditionReady, core.ConditionTrue)
 	f.ClusterEventuallyCondition(cluster, api.ClusterConditionFailoverAck, core.ConditionFalse)
+}
+
+func testCreateAClusterWithPendingAck(f *framework.Framework, cluster *api.MysqlCluster) {
+	Eventually(func() int {
+		cluster, _ := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
+		return cluster.Status.ReadyNodes
+	}, TIMEOUT, POLLING).Should(Equal(int(cluster.Spec.Replicas)))
+
+	f.ClusterEventuallyCondition(cluster, api.ClusterConditionReady, core.ConditionTrue)
+	f.ClusterEventuallyCondition(cluster, api.ClusterConditionFailoverAck, core.ConditionTrue)
 }
 
 // tests if the cluster is in orchestrator and is properly configured
@@ -165,21 +233,41 @@ func testClusterIsInOrchestartor(f *framework.Framework, cluster *api.MysqlClust
 
 // checks for cluster endpoints to exists when cluster is ready
 // TODO: check in more detail
-func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster) {
+func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster, master []int, nodes []int) {
 	cluster, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
-	getAddrForSVC := func(name string, ready bool) func() []core.EndpointAddress {
-		return func() []core.EndpointAddress {
+	var masterIPs []string
+	var healtyIPs []string
+
+	for _, node := range master {
+		pod := f.GetPodForNode(cluster, node)
+		masterIPs = append(masterIPs, pod.Status.PodIP)
+	}
+
+	for _, node := range nodes {
+		pod := f.GetPodForNode(cluster, node)
+		healtyIPs = append(healtyIPs, pod.Status.PodIP)
+	}
+
+	getAddrForSVC := func(name string, ready bool) func() []string {
+		return func() []string {
 			endpoints, err := f.ClientSet.CoreV1().Endpoints(cluster.Namespace).Get(name, meta.GetOptions{})
 			if err != nil {
 				return nil
 			}
 
+			addrs := endpoints.Subsets[0].NotReadyAddresses
 			if ready {
-				return endpoints.Subsets[0].Addresses
+				addrs = endpoints.Subsets[0].Addresses
 			}
-			return endpoints.Subsets[0].NotReadyAddresses
+
+			var ips []string
+			for _, addr := range addrs {
+				ips = append(ips, addr.IP)
+			}
+
+			return ips
 		}
 	}
 
@@ -187,12 +275,20 @@ func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster) {
 
 	// master service
 	master_ep := cluster.GetNameForResource(api.MasterService)
-	Eventually(getAddrForSVC(master_ep, true), timeout).Should(HaveLen(1))
+	if len(masterIPs) > 0 {
+		Eventually(getAddrForSVC(master_ep, true), timeout).Should(ConsistOf(masterIPs))
+	} else {
+		Eventually(getAddrForSVC(master_ep, true), timeout).Should(HaveLen(0))
+	}
 	Eventually(getAddrForSVC(master_ep, false), timeout).Should(HaveLen(0))
 
 	// healty nodes service
 	hnodes_ep := cluster.GetNameForResource(api.HealthyNodesService)
-	Eventually(getAddrForSVC(hnodes_ep, true), timeout).Should(HaveLen(cluster.Status.ReadyNodes))
+	if len(healtyIPs) > 0 {
+		Eventually(getAddrForSVC(hnodes_ep, true), timeout).Should(ConsistOf(healtyIPs))
+	} else {
+		Eventually(getAddrForSVC(hnodes_ep, true), timeout).Should(HaveLen(0))
+	}
 	Eventually(getAddrForSVC(hnodes_ep, false), timeout).Should(
 		HaveLen(int(cluster.Spec.Replicas) - cluster.Status.ReadyNodes))
 }
