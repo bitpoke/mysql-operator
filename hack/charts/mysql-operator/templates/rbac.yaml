@@ -21,6 +21,7 @@ rules:
       - services
       - pods
       - jobs
+      - persistentvolumeclaims
     verbs: ["*"]
   - apiGroups: ["apps"]
     resources:

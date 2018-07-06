@@ -198,3 +198,17 @@ func getRecoveryTextMsg(acks []orc.TopologyRecovery) string {
 
 	return fmt.Sprintf("[%s]", text)
 }
+
+func getVolumeClaimsForCluster(client *kubernetes.Interface, ns string, lbls labels.Set, clusterName string) (*core.PersistentVolumeClaimList, error) {
+	selector := labels.SelectorFromSet(lbls)
+
+	claimList, err := (*client).CoreV1().PersistentVolumeClaims(ns).List(metav1.ListOptions{
+		LabelSelector: selector.String(),
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("listing volume claims: %s", err)
+	}
+
+	return claimList, nil
+}

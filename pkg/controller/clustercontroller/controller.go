@@ -78,8 +78,9 @@ type Controller struct {
 
 	clustersSync sync.Map
 
-	reconcileQueue workqueue.DelayingInterface
-	cron           *cron.Cron
+	reconcileQueue  workqueue.DelayingInterface
+	cron            *cron.Cron
+	clustersCleanup sync.Map
 }
 
 // New returns a new controller
@@ -205,6 +206,8 @@ func (c *Controller) workerController(stopCh <-chan struct{}) {
 			if err != nil && k8errors.IsNotFound(err) {
 				// If the cluster has disappeared, do not re-queue
 				glog.Infof("Removing issuer %q from processing queue", key)
+				// Schedule any cleanup if needed
+				c.cleanupCluster(key)
 				c.queue.Forget(obj)
 				return nil
 			}
