@@ -170,7 +170,7 @@ pipeline:
       - go test ./test/e2e -v --kubernetes-config /go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
             --operator-image quay.io/presslabs/mysql-operator:${DRONE_BRANCH/master/latest}
             --helper-image quay.io/presslabs/mysql-helper:${DRONE_BRANCH/master/latest}
-            -timeout 20m
+            -timeout 30m
     when:
       # branch: master
       event: push
