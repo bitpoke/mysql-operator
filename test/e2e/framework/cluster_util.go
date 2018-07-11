@@ -52,7 +52,7 @@ func (f *Framework) ClusterEventuallyCondition(cluster *api.MysqlCluster,
 	}, TIMEOUT, POLLING).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
 		"Type":   Equal(condType),
 		"Status": Equal(status),
-	})))
+	})), "Testing cluster '%s' for condition %s to be %s", cluster.Name, condType, status)
 
 }
 
@@ -75,7 +75,7 @@ func (f *Framework) NodeEventuallyCondition(cluster *api.MysqlCluster, nodeName 
 	}, TIMEOUT, POLLING).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
 		"Type":   Equal(condType),
 		"Status": Equal(status),
-	})))
+	})), "Testing node '%s' of the cluster '%s'", cluster.Name, nodeName)
 }
 
 func (f *Framework) ExecSQLOnNode(cluster *api.MysqlCluster, i int, user, password, query string) *sql.Rows {
@@ -91,14 +91,14 @@ func (f *Framework) ExecSQLOnNode(cluster *api.MysqlCluster, i int, user, passwo
 	)
 
 	err = tunnel.ForwardPort()
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed setting up port-forarding for pod: %s", podName)
 
 	dsn := fmt.Sprintf("%s:%s@tcp(localhost:%d)/?timeout=10s&multiStatements=true", user, password, tunnel.Local)
 	db, err := sql.Open("mysql", dsn)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed connection to mysql DSN: %s", dsn)
 
 	rows, err := db.Query(query)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Query failed: %s", query)
 
 	return rows
 }
@@ -108,7 +108,7 @@ func (f *Framework) GetPodForNode(cluster *api.MysqlCluster, i int) *core.Pod {
 	podList, err := f.ClientSet.CoreV1().Pods(cluster.Namespace).List(meta.ListOptions{
 		LabelSelector: selector.String(),
 	})
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed listing pods for cluster '%s'", cluster.Name)
 
 	hostname := cluster.GetPodHostname(i)
 	for _, pod := range podList.Items {
