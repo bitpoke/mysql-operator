@@ -175,10 +175,11 @@ var _ = Describe("Mysql cluster tests", func() {
 
 func testCreateACluster(f *framework.Framework, cluster *api.MysqlCluster, where string) {
 	By(fmt.Sprintf("Test cluster is ready: %s", where))
+	timeout := 100 * cluster.Spec.Replicas
 	Eventually(func() int {
-		cluster, _ = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
+		cluster, _ := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 		return cluster.Status.ReadyNodes
-	}, TIMEOUT, POLLING).Should(Equal(int(cluster.Spec.Replicas)), "Not ready replicas of cluster '%s'", cluster.Name)
+	}, timeout, POLLING).Should(Equal(int(cluster.Spec.Replicas)), "Not ready replicas of cluster '%s'", cluster.Name)
 
 	f.ClusterEventuallyCondition(cluster, api.ClusterConditionReady, core.ConditionTrue)
 	f.ClusterEventuallyCondition(cluster, api.ClusterConditionFailoverAck, core.ConditionFalse)
