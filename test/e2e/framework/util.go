@@ -7,7 +7,7 @@ import (
 	kcore "github.com/appscode/kutil/core/v1"
 	. "github.com/onsi/ginkgo"
 	"k8s.io/api/core/v1"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	// apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
@@ -129,19 +129,19 @@ func DeleteNS(c clientset.Interface, namespace string, timeout time.Duration) er
 	}
 
 	// wait for namespace to delete or timeout.
-	err := wait.PollImmediate(2*time.Second, timeout, func() (bool, error) {
-		if _, err := c.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{}); err != nil {
-			if apierrs.IsNotFound(err) {
-				return true, nil
-			}
-			Logf("Error while waiting for namespace to be terminated: %v", err)
-			return false, nil
-		}
-		return false, nil
-	})
+	// err := wait.PollImmediate(2*time.Second, timeout, func() (bool, error) {
+	// 	if _, err := c.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{}); err != nil {
+	// 		if apierrs.IsNotFound(err) {
+	// 			return true, nil
+	// 		}
+	// 		Logf("Error while waiting for namespace to be terminated: %v", err)
+	// 		return false, nil
+	// 	}
+	// 	return false, nil
+	// })
 
 	Logf("namespace %v deletion completed in %s", namespace, time.Now().Sub(startTime))
-	return err
+	return nil
 }
 
 func log(level string, format string, args ...interface{}) {
