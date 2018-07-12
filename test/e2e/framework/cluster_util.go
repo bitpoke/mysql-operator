@@ -36,12 +36,12 @@ import (
 )
 
 var (
-	TIMEOUT = 120 * time.Second
 	POLLING = 2 * time.Second
 )
 
 func (f *Framework) ClusterEventuallyCondition(cluster *api.MysqlCluster,
 	condType api.ClusterConditionType, status core.ConditionStatus) {
+	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
 	Eventually(func() []api.ClusterCondition {
 		c, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(
 			cluster.Name, meta.GetOptions{})
@@ -49,7 +49,7 @@ func (f *Framework) ClusterEventuallyCondition(cluster *api.MysqlCluster,
 			return nil
 		}
 		return c.Status.Conditions
-	}, TIMEOUT, POLLING).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+	}, timeout, POLLING).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
 		"Type":   Equal(condType),
 		"Status": Equal(status),
 	})), "Testing cluster '%s' for condition %s to be %s", cluster.Name, condType, status)
@@ -58,6 +58,7 @@ func (f *Framework) ClusterEventuallyCondition(cluster *api.MysqlCluster,
 
 func (f *Framework) NodeEventuallyCondition(cluster *api.MysqlCluster, nodeName string,
 	condType api.NodeConditionType, status core.ConditionStatus) {
+	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
 	Eventually(func() []api.NodeCondition {
 		cluster, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(cluster.Namespace).Get(
 			cluster.Name, meta.GetOptions{})
@@ -72,7 +73,7 @@ func (f *Framework) NodeEventuallyCondition(cluster *api.MysqlCluster, nodeName 
 		}
 
 		return nil
-	}, TIMEOUT, POLLING).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+	}, timeout, POLLING).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
 		"Type":   Equal(condType),
 		"Status": Equal(status),
 	})), "Testing node '%s' of the cluster '%s'", cluster.Name, nodeName)
