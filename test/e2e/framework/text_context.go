@@ -38,6 +38,8 @@ type TestContextType struct {
 
 	OperatorImage string
 	HelperImage   string
+
+	TimeoutSeconds int
 }
 
 var TestContext TestContextType
@@ -63,6 +65,8 @@ func RegisterCommonFlags() {
 
 	flag.StringVar(&TestContext.OperatorImage, "operator-image", "quay.io/presslabs/mysql-operator:build", "Image for mysql operator.")
 	flag.StringVar(&TestContext.HelperImage, "helper-image", "quay.io/presslabs/mysql-helper:build", "Image for mysql helper.")
+
+	flag.IntVar(&TestContext.TimeoutSeconds, "pod-wait-timeout", 100, "Timeout to wait for a pod to be ready.")
 }
 
 func RegisterParseFlags() {

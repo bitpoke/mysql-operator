@@ -49,9 +49,12 @@ type Framework struct {
 	SkipNamespaceCreation bool
 
 	OrcClient orc.Interface
+
+	Timeout time.Duration
 }
 
 func NewFramework(baseName string) *Framework {
+	By(fmt.Sprintf("Creating framework with timeout: %v", TestContext.TimeoutSeconds))
 	f := &Framework{
 		BaseName:              baseName,
 		SkipNamespaceCreation: false,
@@ -68,6 +71,7 @@ func (f *Framework) BeforeEach() {
 	// The fact that we need this feels like a bug in ginkgo.
 	// https://github.com/onsi/ginkgo/issues/222
 	f.cleanupHandle = AddCleanupAction(f.AfterEach)
+	f.Timeout = time.Duration(TestContext.TimeoutSeconds) * time.Second
 
 	if f.ClientSet == nil {
 		By("Creating a kubernetes client")

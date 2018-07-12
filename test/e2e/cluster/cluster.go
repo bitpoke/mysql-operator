@@ -34,7 +34,6 @@ import (
 )
 
 const (
-	TIMEOUT = 120 * time.Second
 	POLLING = 2 * time.Second
 )
 
@@ -174,8 +173,9 @@ var _ = Describe("Mysql cluster tests", func() {
 })
 
 func testCreateACluster(f *framework.Framework, cluster *api.MysqlCluster, where string) {
-	By(fmt.Sprintf("Test cluster is ready: %s", where))
-	timeout := 100 * cluster.Spec.Replicas
+	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
+	By(fmt.Sprintf("Test cluster is ready: %s timeout: %v rep: %v", where, f.Timeout, cluster.Spec.Replicas))
+
 	Eventually(func() int {
 		cluster, _ := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 		return cluster.Status.ReadyNodes
@@ -187,10 +187,11 @@ func testCreateACluster(f *framework.Framework, cluster *api.MysqlCluster, where
 
 func testCreateAClusterWithPendingAck(f *framework.Framework, cluster *api.MysqlCluster, where string) {
 	By(fmt.Sprintf("Test cluster is ready: %s", where))
+	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
 	Eventually(func() int {
 		cluster, _ := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 		return cluster.Status.ReadyNodes
-	}, TIMEOUT, POLLING).Should(Equal(int(cluster.Spec.Replicas)), "Not ready replicas of cluster '%s'", cluster.Name)
+	}, timeout, POLLING).Should(Equal(int(cluster.Spec.Replicas)), "Not ready replicas of cluster '%s'", cluster.Name)
 
 	f.ClusterEventuallyCondition(cluster, api.ClusterConditionReady, core.ConditionTrue)
 	f.ClusterEventuallyCondition(cluster, api.ClusterConditionFailoverAck, core.ConditionTrue)
@@ -227,6 +228,7 @@ func testClusterIsInOrchestartor(f *framework.Framework, cluster *api.MysqlClust
 		})) // slave node
 	}
 
+	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
 	Eventually(func() []orc.Instance {
 		insts, err := f.OrcClient.Cluster(tutil.OrcClusterName(cluster))
 		if err != nil {
@@ -235,7 +237,7 @@ func testClusterIsInOrchestartor(f *framework.Framework, cluster *api.MysqlClust
 
 		return insts
 
-	}, TIMEOUT, POLLING).Should(ConsistOf(consistOfNodes), "Cluster is not configured correctly in orchestrator.")
+	}, timeout, POLLING).Should(ConsistOf(consistOfNodes), "Cluster is not configured correctly in orchestrator.")
 }
 
 // checks for cluster endpoints to exists when cluster is ready
@@ -279,7 +281,7 @@ func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster, mas
 		}
 	}
 
-	timeout := 30 * time.Second
+	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
 
 	// master service
 	master_ep := cluster.GetNameForResource(api.MasterService)
