@@ -329,7 +329,11 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 		ContainerPort: MysqlPort,
 	})
 	mysql.Resources = f.cluster.Spec.PodSpec.Resources
-	mysql.LivenessProbe = ensureProbe(mysql.LivenessProbe, 30, 5, 10, core.Handler{
+
+	// initialDelaySeconds = 30
+	// timeoutSeconds = 5
+	// periodSeconds = 5
+	mysql.LivenessProbe = ensureProbe(mysql.LivenessProbe, 30, 5, 5, core.Handler{
 		Exec: &core.ExecAction{
 			Command: []string{
 				"mysqladmin",
@@ -339,7 +343,11 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 		},
 	})
 
-	mysql.ReadinessProbe = ensureProbe(mysql.ReadinessProbe, 5, 5, 10, core.Handler{
+	// initialDelaySeconds = 30
+	// timeoutSeconds = 2
+	// periodSeconds = 2
+	// we have to know ASAP when server is not ready to remove it from endpoints
+	mysql.ReadinessProbe = ensureProbe(mysql.ReadinessProbe, 30, 2, 2, core.Handler{
 		Exec: &core.ExecAction{
 			Command: []string{
 				"mysql",
@@ -361,7 +369,7 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 	})
 
 	// HELPER container
-	helper.ReadinessProbe = ensureProbe(helper.ReadinessProbe, 5, 5, 10, core.Handler{
+	helper.ReadinessProbe = ensureProbe(helper.ReadinessProbe, 30, 5, 5, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   HelperServerProbePath,
 			Port:   intstr.FromInt(HelperServerPort),
@@ -384,7 +392,7 @@ func (f *cFactory) ensureContainersSpec(in []core.Container) []core.Container {
 		Name:          ExporterPortName,
 		ContainerPort: ExporterPort,
 	})
-	exporter.LivenessProbe = ensureProbe(exporter.LivenessProbe, 30, 30, 120, core.Handler{
+	exporter.LivenessProbe = ensureProbe(exporter.LivenessProbe, 30, 30, 30, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   ExporterPath,
 			Port:   ExporterTargetPort,
