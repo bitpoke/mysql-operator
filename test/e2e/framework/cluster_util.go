@@ -40,8 +40,7 @@ var (
 )
 
 func (f *Framework) ClusterEventuallyCondition(cluster *api.MysqlCluster,
-	condType api.ClusterConditionType, status core.ConditionStatus) {
-	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
+	condType api.ClusterConditionType, status core.ConditionStatus, timeout time.Duration) {
 	Eventually(func() []api.ClusterCondition {
 		c, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(
 			cluster.Name, meta.GetOptions{})
@@ -57,8 +56,7 @@ func (f *Framework) ClusterEventuallyCondition(cluster *api.MysqlCluster,
 }
 
 func (f *Framework) NodeEventuallyCondition(cluster *api.MysqlCluster, nodeName string,
-	condType api.NodeConditionType, status core.ConditionStatus) {
-	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
+	condType api.NodeConditionType, status core.ConditionStatus, timeout time.Duration) {
 	Eventually(func() []api.NodeCondition {
 		cluster, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(cluster.Namespace).Get(
 			cluster.Name, meta.GetOptions{})
