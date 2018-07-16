@@ -93,6 +93,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 
 }, func(data []byte) {
 	// all other nodes
+	framework.Logf("Running BeforeSuite actions on all node")
 })
 
 // Similar to SynchornizedBeforeSuite, we want to run some operations only once (such as collecting cluster logs).
@@ -115,11 +116,9 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	if err := framework.DeleteNS(client, operatorNamespace, framework.DefaultNamespaceDeletionTimeout); err != nil {
 		framework.Failf(fmt.Sprintf("Can't delete namespace: %s", err))
 	}
-
 }, func() {
 	// Run only Ginkgo on node 1
 	framework.Logf("Running AfterSuite actions on node 1")
-
 })
 
 // RunE2ETests checks configuration parameters (specified through flags) and then runs

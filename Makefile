@@ -153,5 +153,5 @@ KUBECONFIG ?= ~/.kube/config
 K8S_CONTEXT ?= minikube
 
 e2e-local: images
-	go test ./test/e2e -v $(G_ARGS) -timeout 20m\
+	go test ./test/e2e -v $(G_ARGS) -timeout 20m  -ginkgo.parallel.total=4 --pod-wait-timeout 60 \
 		--kubernetes-config $(KUBECONFIG) --kubernetes-context $(K8S_CONTEXT)
