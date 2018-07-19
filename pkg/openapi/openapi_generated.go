@@ -292,6 +292,12 @@ func schema_pkg_apis_mysql_v1alpha1_ClusterSpec(ref common.ReferenceCallback) co
 							Format: "",
 						},
 					},
+					"minAvailable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of pods from that set that must still be available after the eviction, even in the absence of the evicted pod Defaults to 50%",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
 					"backupSchedule": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Specify under crontab format interval to take backups leave it empty to deactivate the backup process Defaults to \"\"",
@@ -354,7 +360,7 @@ func schema_pkg_apis_mysql_v1alpha1_ClusterSpec(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.PodSpec", "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.QueryLimits", "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.VolumeSpec"},
+			"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.PodSpec", "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.QueryLimits", "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.VolumeSpec", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 

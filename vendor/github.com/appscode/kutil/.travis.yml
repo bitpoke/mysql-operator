@@ -13,7 +13,7 @@ before_install:
   - chmod +x $GOPATH/bin/dep
 
 install:
-  - dep ensure
+  - dep ensure -vendor-only
 
 script:
   - go build ./...

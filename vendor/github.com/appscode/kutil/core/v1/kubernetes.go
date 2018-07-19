@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"fmt"
+
 	"github.com/appscode/go/types"
 	"github.com/appscode/mergo"
 	"github.com/json-iterator/go"
@@ -203,6 +205,9 @@ func EnsureOwnerReference(meta metav1.ObjectMeta, owner *core.ObjectReference) m
 		owner.Name == "" ||
 		owner.UID == "" {
 		return meta
+	}
+	if meta.Namespace != owner.Namespace {
+		panic(fmt.Errorf("owner %s %s must be from the same namespace as object %s", owner.Kind, owner.Name, meta.Name))
 	}
 
 	fi := -1

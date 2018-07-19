@@ -1,12 +1,14 @@
 package doctor
 
 import (
+	"crypto/x509"
 	"strings"
 
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/util/cert"
 )
 
 type ClusterInfo struct {
@@ -43,17 +45,21 @@ type Capabilities struct {
 }
 
 type APIServerConfig struct {
-	PodName             string      `json:"podName,omitempty"`
-	NodeName            string      `json:"nodeName,omitempty"`
-	PodIP               string      `json:"podIP,omitempty"`
-	HostIP              string      `json:"hostIP,omitempty"`
-	AdmissionControl    []string    `json:"admissionControl,omitempty"`
-	ClientCAData        string      `json:"clientCAData,omitempty"`
-	RequestHeaderCAData string      `json:"requestHeaderCAData,omitempty"`
-	AllowPrivileged     bool        `json:"allowPrivileged,omitempty"`
-	AuthorizationMode   []string    `json:"authorizationMode,omitempty"`
-	RuntimeConfig       FeatureList `json:"runtimeConfig,omitempty"`
-	FeatureGates        FeatureList `json:"featureGates,omitempty"`
+	PodName             string            `json:"podName,omitempty"`
+	NodeName            string            `json:"nodeName,omitempty"`
+	PodIP               string            `json:"podIP,omitempty"`
+	HostIP              string            `json:"hostIP,omitempty"`
+	AdmissionControl    []string          `json:"admissionControl,omitempty"`
+	ClientCAData        string            `json:"clientCAData,omitempty"`
+	TLSCertData         string            `json:"tlsCertData,omitempty"`
+	RequestHeaderCAData string            `json:"requestHeaderCAData,omitempty"`
+	AllowPrivileged     bool              `json:"allowPrivileged,omitempty"`
+	AuthorizationMode   []string          `json:"authorizationMode,omitempty"`
+	RuntimeConfig       FeatureList       `json:"runtimeConfig,omitempty"`
+	FeatureGates        FeatureList       `json:"featureGates,omitempty"`
+	KubeProxyFound      bool              `json:"kubeProxyFound,omitempty"`
+	KubeProxyRunning    bool              `json:"kubeProxyRunning,omitempty"`
+	ProxySettings       map[string]string `json:"proxySettings,omitempty"`
 }
 
 var (
@@ -119,7 +125,7 @@ func (c ClusterInfo) Validate() error {
 
 			for _, pod := range c.APIServers {
 				if pod.ClientCAData != c.ClientConfig.CAData {
-					errs = append(errs, errors.Errorf(`pod "%s"" has mismatched "client-ca-file".`, pod.PodName))
+					errs = append(errs, errors.Errorf(`pod "%s" has mismatched "client-ca-file".`, pod.PodName))
 				}
 			}
 		}
@@ -130,12 +136,45 @@ func (c ClusterInfo) Validate() error {
 		}
 	}
 	{
+		for _, pod := range c.APIServers {
+			certs, err := cert.ParseCertsPEM([]byte(pod.TLSCertData))
+			if err != nil {
+				errs = append(errs, errors.Wrapf(err, `pod "%s" has bad "tls-cert-file".`, pod.PodName))
+			} else {
+				cert := certs[0]
+
+				var intermediates *x509.CertPool
+				if len(certs) > 1 {
+					intermediates = x509.NewCertPool()
+					for _, ic := range certs[1:] {
+						intermediates.AddCert(ic)
+					}
+				}
+
+				roots := x509.NewCertPool()
+				ok := roots.AppendCertsFromPEM([]byte(pod.ClientCAData))
+				if !ok {
+					errs = append(errs, errors.Errorf(`pod "%s" has bad "client-ca-file".`, pod.PodName))
+					continue
+				}
+
+				opts := x509.VerifyOptions{
+					Roots:         roots,
+					Intermediates: intermediates,
+				}
+				if _, err := cert.Verify(opts); err != nil {
+					errs = append(errs, errors.Wrapf(err, `failed to verify tls-cert-file of pod "%s".`, pod.PodName))
+				}
+			}
+		}
+	}
+	{
 		if c.ExtensionServerConfig.RequestHeader == nil {
 			errs = append(errs, errors.Errorf(`"%s/%s" configmap is missing "requestheader-client-ca-file" key.`, authenticationConfigMapNamespace, authenticationConfigMapName))
 		}
 		for _, pod := range c.APIServers {
 			if pod.RequestHeaderCAData != c.ExtensionServerConfig.RequestHeader.CAData {
-				errs = append(errs, errors.Errorf(`pod "%s"" has mismatched "requestheader-client-ca-file".`, pod.PodName))
+				errs = append(errs, errors.Errorf(`pod "%s" has mismatched "requestheader-client-ca-file".`, pod.PodName))
 			}
 		}
 	}
@@ -143,7 +182,7 @@ func (c ClusterInfo) Validate() error {
 		for _, pod := range c.APIServers {
 			modes := sets.NewString(pod.AuthorizationMode...)
 			if !modes.Has("RBAC") {
-				errs = append(errs, errors.Errorf(`pod "%s"" does not enable RBAC authorization mode.`, pod.PodName))
+				errs = append(errs, errors.Errorf(`pod "%s" does not enable RBAC authorization mode.`, pod.PodName))
 			}
 		}
 	}
@@ -151,10 +190,17 @@ func (c ClusterInfo) Validate() error {
 		for _, pod := range c.APIServers {
 			adms := sets.NewString(pod.AdmissionControl...)
 			if !adms.Has("MutatingAdmissionWebhook") {
-				errs = append(errs, errors.Errorf(`pod "%s"" does not enable MutatingAdmissionWebhook admission controller.`, pod.PodName))
+				errs = append(errs, errors.Errorf(`pod "%s" does not enable MutatingAdmissionWebhook admission controller.`, pod.PodName))
 			}
 			if !adms.Has("ValidatingAdmissionWebhook") {
-				errs = append(errs, errors.Errorf(`pod "%s"" does not enable ValidatingAdmissionWebhook admission controller.`, pod.PodName))
+				errs = append(errs, errors.Errorf(`pod "%s" does not enable ValidatingAdmissionWebhook admission controller.`, pod.PodName))
+			}
+		}
+	}
+	{
+		for _, pod := range c.APIServers {
+			if !pod.KubeProxyFound {
+				errs = append(errs, errors.Errorf(`pod "%s" is not running kube-proxy.`, pod.PodName))
 			}
 		}
 	}

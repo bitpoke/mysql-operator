@@ -155,6 +155,8 @@ const (
 	EventReasonMasterServiceUpdated       = "MasterServiceUpdated"
 	EventReasonHealthyNodesServiceFailed  = "HealthyNodesServiceFailed"
 	EventReasonHealthyNodesServiceUpdated = "HealthyNodesServiceUpdated"
+	EventReasonPDBFailed                  = "PodDisruptionBudgetFailed"
+	EventReasonPDBUpdated                 = "PodDisruptionBudgetUpdated"
 )
 
 // Event types

@@ -20,16 +20,18 @@
   revision = "230e0e4622c682b5d117db8c28a66404ed874ed5"
 
 [[projects]]
-  branch = "master"
+  branch = "pdb"
   name = "github.com/appscode/kutil"
   packages = [
     ".",
     "apiextensions/v1beta1",
     "apps/v1",
     "batch/v1",
-    "core/v1"
+    "core/v1",
+    "policy/v1beta1"
   ]
-  revision = "7de9bdd06e30d7ad4df3452d6188a36134bcddee"
+  revision = "29cc626ee27b0e4de4904256dd37145c2f2a0da1"
+  source = "https://github.com/presslabs/kutil.git"
 
 [[projects]]
   branch = "master"
@@ -185,8 +187,8 @@
 [[projects]]
   name = "github.com/json-iterator/go"
   packages = ["."]
-  revision = "ca39e5af3ece67bbcda3d0f4f56a8e24d9f2dad4"
-  version = "1.1.3"
+  revision = "ab8a2e0c74be9d3be70b3184d9acc634935ded82"
+  version = "1.1.4"
 
 [[projects]]
   branch = "master"
@@ -219,8 +221,8 @@
 [[projects]]
   name = "github.com/modern-go/reflect2"
   packages = ["."]
-  revision = "1df9eeb2bb81f327b96228865c5687bc2194af3f"
-  version = "1.0.0"
+  revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
+  version = "1.0.1"
 
 [[projects]]
   name = "github.com/onsi/ginkgo"
@@ -419,7 +421,7 @@
     "storage/v1beta1"
   ]
   revision = "73d903622b7391f3312dcbac6483fed484e185f8"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.10.1"
 
 [[projects]]
   name = "k8s.io/apiextensions-apiserver"
@@ -481,7 +483,7 @@
     "third_party/forked/golang/reflect"
   ]
   revision = "302974c03f7e50f16561ba237db776ab93594ef6"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.10.1"
 
 [[projects]]
   name = "k8s.io/client-go"
@@ -669,7 +671,7 @@
     "pkg/util"
   ]
   revision = "7ead8f38b01cf8653249f5af80ce7b2c8aba12e2"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.10.1"
 
 [[projects]]
   name = "k8s.io/gengo"
@@ -697,6 +699,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "792615aa0482073098c32a699edca8392eccd230ce17e01e259cacc59885a159"
+  inputs-digest = "77fd313760d0c415f30f2dfb6270c3fec613afeb9449bcba36a878c238b63f7b"
   solver-name = "gps-cdcl"
   solver-version = 1

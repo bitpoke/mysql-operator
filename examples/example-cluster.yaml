@@ -3,11 +3,14 @@ kind: MysqlCluster
 metadata:
   name: foo
 spec:
-  replicas: 1
+  replicas: 3
   secretName: the-secret
   # mysqlVersion: 5.7
   # initBucketUri: gs://bucket_name/backup.xtrabackup.gz
   # initBucketSecretName:
+
+  ## PodDisruptionBudget
+  # minAvailable: 1
 
   ## For recurrent backups set backupSchedule with a cronjob expression
   # backupSchedule:

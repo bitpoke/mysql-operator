@@ -41,6 +41,10 @@ spec:
                 is removed from service.
               format: int64
               type: integer
+            minAvailable:
+              anyOf:
+              - type: string
+              - type: integer
             mysqlConf:
               description: A map[string]string that will be passed to my.cnf file.
               type: object
@@ -185,11 +189,4 @@ spec:
                   description: VolumeName is the binding reference to the PersistentVolume
                     backing this claim.
                   type: string
-      required:
-      - spec
   version: v1alpha1
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: null

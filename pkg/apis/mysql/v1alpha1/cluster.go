@@ -26,6 +26,7 @@ import (
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/presslabs/mysql-operator/pkg/util/options"
 )
@@ -42,7 +43,8 @@ const (
 )
 
 var (
-	opt *options.Options
+	opt                 *options.Options
+	DefaultMinAvailable intstr.IntOrString = intstr.FromString("50%")
 )
 
 func init() {
@@ -78,6 +80,10 @@ func (c *ClusterSpec) UpdateDefaults(opt *options.Options, cluster *MysqlCluster
 
 	if len(c.MysqlConf) == 0 {
 		c.MysqlConf = make(MysqlConf)
+	}
+
+	if c.MinAvailable == nil && c.Replicas > 1 {
+		c.MinAvailable = &DefaultMinAvailable
 	}
 
 	// configure mysql based on:
@@ -225,6 +231,8 @@ const (
 	MasterService ResourceName = "master-service"
 	// HealthyNodes is the name of a service that continas all healthy nodes
 	HealthyNodesService ResourceName = "healthy-nodes-service"
+	// PodDisruptionBudget is the name of pod disruption budget for the stateful set
+	PodDisruptionBudget ResourceName = "pdb"
 )
 
 func (c *MysqlCluster) GetNameForResource(name ResourceName) string {
