@@ -40,3 +40,13 @@ required = [
 [[constraint]]
   name = "github.com/wgliang/cron"
   revision = "79834306f6432d41449e7003710d866ceea9b40c"
+
+[[constraint]]
+  # Required: the root import path of the project being constrained.
+  name = "github.com/appscode/kutil"
+  # Recommended: the version constraint to enforce for the project.
+  # Note that only one of "branch", "version" or "revision" can be specified.
+  branch = "pdb"
+
+  # Optional: an alternate location (URL or import path) for the project's source.
+  source = "https://github.com/presslabs/kutil.git"

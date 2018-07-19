@@ -34,11 +34,4 @@ spec:
               type: string
           required:
           - clusterName
-      required:
-      - spec
   version: v1alpha1
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: null

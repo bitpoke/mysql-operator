@@ -147,7 +147,7 @@ func (mgr BackupManager) Backup(process processorFunc) error {
 				continue
 			}
 
-			glog.V(3).Infof("Taking backup of %s apiVersion:%s kind:%s", list.GroupVersion, r.Name)
+			glog.V(3).Infof("Taking backup of %s apiVersion:%s kind:%s", list.GroupVersion, r.Name, r.Kind)
 			mgr.config.GroupVersion = &gv
 			mgr.config.APIPath = "/apis"
 			if gv.Group == core.GroupName {

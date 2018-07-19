@@ -635,13 +635,13 @@
   version = "v1.0.5"
 
 [[projects]]
+  branch = "master"
   name = "github.com/spf13/afero"
   packages = [
     ".",
     "mem"
   ]
-  revision = "63644898a8da0bc22138abf860edaf5277b6102e"
-  version = "v1.1.0"
+  revision = "787d034dfe70e44075ccc060d346146ef53270ad"
 
 [[projects]]
   name = "github.com/spf13/cobra"
@@ -1402,6 +1402,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0656f963e50a4fb26c76e6745ab21b56a07ee733768ccef051425ff9541b2341"
+  inputs-digest = "1fb4e83163502bea98abd9aa972a6ca0513a1ab7118643065480d8b1aa56f7af"
   solver-name = "gps-cdcl"
   solver-version = 1

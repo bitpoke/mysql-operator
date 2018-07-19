@@ -25,6 +25,7 @@ import (
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/util/options"
 	//	fakeMyClient "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned/fake"
+	// "k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (

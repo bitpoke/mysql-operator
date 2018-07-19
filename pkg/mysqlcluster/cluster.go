@@ -84,6 +84,7 @@ const (
 	statusFailed   = "failed"
 	statusOk       = "ok"
 	statusSkip     = "skip"
+	statusDeleted  = "deleted"
 )
 
 type component struct {
@@ -140,6 +141,13 @@ func (f *cFactory) getComponents() []component {
 			syncFn:        f.syncHealthyNodesService,
 			reasonFailed:  api.EventReasonHealthyNodesServiceFailed,
 			reasonUpdated: api.EventReasonHealthyNodesServiceUpdated,
+		},
+		component{
+			alias:         "pdb",
+			name:          f.cluster.GetNameForResource(api.PodDisruptionBudget),
+			syncFn:        f.syncPDB,
+			reasonFailed:  api.EventReasonPDBFailed,
+			reasonUpdated: api.EventReasonPDBUpdated,
 		},
 	}
 }

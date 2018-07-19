@@ -3,6 +3,7 @@ package doctor
 import (
 	"context"
 
+	core_util "github.com/appscode/kutil/core/v1"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -20,14 +21,29 @@ func (d *Doctor) extractMasterArgs(info *ClusterInfo) error {
 		return err
 	}
 
+	proxyPods, err := d.findKubeProxyPods()
+	if err != nil {
+		return err
+	}
+
 	var errs []error
 	for _, pod := range pods {
 		if c, err := d.processPod(pod); err != nil {
 			errs = append(errs, err)
 		} else {
+			for _, proxyPod := range proxyPods {
+				if proxyPod.Spec.NodeName == c.NodeName {
+					c.KubeProxyFound = true
+					c.KubeProxyRunning, err = core_util.PodRunningAndReady(proxyPod)
+					if err != nil {
+						return err
+					}
+				}
+			}
 			info.APIServers = append(info.APIServers, *c)
 		}
 	}
+
 	return utilerrors.NewAggregate(errs)
 }
 
@@ -52,6 +68,19 @@ func (d *Doctor) findMasterPodsByLabel() ([]core.Pod, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(pods.Items) > 0 {
+		return pods.Items, nil
+	}
+
+	// kops
+	pods, err = d.kc.CoreV1().Pods(metav1.NamespaceSystem).List(metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labels.Set{
+			"k8s-app": "kube-apiserver",
+		}).String(),
+	})
+	if err != nil {
+		return nil, err
+	}
 	return pods.Items, nil
 }
 
@@ -61,9 +90,13 @@ func (d *Doctor) findMasterPodsByKubernetesService() ([]core.Pod, error) {
 		return nil, err
 	}
 	podIPs := sets.NewString()
+	ports := sets.NewInt64()
 	for _, subnet := range ep.Subsets {
 		for _, addr := range subnet.Addresses {
 			podIPs.Insert(addr.IP)
+		}
+		for _, p := range subnet.Ports {
+			ports.Insert(int64(p.Port))
 		}
 	}
 
@@ -81,7 +114,9 @@ func (d *Doctor) findMasterPodsByKubernetesService() ([]core.Pod, error) {
 		if !ok {
 			return errors.Errorf("%v is not a pod", obj)
 		}
-		if podIPs.Has(pod.Status.PodIP) {
+		if podIPs.Has(pod.Status.PodIP) &&
+			len(pod.Spec.Containers[0].Ports) > 0 &&
+			ports.Has(int64(pod.Spec.Containers[0].Ports[0].ContainerPort)) {
 			pods = append(pods, *pod)
 		}
 		return nil
