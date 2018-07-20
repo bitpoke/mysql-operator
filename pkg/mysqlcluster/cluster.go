@@ -81,7 +81,7 @@ const (
 	statusUpToDate = "up-to-date"
 	statusCreated  = "created"
 	statusUpdated  = "updated"
-	statusFailed   = "faild"
+	statusFailed   = "failed"
 	statusOk       = "ok"
 	statusSkip     = "skip"
 )
