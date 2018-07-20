@@ -459,12 +459,21 @@ func (f *cFactory) ensureVolumes(in []core.Volume) []core.Volume {
 }
 
 func (f *cFactory) ensureVolumeClaimTemplates(in []core.PersistentVolumeClaim) []core.PersistentVolumeClaim {
+	initPvc := false
 	if len(in) == 0 {
 		in = make([]core.PersistentVolumeClaim, 1)
+		initPvc = true
 	}
 	data := in[0]
 
 	data.Name = dataVolumeName
+
+	if initPvc {
+		// This can be set only when creating new PVC. It ensures that PVC can be
+		// terminated after deleting parent MySQL cluster
+		data.ObjectMeta.OwnerReferences = f.getOwnerReferences()
+	}
+
 	data.Spec = f.cluster.Spec.VolumeSpec.PersistentVolumeClaimSpec
 
 	in[0] = data
