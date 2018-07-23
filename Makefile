@@ -61,10 +61,11 @@ test:
 		)
 
 .PHONY: full-test
-full-test: generate_verify test
+full-test: lint generate_verify test
 
 .PHONY: lint
 lint:
+	@echo "Checking for formatting issues"
 	@set -e; \
 	GO_FMT=$$(git ls-files *.go | grep -v 'vendor/' | xargs gofmt -d); \
 	if [ -n "$${GO_FMT}" ] ; then \
