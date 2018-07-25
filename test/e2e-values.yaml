@@ -1,0 +1,7 @@
+extraArgs:
+  - -v=4
+
+orchestrator:
+  topologyPassword: password1
+  antiAffinity: soft
+  replicas: 1

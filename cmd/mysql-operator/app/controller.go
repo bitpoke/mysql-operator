@@ -53,7 +53,10 @@ import (
 	_ "github.com/presslabs/mysql-operator/pkg/controller/clustercontroller"
 )
 
-const controllerAgentName = "mysql-controller"
+const (
+	controllerAgentName = "mysql-controller"
+	informerRsyncTime   = 10 * time.Second
+)
 
 // NewControllerCommand creates a new cobra command for running the mysql controller
 func NewControllerCommand(out, errOut io.Writer, stopCh <-chan struct{}) *cobra.Command {
@@ -173,17 +176,16 @@ func buildControllerContext(opts *options.MysqlControllerOptions) (*controller.C
 	recorder := eventBroadcaster.NewRecorder(
 		scheme.Scheme, v1.EventSource{Component: controllerAgentName})
 
-	sharedInformerFactory := informers.NewFilteredSharedInformerFactory(
-		intcl, time.Second*30, opts.Namespace, nil)
-	kubeSharedInformerFactory := kubeinformers.NewFilteredSharedInformerFactory(
-		cl, time.Second*30, opts.Namespace, nil)
+	sharedInformerFactory := informers.NewSharedInformerFactory(
+		intcl, informerRsyncTime)
+	kubeSharedInformerFactory := kubeinformers.NewSharedInformerFactory(
+		cl, informerRsyncTime)
 	return &controller.Context{
 		Client:                    intcl,
 		KubeClient:                cl,
 		Recorder:                  recorder,
 		KubeSharedInformerFactory: kubeSharedInformerFactory,
 		SharedInformerFactory:     sharedInformerFactory,
-		Namespace:                 opts.Namespace,
 		InstallCRDs:               opts.InstallCRDs,
 		CRDClient:                 crdcl,
 	}, kubeCfg, nil

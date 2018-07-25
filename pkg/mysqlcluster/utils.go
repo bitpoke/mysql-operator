@@ -34,13 +34,13 @@ import (
 	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 )
 
-func ensureProbe(in *core.Probe, ids, ts, ps int32, handler core.Handler) *core.Probe {
+func ensureProbe(in *core.Probe, deply, timeout, period int32, handler core.Handler) *core.Probe {
 	if in == nil {
 		in = &core.Probe{}
 	}
-	in.InitialDelaySeconds = ids
-	in.TimeoutSeconds = ts
-	in.PeriodSeconds = ps
+	in.InitialDelaySeconds = deply
+	in.TimeoutSeconds = timeout
+	in.PeriodSeconds = period
 	if handler.Exec != nil {
 		in.Handler.Exec = handler.Exec
 	}
@@ -90,7 +90,7 @@ func getPodForHostname(client kubernetes.Interface, ns string, lbs labels.Set, h
 		}
 	}
 
-	return nil, fmt.Errorf("pod whith hostname %s not found", hostname)
+	return nil, fmt.Errorf("pod with hostname %s not found", hostname)
 }
 
 func podCondIndex(pod *core.Pod, ty core.PodConditionType) (int, bool) {

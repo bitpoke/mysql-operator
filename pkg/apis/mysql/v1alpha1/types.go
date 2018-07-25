@@ -127,7 +127,6 @@ type ClusterConditionType string
 
 const (
 	ClusterConditionReady       ClusterConditionType = "Ready"
-	ClusterConditionConfig                           = "ConfigReady"
 	ClusterConditionFailoverAck                      = "PendingFailoverAck"
 )
 
