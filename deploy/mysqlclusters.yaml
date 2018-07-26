@@ -25,6 +25,10 @@ spec:
               description: Specify under crontab format interval to take backups leave
                 it empty to deactivate the backup process Defaults to ""
               type: string
+            backupScheduleJobsHistoryLimit:
+              description: If set keeps last BackupScheduleJobsHistoryLimit Backups
+              format: int32
+              type: integer
             backupSecretName:
               type: string
             backupUri:

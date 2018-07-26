@@ -3,7 +3,7 @@ kind: MysqlCluster
 metadata:
   name: foo
 spec:
-  replicas: 3
+  replicas: 1
   secretName: the-secret
   # mysqlVersion: 5.7
   # initBucketUri: gs://bucket_name/backup.xtrabackup.gz
@@ -16,6 +16,8 @@ spec:
   # backupSchedule:
   # backupUri: s3://bucket_name/
   # backupSecretName:
+  # backupScheduleJobsHistoryLimit:
+
 
   ## Configs that will be added to my.cnf for cluster
   # mysqlConf:

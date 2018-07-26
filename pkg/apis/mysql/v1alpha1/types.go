@@ -82,6 +82,10 @@ type ClusterSpec struct {
 	BackupUri        string `json:"backupUri,omitempty"`
 	BackupSecretName string `json:"backupSecretName,omitempty"`
 
+	// If set keeps last BackupScheduleJobsHistoryLimit Backups
+	// +optional
+	BackupScheduleJobsHistoryLimit *int `json:"backupScheduleJobsHistoryLimit"`
+
 	// A map[string]string that will be passed to my.cnf file.
 	// +optional
 	MysqlConf MysqlConf `json:"mysqlConf,omitempty"`
