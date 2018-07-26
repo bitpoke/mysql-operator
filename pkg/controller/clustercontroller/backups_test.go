@@ -1,12 +1,9 @@
 /*
 Copyright 2018 Pressinfra SRL
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -56,6 +53,8 @@ var _ = Describe("Test cluster reconciliation queue", func() {
 		controller = newController(stop, client, myClient, rec)
 		backupPollingTime = 10 * time.Millisecond
 		backupWatchTimeout = time.Second
+		two := 2
+		cluster.Spec.BackupScheduleJobsHistoryLimit = &two
 
 	})
 
@@ -67,6 +66,7 @@ var _ = Describe("Test cluster reconciliation queue", func() {
 		Context("cluster with schedule backups", func() {
 			It("try to register multiple times", func() {
 				cluster.Spec.BackupSchedule = "0 * * * *"
+
 				_, err := myClient.MysqlV1alpha1().MysqlClusters(tutil.Namespace).Create(cluster)
 				Expect(err).To(Succeed())
 
@@ -113,15 +113,16 @@ var _ = Describe("Test cluster reconciliation queue", func() {
 					myClient:      myClient,
 					BackupRunning: new(bool),
 					lock:          new(sync.Mutex),
+					BackupScheduleJobsHistoryLimit: cluster.Spec.BackupScheduleJobsHistoryLimit,
 				}
 
 				go j.Run()
-
 				Eventually(func() bool {
 					j.lock.Lock() // avoid a data race
 					defer j.lock.Unlock()
 					return *j.BackupRunning
 				}).Should(Equal(true))
+
 				Eventually(func() []api.MysqlBackup {
 					bs, _ := myClient.Mysql().MysqlBackups(j.Namespace).List(metav1.ListOptions{})
 					return bs.Items
@@ -138,6 +139,28 @@ var _ = Describe("Test cluster reconciliation queue", func() {
 					defer j.lock.Unlock()
 					return *j.BackupRunning
 				}).Should(Equal(false))
+			})
+
+			It("start jobs to schedule backups", func() {
+
+				j := job{
+					Name:          cluster.Name,
+					Namespace:     cluster.Namespace,
+					myClient:      myClient,
+					BackupRunning: new(bool),
+					lock:          new(sync.Mutex),
+					BackupScheduleJobsHistoryLimit: cluster.Spec.BackupScheduleJobsHistoryLimit,
+				}
+
+				for i := 0; i < *(j.BackupScheduleJobsHistoryLimit)+1; i++ {
+					j.Run()
+				}
+
+				Eventually(func() []api.MysqlBackup {
+					bs, _ := myClient.Mysql().MysqlBackups(j.Namespace).List(metav1.ListOptions{})
+					return bs.Items
+				}).Should(HaveLen(*j.BackupScheduleJobsHistoryLimit))
+
 			})
 		})
 	})

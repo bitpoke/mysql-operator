@@ -317,6 +317,13 @@ func schema_pkg_apis_mysql_v1alpha1_ClusterSpec(ref common.ReferenceCallback) co
 							Format: "",
 						},
 					},
+					"backupScheduleJobsHistoryLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "If set keeps last BackupScheduleJobsHistoryLimit Backups",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"mysqlConf": {
 						SchemaProps: spec.SchemaProps{
 							Description: "A map[string]string that will be passed to my.cnf file.",

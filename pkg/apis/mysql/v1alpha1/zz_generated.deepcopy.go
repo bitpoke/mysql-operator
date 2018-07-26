@@ -111,6 +111,15 @@ func (in *ClusterSpec) DeepCopyInto(out *ClusterSpec) {
 			**out = **in
 		}
 	}
+	if in.BackupScheduleJobsHistoryLimit != nil {
+		in, out := &in.BackupScheduleJobsHistoryLimit, &out.BackupScheduleJobsHistoryLimit
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int)
+			**out = **in
+		}
+	}
 	if in.MysqlConf != nil {
 		in, out := &in.MysqlConf, &out.MysqlConf
 		*out = make(MysqlConf, len(*in))

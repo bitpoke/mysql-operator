@@ -48,6 +48,8 @@ type job struct {
 
 	lock     *sync.Mutex
 	myClient myclientset.Interface
+
+	BackupScheduleJobsHistoryLimit *int
 }
 
 func (c *Controller) registerClusterInBackupCron(cluster *api.MysqlCluster) error {
@@ -86,6 +88,7 @@ func (c *Controller) registerClusterInBackupCron(cluster *api.MysqlCluster) erro
 		myClient:      c.myClient,
 		BackupRunning: new(bool),
 		lock:          new(sync.Mutex),
+		BackupScheduleJobsHistoryLimit: cluster.Spec.BackupScheduleJobsHistoryLimit,
 	}, cluster.Name)
 
 	return nil
@@ -93,10 +96,15 @@ func (c *Controller) registerClusterInBackupCron(cluster *api.MysqlCluster) erro
 
 func (j job) Run() {
 	backupName := fmt.Sprintf("%s-auto-backup-%s", j.Name, time.Now().Format("2006-01-02t15-04-05"))
-	glog.Infof("Schedul backup job started. Creating backup %s..", backupName)
+	glog.Infof("Scheduled backup job started for %s/%s ", j.Namespace, backupName)
+
+	if j.BackupScheduleJobsHistoryLimit != nil {
+		defer j.backupGC()
+	}
 
 	// Wrap backup creation to ensure that lock is released when backup is
 	// created
+
 	created := func() bool {
 		j.lock.Lock()
 		defer j.lock.Unlock()
@@ -121,7 +129,6 @@ func (j job) Run() {
 					ClusterName: j.Name,
 				},
 			})
-
 			if err == nil {
 				break
 			}
@@ -140,7 +147,6 @@ func (j job) Run() {
 		*j.BackupRunning = true
 		return true
 	}()
-
 	if !created {
 		return
 	}
@@ -169,4 +175,40 @@ func (j job) Run() {
 		glog.Errorf("Waiting for backup '%s' for cluster '%s' to be ready failed: %s",
 			backupName, j.Name, err)
 	}
+}
+
+func (j *job) backupGC() {
+
+	var err error
+
+	backups, err := j.myClient.Mysql().MysqlBackups(j.Namespace).List(metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("recurrent=true"),
+	})
+
+	var clusterBackups []api.MysqlBackup
+
+	for i := 0; i < len(backups.Items); i++ {
+		if backups.Items[i].Spec.ClusterName == j.Name {
+			clusterBackups = append(clusterBackups, backups.Items[i])
+		}
+	}
+
+	if err != nil {
+		glog.Infof("Failed to obtain backup list for %s/%s, error:%s", j.Namespace, j.Name, err)
+		return
+	}
+	var size = len(clusterBackups)
+
+	if size > *j.BackupScheduleJobsHistoryLimit {
+		for i := 0; i < size-(*j.BackupScheduleJobsHistoryLimit); i++ {
+
+			err := j.myClient.Mysql().MysqlBackups(j.Namespace).Delete(clusterBackups[i].Name, &(metav1.DeleteOptions{}))
+
+			if err != nil {
+				glog.Warningf("Failed to remove backup %s/%s", clusterBackups[i].Name, err)
+			}
+		}
+		clusterBackups = clusterBackups[(size - (*j.BackupScheduleJobsHistoryLimit)):]
+	}
+
 }
