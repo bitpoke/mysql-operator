@@ -32,8 +32,10 @@ const (
 var (
 	// ResourceMysqlCluster contains the definition bits for Mysql Cluster CRD
 	ResourceMysqlCluster = kutil.Config{
-		Group:   SchemeGroupVersion.Group,
-		Version: SchemeGroupVersion.Version,
+		Group: SchemeGroupVersion.Group,
+		Versions: []apiextensions.CustomResourceDefinitionVersion{
+			{Name: SchemeGroupVersion.Version},
+		},
 
 		Kind:       ResourceKindMysqlCluster,
 		Plural:     "mysqlclusters",
@@ -53,8 +55,10 @@ var (
 	ResourceMysqlClusterCRD = kutil.NewCustomResourceDefinition(ResourceMysqlCluster)
 
 	ResourceMysqlBackup = kutil.Config{
-		Group:   SchemeGroupVersion.Group,
-		Version: SchemeGroupVersion.Version,
+		Group: SchemeGroupVersion.Group,
+		Versions: []apiextensions.CustomResourceDefinitionVersion{
+			{Name: SchemeGroupVersion.Version},
+		},
 
 		Kind:       ResourceKindMysqlBackup,
 		Plural:     "mysqlbackups",

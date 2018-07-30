@@ -11,7 +11,6 @@ package mysql
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"testing"
 	"time"
 )
@@ -89,25 +88,6 @@ func TestLengthEncodedInteger(t *testing.T) {
 		encoded := appendLengthEncodedInteger(nil, num)
 		if !bytes.Equal(encoded, tst.encoded) {
 			t.Errorf("%v: expected %x, got %x", num, tst.encoded, encoded)
-		}
-	}
-}
-
-func TestOldPass(t *testing.T) {
-	scramble := []byte{9, 8, 7, 6, 5, 4, 3, 2}
-	vectors := []struct {
-		pass string
-		out  string
-	}{
-		{" pass", "47575c5a435b4251"},
-		{"pass ", "47575c5a435b4251"},
-		{"123\t456", "575c47505b5b5559"},
-		{"C0mpl!ca ted#PASS123", "5d5d554849584a45"},
-	}
-	for _, tuple := range vectors {
-		ours := scrambleOldPassword(scramble, []byte(tuple.pass))
-		if tuple.out != fmt.Sprintf("%x", ours) {
-			t.Errorf("Failed old password %q", tuple.pass)
 		}
 	}
 }
@@ -194,4 +174,84 @@ func TestEscapeQuotes(t *testing.T) {
 	expect("foo\x1abar", "foo\x1abar") // not affected
 	expect("foo''bar", "foo'bar")      // affected
 	expect("foo\"bar", "foo\"bar")     // not affected
+}
+
+func TestAtomicBool(t *testing.T) {
+	var ab atomicBool
+	if ab.IsSet() {
+		t.Fatal("Expected value to be false")
+	}
+
+	ab.Set(true)
+	if ab.value != 1 {
+		t.Fatal("Set(true) did not set value to 1")
+	}
+	if !ab.IsSet() {
+		t.Fatal("Expected value to be true")
+	}
+
+	ab.Set(true)
+	if !ab.IsSet() {
+		t.Fatal("Expected value to be true")
+	}
+
+	ab.Set(false)
+	if ab.value != 0 {
+		t.Fatal("Set(false) did not set value to 0")
+	}
+	if ab.IsSet() {
+		t.Fatal("Expected value to be false")
+	}
+
+	ab.Set(false)
+	if ab.IsSet() {
+		t.Fatal("Expected value to be false")
+	}
+	if ab.TrySet(false) {
+		t.Fatal("Expected TrySet(false) to fail")
+	}
+	if !ab.TrySet(true) {
+		t.Fatal("Expected TrySet(true) to succeed")
+	}
+	if !ab.IsSet() {
+		t.Fatal("Expected value to be true")
+	}
+
+	ab.Set(true)
+	if !ab.IsSet() {
+		t.Fatal("Expected value to be true")
+	}
+	if ab.TrySet(true) {
+		t.Fatal("Expected TrySet(true) to fail")
+	}
+	if !ab.TrySet(false) {
+		t.Fatal("Expected TrySet(false) to succeed")
+	}
+	if ab.IsSet() {
+		t.Fatal("Expected value to be false")
+	}
+
+	ab._noCopy.Lock() // we've "tested" it ¯\_(ツ)_/¯
+}
+
+func TestAtomicError(t *testing.T) {
+	var ae atomicError
+	if ae.Value() != nil {
+		t.Fatal("Expected value to be nil")
+	}
+
+	ae.Set(ErrMalformPkt)
+	if v := ae.Value(); v != ErrMalformPkt {
+		if v == nil {
+			t.Fatal("Value is still nil")
+		}
+		t.Fatal("Error did not match")
+	}
+	ae.Set(ErrPktSync)
+	if ae.Value() == ErrMalformPkt {
+		t.Fatal("Error still matches old error")
+	}
+	if v := ae.Value(); v != ErrPktSync {
+		t.Fatal("Error did not match")
+	}
 }

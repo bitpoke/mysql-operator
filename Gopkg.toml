@@ -8,24 +8,28 @@ required = [
 ]
 
 [[constraint]]
+  name = "k8s.io/kube-openapi"
+  revision = "3a0c53868c9444e4224c3dd5dc2caa9b5107ff7b"
+
+[[constraint]]
   name = "k8s.io/api"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.0"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.0"
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.0"
 
 [[constraint]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.0"
 
 [[constraint]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.0"
 
 # gengo needs to be manually pinned to the version listed in code-generators
 # Gopkg.toml, because the k8s project does not produce Gopkg.toml files & dep
@@ -44,9 +48,10 @@ required = [
 [[constraint]]
   # Required: the root import path of the project being constrained.
   name = "github.com/appscode/kutil"
-  # Recommended: the version constraint to enforce for the project.
-  # Note that only one of "branch", "version" or "revision" can be specified.
-  branch = "pdb"
+  branch = "release-8.0"
 
-  # Optional: an alternate location (URL or import path) for the project's source.
-  source = "https://github.com/presslabs/kutil.git"
+# this crashes dep ensure --update if not specified
+[[override]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "gopkg.in/fsnotify/fsnotify.v1"
+  version = "v1"

@@ -71,12 +71,14 @@ func (cs *Clientset) resource(apiResource *dynamicdiscovery.APIResource, namespa
 	if gv.Group != "" {
 		config.APIPath = "/apis"
 	}
-	dc, err := dynamic.NewClient(&config)
+	client, err := dynamic.NewForConfig(&config)
 	if err != nil {
 		return nil, fmt.Errorf("can't create dynamic client for resource %v in apiVersion %v: %v", apiResource.Name, apiResource.APIVersion, err)
 	}
+	dc := client.Resource(gv.WithResource(apiResource.Name))
+
 	return &ResourceClient{
-		ResourceInterface: dc.Resource(&apiResource.APIResource, namespace),
+		ResourceInterface: dc.Namespace(namespace),
 		dc:                dc,
 		gv:                gv,
 		resource:          apiResource,
@@ -86,7 +88,7 @@ func (cs *Clientset) resource(apiResource *dynamicdiscovery.APIResource, namespa
 type ResourceClient struct {
 	dynamic.ResourceInterface
 
-	dc       *dynamic.Client
+	dc       dynamic.NamespaceableResourceInterface
 	gv       schema.GroupVersion
 	resource *dynamicdiscovery.APIResource
 }
@@ -94,7 +96,7 @@ type ResourceClient struct {
 func (rc *ResourceClient) WithNamespace(namespace string) *ResourceClient {
 	// Make a shallow copy of self, then change the namespace.
 	rc2 := *rc
-	rc2.ResourceInterface = rc.dc.Resource(&rc.resource.APIResource, namespace)
+	rc2.ResourceInterface = rc.dc.Namespace(namespace)
 	return &rc2
 }
 

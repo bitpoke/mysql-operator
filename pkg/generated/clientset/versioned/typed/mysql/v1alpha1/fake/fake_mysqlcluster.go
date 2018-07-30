@@ -59,7 +59,7 @@ func (c *FakeMysqlClusters) List(opts v1.ListOptions) (result *v1alpha1.MysqlClu
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.MysqlClusterList{}
+	list := &v1alpha1.MysqlClusterList{ListMeta: obj.(*v1alpha1.MysqlClusterList).ListMeta}
 	for _, item := range obj.(*v1alpha1.MysqlClusterList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

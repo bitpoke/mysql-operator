@@ -8,16 +8,22 @@ import (
 	"github.com/spf13/pflag"
 	utilflag "k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/kubernetes/pkg/kubectl/cmd/util"
+	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
+	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 	"k8s.io/kubernetes/pkg/kubectl/plugins"
 )
 
-func BindGlobalFlags(flags *pflag.FlagSet, plugin bool) clientcmd.ClientConfig {
+func BindGlobalFlags(flags *pflag.FlagSet, plugin bool) genericclioptions.RESTClientGetter {
 	flags.AddGoFlagSet(flag.CommandLine)
 	// Normalize all flags that are coming from other packages or pre-configurations
 	// a.k.a. change all "_" to "-". e.g. glog package
 	flags.SetNormalizeFunc(utilflag.WordSepNormalizeFunc)
-	clientConfig := util.DefaultClientConfig(flags)
+
+	kubeConfigFlags := genericclioptions.NewConfigFlags()
+	kubeConfigFlags.AddFlags(flags)
+	matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
+	matchVersionKubeConfigFlags.AddFlags(flags)
+
 	if plugin {
 		LoadFromEnv(flags, "kubeconfig", "KUBECTL_PLUGINS_GLOBAL_FLAG_")
 		LoadFromEnv(flags, clientcmd.FlagClusterName, "KUBECTL_PLUGINS_GLOBAL_FLAG_")
@@ -44,7 +50,7 @@ func BindGlobalFlags(flags *pflag.FlagSet, plugin bool) clientcmd.ClientConfig {
 		LoadFromEnv(flags, "v", "KUBECTL_PLUGINS_GLOBAL_FLAG_")
 		LoadFromEnv(flags, "vmodule", "KUBECTL_PLUGINS_GLOBAL_FLAG_")
 	}
-	return clientConfig
+	return matchVersionKubeConfigFlags
 }
 
 func LoadFromEnv(flags *pflag.FlagSet, name, prefix string) {
