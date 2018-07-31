@@ -68,9 +68,6 @@ mysql-operator is a Kubernetes addon to automate the deployment, scaling and
 management of multiple mysql clusters.`,
 		// TODO: Refactor this function from this package
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := o.Validate(); err != nil {
-				glog.Fatalf("error validating options: %s", err.Error())
-			}
 			if err := gOpt.Validate(); err != nil {
 				glog.Fatalf("error validating mysql controller options: %s", err.Error())
 			}
