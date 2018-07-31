@@ -17,11 +17,9 @@ limitations under the License.
 package options
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/spf13/pflag"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 type MysqlControllerOptions struct {
@@ -43,7 +41,7 @@ type MysqlControllerOptions struct {
 
 const (
 	defaultAPIServerHost = ""
-	defaultNamespace     = "default"
+	defaultNamespace     = ""
 
 	defaultLeaderElect                 = true
 	defaultLeaderElectionNamespace     = "kube-system"
@@ -74,8 +72,8 @@ func (s *MysqlControllerOptions) AddFlags(fs *pflag.FlagSet) {
 		"Optional apiserver host address to connect to. If not specified, autoconfiguration "+
 		"will be attempted.")
 	fs.StringVar(&s.Namespace, "namespace", defaultNamespace, ""+
-		"Namespace to monitor resources within. If not specified, default "+
-		"namespace will be watched")
+		"Namespace to monitor resources within. If not specified, all "+
+		"namespaces will be watched")
 
 	fs.BoolVar(&s.LeaderElect, "leader-elect", true, ""+
 		"If true, mysql-controller will perform leader election between instances "+
@@ -105,12 +103,4 @@ func (s *MysqlControllerOptions) AddFlags(fs *pflag.FlagSet) {
 
 	fs.BoolVar(&s.InstallCRDs, "install-crds", defaultInstallCRDs, "Whether or not to install CRDs.")
 
-}
-
-func (o *MysqlControllerOptions) Validate() error {
-	var errs []error
-	if len(o.Namespace) == 0 {
-		errs = append(errs, fmt.Errorf("no namespace specified"))
-	}
-	return utilerrors.NewAggregate(errs)
 }
