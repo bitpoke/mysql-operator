@@ -26,6 +26,10 @@ rules:
     resources:
       - statefulsets
     verbs: ["*"]
+  - apiGroups: ["policy"]
+    resources:
+     - poddisruptionbudgets
+    verbs: ["*"]
   - apiGroups: ["batch"]
     resources:
       - jobs
