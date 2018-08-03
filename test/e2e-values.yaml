@@ -1,5 +1,5 @@
 extraArgs:
-  - -v=4
+  - -v=3
 
 orchestrator:
   topologyPassword: password1

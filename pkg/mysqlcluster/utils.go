@@ -103,6 +103,7 @@ func podCondIndex(pod *core.Pod, ty core.PodConditionType) (int, bool) {
 	return 0, false
 }
 
+// TODO: refactor this method to getEndpointsSubsets and to return just subsets of endpoints
 func (f *cFactory) addNodesToService(serviceName string, hosts ...string) error {
 	var pods []*core.Pod
 	for _, host := range hosts {
@@ -121,7 +122,7 @@ func (f *cFactory) addNodesToService(serviceName string, hosts ...string) error 
 
 	if len(pods) == 0 {
 		// no need to create endpoints, because will fail without addresses
-		glog.V(3).Infof("Nothing to do for hosts: %v, pods not found!", hosts)
+		glog.V(3).Infof("Configuriong service '%s': Nothing to do for hosts: %v, pods not found!", serviceName, hosts)
 		return nil
 	}
 

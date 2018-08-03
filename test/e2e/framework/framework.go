@@ -97,6 +97,14 @@ func (f *Framework) BeforeEach() {
 
 // AfterEach deletes the namespace, after reading its events.
 func (f *Framework) AfterEach() {
+	By("Collecting logs")
+	if CurrentGinkgoTestDescription().Failed && TestContext.DumpLogsOnFailure {
+		logFunc := Logf
+		// TODO: log in file if ReportDir is set
+		LogPodsWithLabels(f.ClientSet, f.Namespace.Name, map[string]string{}, logFunc)
+
+	}
+
 	By("Run cleanup actions")
 	RemoveCleanupAction(f.cleanupHandle)
 
