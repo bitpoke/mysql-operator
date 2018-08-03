@@ -42,6 +42,8 @@ func (f *cFactory) SyncOrchestratorStatus(ctx context.Context) error {
 		return fmt.Errorf("orchestrator is not configured")
 	}
 
+	// Try to get cluster from orchestrator if cluster is not present then
+	// register nodes into orchestrator.
 	if insts, err := f.orcClient.Cluster(f.getClusterAlias()); err == nil {
 		f.updateStatusFromOrc(insts)
 	} else {
@@ -49,6 +51,7 @@ func (f *cFactory) SyncOrchestratorStatus(ctx context.Context) error {
 		return f.registerNodesInOrc()
 	}
 
+	// Check for orchestrator audit recoveries and acknowledge recoveries.
 	if recoveries, err := f.orcClient.AuditRecovery(f.getClusterAlias()); err == nil {
 		f.updateStatusForRecoveries(recoveries)
 		toAck := f.getRecoveriesToAck(recoveries)

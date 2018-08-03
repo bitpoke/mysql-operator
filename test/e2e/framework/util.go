@@ -2,11 +2,14 @@ package framework
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	kcore "github.com/appscode/kutil/core/v1"
 	. "github.com/onsi/ginkgo"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	// apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -172,4 +175,73 @@ func Skipf(format string, args ...interface{}) {
 
 func nowStamp() string {
 	return time.Now().Format(time.StampMilli)
+}
+
+func GetPodLogs(c clientset.Interface, namespace, podName, containerName string) (string, error) {
+	return getPodLogsInternal(c, namespace, podName, containerName, false)
+}
+
+func getPreviousPodLogs(c clientset.Interface, namespace, podName, containerName string) (string, error) {
+	return getPodLogsInternal(c, namespace, podName, containerName, true)
+}
+
+// utility function for gomega Eventually
+func getPodLogsInternal(c clientset.Interface, namespace, podName, containerName string, previous bool) (string, error) {
+	logs, err := c.CoreV1().RESTClient().Get().
+		Resource("pods").
+		Namespace(namespace).
+		Name(podName).SubResource("log").
+		Param("container", containerName).
+		Param("previous", strconv.FormatBool(previous)).
+		Do().
+		Raw()
+	if err != nil {
+		return "", err
+	}
+	if err == nil && strings.Contains(string(logs), "Internal Error") {
+		return "", fmt.Errorf("Fetched log contains \"Internal Error\": %q.", string(logs))
+	}
+	return string(logs), err
+}
+
+func kubectlLogPod(c clientset.Interface, pod v1.Pod, containerNameSubstr string, logFunc func(ftm string, args ...interface{})) {
+	for _, container := range pod.Spec.Containers {
+		if strings.Contains(container.Name, containerNameSubstr) {
+			// Contains() matches all strings if substr is empty
+			logs, err := GetPodLogs(c, pod.Namespace, pod.Name, container.Name)
+			if err != nil {
+				logFunc("Failed to get logs of pod %v, container %v, err: %v", pod.Name, container.Name, err)
+			}
+			plogs, err := getPreviousPodLogs(c, pod.Namespace, pod.Name, container.Name)
+			plogs = "PREVIOUS\n" + plogs
+			if err != nil {
+				plogs = fmt.Sprintf("Failed to get previous logs for pod %v, container %v, err: %v", pod.Name, container.Name, err)
+			}
+			logFunc("Logs of %v/%v:%v on node %v", pod.Namespace, pod.Name, container.Name, pod.Spec.NodeName)
+			logFunc("%s : %s \nSTARTLOG\n%s\nENDLOG for container %v:%v:%v", plogs, containerNameSubstr, logs, pod.Namespace, pod.Name, container.Name)
+		}
+	}
+}
+
+func LogPodsWithLabels(c clientset.Interface, ns string, match map[string]string, logFunc func(ftm string, args ...interface{})) {
+	podList, err := c.CoreV1().Pods(ns).List(metav1.ListOptions{LabelSelector: labels.SelectorFromSet(match).String()})
+	if err != nil {
+		logFunc("Error getting pods in namespace %q: %v", ns, err)
+		return
+	}
+	logFunc("Running kubectl logs on pods with labels %v in %v", match, ns)
+	for _, pod := range podList.Items {
+		kubectlLogPod(c, pod, "", logFunc)
+	}
+}
+
+func LogContainersInPodsWithLabels(c clientset.Interface, ns string, match map[string]string, containerSubstr string, logFunc func(ftm string, args ...interface{})) {
+	podList, err := c.CoreV1().Pods(ns).List(metav1.ListOptions{LabelSelector: labels.SelectorFromSet(match).String()})
+	if err != nil {
+		Logf("Error getting pods in namespace %q: %v", ns, err)
+		return
+	}
+	for _, pod := range podList.Items {
+		kubectlLogPod(c, pod, containerSubstr, logFunc)
+	}
 }

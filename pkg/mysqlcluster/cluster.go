@@ -38,6 +38,9 @@ type Interface interface {
 
 	// SyncOrchestratorStatus brings info from orchestrator on resource status
 	SyncOrchestratorStatus(ctx context.Context) error
+
+	// Reconcile handle some action that need to be done recurrent over a cluster
+	Reconcile(ctx context.Context) error
 }
 
 // cluster factory
@@ -182,6 +185,11 @@ func (f *cFactory) Sync(ctx context.Context) error {
 		return fmt.Errorf("cluster sync pod labeling: %s", err)
 	}
 	return nil
+}
+
+func (f *cFactory) Reconcile(ctx context.Context) error {
+	// Update healty nodes endpoints
+	return f.updateHealthyNodesServiceEndpoints()
 }
 
 func (f *cFactory) getOwnerReferences(ors ...[]metav1.OwnerReference) []metav1.OwnerReference {
