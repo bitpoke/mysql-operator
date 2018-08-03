@@ -72,12 +72,24 @@ func (c *Controller) registerClusterInBackupCron(cluster *api.MysqlCluster) erro
 		j, ok := entry.Job.(job)
 		if ok && j.Name == cluster.Name && j.Namespace == cluster.Namespace {
 			glog.V(3).Infof("Cluster %s already added to cron.", cluster.Name)
+
+			// change scheduler for already added crons
 			if !reflect.DeepEqual(entry.Schedule, schedule) {
 				glog.Infof("Update cluster '%s' scheduler to: %s",
 					cluster.Name, cluster.Spec.BackupSchedule)
 				c.cron.Remove(cluster.Name)
 				break
 			}
+
+			// update backups limit for already added crons
+			if !reflect.DeepEqual(cluster.Spec.BackupScheduleJobsHistoryLimit, j.BackupScheduleJobsHistoryLimit) {
+				glog.Infof("Update cluster '%s' backup limit to: %v",
+					cluster.Name, cluster.Spec.BackupScheduleJobsHistoryLimit)
+				c.cron.Remove(cluster.Name)
+				break
+			}
+
+			// nothing to change for this cluster, return
 			return nil
 		}
 	}
