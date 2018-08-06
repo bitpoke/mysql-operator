@@ -4,7 +4,7 @@ metadata:
   name: foo
 spec:
   replicas: 1
-  secretName: the-secret
+  secretName: db-secret
   # mysqlVersion: 5.7
   # initBucketUri: gs://bucket_name/backup.xtrabackup.gz
   # initBucketSecretName:
