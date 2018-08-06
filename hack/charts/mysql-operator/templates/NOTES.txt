@@ -15,5 +15,5 @@ metadata:
   name: my-cluster-secret
 type: Opaque
 data:
-  ROOT_PASSWORD: $(echo "not-so-secure" | base64)
+  ROOT_PASSWORD: $(echo -n "not-so-secure" | base64)
 EOF
