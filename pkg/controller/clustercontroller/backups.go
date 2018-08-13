@@ -83,10 +83,15 @@ func (c *Controller) registerClusterInBackupCron(cluster *api.MysqlCluster) erro
 
 			// update backups limit for already added crons
 			if !reflect.DeepEqual(cluster.Spec.BackupScheduleJobsHistoryLimit, j.BackupScheduleJobsHistoryLimit) {
-				glog.Infof("Update cluster '%s' backup limit to: %v",
-					cluster.Name, cluster.Spec.BackupScheduleJobsHistoryLimit)
+				newValFmt := "inf"
+				if cluster.Spec.BackupScheduleJobsHistoryLimit != nil {
+					newValFmt = fmt.Sprintf("%d", cluster.Spec.BackupScheduleJobsHistoryLimit)
+				}
+				glog.Infof("Update cluster '%s' backup limit to: %s",
+					cluster.Name, newValFmt)
 				c.cron.Remove(cluster.Name)
 				break
+
 			}
 
 			// nothing to change for this cluster, return

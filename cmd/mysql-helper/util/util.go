@@ -324,7 +324,11 @@ func RequestABackup(host, endpoint string) (io.Reader, error) {
 
 	resp, err := client.Do(req)
 	if err != nil || resp.StatusCode != 200 {
-		return nil, fmt.Errorf("fail to get backup: %s, code: %s", err, resp.Status)
+		status := "unknown"
+		if resp != nil {
+			status = resp.Status
+		}
+		return nil, fmt.Errorf("fail to get backup: %s, code: %s", err, status)
 	}
 
 	return resp.Body, nil

@@ -376,7 +376,7 @@ func schema_pkg_apis_mysql_v1alpha1_ClusterStatus(ref common.ReferenceCallback) 
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"ReadyNodes": {
+					"readyNodes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ReadyNodes represents number of the nodes that are in ready state",
 							Type:        []string{"integer"},
@@ -410,7 +410,6 @@ func schema_pkg_apis_mysql_v1alpha1_ClusterStatus(ref common.ReferenceCallback) 
 						},
 					},
 				},
-				Required: []string{"ReadyNodes"},
 			},
 		},
 		Dependencies: []string{
@@ -563,13 +562,13 @@ func schema_pkg_apis_mysql_v1alpha1_NodeCondition(ref common.ReferenceCallback) 
 							Format: "",
 						},
 					},
-					"LastTransitionTime": {
+					"lastTransitionTime": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 				},
-				Required: []string{"type", "status", "LastTransitionTime"},
+				Required: []string{"type", "status", "lastTransitionTime"},
 			},
 		},
 		Dependencies: []string{
@@ -582,13 +581,13 @@ func schema_pkg_apis_mysql_v1alpha1_NodeStatus(ref common.ReferenceCallback) com
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"Name": {
+					"name": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
 						},
 					},
-					"Conditions": {
+					"conditions": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -601,7 +600,7 @@ func schema_pkg_apis_mysql_v1alpha1_NodeStatus(ref common.ReferenceCallback) com
 						},
 					},
 				},
-				Required: []string{"Name", "Conditions"},
+				Required: []string{"name"},
 			},
 		},
 		Dependencies: []string{
