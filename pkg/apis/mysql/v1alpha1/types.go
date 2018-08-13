@@ -84,7 +84,7 @@ type ClusterSpec struct {
 
 	// If set keeps last BackupScheduleJobsHistoryLimit Backups
 	// +optional
-	BackupScheduleJobsHistoryLimit *int `json:"backupScheduleJobsHistoryLimit"`
+	BackupScheduleJobsHistoryLimit *int `json:"backupScheduleJobsHistoryLimit,omitempty"`
 
 	// A map[string]string that will be passed to my.cnf file.
 	// +optional
@@ -113,7 +113,7 @@ type MysqlConf map[string]string
 
 type ClusterStatus struct {
 	// ReadyNodes represents number of the nodes that are in ready state
-	ReadyNodes int
+	ReadyNodes int `json:"readyNodes,omitempty"`
 	// Conditions contains the list of the cluster conditions fulfilled
 	Conditions []ClusterCondition `json:"conditions,omitempty"`
 	// Nodes contains informations from orchestrator
@@ -143,14 +143,14 @@ const (
 )
 
 type NodeStatus struct {
-	Name       string          `json:"name`
-	Conditions []NodeCondition `json:"conditions,omitempty`
+	Name       string          `json:"name"`
+	Conditions []NodeCondition `json:"conditions,omitempty"`
 }
 
 type NodeCondition struct {
 	Type               NodeConditionType    `json:"type"`
 	Status             core.ConditionStatus `json:"status"`
-	LastTransitionTime metav1.Time          `json:"lastTransitionTime`
+	LastTransitionTime metav1.Time          `json:"lastTransitionTime"`
 }
 
 type NodeConditionType string
