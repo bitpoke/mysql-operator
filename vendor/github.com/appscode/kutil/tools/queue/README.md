@@ -1,1 +1,0 @@
-- Adapted from https://github.com/kubernetes-incubator/apiserver-builder/tree/master/pkg/controller

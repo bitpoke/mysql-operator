@@ -1,4 +1,4 @@
-// Copyright 2016 Google LLC
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -75,6 +74,11 @@ func (o *ObjectHandle) NewRangeReader(ctx context.Context, offset, length int64)
 		return nil, err
 	}
 	req = withContext(req, ctx)
+	if length < 0 && offset > 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
+	} else if length > 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
+	}
 	if o.userProject != "" {
 		req.Header.Set("X-Goog-User-Project", o.userProject)
 	}
@@ -84,57 +88,39 @@ func (o *ObjectHandle) NewRangeReader(ctx context.Context, offset, length int64)
 	if err := setEncryptionHeaders(req.Header, o.encryptionKey, false); err != nil {
 		return nil, err
 	}
-
-	// Define a function that initiates a Read with offset and length, assuming we
-	// have already read seen bytes.
-	reopen := func(seen int64) (*http.Response, error) {
-		start := offset + seen
-		if length < 0 && start > 0 {
-			req.Header.Set("Range", fmt.Sprintf("bytes=%d-", start))
-		} else if length > 0 {
-			// The end character isn't affected by how many bytes we've seen.
-			req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, offset+length-1))
-		}
-		var res *http.Response
-		err = runWithRetry(ctx, func() error {
-			res, err = o.c.hc.Do(req)
-			if err != nil {
-				return err
-			}
-			if res.StatusCode == http.StatusNotFound {
-				res.Body.Close()
-				return ErrObjectNotExist
-			}
-			if res.StatusCode < 200 || res.StatusCode > 299 {
-				body, _ := ioutil.ReadAll(res.Body)
-				res.Body.Close()
-				return &googleapi.Error{
-					Code:   res.StatusCode,
-					Header: res.Header,
-					Body:   string(body),
-				}
-			}
-			if start > 0 && length != 0 && res.StatusCode != http.StatusPartialContent {
-				res.Body.Close()
-				return errors.New("storage: partial request not satisfied")
-			}
-			return nil
-		})
+	var res *http.Response
+	err = runWithRetry(ctx, func() error {
+		res, err = o.c.hc.Do(req)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return res, nil
-	}
-
-	res, err := reopen(0)
+		if res.StatusCode == http.StatusNotFound {
+			res.Body.Close()
+			return ErrObjectNotExist
+		}
+		if res.StatusCode < 200 || res.StatusCode > 299 {
+			body, _ := ioutil.ReadAll(res.Body)
+			res.Body.Close()
+			return &googleapi.Error{
+				Code:   res.StatusCode,
+				Header: res.Header,
+				Body:   string(body),
+			}
+		}
+		if offset > 0 && length != 0 && res.StatusCode != http.StatusPartialContent {
+			res.Body.Close()
+			return errors.New("storage: partial request not satisfied")
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
+
 	var size int64 // total size of object, even if a range was requested.
 	if res.StatusCode == http.StatusPartialContent {
 		cr := strings.TrimSpace(res.Header.Get("Content-Range"))
 		if !strings.HasPrefix(cr, "bytes ") || !strings.Contains(cr, "/") {
-
 			return nil, fmt.Errorf("storage: invalid Content-Range %q", cr)
 		}
 		size, err = strconv.ParseInt(cr[strings.LastIndex(cr, "/")+1:], 10, 64)
@@ -169,7 +155,6 @@ func (o *ObjectHandle) NewRangeReader(ctx context.Context, offset, length int64)
 		cacheControl:    res.Header.Get("Cache-Control"),
 		wantCRC:         crc,
 		checkCRC:        checkCRC,
-		reopen:          reopen,
 	}, nil
 }
 
@@ -195,16 +180,15 @@ var emptyBody = ioutil.NopCloser(strings.NewReader(""))
 // the stored CRC, returning an error from Read if there is a mismatch. This integrity check
 // is skipped if transcoding occurs. See https://cloud.google.com/storage/docs/transcoding.
 type Reader struct {
-	body               io.ReadCloser
-	seen, remain, size int64
-	contentType        string
-	contentEncoding    string
-	cacheControl       string
-	checkCRC           bool   // should we check the CRC?
-	wantCRC            uint32 // the CRC32c value the server sent in the header
-	gotCRC             uint32 // running crc
-	checkedCRC         bool   // did we check the CRC? (For tests.)
-	reopen             func(seen int64) (*http.Response, error)
+	body            io.ReadCloser
+	remain, size    int64
+	contentType     string
+	contentEncoding string
+	cacheControl    string
+	checkCRC        bool   // should we check the CRC?
+	wantCRC         uint32 // the CRC32c value the server sent in the header
+	gotCRC          uint32 // running crc
+	checkedCRC      bool   // did we check the CRC? (For tests.)
 }
 
 // Close closes the Reader. It must be called when done reading.
@@ -213,7 +197,7 @@ func (r *Reader) Close() error {
 }
 
 func (r *Reader) Read(p []byte) (int, error) {
-	n, err := r.readWithRetry(p)
+	n, err := r.body.Read(p)
 	if r.remain != -1 {
 		r.remain -= int64(n)
 	}
@@ -231,35 +215,6 @@ func (r *Reader) Read(p []byte) (int, error) {
 		}
 	}
 	return n, err
-}
-
-func (r *Reader) readWithRetry(p []byte) (int, error) {
-	n := 0
-	for len(p[n:]) > 0 {
-		m, err := r.body.Read(p[n:])
-		n += m
-		r.seen += int64(m)
-		if !shouldRetryRead(err) {
-			return n, err
-		}
-		// Read failed, but we will try again. Send a ranged read request that takes
-		// into account the number of bytes we've already seen.
-		res, err := r.reopen(r.seen)
-		if err != nil {
-			// reopen already retries
-			return n, err
-		}
-		r.body.Close()
-		r.body = res.Body
-	}
-	return n, nil
-}
-
-func shouldRetryRead(err error) bool {
-	if err == nil {
-		return false
-	}
-	return strings.HasSuffix(err.Error(), "INTERNAL_ERROR") && strings.Contains(reflect.TypeOf(err).String(), "http2")
 }
 
 // Size returns the size of the object in bytes.

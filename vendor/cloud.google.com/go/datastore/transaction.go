@@ -1,4 +1,4 @@
-// Copyright 2014 Google LLC
+// Copyright 2014 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -167,7 +167,7 @@ func (c *Client) RunInTransaction(ctx context.Context, f func(tx *Transaction) e
 			return nil, err
 		}
 		if err := f(tx); err != nil {
-			_ = tx.Rollback()
+			tx.Rollback()
 			return nil, err
 		}
 		if cmt, err := tx.Commit(); err != ErrConcurrentTransaction {

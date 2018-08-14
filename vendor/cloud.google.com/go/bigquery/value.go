@@ -1,4 +1,4 @@
-// Copyright 2015 Google LLC
+// Copyright 2015 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
@@ -381,13 +380,6 @@ func determineSetFunc(ftype reflect.Type, stype FieldType) setFunc {
 				})
 			}
 		}
-
-	case NumericFieldType:
-		if ftype == typeOfRat {
-			return func(v reflect.Value, x interface{}) error {
-				return setNull(v, x, func() interface{} { return x.(*big.Rat) })
-			}
-		}
 	}
 	return nil
 }
@@ -614,7 +606,7 @@ func structFieldToUploadValue(vfield reflect.Value, schemaField *FieldSchema) (i
 			schemaField.Name, vfield.Type())
 	}
 
-	// A non-nested field can be represented by its Go value, except for some types.
+	// A non-nested field can be represented by its Go value, except for civil times.
 	if schemaField.Type != RecordFieldType {
 		return toUploadValueReflect(vfield, schemaField), nil
 	}
@@ -645,7 +637,7 @@ func structFieldToUploadValue(vfield reflect.Value, schemaField *FieldSchema) (i
 }
 
 func toUploadValue(val interface{}, fs *FieldSchema) interface{} {
-	if fs.Type == TimeFieldType || fs.Type == DateTimeFieldType || fs.Type == NumericFieldType {
+	if fs.Type == TimeFieldType || fs.Type == DateTimeFieldType {
 		return toUploadValueReflect(reflect.ValueOf(val), fs)
 	}
 	return val
@@ -657,22 +649,15 @@ func toUploadValueReflect(v reflect.Value, fs *FieldSchema) interface{} {
 		if v.Type() == typeOfNullTime {
 			return v.Interface()
 		}
-		return formatUploadValue(v, fs, func(v reflect.Value) string {
+		return civilToUploadValue(v, fs, func(v reflect.Value) string {
 			return CivilTimeString(v.Interface().(civil.Time))
 		})
 	case DateTimeFieldType:
 		if v.Type() == typeOfNullDateTime {
 			return v.Interface()
 		}
-		return formatUploadValue(v, fs, func(v reflect.Value) string {
+		return civilToUploadValue(v, fs, func(v reflect.Value) string {
 			return CivilDateTimeString(v.Interface().(civil.DateTime))
-		})
-	case NumericFieldType:
-		if r, ok := v.Interface().(*big.Rat); ok && r == nil {
-			return nil
-		}
-		return formatUploadValue(v, fs, func(v reflect.Value) string {
-			return NumericString(v.Interface().(*big.Rat))
 		})
 	default:
 		if !fs.Repeated || v.Len() > 0 {
@@ -684,7 +669,7 @@ func toUploadValueReflect(v reflect.Value, fs *FieldSchema) interface{} {
 	}
 }
 
-func formatUploadValue(v reflect.Value, fs *FieldSchema, cvt func(reflect.Value) string) interface{} {
+func civilToUploadValue(v reflect.Value, fs *FieldSchema, cvt func(reflect.Value) string) interface{} {
 	if !fs.Repeated {
 		return cvt(v)
 	}
@@ -732,21 +717,6 @@ func parseCivilDateTime(s string) (civil.DateTime, error) {
 		return civil.DateTime{}, fmt.Errorf("bigquery: bad DATETIME value %q", s)
 	}
 	return civil.ParseDateTime(parts[0] + "T" + parts[1])
-}
-
-const (
-	// The maximum number of digits in a NUMERIC value.
-	NumericPrecisionDigits = 38
-
-	// The maximum number of digits after the decimal point in a NUMERIC value.
-	NumericScaleDigits = 9
-)
-
-// NumericString returns a string representing a *big.Rat in a format compatible
-// with BigQuery SQL. It returns a floating-point literal with 9 digits
-// after the decimal point.
-func NumericString(r *big.Rat) string {
-	return r.FloatString(NumericScaleDigits)
 }
 
 // convertRows converts a series of TableRows into a series of Value slices.
@@ -859,12 +829,6 @@ func convertBasicType(val string, typ FieldType) (Value, error) {
 		return civil.ParseTime(val)
 	case DateTimeFieldType:
 		return civil.ParseDateTime(val)
-	case NumericFieldType:
-		r, ok := (&big.Rat{}).SetString(val)
-		if !ok {
-			return nil, fmt.Errorf("bigquery: invalid NUMERIC value %q", val)
-		}
-		return Value(r), nil
 	default:
 		return nil, fmt.Errorf("unrecognized type: %s", typ)
 	}

@@ -1,4 +1,4 @@
-// Copyright 2016 Google LLC
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"math/big"
 	"reflect"
 	"regexp"
 	"time"
@@ -69,7 +68,6 @@ var (
 	timeParamType      = &bq.QueryParameterType{Type: "TIME"}
 	dateTimeParamType  = &bq.QueryParameterType{Type: "DATETIME"}
 	timestampParamType = &bq.QueryParameterType{Type: "TIMESTAMP"}
-	numericParamType   = &bq.QueryParameterType{Type: "NUMERIC"}
 )
 
 var (
@@ -77,7 +75,6 @@ var (
 	typeOfTime     = reflect.TypeOf(civil.Time{})
 	typeOfDateTime = reflect.TypeOf(civil.DateTime{})
 	typeOfGoTime   = reflect.TypeOf(time.Time{})
-	typeOfRat      = reflect.TypeOf(&big.Rat{})
 )
 
 // A QueryParameter is a parameter to a query.
@@ -98,7 +95,6 @@ type QueryParameter struct {
 	// string: STRING
 	// []byte: BYTES
 	// time.Time: TIMESTAMP
-	// *big.Rat: NUMERIC
 	// Arrays and slices of the above.
 	// Structs of the above. Only the exported fields are used.
 	//
@@ -140,8 +136,6 @@ func paramType(t reflect.Type) (*bq.QueryParameterType, error) {
 		return dateTimeParamType, nil
 	case typeOfGoTime:
 		return timestampParamType, nil
-	case typeOfRat:
-		return numericParamType, nil
 	}
 	switch t.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint8, reflect.Uint16, reflect.Uint32:
@@ -222,10 +216,6 @@ func paramValue(v reflect.Value) (bq.QueryParameterValue, error) {
 	case typeOfGoTime:
 		res.Value = v.Interface().(time.Time).Format(timestampFormat)
 		return res, nil
-
-	case typeOfRat:
-		res.Value = NumericString(v.Interface().(*big.Rat))
-		return res, nil
 	}
 	switch t.Kind() {
 	case reflect.Slice:
@@ -298,7 +288,6 @@ var paramTypeToFieldType = map[string]FieldType{
 	bytesParamType.Type:   BytesFieldType,
 	dateParamType.Type:    DateFieldType,
 	timeParamType.Type:    TimeFieldType,
-	numericParamType.Type: NumericFieldType,
 }
 
 // Convert a parameter value from the service to a Go value. This is similar to, but
@@ -338,7 +327,7 @@ func convertParamArray(elVals []*bq.QueryParameterValue, elType *bq.QueryParamet
 	return vals, nil
 }
 
-// convertParamStruct converts a query parameter struct value into a Go value. It
+// convertParamValue converts a query parameter struct value into a Go value. It
 // always returns a map[string]interface{}.
 func convertParamStruct(sVals map[string]bq.QueryParameterValue, sTypes []*bq.QueryParameterTypeStructTypes) (map[string]interface{}, error) {
 	vals := map[string]interface{}{}

@@ -1,4 +1,4 @@
-// Copyright 2016 Google LLC
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -123,15 +123,10 @@ func (agg *Aggregate) String() string {
 
 // WriteCSV writes a csv file to the given Writer,
 // with a header row and one row per aggregate.
-func WriteCSV(aggs []*Aggregate, iow io.Writer) (err error) {
+func WriteCSV(aggs []*Aggregate, iow io.Writer) error {
 	w := csv.NewWriter(iow)
-	defer func() {
-		w.Flush()
-		if err == nil {
-			err = w.Error()
-		}
-	}()
-	err = w.Write([]string{"name", "count", "errors", "min", "median", "max", "p75", "p90", "p95", "p99"})
+	defer w.Flush()
+	err := w.Write([]string{"name", "count", "errors", "min", "median", "max", "p75", "p90", "p95", "p99"})
 	if err != nil {
 		return err
 	}

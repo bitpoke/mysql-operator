@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC
+// Copyright 2018 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,8 +62,7 @@ type DocumentChange struct {
 // https://github.com/googleapis/nodejs-firestore/blob/master/src/watch.js.
 
 // The sole target ID for all streams from this client.
-// Variable for testing.
-var watchTargetID int32 = 'g' + 'o'
+const watchTargetID int32 = 'g' + 'o'
 
 var defaultBackoff = gax.Backoff{
 	// Values from https://github.com/googleapis/nodejs-firestore/blob/master/src/backoff.js.
@@ -99,7 +98,7 @@ func newWatchStreamForDocument(ctx context.Context, dr *DocumentRef) *watchStrea
 	compare := func(_, _ *DocumentSnapshot) (int, error) { return 0, nil }
 	return newWatchStream(ctx, dr.Parent.c, compare, &pb.Target{
 		TargetType: &pb.Target_Documents{
-			Documents: &pb.Target_DocumentsTarget{Documents: []string{dr.Path}},
+			Documents: &pb.Target_DocumentsTarget{[]string{dr.Path}},
 		},
 		TargetId: watchTargetID,
 	})

@@ -1,4 +1,4 @@
-// Copyright 2017 Google LLC
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -85,11 +85,10 @@ const (
 	xGoogAPIMetadata = "x-goog-api-client"
 	zoneNameLabel    = "zone"
 	versionLabel     = "version"
-	languageLabel    = "language"
 	instanceLabel    = "instance"
 	scope            = "https://www.googleapis.com/auth/monitoring.write"
 
-	initialBackoff = time.Minute
+	initialBackoff = time.Second
 	// Ensure the agent will recover within 1 hour.
 	maxBackoff        = time.Hour
 	backoffMultiplier = 1.3 // Backoff envelope increases by this factor on each retry.
@@ -98,14 +97,12 @@ const (
 
 // Config is the profiler configuration.
 type Config struct {
-	// Service must be provided to start the profiler. It specifies the name of
-	// the service under which the profiled data will be recorded and exposed at
-	// the Profiler UI for the project. You can specify an arbitrary string, but
-	// see Deployment.target at
+	// Service (or deprecated Target) must be provided to start the profiler.
+	// It specifies the name of the service under which the profiled data
+	// will be recorded and exposed at the Profiler UI for the project.
+	// You can specify an arbitrary string, but see Deployment.target at
 	// https://github.com/googleapis/googleapis/blob/master/google/devtools/cloudprofiler/v2/profiler.proto
-	// for restrictions. If the parameter is not set, the agent will probe
-	// GAE_SERVICE environment variable which is present in Google App Engine
-	// environment.
+	// for restrictions.
 	// NOTE: The string should be the same across different replicas of
 	// your service so that the globally constant profiling rate is
 	// maintained. Do not put things like PID or unique pod ID in the name.
@@ -114,8 +111,7 @@ type Config struct {
 	// ServiceVersion is an optional field specifying the version of the
 	// service. It can be an arbitrary string. Profiler profiles
 	// once per minute for each version of each service in each zone.
-	// ServiceVersion defaults to GAE_VERSION environment variable if that is
-	// set, or to empty string otherwise.
+	// ServiceVersion defaults to an empty string.
 	ServiceVersion string
 
 	// DebugLogging enables detailed debug logging from profiler. It
@@ -133,9 +129,8 @@ type Config struct {
 	// When true, collecting the goroutine profiles is disabled.
 	NoGoroutineProfiling bool
 
-	// ProjectID is the Cloud Console project ID to use instead of the one set by
-	// GOOGLE_CLOUD_PROJECT environment variable or read from the VM metadata
-	// server.
+	// ProjectID is the Cloud Console project ID to use instead of
+	// the one read from the VM metadata server.
 	//
 	// Set this if you are running the agent in your local environment
 	// or anywhere else outside of Google Cloud Platform.
@@ -146,11 +141,14 @@ type Config struct {
 	// for testing.
 	APIAddr string
 
+	// Target is deprecated, use Service instead.
+	Target string
+
 	instance string
 	zone     string
 }
 
-// startError represents the error occurred during the
+// startError represents the error occured during the
 // initializating and starting of the agent.
 var startError error
 
@@ -403,7 +401,7 @@ func withXGoogHeader(ctx context.Context, keyval ...string) context.Context {
 }
 
 func initializeAgent(c pb.ProfilerServiceClient) *agent {
-	labels := map[string]string{languageLabel: "go"}
+	labels := map[string]string{}
 	if config.zone != "" {
 		labels[zoneNameLabel] = config.zone
 	}
@@ -412,7 +410,7 @@ func initializeAgent(c pb.ProfilerServiceClient) *agent {
 	}
 	d := &pb.Deployment{
 		ProjectId: config.ProjectID,
-		Target:    config.Service,
+		Target:    config.Target,
 		Labels:    labels,
 	}
 
@@ -444,11 +442,15 @@ func initializeAgent(c pb.ProfilerServiceClient) *agent {
 func initializeConfig(cfg Config) error {
 	config = cfg
 
-	if config.Service == "" {
-		config.Service = os.Getenv("GAE_SERVICE")
+	switch {
+	case config.Service != "":
+		config.Target = config.Service
+	case config.Target == "":
+		config.Target = os.Getenv("GAE_SERVICE")
 	}
-	if config.Service == "" {
-		return errors.New("service name must be configured")
+
+	if config.Target == "" {
+		return errors.New("service name must be specified in the configuration")
 	}
 
 	if config.ServiceVersion == "" {

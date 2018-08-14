@@ -14,11 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package v1alpha1 contains API Schema definitions for the mysql v1alpha1 API group
+// +k8s:openapi-gen=true
 // +k8s:deepcopy-gen=package,register
 // +k8s:conversion-gen=github.com/presslabs/mysql-operator/pkg/apis/mysql
 // +k8s:defaulter-gen=TypeMeta
-// +k8s:openapi-gen=true
-
-// Package v1alpha1 is the v1alpha1 version of the API.
 // +groupName=mysql.presslabs.org
 package v1alpha1

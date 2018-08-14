@@ -1,5 +1,5 @@
 /*
-Copyright 2015 Google LLC
+Copyright 2015 Google Inc. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -123,7 +123,7 @@ func main() {
 	go func() {
 		s := <-c
 		log.Printf("Caught %v, cleaning scratch table.", s)
-		_ = adminClient.DeleteTable(context.Background(), *scratchTable)
+		adminClient.DeleteTable(context.Background(), *scratchTable)
 		os.Exit(1)
 	}()
 

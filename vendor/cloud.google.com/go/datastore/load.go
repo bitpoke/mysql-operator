@@ -1,4 +1,4 @@
-// Copyright 2014 Google LLC
+// Copyright 2014 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -412,15 +412,18 @@ func loadEntityToStruct(dst interface{}, ent *Entity) error {
 	if err != nil {
 		return err
 	}
-
-	// Try and load key.
+	// Load properties.
+	err = pls.Load(ent.Properties)
+	if err != nil {
+		return err
+	}
+	// Load key.
 	keyField := pls.codec.Match(keyFieldName)
 	if keyField != nil && ent.Key != nil {
 		pls.v.FieldByIndex(keyField.Index).Set(reflect.ValueOf(ent.Key))
 	}
 
-	// Load properties.
-	return pls.Load(ent.Properties)
+	return nil
 }
 
 func (s structPLS) Load(props []Property) error {
