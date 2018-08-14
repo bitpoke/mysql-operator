@@ -1,12 +1,14 @@
 
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
+BINDIR := $(PWD)/bin
+KUBEBUILDER_VERSION ?= 1.0.4
 
 all: test manager
 
 # Run tests
 test: generate fmt vet manifests
-	go test ./pkg/... ./cmd/... -coverprofile cover.out
+	go test ./pkg/... ./cmd/... -coverprofile cover.out $(TEST_ARGS)
 
 # Build manager binary
 manager: generate fmt vet
@@ -50,3 +52,14 @@ docker-build: test
 # Push the docker image
 docker-push:
 	docker push ${IMG}
+
+lint: vet
+	$(BINDIR)/golangci-lint run ./pkg/... ./cmd/...
+
+dependencies:
+	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v1.10.2
+
+	# install Kubebuilder
+	curl -L -O https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${KUBEBUILDER_VERSION}/kubebuilder_${KUBEBUILDER_VERSION}_linux_amd64.tar.gz
+	tar -zxvf kubebuilder_${KUBEBUILDER_VERSION}_linux_amd64.tar.gz
+	mv kubebuilder_${KUBEBUILDER_VERSION}_linux_amd64 -T /usr/local/kubebuilder

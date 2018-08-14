@@ -24,10 +24,10 @@ spec:
           type: object
         status:
           type: object
-      type: object
   version: v1
 status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: null
+  conditions: []
+  storedVersions: []
