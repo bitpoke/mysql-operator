@@ -205,6 +205,47 @@ var _ = Describe("Mysql cluster tests", func() {
 		testClusterEndpoints(f, cluster, []int{0}, []int{0})
 	})
 
+	It("cluster readOnly", func() {
+		cluster.Spec.Replicas = 2
+		cluster.Spec.ReadOnly = true
+
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Update(cluster)
+		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: '%s'", cluster.Name)
+
+		// test cluster to be ready
+		By("test cluster is ready after cluster update")
+		testClusterReadiness(f, cluster)
+		By("test cluster is registered in orchestrator after cluster update")
+		testClusterReadOnlyIsRegistredWithOrchestrator(f, cluster)
+
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
+		Expect(err).NotTo(HaveOccurred(), "Failed to get cluster %s", cluster.Name)
+
+		// expect cluster to be marked readOnly
+		By("test cluster to be readOnly")
+		f.ClusterEventuallyCondition(cluster, api.ClusterConditionReadOnly, core.ConditionTrue, f.Timeout)
+
+		// expect node to be marked as lagged and removed from service
+		By("test cluster node 0 to be readOnly")
+		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(0), api.NodeConditionReadOnly, core.ConditionTrue, 20*time.Second)
+		// node 1 should not be in healty service
+		By("test cluster endpoints after delayed slave")
+		testClusterEndpoints(f, cluster, []int{0}, []int{0, 1})
+
+		// remove master pod
+		podName := cluster.GetNameForResource(api.StatefulSet) + "-0"
+		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(podName, &meta.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred(), "Failed to delete pod %s", podName)
+
+		// check failover done, this is a reggression test
+		// TODO: decrease this timeout to 20
+		failoverTimeout := 40 * time.Second
+		By(fmt.Sprintf("Check failover done; timeout=%s", failoverTimeout))
+		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(1), api.NodeConditionMaster, core.ConditionFalse, failoverTimeout)
+		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(1), api.NodeConditionReadOnly, core.ConditionTrue, failoverTimeout)
+
+	})
+
 })
 
 func testClusterReadiness(f *framework.Framework, cluster *api.MysqlCluster) {
@@ -221,8 +262,18 @@ func testClusterReadiness(f *framework.Framework, cluster *api.MysqlCluster) {
 	// f.ClusterEventuallyCondition(cluster, api.ClusterConditionFailoverAck, core.ConditionFalse, f.Timeout)
 }
 
-// tests if the cluster is in orchestrator and is properly configured
+//test if a non-readOnly cluster is registered with orchestrator
 func testClusterIsRegistredWithOrchestrator(f *framework.Framework, cluster *api.MysqlCluster) {
+	testClusterRegistrationInOrchestrator(f, cluster, false)
+}
+
+//test if a readOnly cluster is registered with orchestrator
+func testClusterReadOnlyIsRegistredWithOrchestrator(f *framework.Framework, cluster *api.MysqlCluster) {
+	testClusterRegistrationInOrchestrator(f, cluster, true)
+}
+
+// tests if the cluster is in orchestrator and is properly configured
+func testClusterRegistrationInOrchestrator(f *framework.Framework, cluster *api.MysqlCluster, clusterReadOnly bool) {
 	cluster, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 	Expect(err).NotTo(HaveOccurred(), "Failed to get cluster '%s'", cluster.Name)
 
@@ -236,7 +287,7 @@ func testClusterIsRegistredWithOrchestrator(f *framework.Framework, cluster *api
 			"GTIDMode":      Equal("ON"),
 			"IsUpToDate":    Equal(true),
 			"Binlog_format": Equal("ROW"),
-			"ReadOnly":      Equal(false),
+			"ReadOnly":      Equal(clusterReadOnly),
 		}), // master node
 	}
 	for i := 1; i < int(cluster.Spec.Replicas); i++ {

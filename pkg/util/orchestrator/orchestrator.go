@@ -30,6 +30,12 @@ type Interface interface {
 
 	AuditRecovery(cluster string) ([]TopologyRecovery, error)
 	AckRecovery(id int64, commnet string) error
+
+	SetHostWritable(key InstanceKey) error
+	SetHostReadOnly(key InstanceKey) error
+
+	BeginMaintenance(key InstanceKey, owner, reason string) error
+	EndMaintenance(key InstanceKey) error
 }
 
 type orchestrator struct {
@@ -96,5 +102,40 @@ func (o *orchestrator) AckRecovery(id int64, comment string) error {
 		return err
 	}
 
+	return nil
+}
+
+func (o *orchestrator) SetHostWritable(key InstanceKey) error {
+
+	if err := o.makeGetAPIRequest(fmt.Sprintf("set-writeable/%s/%d", key.Hostname, key.Port), nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *orchestrator) SetHostReadOnly(key InstanceKey) error {
+
+	if err := o.makeGetAPIRequest(fmt.Sprintf("set-read-only/%s/%d", key.Hostname, key.Port), nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *orchestrator) BeginMaintenance(key InstanceKey, owner, reason string) error {
+
+	if err := o.makeGetAPIRequest(fmt.Sprintf("begin-maintenance/%s/%d/%s/%s", key.Hostname, key.Port, owner, reason), nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *orchestrator) EndMaintenance(key InstanceKey) error {
+
+	if err := o.makeGetAPIRequest(fmt.Sprintf("end-maintenance/%s/%d", key.Hostname, key.Port), nil); err != nil {
+		return err
+	}
 	return nil
 }

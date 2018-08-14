@@ -363,6 +363,13 @@ func schema_pkg_apis_mysql_v1alpha1_ClusterSpec(ref common.ReferenceCallback) co
 							Ref:         ref("github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1.QueryLimits"),
 						},
 					},
+					"readOnly": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Makes the cluster READ ONLY. Set the master to writable or ReadOnly",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

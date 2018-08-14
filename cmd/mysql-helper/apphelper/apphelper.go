@@ -147,12 +147,9 @@ func waitForMysqlReady() error {
 }
 
 func configReadOnly() error {
-	var query string
-	if tb.NodeRole() == "master" {
-		query = "SET GLOBAL READ_ONLY = 0"
-	} else {
-		query = "SET GLOBAL SUPER_READ_ONLY = 1"
-	}
+
+	query := "SET GLOBAL SUPER_READ_ONLY = 1"
+
 	if err := tb.RunQuery(query); err != nil {
 		return fmt.Errorf("failed to set read_only config, err: %s", err)
 	}
