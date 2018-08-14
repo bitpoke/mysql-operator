@@ -23,8 +23,10 @@ import (
 
 	dynamicclientset "github.com/appscode/kutil/dynamic/clientset"
 	dynamiclister "github.com/appscode/kutil/dynamic/lister"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
 )
@@ -107,7 +109,9 @@ type sharedResourceInformer struct {
 func newSharedResourceInformer(client *dynamicclientset.ResourceClient, defaultResyncPeriod time.Duration, close func()) *sharedResourceInformer {
 	informer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
-			ListFunc:  client.List,
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				return client.List(options)
+			},
 			WatchFunc: client.Watch,
 		},
 		&unstructured.Unstructured{},

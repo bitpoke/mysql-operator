@@ -79,14 +79,30 @@ func UpsertContainer(containers []core.Container, upsert core.Container) []core.
 	return append(containers, upsert)
 }
 
-func UpsertVolume(volumes []core.Volume, nv core.Volume) []core.Volume {
-	for i, vol := range volumes {
-		if vol.Name == nv.Name {
-			volumes[i] = nv
-			return volumes
-		}
+func UpsertContainers(containers []core.Container, addons []core.Container) []core.Container {
+	var out = containers
+	for _, c := range addons {
+		out = UpsertContainer(out, c)
 	}
-	return append(volumes, nv)
+	return out
+}
+
+func UpsertVolume(volumes []core.Volume, nv ...core.Volume) []core.Volume {
+	upsert := func(v core.Volume) {
+		for i, vol := range volumes {
+			if vol.Name == v.Name {
+				volumes[i] = v
+				return
+			}
+		}
+		volumes = append(volumes, v)
+	}
+
+	for _, volume := range nv {
+		upsert(volume)
+	}
+	return volumes
+
 }
 
 func UpsertVolumeClaim(volumeClaims []core.PersistentVolumeClaim, upsert core.PersistentVolumeClaim) []core.PersistentVolumeClaim {
@@ -108,14 +124,21 @@ func EnsureVolumeDeleted(volumes []core.Volume, name string) []core.Volume {
 	return volumes
 }
 
-func UpsertVolumeMount(mounts []core.VolumeMount, nv core.VolumeMount) []core.VolumeMount {
-	for i, vol := range mounts {
-		if vol.Name == nv.Name {
-			mounts[i] = nv
-			return mounts
+func UpsertVolumeMount(mounts []core.VolumeMount, nv ...core.VolumeMount) []core.VolumeMount {
+	upsert := func(m core.VolumeMount) {
+		for i, vol := range mounts {
+			if vol.Name == m.Name {
+				mounts[i] = m
+				return
+			}
 		}
+		mounts = append(mounts, m)
 	}
-	return append(mounts, nv)
+
+	for _, mount := range nv {
+		upsert(mount)
+	}
+	return mounts
 }
 
 func EnsureVolumeMountDeleted(mounts []core.VolumeMount, name string) []core.VolumeMount {
@@ -182,18 +205,17 @@ func UpsertMap(maps, upsert map[string]string) map[string]string {
 	return maps
 }
 
-func MergeLocalObjectReferences(old, new []core.LocalObjectReference) []core.LocalObjectReference {
+func MergeLocalObjectReferences(l1, l2 []core.LocalObjectReference) []core.LocalObjectReference {
+	result := make([]core.LocalObjectReference, 0, len(l1)+len(l2))
 	m := make(map[string]core.LocalObjectReference)
-	for _, ref := range old {
+	for _, ref := range l1 {
 		m[ref.Name] = ref
-	}
-	for _, ref := range new {
-		m[ref.Name] = ref
-	}
-
-	result := make([]core.LocalObjectReference, 0, len(m))
-	for _, ref := range m {
 		result = append(result, ref)
+	}
+	for _, ref := range l2 {
+		if _, found := m[ref.Name]; !found {
+			result = append(result, ref)
+		}
 	}
 	return result
 }

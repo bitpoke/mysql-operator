@@ -1,11 +1,9 @@
+// This library implements a cron spec parser and runner.  See the README for
+// more details.
 package cron
 
 import (
-	"fmt"
-	"log"
-	"runtime"
 	"sort"
-	"sync"
 	"time"
 )
 
@@ -17,11 +15,7 @@ type Cron struct {
 	stop     chan struct{}
 	add      chan *Entry
 	snapshot chan []*Entry
-	remove   chan string
 	running  bool
-	ErrorLog *log.Logger
-	location *time.Location
-	mux      *sync.RWMutex
 }
 
 // Job is an interface for submitted cron jobs.
@@ -51,9 +45,6 @@ type Entry struct {
 
 	// The Job to run.
 	Job Job
-
-	// The Job's name
-	Name string
 }
 
 // byTime is a wrapper for sorting the entry array by time
@@ -75,23 +66,14 @@ func (s byTime) Less(i, j int) bool {
 	return s[i].Next.Before(s[j].Next)
 }
 
-// New returns a new Cron job runner, in the Local time zone.
+// New returns a new Cron job runner.
 func New() *Cron {
-	return NewWithLocation(time.Now().Location())
-}
-
-// NewWithLocation returns a new Cron job runner.
-func NewWithLocation(location *time.Location) *Cron {
 	return &Cron{
 		entries:  nil,
 		add:      make(chan *Entry),
 		stop:     make(chan struct{}),
 		snapshot: make(chan []*Entry),
-		remove:   make(chan string),
 		running:  false,
-		ErrorLog: nil,
-		location: location,
-		mux:      new(sync.RWMutex),
 	}
 }
 
@@ -101,104 +83,27 @@ type FuncJob func()
 func (f FuncJob) Run() { f() }
 
 // AddFunc adds a func to the Cron to be run on the given schedule.
-func (c *Cron) AddFunc(spec string, cmd func(), names ...string) error {
-	var name string
-	if len(names) <= 0 {
-		name = fmt.Sprintf("%d", time.Now().Unix())
-	} else {
-		name = names[0]
-	}
-
-	return c.AddJob(spec, FuncJob(cmd), name)
+func (c *Cron) AddFunc(spec string, cmd func()) error {
+	return c.AddJob(spec, FuncJob(cmd))
 }
 
-// AddFunc adds a func to the Cron to be run on the given schedule.
-func (c *Cron) AddOnceFunc(spec string, cmd func(), names ...string) error {
-	var name string
-	if len(names) <= 0 {
-		name = fmt.Sprintf("%d", time.Now().Unix())
-	} else {
-		name = names[0]
-	}
-
-	// Support Once run function.
-	onceCmd := func() {
-		cmd()
-		c.Remove(name)
-	}
-
-	return c.AddJob(spec, FuncJob(onceCmd), name)
-}
-
-// AddJob adds a Job to the Cron to be run on the given schedule.
-func (c *Cron) AddJob(spec string, cmd Job, names ...string) error {
-	var name string
+// AddFunc adds a Job to the Cron to be run on the given schedule.
+func (c *Cron) AddJob(spec string, cmd Job) error {
 	schedule, err := Parse(spec)
 	if err != nil {
 		return err
 	}
-	if len(names) <= 0 {
-		name = fmt.Sprintf("%d", time.Now().Unix())
-	} else {
-		name = names[0]
-	}
-
-	c.Schedule(schedule, cmd, name)
+	c.Schedule(schedule, cmd)
 	return nil
-}
-
-// Remove an entry from being run in the future.
-func (c *Cron) Remove(name string) error {
-	c.mux.Lock()
-	defer c.mux.Unlock()
-
-	if !c.running {
-		p := c.pos(name)
-		if p == -1 {
-			return fmt.Errorf("no entry name: %s", name)
-		}
-
-		c.entries = c.entries[:p+copy(c.entries[p:], c.entries[p+1:])]
-		return nil
-	}
-
-	c.remove <- name
-	return nil
-}
-
-// pos return index if name in the Cron entries else -1
-func (c *Cron) pos(name string) int {
-	for p, e := range c.entries {
-		if e.Name == name {
-			return p
-		}
-	}
-
-	return -1
 }
 
 // Schedule adds a Job to the Cron to be run on the given schedule.
-func (c *Cron) Schedule(schedule Schedule, cmd Job, names ...string) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
-
-	var name string
-	if len(names) <= 0 {
-		name = fmt.Sprintf("%d", time.Now().Unix())
-	} else {
-		name = names[0]
-	}
+func (c *Cron) Schedule(schedule Schedule, cmd Job) {
 	entry := &Entry{
 		Schedule: schedule,
 		Job:      cmd,
-		Name:     name,
 	}
 	if !c.running {
-		p := c.pos(name)
-		if p != -1 {
-			fmt.Errorf("Duplicate names not allowed")
-		}
-
 		c.entries = append(c.entries, entry)
 		return
 	}
@@ -216,46 +121,17 @@ func (c *Cron) Entries() []*Entry {
 	return c.entrySnapshot()
 }
 
-// Location gets the time zone location
-func (c *Cron) Location() *time.Location {
-	return c.location
-}
-
-// Start the cron scheduler in its own go-routine, or no-op if already started.
+// Start the cron scheduler in its own go-routine.
 func (c *Cron) Start() {
-	if c.running {
-		return
-	}
 	c.running = true
 	go c.run()
 }
 
-// Run the cron scheduler, or no-op if already running.
-func (c *Cron) Run() {
-	if c.running {
-		return
-	}
-	c.running = true
-	c.run()
-}
-
-func (c *Cron) runWithRecovery(j Job) {
-	defer func() {
-		if r := recover(); r != nil {
-			const size = 64 << 10
-			buf := make([]byte, size)
-			buf = buf[:runtime.Stack(buf, false)]
-			c.logf("cron: panic running job: %v\n%s", r, buf)
-		}
-	}()
-	j.Run()
-}
-
-// Run the scheduler. this is private just due to the need to synchronize
+// Run the scheduler.. this is private just due to the need to synchronize
 // access to the 'running' state variable.
 func (c *Cron) run() {
 	// Figure out the next activation times for each entry.
-	now := c.now()
+	now := time.Now().Local()
 	for _, entry := range c.entries {
 		entry.Next = entry.Schedule.Next(now)
 	}
@@ -264,71 +140,46 @@ func (c *Cron) run() {
 		// Determine the next entry to run.
 		sort.Sort(byTime(c.entries))
 
-		var timer *time.Timer
+		var effective time.Time
 		if len(c.entries) == 0 || c.entries[0].Next.IsZero() {
 			// If there are no entries yet, just sleep - it still handles new entries
 			// and stop requests.
-			timer = time.NewTimer(100000 * time.Hour)
+			effective = now.AddDate(10, 0, 0)
 		} else {
-			timer = time.NewTimer(c.entries[0].Next.Sub(now))
+			effective = c.entries[0].Next
 		}
 
-		for {
-			select {
-			case now = <-timer.C:
-				now = now.In(c.location)
-				// Run every entry whose next time was less than now
-				for _, e := range c.entries {
-					if e.Next.After(now) || e.Next.IsZero() {
-						break
-					}
-					go c.runWithRecovery(e.Job)
-					e.Prev = e.Next
-					e.Next = e.Schedule.Next(now)
-				}
-
-			case newEntry := <-c.add:
-				timer.Stop()
-				now = c.now()
-				newEntry.Next = newEntry.Schedule.Next(now)
-				c.entries = append(c.entries, newEntry)
-
-			case name := <-c.remove:
-				p := c.pos(name)
-				if p == -1 {
+		select {
+		case now = <-time.After(effective.Sub(now)):
+			// Run every entry whose next time was this effective time.
+			for _, e := range c.entries {
+				if e.Next != effective {
 					break
 				}
-
-				c.entries = c.entries[:p+copy(c.entries[p:], c.entries[p+1:])]
-
-			case <-c.snapshot:
-				c.snapshot <- c.entrySnapshot()
-				continue
-
-			case <-c.stop:
-				timer.Stop()
-				return
+				go e.Job.Run()
+				e.Prev = e.Next
+				e.Next = e.Schedule.Next(effective)
 			}
+			continue
 
-			break
+		case newEntry := <-c.add:
+			c.entries = append(c.entries, newEntry)
+			newEntry.Next = newEntry.Schedule.Next(now)
+
+		case <-c.snapshot:
+			c.snapshot <- c.entrySnapshot()
+
+		case <-c.stop:
+			return
 		}
+
+		// 'now' should be updated after newEntry and snapshot cases.
+		now = time.Now().Local()
 	}
 }
 
-// Logs an error to stderr or to the configured error log
-func (c *Cron) logf(format string, args ...interface{}) {
-	if c.ErrorLog != nil {
-		c.ErrorLog.Printf(format, args...)
-	} else {
-		log.Printf(format, args...)
-	}
-}
-
-// Stop stops the cron scheduler if it is running; otherwise it does nothing.
+// Stop the cron scheduler.
 func (c *Cron) Stop() {
-	if !c.running {
-		return
-	}
 	c.stop <- struct{}{}
 	c.running = false
 }
@@ -345,9 +196,4 @@ func (c *Cron) entrySnapshot() []*Entry {
 		})
 	}
 	return entries
-}
-
-// now returns current time in c location
-func (c *Cron) now() time.Time {
-	return time.Now().In(c.location)
 }

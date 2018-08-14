@@ -8,7 +8,11 @@ import (
 )
 
 func CheckSkew(limit time.Duration) error {
-	t, err := ntp.Time("0.pool.ntp.org")
+	return CheckSkewFromServer("0.pool.ntp.org", limit)
+}
+
+func CheckSkewFromServer(server string, limit time.Duration) error {
+	t, err := ntp.Time(server)
 	if err != nil {
 		return err
 	}
