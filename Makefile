@@ -1,145 +1,52 @@
-PACKAGE_NAME := github.com/presslabs/mysql-operator
-REGISTRY := quay.io/presslabs
-IMAGE_TAGS := canary
-BUILD_TAG := build
 
-SRCDIRS  := cmd pkg
-PACKAGES := $(shell go list ./... | grep -v /vendor)
-GOFILES  := $(shell find $(SRCDIRS) -name '*.go' -type f | grep -v '_test.go')
+# Image URL to use all building/pushing image targets
+IMG ?= controller:latest
 
-ifeq ($(APP_VERSION),)
-APP_VERSION := $(shell git describe --abbrev=7 --dirty --tags --always)
-endif
+all: test manager
 
-GIT_COMMIT ?= $(shell git rev-parse HEAD)
+# Run tests
+test: generate fmt vet manifests
+	go test ./pkg/... ./cmd/... -coverprofile cover.out
 
-ifeq ($(shell git status --porcelain),)
-	GIT_STATE ?= clean
-else
-	GIT_STATE ?= dirty
-endif
+# Build manager binary
+manager: generate fmt vet
+	go build -o bin/manager github.com/presslabs/mysql-operator/cmd/manager
 
-HACK_DIR ?= hack
-GOPATH ?= $(HOME)/go
-GOBIN :=${GOPATH}/bin
-GOOS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
-GOARCH ?= amd64
-GOFLAGS := -ldflags "-X $(PACKAGE_NAME)/pkg/util.AppGitState=${GIT_STATE} -X $(PACKAGE_NAME)/pkg/util.AppGitCommit=${GIT_COMMIT} -X $(PACKAGE_NAME)/pkg/util.AppVersion=${APP_VERSION}"
+# Run against the configured Kubernetes cluster in ~/.kube/config
+run: generate fmt vet
+	go run ./cmd/manager/main.go
 
-# Get a list of all binaries to be built
-CMDS     := $(shell find ./cmd/ -maxdepth 1 -type d -exec basename {} \; | grep -v cmd)
-BIN_CMDS := $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
-DOCKER_BIN_CMDS := $(patsubst %, $(HACK_DIR)/docker/%/%, $(CMDS))
+# Install CRDs into a cluster
+install: manifests
+	kubectl apply -f config/crds
 
-DOCKER_IMAGES := mysql-operator mysql-helper
+# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+deploy: manifests
+	kubectl apply -f config/crds
+	kustomize build config/default | kubectl apply -f -
 
-.DEFAULT_GOAL := bin/mysql-operator_$(GOOS)_$(GOARCH)
+# Generate manifests e.g. CRD, RBAC etc.
+manifests:
+	go run vendor/sigs.k8s.io/controller-tools/cmd/controller-gen/main.go all
 
-# Code building targets
-#######################
-.PHONY: build
-build: $(BIN_CMDS)
+# Run go fmt against code
+fmt:
+	go fmt ./pkg/... ./cmd/...
 
-bin/%: $(GOFILES) Makefile
-	CGO_ENABLED=0 \
-	GOOS=$(shell echo "$*" | cut -d'_' -f2) \
-	GOARCH=$(shell echo "$*" | cut -d'_' -f3) \
-		go build $(GOFLAGS) \
-			-v -o $@ cmd/$(shell echo "$*" | cut -d'_' -f1)/main.go
+# Run go vet against code
+vet:
+	go vet ./pkg/... ./cmd/...
 
-# Testing targets
-#################
-.PHONY: test
-test:
-	go test -v \
-	    -race \
-		$$(go list ./... | \
-			grep -v '/vendor/' | \
-			grep -v '/test/e2e' | \
-			grep -v '/pkg/generated/' | \
-			grep -v '/pkg/client' \
-		)
+# Generate code
+generate:
+	go generate ./pkg/... ./cmd/...
 
-.PHONY: full-test
-full-test: lint generate_verify test
+# Build the docker image
+docker-build: test
+	docker build . -t ${IMG}
+	@echo "updating kustomize image patch file for manager resource"
+	sed -i 's@image: .*@image: '"${IMG}"'@' ./config/default/manager_image_patch.yaml
 
-.PHONY: lint
-lint:
-	@echo "Checking for formatting issues"
-	@set -e; \
-	GO_FMT=$$(git ls-files *.go | grep -v 'vendor/' | xargs gofmt -d); \
-	if [ -n "$${GO_FMT}" ] ; then \
-		echo "Please run go fmt"; \
-		echo "$$GO_FMT"; \
-		exit 1; \
-	fi
-
-# Cleanup targets
-#################
-.PHONY: clean
-clean:
-	rm -rf bin/*
-
-# Docker image targets
-######################
-.PHONY: install-docker
-install-docker : $(patsubst %, bin/%_linux_amd64, $(CMDS))
-	set -e;
-		for cmd in $(DOCKER_IMAGES); do \
-			install -m 755 bin/$${cmd}_linux_amd64 $(HACK_DIR)/docker/$${cmd}/$${cmd} ; \
-		done
-
-.PHONY: images
-images: install-docker
-	set -e;
-	for cmd in $(DOCKER_IMAGES); do \
-		docker build \
-			--build-arg VCS_REF=$(GIT_COMMIT) \
-			--build-arg APP_VERSION=$(APP_VERSION) \
-			-t $(REGISTRY)/$${cmd}:$(BUILD_TAG) \
-			-f $(HACK_DIR)/docker/$${cmd}/Dockerfile $(HACK_DIR)/docker/$${cmd} ; \
-	done
-
-publish: images
-	set -e; \
-	for cmd in $(DOCKER_IMAGES); do \
-		for tag in $(IMAGE_TAGS); do \
-			docker tag $(REGISTRY)/$${cmd}:$(BUILD_TAG) $(REGISTRY)/$${cmd}:$${tag}; \
-			docker push $(REGISTRY)/$${cmd}:$${tag}; \
-		done ; \
-	done
-
-
-# CRD generator
-###############
-CHART_TEMPLATE_PATH := deploy/
-CRDS := mysqlclusters.mysql.presslabs.org mysqlbackups.mysql.presslabs.org
-GROUP_NAME := mysql.presslabs.org
-
-CRD_GEN_FILES := $(addprefix $(CHART_TEMPLATE_PATH),$(addsuffix .yaml,$(CRDS)))
-
-$(CRD_GEN_FILES):
-	bin/gen-crds-yaml_$(GOOS)_$(GOARCH) --crd $(basename $(notdir $@)) > $(@:.$(GROUP_NAME).yaml=.yaml)
-
-.PHONY: gen-crds gen-crds-verify gen-crds-clean
-gen-crds: gen-crds-clean $(CRD_GEN_FILES)
-
-gen-crds-verify: SHELL := /bin/bash
-gen-crds-verify: $(addsuffix -verify,$(CRD_GEN_FILES))
-	@echo "Verifying generated CRDs"
-
-$(addsuffix -verify,$(CRD_GEN_FILES)): bin/gen-crds-yaml_$(GOOS)_$(GOARCH)
-	$(eval FILE := $(subst -verify,,$@))
-	$(eval CRD := $(basename $(notdir $@)))
-	diff -Naupr $(FILE:.$(GROUP_NAME).yaml=.yaml) <(bin/gen-crds-yaml_$(GOOS)_$(GOARCH) --crd $(CRD))
-
-gen-crds-clean:
-	rm -f $(CRD_GEN_FILES:.$(GROUP_NAME).yaml=.yaml)
-
-
-# Code generation targets
-#########################
-CODEGEN_APIS_VERSIONS := mysql:v1alpha1
-CODEGEN_TOOLS := deepcopy client lister informer openapi
-CODEGEN_OUTPUT_PKG := $(PACKAGE_NAME)/pkg/generated
-include hack/codegen.mk
+# Push the docker image
+docker-push:
+	docker push ${IMG}

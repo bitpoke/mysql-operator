@@ -14,38 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// NOTE: Boilerplate only.  Ignore this file.
+
+// Package v1alpha1 contains API Schema definitions for the mysql v1alpha1 API group
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen=package,register
+// +k8s:conversion-gen=github.com/presslabs/mysql-operator/pkg/apis/mysql
+// +k8s:defaulter-gen=TypeMeta
+// +groupName=mysql.presslabs.org
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/presslabs/mysql-operator/pkg/apis/mysql"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/scheme"
 )
 
 var (
-	// SchemeBuilder the scheme builder
-	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
-	// AddToScheme function
-	AddToScheme = SchemeBuilder.AddToScheme
-	// SchemeGroupVersion ..
-	SchemeGroupVersion = schema.GroupVersion{Group: mysql.GroupName, Version: "v1alpha1"}
+	// SchemeGroupVersion is group version used to register these objects
+	SchemeGroupVersion = schema.GroupVersion{Group: "mysql.presslabs.org", Version: "v1alpha1"}
+
+	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
+	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}
 )
-
-// Resource gets an MysqlCluster GroupResource for a specified resource
-func Resource(resource string) schema.GroupResource {
-	return SchemeGroupVersion.WithResource(resource).GroupResource()
-}
-
-// addKnownTypes adds the set of types defined in this package to the supplied scheme.
-func addKnownTypes(s *runtime.Scheme) error {
-	s.AddKnownTypes(SchemeGroupVersion,
-		&MysqlCluster{},
-		&MysqlClusterList{},
-		&MysqlBackup{},
-		&MysqlBackupList{},
-	)
-	metav1.AddToGroupVersion(s, SchemeGroupVersion)
-	return nil
-}
