@@ -23,7 +23,7 @@ import (
 )
 
 type FakeOrc struct {
-	Clusters   map[string][]Instance
+	Clusters   map[string][]*Instance
 	Recoveries map[string][]TopologyRecovery
 	AckRec     []int64
 
@@ -34,12 +34,12 @@ func New() *FakeOrc {
 	return &FakeOrc{}
 }
 
-func (o *FakeOrc) AddInstance(cluster, host string, master bool, sls int64, slaveR, upToDate bool) {
+func (o *FakeOrc) AddInstance(cluster, host string, master bool, lag int64, slaveRunning, upToDate bool) *Instance {
 	valid := true
-	if sls < 0 {
+	if lag < 0 {
 		valid = false
 	}
-	inst := Instance{
+	inst := &Instance{
 		Key: InstanceKey{
 			Hostname: host,
 			Port:     3306,
@@ -47,22 +47,25 @@ func (o *FakeOrc) AddInstance(cluster, host string, master bool, sls int64, slav
 		ReadOnly: !master,
 		SlaveLagSeconds: NullInt64{
 			Valid: valid,
-			Int64: sls,
+			Int64: lag,
 		},
 		ClusterName:       cluster,
-		Slave_SQL_Running: slaveR,
-		Slave_IO_Running:  slaveR,
+		Slave_SQL_Running: slaveRunning,
+		Slave_IO_Running:  slaveRunning,
 		IsUpToDate:        upToDate,
 		IsLastCheckValid:  upToDate,
 	}
 	if o.Clusters == nil {
-		o.Clusters = make(map[string][]Instance)
+		o.Clusters = make(map[string][]*Instance)
 	}
 	clusters, ok := o.Clusters[cluster]
 	if ok {
 		o.Clusters[cluster] = append(clusters, inst)
+	} else {
+		o.Clusters[cluster] = []*Instance{inst}
 	}
-	o.Clusters[cluster] = []Instance{inst}
+
+	return inst
 }
 
 func (o *FakeOrc) RemoveInstance(cluster, host string) {
@@ -139,7 +142,7 @@ func (o *FakeOrc) Master(clusterHint string) (*Instance, error) {
 	}
 	for _, inst := range insts {
 		if !inst.ReadOnly {
-			return &inst, nil
+			return inst, nil
 		}
 	}
 	return nil, fmt.Errorf("[faker] master not found!!!!")
@@ -150,8 +153,11 @@ func (o *FakeOrc) Cluster(cluster string) ([]Instance, error) {
 	if !ok {
 		return nil, fmt.Errorf("not found")
 	}
-
-	return insts, nil
+	var Insts []Instance
+	for _, inst := range insts {
+		Insts = append(Insts, *inst)
+	}
+	return Insts, nil
 }
 
 func (o *FakeOrc) AuditRecovery(cluster string) ([]TopologyRecovery, error) {
@@ -165,5 +171,49 @@ func (o *FakeOrc) AuditRecovery(cluster string) ([]TopologyRecovery, error) {
 
 func (o *FakeOrc) AckRecovery(id int64, comment string) error {
 	o.AckRec = append(o.AckRec, id)
+	return nil
+}
+
+func (o *FakeOrc) SetHostWritable(key InstanceKey) error {
+
+	check := false
+	for _, instances := range o.Clusters {
+		for _, instance := range instances {
+			if instance.Key.Hostname == key.Hostname && instance.Key.Port == key.Port {
+				instance.ReadOnly = false
+				check = true
+			}
+		}
+	}
+	if check == true {
+		return nil
+	} else {
+		return fmt.Errorf("the desired host and port was not found")
+	}
+}
+
+func (o *FakeOrc) SetHostReadOnly(key InstanceKey) error {
+
+	check := false
+	for _, instances := range o.Clusters {
+		for _, instance := range instances {
+			if instance.Key.Hostname == key.Hostname && instance.Key.Port == key.Port {
+				instance.ReadOnly = true
+				check = true
+			}
+		}
+	}
+	if check == true {
+		return nil
+	} else {
+		return fmt.Errorf("the desired host and port was not found")
+	}
+}
+
+func (o *FakeOrc) BeginMaintenance(key InstanceKey, owner, reason string) error {
+	return nil
+}
+
+func (o *FakeOrc) EndMaintenance(key InstanceKey) error {
 	return nil
 }

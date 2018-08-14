@@ -107,6 +107,10 @@ type ClusterSpec struct {
 	// QueryLimits represents limits for a query
 	// +optional
 	QueryLimits *QueryLimits `json:"queryLimits,omitempty"`
+
+	// Makes the cluster READ ONLY. Set the master to writable or ReadOnly
+	// +optional
+	ReadOnly bool `json:"readOnly,omitempty"`
 }
 
 type MysqlConf map[string]string
@@ -139,6 +143,7 @@ type ClusterConditionType string
 const (
 	ClusterConditionReady       ClusterConditionType = "Ready"
 	ClusterConditionFailoverAck                      = "PendingFailoverAck"
+	ClusterConditionReadOnly                         = "ReadOnly"
 )
 
 type NodeStatus struct {
@@ -158,6 +163,7 @@ const (
 	NodeConditionLagged      NodeConditionType = "Lagged"
 	NodeConditionReplicating                   = "Replicating"
 	NodeConditionMaster                        = "Master"
+	NodeConditionReadOnly                      = "ReadOnly"
 )
 
 type PodSpec struct {
