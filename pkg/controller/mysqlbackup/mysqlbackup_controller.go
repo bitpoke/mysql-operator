@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mysqlcluster
+package mysqlbackup
 
 import (
 	"context"
@@ -42,7 +42,7 @@ import (
 * business logic.  Delete these comments after modifying this file.*
  */
 
-// Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+// Add creates a new MysqlBackup Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 // USER ACTION REQUIRED: update cmd/manager/main.go to call this mysql.Add(mgr) to install this Controller
 func Add(mgr manager.Manager) error {
@@ -51,28 +51,28 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileMysqlCluster{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileMysqlBackup{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("mysqlcluster-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("mysqlbackup-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
-	// Watch for changes to MysqlCluster
-	err = c.Watch(&source.Kind{Type: &mysqlv1alpha1.MysqlCluster{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to MysqlBackup
+	err = c.Watch(&source.Kind{Type: &mysqlv1alpha1.MysqlBackup{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
 
 	// TODO(user): Modify this to be the types you create
-	// Uncomment watch a Deployment created by MysqlCluster - change this for objects you create
+	// Uncomment watch a Deployment created by MysqlBackup - change this for objects you create
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &mysqlv1alpha1.MysqlCluster{},
+		OwnerType:    &mysqlv1alpha1.MysqlBackup{},
 	})
 	if err != nil {
 		return err
@@ -81,24 +81,24 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-var _ reconcile.Reconciler = &ReconcileMysqlCluster{}
+var _ reconcile.Reconciler = &ReconcileMysqlBackup{}
 
-// ReconcileMysqlCluster reconciles a MysqlCluster object
-type ReconcileMysqlCluster struct {
+// ReconcileMysqlBackup reconciles a MysqlBackup object
+type ReconcileMysqlBackup struct {
 	client.Client
 	scheme *runtime.Scheme
 }
 
-// Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
-// and what is in the MysqlCluster.Spec
+// Reconcile reads that state of the cluster for a MysqlBackup object and makes changes based on the state read
+// and what is in the MysqlBackup.Spec
 // TODO(user): Modify this Reconcile function to implement your Controller logic.  The scaffolding writes
 // a Deployment as an example
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlclusters,verbs=get;list;watch;create;update;patch;delete
-func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// Fetch the MysqlCluster instance
-	instance := &mysqlv1alpha1.MysqlCluster{}
+// +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlbackups,verbs=get;list;watch;create;update;patch;delete
+func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	// Fetch the MysqlBackup instance
+	instance := &mysqlv1alpha1.MysqlBackup{}
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {

@@ -50,3 +50,28 @@ docker-build: test
 # Push the docker image
 docker-push:
 	docker push ${IMG}
+
+lint: vet
+	gometalinter.v2 --disable-all --deadline 5m \
+	--enable=vetshadow \
+	--enable=misspell \
+	--enable=structcheck \
+	--enable=golint \
+	--enable=deadcode \
+	--enable=goimports \
+	--enable=errcheck \
+	--enable=varcheck \
+	--enable=goconst \
+	--enable=gas \
+	--enable=unparam \
+	--enable=ineffassign \
+	--enable=nakedret \
+	--enable=interfacer \
+	--enable=misspell \
+	--enable=gocyclo \
+	--line-length=170 \
+	--enable=lll \
+	--dupl-threshold=400 \
+	--enable=dupl \
+	--enable=maligned \
+./pkg/... ./cmd/...

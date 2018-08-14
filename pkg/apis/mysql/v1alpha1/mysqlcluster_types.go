@@ -22,30 +22,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// +genclient
-// +k8s:openapi-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=mysqlcluster
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+// Important: Run "make" to regenerate code after modifying this file
 
-type MysqlCluster struct {
-	// +k8s:openapi-gen=false
-	metav1.TypeMeta `json:",inline"`
-	// +k8s:openapi-gen=false
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              ClusterSpec `json:"spec"`
-	// +k8s:openapi-gen=false
-	Status ClusterStatus `json:"status,omitempty"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type MysqlClusterList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []MysqlCluster `json:"items"`
-}
-
-type ClusterSpec struct {
+// MysqlClusterSpec defines the desired state of MysqlCluster
+type MysqlClusterSpec struct {
 	// The number of pods. This updates replicas filed
 	// Defaults to 0
 	// +optional
@@ -65,7 +48,7 @@ type ClusterSpec struct {
 
 	// A bucket URI that contains a xtrabackup to initialize the mysql database.
 	// +optional
-	InitBucketUri        string `json:"initBucketUri,omitempty"`
+	InitBucketURI        string `json:"initBucketURI,omitempty"`
 	InitBucketSecretName string `json:"initBucketSecretName,omitempty"`
 
 	// The number of pods from that set that must still be available after the
@@ -79,7 +62,7 @@ type ClusterSpec struct {
 	// Defaults to ""
 	// +optional
 	BackupSchedule   string `json:"backupSchedule,omitempty"`
-	BackupUri        string `json:"backupUri,omitempty"`
+	BackupURI        string `json:"backupURI,omitempty"`
 	BackupSecretName string `json:"backupSecretName,omitempty"`
 
 	// If set keeps last BackupScheduleJobsHistoryLimit Backups
@@ -109,58 +92,11 @@ type ClusterSpec struct {
 	QueryLimits *QueryLimits `json:"queryLimits,omitempty"`
 }
 
+// MysqlConf defines type for extra cluster configs. It's a simple map between
+// string and string.
 type MysqlConf map[string]string
 
-type ClusterStatus struct {
-	// ReadyNodes represents number of the nodes that are in ready state
-	ReadyNodes int `json:"readyNodes,omitempty"`
-	// Conditions contains the list of the cluster conditions fulfilled
-	Conditions []ClusterCondition `json:"conditions,omitempty"`
-	// Nodes contains informations from orchestrator
-	Nodes []NodeStatus `json:"nodes,omitempty"`
-}
-
-type ClusterCondition struct {
-	// type of cluster condition, values in (\"Ready\")
-	Type ClusterConditionType `json:"type"`
-	// Status of the condition, one of (\"True\", \"False\", \"Unknown\")
-	Status core.ConditionStatus `json:"status"`
-
-	// LastTransitionTime
-	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
-	// Reason
-	Reason string `json:"reason"`
-	// Message
-	Message string `json:"message"`
-}
-
-type ClusterConditionType string
-
-const (
-	ClusterConditionReady       ClusterConditionType = "Ready"
-	ClusterConditionConfig                           = "ConfigReady"
-	ClusterConditionFailoverAck                      = "PendingFailoverAck"
-)
-
-type NodeStatus struct {
-	Name       string          `json:"name"`
-	Conditions []NodeCondition `json:"conditions,omitempty"`
-}
-
-type NodeCondition struct {
-	Type               NodeConditionType    `json:"type"`
-	Status             core.ConditionStatus `json:"status"`
-	LastTransitionTime metav1.Time          `json:"lastTransitionTime"`
-}
-
-type NodeConditionType string
-
-const (
-	NodeConditionLagged      NodeConditionType = "Lagged"
-	NodeConditionReplicating                   = "Replicating"
-	NodeConditionMaster                        = "Master"
-)
-
+// PodSpec defines type for configure cluster pod spec.
 type PodSpec struct {
 	ImagePullPolicy  core.PullPolicy             `json:"imagePullPolicy,omitempty"`
 	ImagePullSecrets []core.LocalObjectReference `json:"imagePullSecrets,omitempty"`
@@ -172,6 +108,7 @@ type PodSpec struct {
 	NodeSelector map[string]string         `json:"nodeSelector,omitempty"`
 }
 
+// VolumeSpec defines type for configure cluster pvc spec.
 type VolumeSpec struct {
 	core.PersistentVolumeClaimSpec `json:",inline"`
 }
@@ -216,46 +153,10 @@ type QueryLimits struct {
 	IgnoreUser []string `json:"ignoreUser,omitempty"`
 }
 
-// +genclient
-// +k8s:openapi-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=mysqlbackup
-
-type MysqlBackup struct {
-	// +k8s:openapi-gen=false
-	metav1.TypeMeta `json:",inline"`
-	// +k8s:openapi-gen=false
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec BackupSpec `json:"spec"`
-	// +k8s:openapi-gen=false
-	Status BackupStatus `json:"status,omitempty"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type MysqlBackupList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []MysqlBackup `json:"items"`
-}
-
-type BackupSpec struct {
-	// ClustterName represents the cluster for which to take backup
-	ClusterName string `json:"clusterName"`
-	// BucketUri a fully specified bucket URI where to put backup.
-	// Default is used the one specified in cluster.
-	// optional
-	BackupUri string `json:"backupUri,omitempty"`
-	// BackupSecretName the name of secrets that contains the credentials to
-	// access the bucket. Default is used the secret specified in cluster.
-	// optinal
-	BackupSecretName string `json:"backupSecretName,omitempty"`
-}
-
-type BackupCondition struct {
+// ClusterCondition defines type for cluster conditions.
+type ClusterCondition struct {
 	// type of cluster condition, values in (\"Ready\")
-	Type BackupConditionType `json:"type"`
+	Type ClusterConditionType `json:"type"`
 	// Status of the condition, one of (\"True\", \"False\", \"Unknown\")
 	Status core.ConditionStatus `json:"status"`
 
@@ -267,21 +168,76 @@ type BackupCondition struct {
 	Message string `json:"message"`
 }
 
-type BackupStatus struct {
-	// Complete marks the backup in final state
-	Completed bool `json:"completed"`
-
-	// BackupUri represent the fully uri to the backup location
-	BackupUri string `json:"backupUri,omitempty"`
-
-	Conditions []BackupCondition `json:"conditions"`
-}
-
-type BackupConditionType string
+// ClusterConditionType defines type for cluster condition type.
+type ClusterConditionType string
 
 const (
-	// BackupComplete means the backup has finished his execution
-	BackupComplete BackupConditionType = "Complete"
-	// BackupFailed means backup has failed
-	BackupFailed BackupConditionType = "Failed"
+	// ClusterConditionReady represents the readiness of the cluster. This
+	// condition is the same sa statefulset Ready condition.
+	ClusterConditionReady ClusterConditionType = "Ready"
+	// ClusterConditionFailoverAck represents if the cluster has pending ack in
+	// orchestrator or not.
+	ClusterConditionFailoverAck = "PendingFailoverAck"
 )
+
+// NodeStatus defines type for status of a node into cluster.
+type NodeStatus struct {
+	Name       string          `json:"name"`
+	Conditions []NodeCondition `json:"conditions,omitempty"`
+}
+
+// NodeCondition defines type for representing node conditions.
+type NodeCondition struct {
+	Type               NodeConditionType    `json:"type"`
+	Status             core.ConditionStatus `json:"status"`
+	LastTransitionTime metav1.Time          `json:"lastTransitionTime"`
+}
+
+// NodeConditionType defines type for node condition type.
+type NodeConditionType string
+
+const (
+	// NodeConditionLagged represents if the node is marked as lagged by
+	// orchestrator.
+	NodeConditionLagged NodeConditionType = "Lagged"
+	// NodeConditionReplicating represents if the node is replicating or not.
+	NodeConditionReplicating = "Replicating"
+	// NodeConditionMaster represents if the node is master or not.
+	NodeConditionMaster = "Master"
+)
+
+// MysqlClusterStatus defines the observed state of MysqlCluster
+type MysqlClusterStatus struct {
+	// ReadyNodes represents number of the nodes that are in ready state
+	ReadyNodes int
+	// Conditions contains the list of the cluster conditions fulfilled
+	Conditions []ClusterCondition `json:"conditions,omitempty"`
+	// Nodes contains informations from orchestrator
+	Nodes []NodeStatus `json:"nodes,omitempty"`
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// MysqlCluster is the Schema for the mysqlclusters API
+// +k8s:openapi-gen=true
+type MysqlCluster struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   MysqlClusterSpec   `json:"spec,omitempty"`
+	Status MysqlClusterStatus `json:"status,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// MysqlClusterList contains a list of MysqlCluster
+type MysqlClusterList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []MysqlCluster `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&MysqlCluster{}, &MysqlClusterList{})
+}
