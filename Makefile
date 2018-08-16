@@ -2,6 +2,8 @@
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 
+KUBEBUILDER_VERSION ?= 1.0.0
+
 all: test manager
 
 # Run tests
@@ -75,3 +77,13 @@ lint: vet
 	--enable=dupl \
 	--enable=maligned \
 ./pkg/... ./cmd/...
+
+
+dependencies:
+	go get -u gopkg.in/alecthomas/gometalinter.v2
+	gometalinter.v2 --install
+
+	# install Kubebuilder
+	curl -L -O https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${KUBEBUILDER_VERSION}/kubebuilder_${KUBEBUILDER_VERSION}_linux_amd64.tar.gz
+	tar -zxvf kubebuilder_${KUBEBUILDER_VERSION}_linux_amd64.tar.gz
+	mv kubebuilder_${KUBEBUILDER_VERSION}_linux_amd64 -T /usr/local/kubebuilder

@@ -1,0 +1,11 @@
+workspace:
+  base: /go
+  path: src/github.com/presslabs/mysql-operator
+
+pipeline:
+  test:
+    image: golang:1.10
+    commands:
+      - make dependencies
+      - make lint
+      - make test
