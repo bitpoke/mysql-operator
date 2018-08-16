@@ -17,35 +17,49 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"testing"
+	"context"
 
-	"github.com/onsi/gomega"
-	"golang.org/x/net/context"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func TestStorageMysqlBackup(t *testing.T) {
-	key := types.NamespacedName{Name: "foo", Namespace: "default"}
-	created := &MysqlBackup{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"}}
-	g := gomega.NewGomegaWithT(t)
+var _ = Describe("MysqlBackup CRUD", func() {
+	var created *MysqlBackup
+	var key types.NamespacedName
 
-	// Test Create
-	fetched := &MysqlBackup{}
-	g.Expect(c.Create(context.TODO(), created)).NotTo(gomega.HaveOccurred())
+	BeforeEach(func() {
+		key = types.NamespacedName{Name: "foo", Namespace: "default"}
+		created = &MysqlBackup{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"}}
 
-	g.Expect(c.Get(context.TODO(), key, fetched)).NotTo(gomega.HaveOccurred())
-	g.Expect(fetched).To(gomega.Equal(created))
+	})
 
-	// Test Updating the Labels
-	updated := fetched.DeepCopy()
-	updated.Labels = map[string]string{"hello": "world"}
-	g.Expect(c.Update(context.TODO(), updated)).NotTo(gomega.HaveOccurred())
+	AfterEach(func() {
+		c.Delete(context.TODO(), created)
+	})
 
-	g.Expect(c.Get(context.TODO(), key, fetched)).NotTo(gomega.HaveOccurred())
-	g.Expect(fetched).To(gomega.Equal(updated))
+	Context("for a valid config", func() {
+		It("should provide CRUD access to the object", func() {
+			// Test Create
+			fetched := &MysqlBackup{}
+			Expect(c.Create(context.TODO(), created)).NotTo(HaveOccurred())
 
-	// Test Delete
-	g.Expect(c.Delete(context.TODO(), fetched)).NotTo(gomega.HaveOccurred())
-	g.Expect(c.Get(context.TODO(), key, fetched)).To(gomega.HaveOccurred())
-}
+			Expect(c.Get(context.TODO(), key, fetched)).NotTo(HaveOccurred())
+			Expect(fetched).To(Equal(created))
+
+			// Test Updating the Labels
+			updated := fetched.DeepCopy()
+			updated.Labels = map[string]string{"hello": "world"}
+			Expect(c.Update(context.TODO(), updated)).NotTo(HaveOccurred())
+
+			Expect(c.Get(context.TODO(), key, fetched)).NotTo(HaveOccurred())
+			Expect(fetched).To(Equal(updated))
+
+			// Test Delete
+			Expect(c.Delete(context.TODO(), fetched)).NotTo(HaveOccurred())
+			Expect(c.Get(context.TODO(), key, fetched)).To(HaveOccurred())
+
+		})
+	})
+})

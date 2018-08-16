@@ -66,13 +66,13 @@ const (
 // MysqlBackupStatus defines the observed state of MysqlBackup
 type MysqlBackupStatus struct {
 	// Complete marks the backup in final state
-	Completed bool `json:"completed"`
+	Completed bool `json:"completed,omitempty"`
 
 	// BackupURI represent the fully uri to the backup location
 	BackupURI string `json:"backupURI,omitempty"`
 
 	// Conditions represents the backup resource conditions list.
-	Conditions []BackupCondition `json:"conditions"`
+	Conditions []BackupCondition `json:"conditions,omitempty"`
 }
 
 // +genclient
