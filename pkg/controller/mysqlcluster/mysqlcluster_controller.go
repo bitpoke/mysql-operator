@@ -18,11 +18,10 @@ package mysqlcluster
 
 import (
 	"context"
-	"log"
-	"reflect"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -41,10 +41,14 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/syncers/mysqlcluster"
 )
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
+const (
+	eventNormal  = "Normal"
+	eventWarning = "Warning"
+)
+
+var log = logf.Log.WithName(controllerName)
+
+const controllerName = "mysqlcluster-controller"
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -55,13 +59,14 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileMysqlCluster{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileMysqlCluster{Client: mgr.GetClient(), scheme: mgr.GetScheme(),
+		recorder: mgr.GetRecorder(controllerName)}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("mysqlcluster-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -72,15 +77,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create
-	// Uncomment watch a Deployment created by MysqlCluster - change this for objects you create
-	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
+	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &mysqlv1alpha1.MysqlCluster{},
 	})
 	if err != nil {
 		return err
 	}
+
+	//TODO: watch other created resources
 
 	return nil
 }
@@ -97,7 +102,7 @@ type ReconcileMysqlCluster struct {
 // Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
 // and what is in the MysqlCluster.Spec
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=statefulset,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlclusters,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlCluster instance
@@ -112,19 +117,20 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	log.Info(fmt.Sprintf("Syncing cluster: %s/%s", cluster.Name, cluster.Namespace))
 
 	// check for secretName to be specified
-	if len(cluster.Spec.SecretName) != 0 {
+	if len(cluster.Spec.SecretName) == 0 {
 		return reconcile.Result{}, fmt.Errorf("the spec.SecretName is empty")
 	}
 
 	// run the config syncers
-	configSyncers = []syncers.Interface{
+	configSyncers := []syncers.Interface{
 		mysqlcluster.NewConfigMapSyncer(cluster),
 		mysqlcluster.NewSecretSyncer(cluster),
 	}
 
-	err := r.sync(configSyncers)
+	err = r.sync(cluster, configSyncers)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -136,7 +142,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// run the syncers for services, pdb and statefulset
-	otherSyncers = []syncers.Interface{
+	otherSyncers := []syncers.Interface{
 		mysqlcluster.NewPDBSyncer(cluster),
 
 		mysqlcluster.NewHeadlessSVCSyncer(cluster),
@@ -146,9 +152,9 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		mysqlcluster.NewStatefulSetSyncer(cluster, configRev, secretRev),
 	}
 
-	err := r.sync(otherSyncers)
+	err = r.sync(cluster, otherSyncers)
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, err
 }
 
 func (r *ReconcileMysqlCluster) sync(cluster *mysqlv1alpha1.MysqlCluster, syncers []syncers.Interface) error {
@@ -159,7 +165,9 @@ func (r *ReconcileMysqlCluster) sync(cluster *mysqlv1alpha1.MysqlCluster, syncer
 		syncFn := s.Sync
 		if s.ShouldHaveOwnerReference() {
 			syncFn = func(in runtime.Object) error {
-				if err := controllerutil.SetControllerReference(cluster, in, r.scheme); err != nil {
+				// TODO: check this
+				metaIn := in.(metav1.Object)
+				if err := controllerutil.SetControllerReference(cluster, metaIn, r.scheme); err != nil {
 					return err
 				}
 				return s.Sync(in)
@@ -172,37 +180,38 @@ func (r *ReconcileMysqlCluster) sync(cluster *mysqlv1alpha1.MysqlCluster, syncer
 		log.Info(fmt.Sprintf("%T %s/%s %s", existing, cluster.Namespace, cluster.Name, op))
 
 		if err != nil {
-			r.recorder.Eventf(wp, eventWarning, reason, "%T %s/%s failed syncing: %s", existing, cluster.Namespace, cluster.Name, err)
+			r.recorder.Eventf(cluster, eventWarning, reason, "%T %s/%s failed syncing: %s", existing, cluster.Namespace, cluster.Name, err)
 			return err
 		}
 		if op != controllerutil.OperationNoop {
-			r.recorder.Eventf(wp, eventNormal, reason, "%T %s/%s %s successfully", existing, cluster.Namespace, cluster.Name, op)
+			r.recorder.Eventf(cluster, eventNormal, reason, "%T %s/%s %s successfully", existing, cluster.Namespace, cluster.Name, op)
 		}
 	}
 	return nil
 }
 
-func (r *ReconcileMysqlCLuster) getConfigAndSecretRevs(cluster *mysqlv1alpha1.MysqlCluster) (cmRev string, secRev string, err error) {
-	configMap := &core.ConfigMap{
+func (r *ReconcileMysqlCluster) getConfigAndSecretRevs(cluster *mysqlv1alpha1.MysqlCluster) (cmRev string, secRev string, err error) {
+	configMap := &core.ConfigMap{}
+	err = r.Get(context.TODO(), types.NamespacedName{
 		Name:      cluster.GetNameForResource(mysqlv1alpha1.ConfigMap),
 		Namespace: cluster.Namespace,
-	}
-	err = r.Get(context.TODO(), configMap)
+	}, configMap)
 	if err != nil {
 		return
 	}
 
-	secret := &core.Secret{
+	secret := &core.Secret{}
+	err = r.Get(context.TODO(), types.NamespacedName{
 		Name:      cluster.Spec.SecretName,
 		Namespace: cluster.Namespace,
-	}
-	err = r.Get(context.TODO(), secret)
+	}, secret)
 	if err != nil {
 		return
 	}
 
 	cmRev = configMap.ResourceVersion
 	secRev = secret.ResourceVersion
+	return
 }
 
 func getErrorEventReason(obj runtime.Object, err error) string {

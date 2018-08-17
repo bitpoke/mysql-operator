@@ -17,8 +17,6 @@ limitations under the License.
 package mysqlcluster
 
 import (
-	//	"log"
-	//	"os"
 	"path/filepath"
 	"testing"
 
@@ -28,15 +26,17 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 var t *envtest.Environment
 var cfg *rest.Config
 var c client.Client
 
-func TestV1alpha1(t *testing.T) {
+func TestSyncers(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "API v1 Suite", []Reporter{envtest.NewlineReporter{}})
+	RunSpecsWithDefaultAndCustomReporters(t, "Syncers suit", []Reporter{envtest.NewlineReporter{}})
 }
 
 var _ = BeforeSuite(func() {
@@ -46,7 +46,7 @@ var _ = BeforeSuite(func() {
 		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "config", "crds")},
 	}
 
-	err = SchemeBuilder.AddToScheme(scheme.Scheme)
+	err = api.SchemeBuilder.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	cfg, err = t.Start()

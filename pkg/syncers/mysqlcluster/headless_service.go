@@ -18,7 +18,8 @@ package mysqlcluster
 
 import (
 	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/runtime"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/syncers"
@@ -36,8 +37,10 @@ func NewHeadlessSVCSyncer(cluster *api.MysqlCluster) syncers.Interface {
 
 func (s *headlessSVCSyncer) GetExistingObjectPlaceholder() runtime.Object {
 	return &core.Service{
-		Name:      s.cluster.GetNameForResource(api.HeadlessSVC),
-		Namespace: s.cluster.Namespace,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      s.cluster.GetNameForResource(api.HeadlessSVC),
+			Namespace: s.cluster.Namespace,
+		},
 	}
 }
 
@@ -49,7 +52,7 @@ func (s *headlessSVCSyncer) Sync(in runtime.Object) error {
 	out := in.(*core.Service)
 
 	out.Spec.ClusterIP = "None"
-	out.Spec.Selector = f.getLabels(map[string]string{})
+	out.Spec.Selector = s.cluster.GetLabels()
 	if len(out.Spec.Ports) != 2 {
 		out.Spec.Ports = make([]core.ServicePort, 2)
 	}

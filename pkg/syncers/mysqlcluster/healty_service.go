@@ -18,7 +18,8 @@ package mysqlcluster
 
 import (
 	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/runtime"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/syncers"
@@ -36,8 +37,10 @@ func NewHealthySVCSyncer(cluster *api.MysqlCluster) syncers.Interface {
 
 func (s *healthySVCSyncer) GetExistingObjectPlaceholder() runtime.Object {
 	return &core.Service{
-		Name:      s.cluster.GetNameForResource(api.HealthySVC),
-		Namespace: s.cluster.Namespace,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      s.cluster.GetNameForResource(api.HealthyNodesService),
+			Namespace: s.cluster.Namespace,
+		},
 	}
 }
 

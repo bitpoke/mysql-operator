@@ -18,40 +18,45 @@ package mysqlcluster
 
 import (
 	"fmt"
-	"strconv"
 
 	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/runtime"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/options"
 	"github.com/presslabs/mysql-operator/pkg/syncers"
 	"github.com/presslabs/mysql-operator/pkg/util"
 )
 
 type secretSyncer struct {
 	cluster *api.MysqlCluster
+	opt     *options.Options
 }
 
 // NewSecretSyncer returns secret syncer
 func NewSecretSyncer(cluster *api.MysqlCluster) syncers.Interface {
 	return &secretSyncer{
 		cluster: cluster,
+		opt:     options.GetOptions(),
 	}
 }
 
 func (s *secretSyncer) GetExistingObjectPlaceholder() runtime.Object {
 	return &core.Secret{
-		Name:      s.cluster.Spec.SecretName,
-		Namespace: s.cluster.Namespace,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      s.cluster.Spec.SecretName,
+			Namespace: s.cluster.Namespace,
+		},
 	}
 }
 
-func (s *secretSyncer) ShouldHaveOwnerReference() {
+func (s *secretSyncer) ShouldHaveOwnerReference() bool {
 	return false
 }
 
 func (s *secretSyncer) Sync(in runtime.Object) error {
-	out = in.(*core.Secret)
+	out := in.(*core.Secret)
 
 	if _, ok := out.Data["ROOT_PASSWORD"]; !ok {
 		return fmt.Errorf("ROOT_PASSWORD not set in secret: %s", out.Name)
@@ -70,8 +75,8 @@ func (s *secretSyncer) Sync(in runtime.Object) error {
 		out.Data["METRICS_EXPORTER_PASSWORD"] = []byte(util.RandomString(rStrLen))
 	}
 
-	out.Data["ORC_TOPOLOGY_USER"] = []byte(f.opt.OrchestratorTopologyUser)
-	out.Data["ORC_TOPOLOGY_PASSWORD"] = []byte(f.opt.OrchestratorTopologyPassword)
+	out.Data["ORC_TOPOLOGY_USER"] = []byte(s.opt.OrchestratorTopologyUser)
+	out.Data["ORC_TOPOLOGY_PASSWORD"] = []byte(s.opt.OrchestratorTopologyPassword)
 
 	if len(out.Data["BACKUP_USER"]) == 0 {
 		out.Data["BACKUP_USER"] = []byte(util.RandomString(rStrLen))

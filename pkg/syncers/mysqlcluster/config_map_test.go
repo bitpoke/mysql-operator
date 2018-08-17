@@ -21,65 +21,79 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
-var _ = Describe("MysqlCluster CRUD", func() {
+var _ = Describe("ConfigMap syncer", func() {
 	var cluster *api.MysqlCluster
 
 	BeforeEach(func() {
 		cluster = &api.MysqlCluster{
-			Name:      "foo",
-			Namespace: "default",
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+			},
 			Spec: api.MysqlClusterSpec{
 				Replicas:   1,
 				SecretName: "the-secret",
+				MysqlConf:  api.MysqlConf{},
 			},
 		}
-
 	})
 
 	AfterEach(func() {
 		c.Delete(context.TODO(), cluster)
 	})
 
-	Context("for a valid config", func() {
-		It("should be created and updated", func() {
-			syncer := NewConfigMapSyncer(cluster)
-			cm := syncer.GetExistingObjectPlaceholder()
+	Describe("tests", func() {
+		Context("for a valid config", func() {
+			It("should be created and updated", func() {
+				syncer := NewConfigMapSyncer(cluster)
+				cm := syncer.GetExistingObjectPlaceholder().(*core.ConfigMap)
 
-			Expect(cm.Name).To(Equal(cluster.GetNameForResource(api.ConfigMap)))
-			Expect(syncer.Sync(cm)).NotTo(HaveOcurred())
+				Expect(cm.Name).To(Equal(cluster.GetNameForResource(api.ConfigMap)))
+				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
 
-			Expect(cm.ObjectMeta.Annotations).Should(ContainElement("config_hash"))
+				Expect(cm.ObjectMeta.Annotations).Should(HaveKey("config_hash"))
+				oldHash := cm.ObjectMeta.Annotations["config_hash"]
 
-			// update cluster config should reflect in
-			cluster.Spec.MysqlConf["ceva_nou"] = "1"
-			Expect(syncer.Sync(cm)).NotTo(HaveOcurred())
-			Expect(cm.ObjectMeta.Annotations["config_hash"]).ToNot(Equal(old_hash))
-		})
-	})
-
-	Context("update cluster MysqlConfig", func() {
-		syncer := NewConfigMapSyncer(cluster)
-		cm := syncer.GetExistingObjectPlaceholder()
-		Expect(syncer.Sync(cm)).NotTo(HaveOcurred())
-
-		old_hash := cm.ObjectMeta.Annotations["config_hash"]
-		cluster.Spec.MysqlConf["ceva_nou"] = "1"
-
-		It("should reflect in config hash", func() {
-			Expect(syncer.Sync(cm)).NotTo(HaveOcurred())
-			Expect(cm.ObjectMeta.Annotations["config_hash"]).ToNot(Equal(old_hash))
+				// update cluster config should reflect in
+				cluster.Spec.MysqlConf["ceva_nou"] = "1"
+				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
+				Expect(cm.ObjectMeta.Annotations["config_hash"]).ToNot(Equal(oldHash))
+			})
 		})
 
-		It("should not change multiple times", func() {
-			Expect(syncer.Sync(cm)).NotTo(HaveOcurred())
-			old_hash = cm.ObjectMeta.Annotations["config_hash"]
+		Context("update cluster MysqlConfig", func() {
+			It("should reflect in config hash", func() {
+				syncer := NewConfigMapSyncer(cluster)
+				cm := syncer.GetExistingObjectPlaceholder().(*core.ConfigMap)
+				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
 
-			Expect(syncer.Sync(cm)).NotTo(HaveOcurred())
-			Expect(cm.ObjectMeta.Annotations["config_hash"]).To(Equal(old_hash))
+				oldHash := cm.ObjectMeta.Annotations["config_hash"]
+				cluster.Spec.MysqlConf["ceva_nou"] = "1"
+
+				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
+				Expect(cm.ObjectMeta.Annotations["config_hash"]).ToNot(Equal(oldHash))
+			})
+
+			It("should not change multiple times", func() {
+				syncer := NewConfigMapSyncer(cluster)
+				cm := syncer.GetExistingObjectPlaceholder().(*core.ConfigMap)
+				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
+
+				oldHash := cm.ObjectMeta.Annotations["config_hash"]
+				cluster.Spec.MysqlConf["ceva_nou"] = "1"
+
+				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
+				oldHash = cm.ObjectMeta.Annotations["config_hash"]
+
+				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
+				Expect(cm.ObjectMeta.Annotations["config_hash"]).To(Equal(oldHash))
+			})
 		})
 	})
 })

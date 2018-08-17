@@ -36,14 +36,15 @@ type configMapSyncer struct {
 	cluster *api.MysqlCluster
 }
 
-func NewCongigMapSyncer(cluster *api.MysqlCluster) syncers.Interface {
+// NewConfigMapSyncer returns config map syncer
+func NewConfigMapSyncer(cluster *api.MysqlCluster) syncers.Interface {
 	return &configMapSyncer{
 		cluster: cluster,
 	}
 }
 
-func (s *configMapSyncer) GetExistingObjectPlaceholder() {
-	return core.ConfigMap{
+func (s *configMapSyncer) GetExistingObjectPlaceholder() runtime.Object {
+	return &core.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      s.cluster.GetNameForResource(api.ConfigMap),
 			Namespace: s.cluster.Namespace,
@@ -51,7 +52,7 @@ func (s *configMapSyncer) GetExistingObjectPlaceholder() {
 	}
 }
 
-func (s *configMapSyncer) ShouldHaveOwnerReference() {
+func (s *configMapSyncer) ShouldHaveOwnerReference() bool {
 	return true
 }
 
@@ -61,23 +62,22 @@ func (s *configMapSyncer) Sync(in runtime.Object) error {
 	out.ObjectMeta.Labels = s.cluster.GetLabels()
 	out.ObjectMeta.Labels["generated"] = "true"
 
-	data, new_hash, err := s.getMysqlConfData()
+	data, newHash, err := s.getMysqlConfData()
 	if err != nil {
 		return fmt.Errorf("failed to create mysql configs, err: %s", err)
 	}
 
 	if key, ok := out.ObjectMeta.Annotations["config_hash"]; ok {
-		if key == new_hash {
+		if key == newHash {
 			glog.V(2).Infof("Skip updating configs, it's up to date: %s",
 				out.ObjectMeta.Annotations["config_hash"])
-			return out
-		} else {
-			glog.V(2).Infof("Config map hashes doesn't match: %s != %s.", key, new_hash)
+			return nil
 		}
+		glog.V(2).Infof("Config map hashes doesn't match: %s != %s. Updateing config map.", key, newHash)
 	}
 
 	out.ObjectMeta.Annotations = map[string]string{
-		"config_hash": new_hash,
+		"config_hash": newHash,
 	}
 
 	out.Data = map[string]string{
@@ -91,7 +91,7 @@ func (s *configMapSyncer) getMysqlConfData() (string, string, error) {
 	cfg := ini.Empty()
 	sec := cfg.Section("mysqld")
 
-	addKVConfigsToSection(sec, MysqlMasterSlaveConfigs, f.cluster.Spec.MysqlConf)
+	addKVConfigsToSection(sec, MysqlMasterSlaveConfigs, s.cluster.Spec.MysqlConf)
 	addBConfigsToSection(sec, MysqlMasterSlaveBooleanConfigs)
 
 	// include configs from /etc/mysql/conf.d/*.cnf
@@ -107,8 +107,8 @@ func (s *configMapSyncer) getMysqlConfData() (string, string, error) {
 		return "", "", err
 	}
 
-	new_hash := strconv.FormatUint(hash, 10)
-	return data, new_hash, nil
+	newHash := strconv.FormatUint(hash, 10)
+	return data, newHash, nil
 
 }
 

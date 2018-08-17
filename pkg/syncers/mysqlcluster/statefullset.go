@@ -18,14 +18,16 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"strings"
 
-	kapps "github.com/appscode/kutil/apps/v1"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/options"
 	"github.com/presslabs/mysql-operator/pkg/syncers"
 )
 
@@ -51,6 +53,7 @@ type sfsSyncer struct {
 	cluster           *api.MysqlCluster
 	configMapRevision string
 	secretRevision    string
+	opt               *options.Options
 }
 
 // NewStatefulSetSyncer returns a syncer for stateful set
@@ -59,13 +62,16 @@ func NewStatefulSetSyncer(cluster *api.MysqlCluster, cmRev, secRev string) synce
 		cluster:           cluster,
 		configMapRevision: cmRev,
 		secretRevision:    secRev,
+		opt:               options.GetOptions(),
 	}
 }
 
 func (s *sfsSyncer) GetExistingObjectPlaceholder() runtime.Object {
 	return &apps.StatefulSet{
-		Name:      s.cluster.GetNameForResource(api.StatefulSet),
-		Namespace: s.cluster.Namespace,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      s.cluster.GetNameForResource(api.StatefulSet),
+			Namespace: s.cluster.Namespace,
+		},
 	}
 }
 
@@ -74,7 +80,7 @@ func (s *sfsSyncer) ShouldHaveOwnerReference() bool {
 }
 
 func (s *sfsSyncer) Sync(in runtime.Object) error {
-	out = in.(*apps.StatefulSet)
+	out := in.(*apps.StatefulSet)
 
 	if out.Status.ReadyReplicas == out.Status.Replicas {
 		s.cluster.UpdateStatusCondition(api.ClusterConditionReady,
@@ -187,13 +193,13 @@ func (s *sfsSyncer) getEnvFor(name string) (env []core.EnvVar) {
 	})
 	env = append(env, core.EnvVar{
 		Name:  "ORCHESTRATOR_URI",
-		Value: s.cluster.Spec.GetOrcUri(),
+		Value: s.opt.OrchestratorURI,
 	})
 
-	if len(s.cluster.Spec.InitBucketUri) > 0 && name == containerCloneName {
+	if len(s.cluster.Spec.InitBucketURI) > 0 && name == containerCloneName {
 		env = append(env, core.EnvVar{
 			Name:  "INIT_BUCKET_URI",
-			Value: s.cluster.Spec.InitBucketUri,
+			Value: s.cluster.Spec.InitBucketURI,
 		})
 	}
 
@@ -310,13 +316,13 @@ func (s *sfsSyncer) ensureInitContainersSpec(in []core.Container) []core.Contain
 
 	// init container for configs
 	in[0] = s.ensureContainer(in[0], containerInitName,
-		s.cluster.Spec.GetHelperImage(),
+		s.opt.HelperImage,
 		[]string{"files-config"},
 	)
 
 	// clone container
 	in[1] = s.ensureContainer(in[1], containerCloneName,
-		s.cluster.Spec.GetHelperImage(),
+		s.opt.HelperImage,
 		[]string{"clone"},
 	)
 
@@ -335,7 +341,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 
 	// MYSQL container
 	mysql := s.ensureContainer(in[0], containerMysqlName,
-		s.cluster.Spec.GetMysqlImage(),
+		s.opt.MysqlImage+":"+s.opt.MysqlImageTag,
 		[]string{},
 	)
 	mysql.Ports = ensureContainerPorts(mysql.Ports, core.ContainerPort{
@@ -366,7 +372,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 	in[0] = mysql
 
 	helper := s.ensureContainer(in[1], containerHelperName,
-		s.cluster.Spec.GetHelperImage(),
+		s.opt.HelperImage,
 		[]string{"config-and-serve"},
 	)
 	helper.Ports = ensureContainerPorts(helper.Ports, core.ContainerPort{
@@ -386,7 +392,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 
 	// METRICS container
 	exporter := s.ensureContainer(in[2], containerExporterName,
-		s.cluster.Spec.GetMetricsExporterImage(),
+		s.opt.MetricsExporterImage,
 		[]string{
 			fmt.Sprintf("--web.listen-address=0.0.0.0:%d", ExporterPort),
 			fmt.Sprintf("--web.telemetry-path=%s", ExporterPath),
@@ -410,7 +416,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 
 	// PT-HEARTBEAT container
 	heartbeat := s.ensureContainer(in[3], containerHeartBeatName,
-		s.cluster.Spec.GetHelperImage(),
+		s.opt.HelperImage,
 		[]string{
 			"pt-heartbeat",
 			"--update", "--replace",
@@ -431,10 +437,10 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 			"--host=127.0.0.1",
 			fmt.Sprintf("--defaults-file=%s/client.cnf", ConfVolumeMountPath),
 		}
-		command = append(command, s.cluster.Spec.QueryLimits.GetOptions()...)
+		command = append(command, getCliOptionsFromQueryLimits(s.cluster.Spec.QueryLimits)...)
 
 		killer := s.ensureContainer(in[4], containerKillerName,
-			s.cluster.Spec.GetHelperImage(),
+			s.opt.HelperImage,
 			command,
 		)
 		in[4] = killer
@@ -581,4 +587,73 @@ func (s *sfsSyncer) getLabels(extra map[string]string) map[string]string {
 		defaultsLabels[k] = v
 	}
 	return defaultsLabels
+}
+
+func getCliOptionsFromQueryLimits(ql *api.QueryLimits) []string {
+	options := []string{
+		"--print",
+		// The purpose of this is to give blocked queries a chance to execute,
+		// so we don’t kill a query that’s blocking a bunch of others, and then
+		// kill the others immediately afterwards.
+		"--wait-after-kill=1",
+		"--busy-time", fmt.Sprintf("%d", ql.MaxQueryTime),
+	}
+
+	switch ql.KillMode {
+	case "connection":
+		options = append(options, "--kill")
+	case "query":
+		options = append(options, "--kill-query")
+	default:
+		options = append(options, "--kill-query")
+	}
+
+	if ql.MaxIdleTime != nil {
+		options = append(options, "--idle-time", fmt.Sprintf("%d", *ql.MaxIdleTime))
+	}
+
+	if len(ql.Kill) != 0 {
+		options = append(options, "--victims", ql.Kill)
+	}
+
+	if len(ql.IgnoreDb) > 0 {
+		options = append(options, "--ignore-db", strings.Join(ql.IgnoreDb, "|"))
+	}
+
+	if len(ql.IgnoreCommand) > 0 {
+		options = append(options, "--ignore-command", strings.Join(ql.IgnoreCommand, "|"))
+	}
+
+	if len(ql.IgnoreUser) > 0 {
+		options = append(options, "--ignore-user", strings.Join(ql.IgnoreUser, "|"))
+	}
+
+	return options
+}
+
+func ensureProbe(in *core.Probe, ids, ts, ps int32, handler core.Handler) *core.Probe {
+	if in == nil {
+		in = &core.Probe{}
+	}
+	in.InitialDelaySeconds = ids
+	in.TimeoutSeconds = ts
+	in.PeriodSeconds = ps
+	if handler.Exec != nil {
+		in.Handler.Exec = handler.Exec
+	}
+	if handler.HTTPGet != nil {
+		in.Handler.HTTPGet = handler.HTTPGet
+	}
+	if handler.TCPSocket != nil {
+		in.Handler.TCPSocket = handler.TCPSocket
+	}
+
+	return in
+}
+
+func ensureContainerPorts(in []core.ContainerPort, ports ...core.ContainerPort) []core.ContainerPort {
+	if len(in) == 0 {
+		return ports
+	}
+	return in
 }

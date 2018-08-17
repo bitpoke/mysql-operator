@@ -18,6 +18,8 @@ package mysqlcluster
 
 import (
 	"k8s.io/api/policy/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/syncers"
@@ -36,12 +38,14 @@ func NewPDBSyncer(cluster *api.MysqlCluster) syncers.Interface {
 
 func (s *pdbSyncer) GetExistingObjectPlaceholder() runtime.Object {
 	return &v1beta1.PodDisruptionBudget{
-		Name:      s.cluster.GetNameForResource(api.PodDisruptionBudget),
-		Namespace: s.cluster.Namespace,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      s.cluster.GetNameForResource(api.PodDisruptionBudget),
+			Namespace: s.cluster.Namespace,
+		},
 	}
 }
 
-func (s *pdbSyncer) ShouldHaveOwnerReference() {
+func (s *pdbSyncer) ShouldHaveOwnerReference() bool {
 	return true
 }
 
@@ -52,4 +56,5 @@ func (s *pdbSyncer) Sync(in runtime.Object) error {
 		return nil
 	}
 	out.Spec.MinAvailable = s.cluster.Spec.MinAvailable
+	return nil
 }
