@@ -190,3 +190,7 @@ revision="f08db293d3ef80052d6513ece19792642a289fea"
 [[override]]
 name="sigs.k8s.io/testing_frameworks"
 revision="f53464b8b84b4507805a0b033a8377b225163fea"
+
+[[constraint]]
+  name = "github.com/spf13/afero"
+  version = "1.1.1"

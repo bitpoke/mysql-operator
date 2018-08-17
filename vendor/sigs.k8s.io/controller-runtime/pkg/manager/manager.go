@@ -76,12 +76,10 @@ type Options struct {
 	// MapperProvider provides the rest mapper used to map go types to Kubernetes APIs
 	MapperProvider func(c *rest.Config) (meta.RESTMapper, error)
 
-	// SyncPeriod determines the minimum frequency at which watched objects are
-	// reconciled. A lower period will correct entropy more quickly but reduce
-	// responsiveness to change. Choose a low value if reconciles are fast and/or
-	// there are few objects to reconcile. Choose a high value if reconciles are
-	// slow and/or there are many object to reconcile. Defaults to 10 hours if
-	// unset.
+	// SyncPeriod determines the minimum frequency at which watched resources are
+	// reconciled. A lower period will correct entropy more quickly, but reduce
+	// responsiveness to change if there are many watched resources. Change this
+	// value only if you know what you are doing. Defaults to 10 hours if unset.
 	SyncPeriod *time.Duration
 
 	// Dependency injection for testing
@@ -132,7 +130,6 @@ func New(config *rest.Config, options Options) (Manager, error) {
 	cache, err := options.newCache(config, cache.Options{Scheme: options.Scheme, Mapper: mapper, Resync: options.SyncPeriod})
 	if err != nil {
 		return nil, err
-
 	}
 	// Create the recorder provider to inject event recorders for the components.
 	recorderProvider, err := options.newRecorderProvider(config, options.Scheme)
@@ -146,7 +143,7 @@ func New(config *rest.Config, options Options) (Manager, error) {
 		errChan:          make(chan error),
 		cache:            cache,
 		fieldIndexes:     cache,
-		client:           client.DelegatingClient{Reader: cache, Writer: writeObj},
+		client:           client.DelegatingClient{Reader: cache, Writer: writeObj, StatusClient: writeObj},
 		recorderProvider: recorderProvider,
 	}, nil
 }

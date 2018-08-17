@@ -36,7 +36,7 @@
     "core/v1",
     "policy/v1beta1"
   ]
-  revision = "b50ebf9375ccfa41b08350da68618fee6bc6de4b"
+  revision = "753becbb6e10fa9a325cbd7cf5348f61e198c495"
 
 [[projects]]
   branch = "master"
@@ -53,8 +53,8 @@
 [[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
-  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
-  version = "v1.1.0"
+  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/emicklei/go-restful"
@@ -329,6 +329,15 @@
   packages = ["."]
   revision = "3e01752db0189b9157070a0e1668a620f9a85da2"
   version = "v1.0.6"
+
+[[projects]]
+  name = "github.com/spf13/afero"
+  packages = [
+    ".",
+    "mem"
+  ]
+  revision = "787d034dfe70e44075ccc060d346146ef53270ad"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/spf13/cobra"
@@ -794,7 +803,7 @@
   revision = "f08db293d3ef80052d6513ece19792642a289fea"
 
 [[projects]]
-  branch = "master"
+  branch = "create-or-update"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -820,7 +829,8 @@
     "pkg/source",
     "pkg/source/internal"
   ]
-  revision = "60bb251ad86f9b313653618aad0c2c53f41a6625"
+  revision = "2f12419adf386d0ef8281a2b4398e13cc4fdfa06"
+  source = "github.com/presslabs/controller-runtime"
 
 [[projects]]
   branch = "master"
@@ -834,7 +844,7 @@
     "pkg/internal/codegen/parse",
     "pkg/util"
   ]
-  revision = "63bce213bf6d471eb840145d460eb951bb1ad452"
+  revision = "bf5124ca0c75885ec64818f62d7e00692e1cc4e2"
 
 [[projects]]
   name = "sigs.k8s.io/testing_frameworks"
@@ -847,6 +857,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "feb117cd511dd19967582379830f1f8fbfbf2f34219991eac1b68fe2201da646"
+  inputs-digest = "3a5637ccf89c8e0f830819258e7a96a7b5f7798f16a47aa79adc0985321db86c"
   solver-name = "gps-cdcl"
   solver-version = 1
