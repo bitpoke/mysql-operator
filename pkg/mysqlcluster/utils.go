@@ -122,7 +122,7 @@ func (f *cFactory) addNodesToService(serviceName string, hosts ...string) error 
 
 	if len(pods) == 0 {
 		// no need to create endpoints, because will fail without addresses
-		glog.V(3).Infof("Configuriong service '%s': Nothing to do for hosts: %v, pods not found!", serviceName, hosts)
+		glog.V(3).Infof("Configuring service '%s': Nothing to do for hosts: %v, pods not found!", serviceName, hosts)
 		return nil
 	}
 

@@ -18,19 +18,19 @@ package cluster
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	gtypes "github.com/onsi/gomega/types"
+	. "github.com/onsi/gomega/types"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	orc "github.com/presslabs/mysql-operator/pkg/util/orchestrator"
 	"github.com/presslabs/mysql-operator/test/e2e/framework"
-	tutil "github.com/presslabs/mysql-operator/test/e2e/util"
 )
 
 const (
@@ -40,52 +40,60 @@ const (
 var _ = Describe("Mysql cluster tests", func() {
 	f := framework.NewFramework("mc-1")
 
-	It("scale up a cluster", func() {
-		// create a cluster
-		pw := "rootPassword2"
-		secret := tutil.NewClusterSecret("scale-up", f.Namespace.Name, pw)
-		_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
-		Expect(err).NotTo(HaveOccurred(), "Failed to create secret '%s'", secret.Name)
+	var (
+		cluster *api.MysqlCluster
+		secret  *core.Secret
+		name    string
+		pw      string
+		err     error
+	)
 
-		cluster := tutil.NewCluster("scale-up", f.Namespace.Name)
-		cluster.Spec.Replicas = 1
+	BeforeEach(func() {
+		// be careful, mysql allowed hostname lenght is <63
+		name = fmt.Sprintf("cl-%d", rand.Int31()/1000)
 
+		By("creating a new cluster secret")
+		pw = fmt.Sprintf("pw-%d", rand.Int31())
+		secret = framework.NewClusterSecret(name, f.Namespace.Name, pw)
+		_, err = f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
+		Expect(err).ToNot(HaveOccurred(), "Failed to create secret '%s'", secret.Name)
+
+		By("creating a new cluster")
+		cluster = framework.NewCluster(name, f.Namespace.Name)
 		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Create(cluster)
-		Expect(err).NotTo(HaveOccurred(), "Failed to create cluster: '%s'", cluster.Name)
+		Expect(err).ToNot(HaveOccurred(), "Failed to create cluster: '%s'", cluster.Name)
 
-		testCreateACluster(f, cluster, "after cluster creation")
+		By("testing the cluster readiness")
+		testClusterReadiness(f, cluster, "after creation")
 
-		// update cluster from k8s
+		By("testing that cluster is registered with orchestrator")
+		testClusterIsRegistredWithOrchestrator(f, cluster, "after creation")
+
 		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
-		Expect(err).NotTo(HaveOccurred(), "Failed to get cluster %s", cluster.Name)
+		Expect(err).ToNot(HaveOccurred(), "Failed to get cluster %s", cluster.Name)
+	})
 
+	It("scale up a cluster", func() {
 		// scale up the cluster
 		cluster.Spec.Replicas = 2
 		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Update(cluster)
 		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: %s", cluster.Name)
 
 		// test cluster
-		testCreateACluster(f, cluster, "after scale up")
-		testClusterIsInOrchestartor(f, cluster, "after scale up")
+		testClusterReadiness(f, cluster, "after scale up")
+		testClusterIsRegistredWithOrchestrator(f, cluster, "after scale up")
 		testClusterEndpoints(f, cluster, []int{0}, []int{0, 1}, "after scale up")
 	})
 
 	It("failover cluster", func() {
-		// create a cluster
-		pw := "rootPassword3"
-		secret := tutil.NewClusterSecret("failover", f.Namespace.Name, pw)
-		_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
-		Expect(err).NotTo(HaveOccurred(), "Failed to create secret '%s'", secret.Name)
-
-		cluster := tutil.NewCluster("failover", f.Namespace.Name)
 		cluster.Spec.Replicas = 2
 
-		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Create(cluster)
-		Expect(err).NotTo(HaveOccurred(), "Failed to create cluster: '%s'", cluster.Name)
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Update(cluster)
+		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: '%s'", cluster.Name)
 
 		// test cluster to be ready
-		testCreateACluster(f, cluster, "after cluster creation")
-		testClusterIsInOrchestartor(f, cluster, "after cluster creation")
+		testClusterReadiness(f, cluster, "after cluster update")
+		testClusterIsRegistredWithOrchestrator(f, cluster, "after cluster update")
 
 		// check cluster to have a master and a slave
 		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(0), api.NodeConditionMaster, core.ConditionTrue, f.Timeout)
@@ -109,21 +117,14 @@ var _ = Describe("Mysql cluster tests", func() {
 	})
 
 	It("scale down a cluster", func() {
-		// create a cluster
-		pw := "rootPassword4"
-		secret := tutil.NewClusterSecret("scale-down", f.Namespace.Name, pw)
-		_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
-		Expect(err).NotTo(HaveOccurred(), "Failed to create secret '%s'", secret.Name)
-
-		cluster := tutil.NewCluster("scale-down", f.Namespace.Name)
 		cluster.Spec.Replicas = 2
 
-		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Create(cluster)
-		Expect(err).NotTo(HaveOccurred(), "Failed to create cluster: '%s'", cluster.Name)
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Update(cluster)
+		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: '%s'", cluster.Name)
 
 		// test cluster to be ready
-		testCreateACluster(f, cluster, "after cluster creation")
-		testClusterIsInOrchestartor(f, cluster, "after cluster creation")
+		testClusterReadiness(f, cluster, "after cluster update")
+		testClusterIsRegistredWithOrchestrator(f, cluster, "after cluster update")
 
 		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to get cluster %s", cluster.Name)
@@ -133,27 +134,20 @@ var _ = Describe("Mysql cluster tests", func() {
 		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Update(cluster)
 		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: %s", cluster.Name)
 
-		testCreateACluster(f, cluster, "after scale down")
+		testClusterReadiness(f, cluster, "after scale down")
 
 		// TODO: check for PVCs
 	})
 
 	It("slave io running stopped", func() {
-		// create a cluster
-		pw := "rootPassword6"
-		secret := tutil.NewClusterSecret("io-running", f.Namespace.Name, pw)
-		_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
-		Expect(err).NotTo(HaveOccurred(), "Failed to create secret '%s'", secret.Name)
-
-		cluster := tutil.NewCluster("io-running", f.Namespace.Name)
 		cluster.Spec.Replicas = 2
 
-		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Create(cluster)
-		Expect(err).NotTo(HaveOccurred(), "Failed to create cluster: '%s'", cluster.Name)
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Update(cluster)
+		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: '%s'", cluster.Name)
 
 		// test cluster to be ready
-		testCreateACluster(f, cluster, "after cluster creation")
-		testClusterIsInOrchestartor(f, cluster, "after cluster creation")
+		testClusterReadiness(f, cluster, "after cluster update")
+		testClusterIsRegistredWithOrchestrator(f, cluster, "after cluster update")
 
 		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to get cluster %s", cluster.Name)
@@ -168,23 +162,16 @@ var _ = Describe("Mysql cluster tests", func() {
 	})
 
 	It("slave latency", func() {
-		// create a cluster
-		pw := "rootPassword6"
-		secret := tutil.NewClusterSecret("latency", f.Namespace.Name, pw)
-		_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
-		Expect(err).NotTo(HaveOccurred(), "Failed to create secret '%s'", secret.Name)
-
-		cluster := tutil.NewCluster("latency", f.Namespace.Name)
 		cluster.Spec.Replicas = 2
 		one := int64(1)
 		cluster.Spec.MaxSlaveLatency = &one
 
-		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Create(cluster)
-		Expect(err).NotTo(HaveOccurred(), "Failed to create cluster: '%s'", cluster.Name)
+		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Update(cluster)
+		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: '%s'", cluster.Name)
 
 		// test cluster to be ready
-		testCreateACluster(f, cluster, "after cluster creation")
-		testClusterIsInOrchestartor(f, cluster, "after cluster creation")
+		testClusterReadiness(f, cluster, "after cluster update")
+		testClusterIsRegistredWithOrchestrator(f, cluster, "after cluster update")
 
 		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to get cluster %s", cluster.Name)
@@ -200,7 +187,7 @@ var _ = Describe("Mysql cluster tests", func() {
 
 })
 
-func testCreateACluster(f *framework.Framework, cluster *api.MysqlCluster, where string) {
+func testClusterReadiness(f *framework.Framework, cluster *api.MysqlCluster, where string) {
 	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
 	By(fmt.Sprintf("Test cluster is ready: %s; timeout=%v", where, timeout))
 
@@ -216,13 +203,13 @@ func testCreateACluster(f *framework.Framework, cluster *api.MysqlCluster, where
 }
 
 // tests if the cluster is in orchestrator and is properly configured
-func testClusterIsInOrchestartor(f *framework.Framework, cluster *api.MysqlCluster, where string) {
+func testClusterIsRegistredWithOrchestrator(f *framework.Framework, cluster *api.MysqlCluster, where string) {
 	By(fmt.Sprintf("Test cluster is in orchestrator: %s", where))
 	cluster, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 	Expect(err).NotTo(HaveOccurred(), "Failed to get cluster '%s'", cluster.Name)
 
 	// update the list of expected nodes to be in orchestrator
-	consistOfNodes := []gtypes.GomegaMatcher{
+	consistOfNodes := []GomegaMatcher{
 		MatchFields(IgnoreExtras, Fields{
 			"Key": Equal(orc.InstanceKey{
 				Hostname: cluster.GetPodHostname(0),
@@ -250,7 +237,7 @@ func testClusterIsInOrchestartor(f *framework.Framework, cluster *api.MysqlClust
 	// check orchestrator nodes to be equal.
 	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
 	Eventually(func() []orc.Instance {
-		insts, err := f.OrcClient.Cluster(tutil.OrcClusterName(cluster))
+		insts, err := f.OrcClient.Cluster(framework.OrcClusterName(cluster))
 		if err != nil {
 			return nil
 		}

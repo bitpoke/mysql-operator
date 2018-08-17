@@ -83,7 +83,7 @@ func (f *Framework) BeforeEach() {
 
 	if !f.SkipNamespaceCreation {
 		By("Building a namespace api object")
-		namespace, err := f.CreateNamespace(f.BaseName, map[string]string{
+		namespace, err := f.CreateNamespace(map[string]string{
 			"e2e-framework": f.BaseName,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -115,9 +115,8 @@ func (f *Framework) AfterEach() {
 	}
 }
 
-func (f *Framework) CreateNamespace(baseName string, labels map[string]string) (
-	*core.Namespace, error) {
-	return CreateTestingNS(baseName, f.ClientSet, labels)
+func (f *Framework) CreateNamespace(labels map[string]string) (*core.Namespace, error) {
+	return CreateTestingNS(f.BaseName, f.ClientSet, labels)
 }
 
 // WaitForPodReady waits for the pod to flip to ready in the namespace.

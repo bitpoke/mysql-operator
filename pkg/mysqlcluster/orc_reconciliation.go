@@ -77,7 +77,7 @@ func (f *cFactory) SyncOrchestratorStatus(ctx context.Context) error {
 
 func (f *cFactory) updateStatusFromOrc(insts []orc.Instance) {
 	// TODO: imporve this code by computing differences between what
-	// orchestartor knows and how should be the truth.
+	// orchestartor knows and what we know
 
 	updatedNodes := []string{}
 	for _, node := range insts {

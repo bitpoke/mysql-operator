@@ -108,7 +108,7 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	orcTunnel.Close()
 
 	ginkgo.By("Remove operator release")
-	HelmDeleteRelease(releaseName)
+	HelmPurgeRelease(releaseName)
 
 	ginkgo.By("Delete operator namespace")
 	client, _, err := framework.KubernetesClients()
