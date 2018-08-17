@@ -53,7 +53,7 @@ pipeline:
           --preemptible --cluster-version 1.10
       # initialize cluster
       - kubectl create serviceaccount -n kube-system tiller
-      - kubectl create clusterrolebinding tiller-crule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+      - kubectl create clusterrolebinding tiller --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
       - helm init --service-account tiller --wait
       - helm repo add presslabs https://presslabs.github.io/charts
       - helm dependency update hack/charts/mysql-operator

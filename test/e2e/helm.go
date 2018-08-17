@@ -41,10 +41,10 @@ func HelmInstallChart(release string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	Ω(cmd.Run()).Should(Succeed())
+	Expect(cmd.Run()).Should(Succeed())
 }
 
-func HelmDeleteRelease(release string) {
+func HelmPurgeRelease(release string) {
 	args := []string{
 		"delete", "--purge", release,
 		"--kube-context", framework.TestContext.KubeContext,
@@ -53,5 +53,5 @@ func HelmDeleteRelease(release string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	Ω(cmd.Run()).Should(Succeed())
+	Expect(cmd.Run()).Should(Succeed())
 }

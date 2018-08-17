@@ -9,6 +9,7 @@ import (
 	kcore "github.com/appscode/kutil/core/v1"
 	. "github.com/onsi/ginkgo"
 	"k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	// apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	myclientset "github.com/presslabs/mysql-operator/pkg/generated/clientset/versioned"
 	"github.com/presslabs/mysql-operator/test/e2e/framework/ginkgowrapper"
 )
@@ -244,4 +246,34 @@ func LogContainersInPodsWithLabels(c clientset.Interface, ns string, match map[s
 	for _, pod := range podList.Items {
 		kubectlLogPod(c, pod, containerSubstr, logFunc)
 	}
+}
+
+func NewCluster(name, ns string) *api.MysqlCluster {
+	return &api.MysqlCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+		Spec: api.ClusterSpec{
+			Replicas:   1,
+			SecretName: name,
+		},
+	}
+
+}
+
+func NewClusterSecret(name, ns, pw string) *core.Secret {
+	return &core.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+		StringData: map[string]string{
+			"ROOT_PASSWORD": pw,
+		},
+	}
+}
+
+func OrcClusterName(cluster *api.MysqlCluster) string {
+	return fmt.Sprintf("%s.%s", cluster.Name, cluster.Namespace)
 }
