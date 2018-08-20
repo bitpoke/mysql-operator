@@ -29,12 +29,15 @@ type healthySVCSyncer struct {
 	cluster *api.MysqlCluster
 }
 
+// NewHealthySVCSyncer returns a service syncer
 func NewHealthySVCSyncer(cluster *api.MysqlCluster) syncers.Interface {
 	return &healthySVCSyncer{
 		cluster: cluster,
 	}
 }
 
+// GetExistingObjectPlaceholder returs a service object with Name and Namespace
+// specified
 func (s *healthySVCSyncer) GetExistingObjectPlaceholder() runtime.Object {
 	return &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -61,7 +64,7 @@ func (s *healthySVCSyncer) Sync(in runtime.Object) error {
 	out.Spec.Ports[0].Name = MysqlPortName
 	out.Spec.Ports[0].Port = MysqlPort
 	out.Spec.Ports[0].TargetPort = TargetPort
-	out.Spec.Ports[0].Protocol = "TCP"
+	out.Spec.Ports[0].Protocol = core.ProtocolTCP
 
 	return nil
 

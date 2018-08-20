@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// Interface represents the actions that a syncer should have
 type Interface interface {
 	Sync(in runtime.Object) error
 	GetExistingObjectPlaceholder() runtime.Object

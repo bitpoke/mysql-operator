@@ -39,14 +39,12 @@ const (
 	ConfDPath = "/etc/mysql/conf.d"
 
 	confMapVolumeName = "config-map"
-	// ConfMapVolumeMountPath represents the temp config mounth path in init containers
+	// ConfMapVolumeMountPath represents the temp config mount path in init containers
 	ConfMapVolumeMountPath = "/mnt/conf"
 
 	dataVolumeName = "data"
 	// DataVolumeMountPath is the path to mysql data
 	DataVolumeMountPath = "/var/lib/mysql"
-
-	orcSecretVolumeName = "orc-topology-secret"
 )
 
 type sfsSyncer struct {
@@ -149,8 +147,9 @@ func (s *sfsSyncer) ensureContainer(in core.Container, name, image string, args 
 	return in
 }
 
-func (s *sfsSyncer) getEnvFor(name string) (env []core.EnvVar) {
+func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 	boolTrue := true
+	env := []core.EnvVar{}
 
 	env = append(env, core.EnvVar{
 		Name: "MY_NAMESPACE",
@@ -306,7 +305,7 @@ func (s *sfsSyncer) getEnvFor(name string) (env []core.EnvVar) {
 		})
 	}
 
-	return
+	return env
 }
 
 func (s *sfsSyncer) ensureInitContainersSpec(in []core.Container) []core.Container {
@@ -349,7 +348,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 		ContainerPort: MysqlPort,
 	})
 	mysql.Resources = s.cluster.Spec.PodSpec.Resources
-	mysql.LivenessProbe = ensureProbe(mysql.LivenessProbe, 30, 5, 10, core.Handler{
+	mysql.LivenessProbe = ensureProbe(mysql.LivenessProbe, 30, 5, 5, core.Handler{
 		Exec: &core.ExecAction{
 			Command: []string{
 				"mysqladmin",
@@ -359,7 +358,8 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 		},
 	})
 
-	mysql.ReadinessProbe = ensureProbe(mysql.ReadinessProbe, 5, 5, 10, core.Handler{
+	// we have to know ASAP when server is not ready to remove it from endpoints
+	mysql.ReadinessProbe = ensureProbe(mysql.ReadinessProbe, 5, 5, 2, core.Handler{
 		Exec: &core.ExecAction{
 			Command: []string{
 				"mysql",
@@ -381,7 +381,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 	})
 
 	// HELPER container
-	helper.ReadinessProbe = ensureProbe(helper.ReadinessProbe, 5, 5, 10, core.Handler{
+	helper.ReadinessProbe = ensureProbe(helper.ReadinessProbe, 30, 5, 5, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   HelperServerProbePath,
 			Port:   intstr.FromInt(HelperServerPort),
@@ -404,7 +404,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 		Name:          ExporterPortName,
 		ContainerPort: ExporterPort,
 	})
-	exporter.LivenessProbe = ensureProbe(exporter.LivenessProbe, 30, 30, 120, core.Handler{
+	exporter.LivenessProbe = ensureProbe(exporter.LivenessProbe, 30, 30, 30, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   ExporterPath,
 			Port:   ExporterTargetPort,
@@ -501,7 +501,8 @@ func (s *sfsSyncer) ensureVolumeClaimTemplates(in []core.PersistentVolumeClaim) 
 	return in
 }
 
-func (s *sfsSyncer) getEnvSourcesFor(name string) (envSources []core.EnvFromSource) {
+func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
+	envSources := []core.EnvFromSource{}
 	if name == containerCloneName && len(s.cluster.Spec.InitBucketSecretName) > 0 {
 		envSources = append(envSources, core.EnvFromSource{
 			SecretRef: &core.SecretEnvSource{
@@ -521,7 +522,7 @@ func (s *sfsSyncer) getEnvSourcesFor(name string) (envSources []core.EnvFromSour
 			},
 		})
 	}
-	return
+	return envSources
 }
 
 func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
@@ -631,13 +632,13 @@ func getCliOptionsFromQueryLimits(ql *api.QueryLimits) []string {
 	return options
 }
 
-func ensureProbe(in *core.Probe, ids, ts, ps int32, handler core.Handler) *core.Probe {
+func ensureProbe(in *core.Probe, delay, timeout, period int32, handler core.Handler) *core.Probe {
 	if in == nil {
 		in = &core.Probe{}
 	}
-	in.InitialDelaySeconds = ids
-	in.TimeoutSeconds = ts
-	in.PeriodSeconds = ps
+	in.InitialDelaySeconds = delay
+	in.TimeoutSeconds = timeout
+	in.PeriodSeconds = period
 	if handler.Exec != nil {
 		in.Handler.Exec = handler.Exec
 	}

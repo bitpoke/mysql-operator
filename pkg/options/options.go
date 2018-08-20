@@ -28,6 +28,7 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/util"
 )
 
+// nolint: unparam
 func getFromEnvOrDefault(key, def string) string {
 	value := os.Getenv(key)
 	if len(value) == 0 {
@@ -74,6 +75,7 @@ func (pp *pullpolicy) Type() string {
 	return "v1.PullPolicy"
 }
 
+// nolint: unparam
 func newPullPolicyValue(defaultValue v1.PullPolicy, v *v1.PullPolicy) *pullpolicy {
 	*v = defaultValue
 	return (*pullpolicy)(v)

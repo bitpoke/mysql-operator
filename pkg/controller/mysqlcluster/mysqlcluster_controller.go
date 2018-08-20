@@ -190,14 +190,14 @@ func (r *ReconcileMysqlCluster) sync(cluster *mysqlv1alpha1.MysqlCluster, syncer
 	return nil
 }
 
-func (r *ReconcileMysqlCluster) getConfigAndSecretRevs(cluster *mysqlv1alpha1.MysqlCluster) (cmRev string, secRev string, err error) {
+func (r *ReconcileMysqlCluster) getConfigAndSecretRevs(cluster *mysqlv1alpha1.MysqlCluster) (string, string, error) {
 	configMap := &core.ConfigMap{}
-	err = r.Get(context.TODO(), types.NamespacedName{
+	err := r.Get(context.TODO(), types.NamespacedName{
 		Name:      cluster.GetNameForResource(mysqlv1alpha1.ConfigMap),
 		Namespace: cluster.Namespace,
 	}, configMap)
 	if err != nil {
-		return
+		return "", "", err
 	}
 
 	secret := &core.Secret{}
@@ -206,12 +206,10 @@ func (r *ReconcileMysqlCluster) getConfigAndSecretRevs(cluster *mysqlv1alpha1.My
 		Namespace: cluster.Namespace,
 	}, secret)
 	if err != nil {
-		return
+		return "", "", err
 	}
 
-	cmRev = configMap.ResourceVersion
-	secRev = secret.ResourceVersion
-	return
+	return configMap.ResourceVersion, secret.ResourceVersion, nil
 }
 
 func getErrorEventReason(obj runtime.Object, err error) string {

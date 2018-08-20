@@ -17,11 +17,15 @@ limitations under the License.
 package util
 
 var (
-	AppGitState  = ""
+	// AppGitState is the app build state
+	AppGitState = ""
+	// AppGitCommit is the app commit
 	AppGitCommit = ""
-	AppVersion   = "canary"
+	// AppVersion is the app version
+	AppVersion = "canary"
 )
 
+// GetVersion returns the  AppVersion
 func GetVersion() string {
 	return AppVersion
 }

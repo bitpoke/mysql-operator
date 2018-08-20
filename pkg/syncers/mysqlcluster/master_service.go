@@ -29,6 +29,7 @@ type masterSVCSyncer struct {
 	cluster *api.MysqlCluster
 }
 
+// NewMasterSVCSyncer returns a service syncer for master service
 func NewMasterSVCSyncer(cluster *api.MysqlCluster) syncers.Interface {
 	return &masterSVCSyncer{
 		cluster: cluster,
@@ -61,7 +62,7 @@ func (s *masterSVCSyncer) Sync(in runtime.Object) error {
 	out.Spec.Ports[0].Name = MysqlPortName
 	out.Spec.Ports[0].Port = MysqlPort
 	out.Spec.Ports[0].TargetPort = TargetPort
-	out.Spec.Ports[0].Protocol = "TCP"
+	out.Spec.Ports[0].Protocol = core.ProtocolTCP
 
 	return nil
 

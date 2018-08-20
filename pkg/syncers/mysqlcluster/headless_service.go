@@ -29,6 +29,7 @@ type headlessSVCSyncer struct {
 	cluster *api.MysqlCluster
 }
 
+// NewHeadlessSVCSyncer returns a service syncer
 func NewHeadlessSVCSyncer(cluster *api.MysqlCluster) syncers.Interface {
 	return &headlessSVCSyncer{
 		cluster: cluster,
@@ -59,12 +60,12 @@ func (s *headlessSVCSyncer) Sync(in runtime.Object) error {
 	out.Spec.Ports[0].Name = MysqlPortName
 	out.Spec.Ports[0].Port = MysqlPort
 	out.Spec.Ports[0].TargetPort = TargetPort
-	out.Spec.Ports[0].Protocol = "TCP"
+	out.Spec.Ports[0].Protocol = core.ProtocolTCP
 
 	out.Spec.Ports[1].Name = ExporterPortName
 	out.Spec.Ports[1].Port = ExporterPort
 	out.Spec.Ports[1].TargetPort = ExporterTargetPort
-	out.Spec.Ports[1].Protocol = "TCP"
+	out.Spec.Ports[1].Protocol = core.ProtocolTCP
 
 	return nil
 

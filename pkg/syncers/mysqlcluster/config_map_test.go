@@ -85,11 +85,10 @@ var _ = Describe("ConfigMap syncer", func() {
 				cm := syncer.GetExistingObjectPlaceholder().(*core.ConfigMap)
 				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
 
-				oldHash := cm.ObjectMeta.Annotations["config_hash"]
 				cluster.Spec.MysqlConf["ceva_nou"] = "1"
 
 				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
-				oldHash = cm.ObjectMeta.Annotations["config_hash"]
+				oldHash := cm.ObjectMeta.Annotations["config_hash"]
 
 				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
 				Expect(cm.ObjectMeta.Annotations["config_hash"]).To(Equal(oldHash))

@@ -95,7 +95,10 @@ func (s *configMapSyncer) getMysqlConfData() (string, string, error) {
 	addBConfigsToSection(sec, MysqlMasterSlaveBooleanConfigs)
 
 	// include configs from /etc/mysql/conf.d/*.cnf
-	sec.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
+	_, err := sec.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
+	if err != nil {
+		return "", "", err
+	}
 
 	data, err := writeConfigs(cfg)
 	if err != nil {
@@ -135,6 +138,7 @@ func addBConfigsToSection(s *ini.Section, boolConfigs ...[]string) {
 }
 
 // helper function to write to string ini.File
+// nolint: interfacer
 func writeConfigs(cfg *ini.File) (string, error) {
 	var buf bytes.Buffer
 	if _, err := cfg.WriteTo(&buf); err != nil {

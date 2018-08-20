@@ -40,12 +40,17 @@ const (
 	// change
 	ConfigVersion = "2018-03-23:12:33"
 
-	HelperServerPort      = 8088
+	// HelperServerPort represents the port on which http server will run
+	HelperServerPort = 8088
+	// HelperServerProbePath the probe path
 	HelperServerProbePath = "/health"
 
+	//ExporterPortName the name of the metrics exporter port
 	ExporterPortName = "prometheus"
-	ExporterPort     = 9104
-	ExporterPath     = "/metrics"
+	// ExporterPort is the port on which metrics exporter expose metrics
+	ExporterPort = 9104
+	// ExporterPath is the path on which metrics are expose
+	ExporterPath = "/metrics"
 
 	// HelperDbName represent the database name that is used by operator to
 	// manage the mysql cluster. This database contains a table with
@@ -87,8 +92,9 @@ var (
 		// Safety
 		"max-allowed-packet": "16M",
 		"max-connect-errors": "1000000",
-		"sql-mode":           "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
-		"sysdate-is-now":     "1",
+		"sql-mode": "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER," +
+			"NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
+		"sysdate-is-now": "1",
 
 		// Binary logging
 		"expire-logs-days": "14",
@@ -115,6 +121,8 @@ var (
 		"character-set-server": "utf8mb4",
 		"collation-server":     "utf8mb4_unicode_ci",
 	}
+
+	// MysqlMasterSlaveBooleanConfigs represents the boolean configs from config file
 	MysqlMasterSlaveBooleanConfigs = []string{
 		// Safety
 		"skip-name-resolve",
