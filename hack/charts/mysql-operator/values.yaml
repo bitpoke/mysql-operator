@@ -61,4 +61,5 @@ orchestrator:
     # Safety! do not disable unless you know what you are doing
     FailMasterPromotionIfSQLThreadNotUpToDate: true
     DetachLostReplicasAfterMasterFailover: true
+    DiscoverByShowSlaveHosts: true
 
