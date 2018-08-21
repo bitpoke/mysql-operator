@@ -17,7 +17,7 @@ limitations under the License.
 package mysqlcluster
 
 import (
-	"k8s.io/api/policy/v1beta1"
+	policy "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -37,7 +37,7 @@ func NewPDBSyncer(cluster *api.MysqlCluster) syncers.Interface {
 }
 
 func (s *pdbSyncer) GetExistingObjectPlaceholder() runtime.Object {
-	return &v1beta1.PodDisruptionBudget{
+	return &policy.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      s.cluster.GetNameForResource(api.PodDisruptionBudget),
 			Namespace: s.cluster.Namespace,
@@ -50,7 +50,7 @@ func (s *pdbSyncer) ShouldHaveOwnerReference() bool {
 }
 
 func (s *pdbSyncer) Sync(in runtime.Object) error {
-	out := in.(*v1beta1.PodDisruptionBudget)
+	out := in.(*policy.PodDisruptionBudget)
 	if out.Spec.MinAvailable != nil {
 		// this mean that pdb is created and should return because spec is imutable
 		return nil

@@ -26,7 +26,9 @@ import (
 	"golang.org/x/net/context"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
+	policy "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -100,6 +102,8 @@ var _ = Describe("MysqlCluster controller", func() {
 		})
 
 		AfterEach(func() {
+			// manually delete all created resources because GC isn't enabled in the test controller plane
+			removeAllCreatedResource(c, cluster)
 			c.Delete(context.TODO(), secret)
 		})
 
@@ -124,7 +128,116 @@ var _ = Describe("MysqlCluster controller", func() {
 					return c.Get(context.TODO(), sfsKey, statefulSet)
 				}, timeout).Should(Succeed())
 			})
+
+		})
+
+		It("should be created all cluster components", func() {
+			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+			defer c.Delete(context.TODO(), cluster)
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			objs := []runtime.Object{
+				&apps.StatefulSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cluster.GetNameForResource(api.StatefulSet),
+						Namespace: cluster.Namespace,
+					},
+				},
+				&core.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cluster.GetNameForResource(api.HeadlessSVC),
+						Namespace: cluster.Namespace,
+					},
+				},
+				&core.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cluster.GetNameForResource(api.MasterService),
+						Namespace: cluster.Namespace,
+					},
+				},
+				&core.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cluster.GetNameForResource(api.HealthyNodesService),
+						Namespace: cluster.Namespace,
+					},
+				},
+				&core.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cluster.GetNameForResource(api.ConfigMap),
+						Namespace: cluster.Namespace,
+					},
+				},
+				&policy.PodDisruptionBudget{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cluster.GetNameForResource(api.PodDisruptionBudget),
+						Namespace: cluster.Namespace,
+					},
+				},
+			}
+
+			testfunc := func() error {
+				for _, obj := range objs {
+					o := obj.(metav1.Object)
+					key := types.NamespacedName{
+						Name:      o.GetName(),
+						Namespace: o.GetNamespace(),
+					}
+					err := c.Get(context.TODO(), key, obj)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			}
+
+			Eventually(testfunc, timeout).Should(Succeed())
+
 		})
 	})
 
 })
+
+func removeAllCreatedResource(c client.Client, cluster *api.MysqlCluster) {
+	objs := []runtime.Object{
+		&apps.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.GetNameForResource(api.StatefulSet),
+				Namespace: cluster.Namespace,
+			},
+		},
+		&core.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.GetNameForResource(api.HeadlessSVC),
+				Namespace: cluster.Namespace,
+			},
+		},
+		&core.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.GetNameForResource(api.MasterService),
+				Namespace: cluster.Namespace,
+			},
+		},
+		&core.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.GetNameForResource(api.HealthyNodesService),
+				Namespace: cluster.Namespace,
+			},
+		},
+		&core.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.GetNameForResource(api.ConfigMap),
+				Namespace: cluster.Namespace,
+			},
+		},
+		&policy.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.GetNameForResource(api.PodDisruptionBudget),
+				Namespace: cluster.Namespace,
+			},
+		},
+	}
+
+	for _, obj := range objs {
+		Expect(c.Delete(context.TODO(), obj)).To(Succeed())
+	}
+}

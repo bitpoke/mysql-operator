@@ -41,8 +41,6 @@ const (
 	StatefulSet ResourceName = "mysql"
 	// ConfigMap is the alias for mysql configs, the config map resource
 	ConfigMap ResourceName = "config-files"
-	// BackupCronJob is the name of cron job
-	BackupCronJob ResourceName = "backup-cron"
 	// MasterService is the name of the service that points to master node
 	MasterService ResourceName = "master-service"
 	// HealthyNodesService is the name of a service that continas all healthy nodes
@@ -59,7 +57,7 @@ func (c *MysqlCluster) GetNameForResource(name ResourceName) string {
 // GetNameForResource returns the name of a resource for a cluster
 func GetNameForResource(name ResourceName, clusterName string) string {
 	switch name {
-	case StatefulSet, ConfigMap, BackupCronJob, HealthyNodesService, PodDisruptionBudget:
+	case StatefulSet, ConfigMap, HealthyNodesService, PodDisruptionBudget:
 		return fmt.Sprintf("%s-mysql", clusterName)
 	case MasterService:
 		return fmt.Sprintf("%s-mysql-master", clusterName)
