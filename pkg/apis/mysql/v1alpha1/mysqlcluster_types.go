@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -55,7 +54,7 @@ type MysqlClusterSpec struct {
 	// eviction, even in the absence of the evicted pod
 	// Defaults to 50%
 	// +optional
-	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
+	MinAvailable string `json:"minAvailable,omitempty"`
 
 	// Specify under crontab format interval to take backups
 	// leave it empty to deactivate the backup process

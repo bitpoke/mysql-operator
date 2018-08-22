@@ -22,6 +22,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 
 	"golang.org/x/net/context"
 	apps "k8s.io/api/apps/v1"
@@ -128,15 +129,16 @@ var _ = Describe("MysqlCluster controller", func() {
 					return c.Get(context.TODO(), sfsKey, statefulSet)
 				}, timeout).Should(Succeed())
 			})
-
 		})
 
 		It("should be created all cluster components", func() {
+			cluster.Spec.MinAvailable = "30%"
+
 			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
 			defer c.Delete(context.TODO(), cluster)
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
-			objs := []runtime.Object{
+			clusterComps := []runtime.Object{
 				&apps.StatefulSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      cluster.GetNameForResource(api.StatefulSet),
@@ -176,7 +178,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			}
 
 			testfunc := func() error {
-				for _, obj := range objs {
+				for _, obj := range clusterComps {
 					o := obj.(metav1.Object)
 					key := types.NamespacedName{
 						Name:      o.GetName(),
@@ -191,7 +193,74 @@ var _ = Describe("MysqlCluster controller", func() {
 			}
 
 			Eventually(testfunc, timeout).Should(Succeed())
+		})
 
+		It("should have revision annotation on statefulset", func() {
+			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+			defer c.Delete(context.TODO(), cluster)
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			// wait for the second update, else a race condition can happend
+			// with secret resource version.
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			sfsKey := types.NamespacedName{
+				Name:      cluster.GetNameForResource(api.StatefulSet),
+				Namespace: cluster.Namespace,
+			}
+			statefulSet := &apps.StatefulSet{}
+			Eventually(func() error {
+				return c.Get(context.TODO(), sfsKey, statefulSet)
+			}, timeout).Should(Succeed())
+
+			cfgMap := &core.ConfigMap{}
+			Expect(c.Get(context.TODO(), types.NamespacedName{
+				Name:      cluster.GetNameForResource(api.ConfigMap),
+				Namespace: cluster.Namespace,
+			}, cfgMap)).To(Succeed())
+			Expect(c.Get(context.TODO(), types.NamespacedName{
+				Name:      secret.Name,
+				Namespace: secret.Namespace,
+			}, secret)).To(Succeed())
+
+			Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["config_rev"]).To(Equal(cfgMap.ResourceVersion))
+			Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["secret_rev"]).To(Equal(secret.ResourceVersion))
+		})
+
+		It("should have set ready condition", func() {
+			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+			defer c.Delete(context.TODO(), cluster)
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			// get statefulset
+			sfsKey := types.NamespacedName{
+				Name:      cluster.GetNameForResource(api.StatefulSet),
+				Namespace: cluster.Namespace,
+			}
+			statefulSet := &apps.StatefulSet{}
+			Eventually(func() error {
+				return c.Get(context.TODO(), sfsKey, statefulSet)
+			}, timeout).Should(Succeed())
+
+			// update statefulset condition
+			statefulSet.Status.Conditions = []apps.StatefulSetCondition{
+				apps.StatefulSetCondition{
+					Type:   apps.StatefulSetConditionType("Ready"),
+					Status: core.ConditionTrue,
+				},
+			}
+			Expect(c.Update(context.TODO(), statefulSet)).To(Succeed())
+
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			Eventually(func() []api.ClusterCondition {
+				cl := &api.MysqlCluster{}
+				c.Get(context.TODO(), types.NamespacedName{Name: cluster.Name, Namespace: cluster.Namespace}, cl)
+				return cl.Status.Conditions
+			}, timeout).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(api.ClusterConditionReady),
+				"Status": Equal(core.ConditionTrue),
+			})))
 		})
 	})
 
@@ -238,6 +307,6 @@ func removeAllCreatedResource(c client.Client, cluster *api.MysqlCluster) {
 	}
 
 	for _, obj := range objs {
-		Expect(c.Delete(context.TODO(), obj)).To(Succeed())
+		c.Delete(context.TODO(), obj)
 	}
 }

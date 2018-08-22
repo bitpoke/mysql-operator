@@ -139,34 +139,6 @@ func (b *MysqlBackup) condExists(ty BackupConditionType) (int, bool) {
 	return 0, false
 }
 
-// Mysql events reason
-const (
-	EventReasonInitDefaults               = "InitDefaults"
-	EventReasonInitDefaultsFailed         = "InitDefaultsFailed"
-	EventReasonDbSecretUpdated            = "DbSecretUpdated"
-	EventReasonDbSecretFailed             = "DbSecretFailed"
-	EventReasonUtilitySecretFailed        = "UtilitySecretFailed"
-	EventReasonUtilitySecretUpdated       = "UtilitySecretUpdated"
-	EventReasonConfigMapFailed            = "MysqlConfigMapFailed"
-	EventReasonConfigMapUpdated           = "MysqlConfigMapUpdated"
-	EventReasonServiceFailed              = "HLServiceFailed"
-	EventReasonServiceUpdated             = "HLServiceUpdated"
-	EventReasonSFSFailed                  = "StatefulSetFailed"
-	EventReasonSFSUpdated                 = "StatefulSetUpdated"
-	EventReasonMasterServiceFailed        = "MasterServiceFailed"
-	EventReasonMasterServiceUpdated       = "MasterServiceUpdated"
-	EventReasonHealthyNodesServiceFailed  = "HealthyNodesServiceFailed"
-	EventReasonHealthyNodesServiceUpdated = "HealthyNodesServiceUpdated"
-	EventReasonPDBFailed                  = "PodDisruptionBudgetFailed"
-	EventReasonPDBUpdated                 = "PodDisruptionBudgetUpdated"
-)
-
-// Event types
-const (
-	EventNormal  = core.EventTypeNormal
-	EventWarning = core.EventTypeWarning
-)
-
 // UpdateNodeCondition updates the condition for a given type
 func (ns *NodeStatus) UpdateNodeCondition(cType NodeConditionType,
 	cStatus core.ConditionStatus) bool {

@@ -55,12 +55,12 @@ type sfsSyncer struct {
 }
 
 // NewStatefulSetSyncer returns a syncer for stateful set
-func NewStatefulSetSyncer(cluster *api.MysqlCluster, cmRev, secRev string) syncers.Interface {
+func NewStatefulSetSyncer(cluster *api.MysqlCluster, cmRev, secRev string, opt *options.Options) syncers.Interface {
 	return &sfsSyncer{
 		cluster:           cluster,
 		configMapRevision: cmRev,
 		secretRevision:    secRev,
-		opt:               options.GetOptions(),
+		opt:               opt,
 	}
 }
 

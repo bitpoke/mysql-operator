@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/options"
 	"github.com/presslabs/mysql-operator/pkg/syncers"
 	"github.com/presslabs/mysql-operator/pkg/syncers/mysqlcluster"
 )
@@ -86,6 +87,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	//TODO: watch other created resources
+	// related secret and config map
 
 	return nil
 }
@@ -124,6 +126,18 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, fmt.Errorf("the spec.SecretName is empty")
 	}
 
+	// TODO: set default on a copy cluster
+	opt := options.GetOptions()
+	cluster.SetDefaults(opt)
+
+	defer func() {
+		// TODO: update just status and not in a defer
+		err := r.Update(context.TODO(), cluster)
+		if err != nil {
+			log.Error(err, "Failed to update cluster status!", "cluster", cluster)
+		}
+	}()
+
 	// run the config syncers
 	configSyncers := []syncers.Interface{
 		mysqlcluster.NewConfigMapSyncer(cluster),
@@ -141,20 +155,22 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
+	log.Info(fmt.Sprintf("################# CM: %s  SEC: %s", configRev, secretRev))
+
 	// run the syncers for services, pdb and statefulset
 	otherSyncers := []syncers.Interface{
-		mysqlcluster.NewPDBSyncer(cluster),
-
 		mysqlcluster.NewHeadlessSVCSyncer(cluster),
 		mysqlcluster.NewHealthySVCSyncer(cluster),
 		mysqlcluster.NewMasterSVCSyncer(cluster),
 
-		mysqlcluster.NewStatefulSetSyncer(cluster, configRev, secretRev),
+		mysqlcluster.NewStatefulSetSyncer(cluster, configRev, secretRev, opt),
 	}
 
-	err = r.sync(cluster, otherSyncers)
+	if len(cluster.Spec.MinAvailable) != 0 {
+		otherSyncers = append(otherSyncers, mysqlcluster.NewPDBSyncer(cluster))
+	}
 
-	return reconcile.Result{}, err
+	return reconcile.Result{}, r.sync(cluster, otherSyncers)
 }
 
 func (r *ReconcileMysqlCluster) sync(cluster *mysqlv1alpha1.MysqlCluster, syncers []syncers.Interface) error {
