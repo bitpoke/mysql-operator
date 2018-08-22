@@ -155,8 +155,6 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	log.Info(fmt.Sprintf("################# CM: %s  SEC: %s", configRev, secretRev))
-
 	// run the syncers for services, pdb and statefulset
 	otherSyncers := []syncers.Interface{
 		mysqlcluster.NewHeadlessSVCSyncer(cluster),
