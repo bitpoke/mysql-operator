@@ -6,9 +6,11 @@ cat <<EOF > /etc/rclone.conf
 [s3]
 type = s3
 env_auth = false
+provider = ${S3_PROVIDER:-"AWS"}
 access_key_id = ${AWS_ACCESS_KEY_ID}
 secret_access_key = ${AWS_SECRET_KEY}
 region = ${AWS_REGION:-"us-east-1"}
+endpoint = ${S3_ENDPOINT}
 acl = ${AWS_ACL}
 storage_class = ${AWS_STORAGE_CLASS}
 

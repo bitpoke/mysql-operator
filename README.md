@@ -86,7 +86,7 @@ Status:
 
 ## Backups
 
-Backups are stored on object storage services like S3 or google cloud storage. In order to be able to store backup, the secret defined under `backupBucketSecretName` must the credentias to store those backups.
+Backups are stored on object storage services like S3 or google cloud storage. In order to be able to store backup, the secret defined under `backupBucketSecretName` must the credentials to store those backups. The backups are uploaded using [Rclone](https://rclone.org/). The contents of the secret are used to generate an rclone.conf in [hack/docker/mysql-helper/docker-entrypoint.sh](hack/docker/mysql-helper/docker-entrypoint.sh).
 
 ### Setup backup to S3
 
@@ -105,6 +105,12 @@ data:
   # AWS_REGION: us-east1
   # Optional, specify the storage class
   # AWS_STORAGE_CLASS: standard
+  # Optional, canned ACL to use
+  # AWS_ACL:
+  # Optional, the S3 provider to use (default: AWS)
+  # S3_PROVIDER: AWS
+  # Optional, the S3 endpoint to use (for when you use a different S3_PROVIDER)
+  # S3_ENDPOINT:
 ```
 
 ### Setup backup to gcloud
