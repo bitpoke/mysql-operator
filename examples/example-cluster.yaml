@@ -1,10 +1,10 @@
 apiVersion: mysql.presslabs.org/v1alpha1
 kind: MysqlCluster
 metadata:
-  name: foo
+  name: my-cluster
 spec:
-  replicas: 1
-  secretName: db-secret
+  replicas: 2
+  secretName: my-secret
   # mysqlVersion: 5.7
   # initBucketUri: gs://bucket_name/backup.xtrabackup.gz
   # initBucketSecretName:

@@ -1,11 +1,11 @@
 apiVersion: mysql.presslabs.org/v1alpha1
 kind: MysqlBackup
 metadata:
-  name: bar-backup
+  name: my-cluster-backup
 
 spec:
   # this field is required
-  clusterName: foo
+  clusterName: my-cluster
 
   ## if backupUri is specified then the backup will be put
   ## at this path, else the backup uri will be filled with
