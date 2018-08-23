@@ -105,7 +105,9 @@ type ReconcileMysqlCluster struct {
 // and what is in the MysqlCluster.Spec
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=statefulset,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=configmap;secret;service,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlclusters,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=policy,resources=poddisruptionbudget,verbs=get;create;update;patch;delete
 func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlCluster instance
 	cluster := &mysqlv1alpha1.MysqlCluster{}
@@ -132,7 +134,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 
 	defer func() {
 		// TODO: update just status and not in a defer
-		err := r.Update(context.TODO(), cluster)
+		err := r.Update(context.TODO(), cluster) // nolint
 		if err != nil {
 			log.Error(err, "Failed to update cluster status!", "cluster", cluster)
 		}
@@ -158,8 +160,8 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	// run the syncers for services, pdb and statefulset
 	otherSyncers := []syncers.Interface{
 		mysqlcluster.NewHeadlessSVCSyncer(cluster),
-		mysqlcluster.NewHealthySVCSyncer(cluster),
 		mysqlcluster.NewMasterSVCSyncer(cluster),
+		mysqlcluster.NewHealthySVCSyncer(cluster),
 
 		mysqlcluster.NewStatefulSetSyncer(cluster, configRev, secretRev, opt),
 	}

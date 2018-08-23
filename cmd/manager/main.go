@@ -42,7 +42,10 @@ func main() {
 	fs := pflag.NewFlagSet(os.Args[0], pflag.ExitOnError)
 	opt := options.GetOptions()
 	opt.AddFlags(fs)
-	fs.Parse(os.Args)
+	if err := fs.Parse(os.Args); err != nil {
+		log.Error(err, "failed to parse command line args, see help.")
+		os.Exit(1)
+	}
 
 	if err := opt.Validate(); err != nil {
 		log.Error(err, "failed to validate command line args, see help.")

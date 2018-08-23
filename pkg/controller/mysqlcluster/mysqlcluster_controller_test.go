@@ -200,7 +200,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			defer c.Delete(context.TODO(), cluster)
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
-			// wait for the second update, else a race condition can happend
+			// wait for the second update, else a race condition can happened
 			// with secret resource version.
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 

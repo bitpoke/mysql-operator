@@ -45,20 +45,18 @@ const (
 )
 
 // SetDefaults sets the defaults for Spec and Status
-func (c *MysqlCluster) SetDefaults(opt *options.Options) error {
-	return c.Spec.SetDefaults(opt, c)
+func (c *MysqlCluster) SetDefaults(opt *options.Options) {
+	c.Spec.SetDefaults(opt, c)
 }
 
 // SetDefaults updates Spec defaults
 // nolint: gocyclo
-func (c *MysqlClusterSpec) SetDefaults(opt *options.Options, cluster *MysqlCluster) error {
+func (c *MysqlClusterSpec) SetDefaults(opt *options.Options, cluster *MysqlCluster) {
 	if len(c.MysqlVersion) == 0 {
 		c.MysqlVersion = opt.MysqlImageTag
 	}
 
-	if err := c.PodSpec.SetDefaults(opt, cluster); err != nil {
-		return err
-	}
+	c.PodSpec.SetDefaults(opt, cluster)
 
 	if len(c.MysqlConf) == 0 {
 		c.MysqlConf = make(MysqlConf)
@@ -114,11 +112,11 @@ func (c *MysqlClusterSpec) SetDefaults(opt *options.Options, cluster *MysqlClust
 		}
 	}
 
-	return c.VolumeSpec.SetDefaults()
+	c.VolumeSpec.SetDefaults()
 }
 
 // SetDefaults for PodSpec
-func (ps *PodSpec) SetDefaults(opt *options.Options, cluster *MysqlCluster) error {
+func (ps *PodSpec) SetDefaults(opt *options.Options, cluster *MysqlCluster) {
 	if len(ps.ImagePullPolicy) == 0 {
 		ps.ImagePullPolicy = opt.ImagePullPolicy
 	}
@@ -148,11 +146,10 @@ func (ps *PodSpec) SetDefaults(opt *options.Options, cluster *MysqlCluster) erro
 			},
 		}
 	}
-	return nil
 }
 
 // SetDefaults for VolumeSpec
-func (vs *VolumeSpec) SetDefaults() error {
+func (vs *VolumeSpec) SetDefaults() {
 	if len(vs.AccessModes) == 0 {
 		vs.AccessModes = []apiv1.PersistentVolumeAccessMode{
 			apiv1.ReadWriteOnce,
@@ -166,6 +163,4 @@ func (vs *VolumeSpec) SetDefaults() error {
 			},
 		}
 	}
-
-	return nil
 }

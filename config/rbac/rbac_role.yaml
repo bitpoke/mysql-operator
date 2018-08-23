@@ -41,6 +41,66 @@ rules:
   - patch
   - delete
 - apiGroups:
+  - ""
+  resources:
+  - configmap
+  - secret
+  - service
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - mysql.presslabs.org
+  resources:
+  - mysqlclusters
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudget
+  verbs:
+  - get
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - statefulset
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - pod
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
   - mysql.presslabs.org
   resources:
   - mysqlclusters
