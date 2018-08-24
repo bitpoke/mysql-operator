@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package e2e
+package framework
 
 import (
 	"fmt"
@@ -23,18 +23,16 @@ import (
 	"os/exec"
 
 	. "github.com/onsi/gomega"
-
-	"github.com/presslabs/mysql-operator/test/e2e/framework"
 )
 
-func HelmInstallChart(release string) {
+func HelmInstallChart(release, ns string) {
 	args := []string{
-		"install", "./" + framework.TestContext.ChartPath,
-		"--namespace", operatorNamespace,
-		"--name", release, "--values", framework.TestContext.ChartValues, "--wait",
-		"--kube-context", framework.TestContext.KubeContext,
-		"--set", fmt.Sprintf("image=%s", framework.TestContext.OperatorImage),
-		"--set", fmt.Sprintf("helperImage=%s", framework.TestContext.HelperImage),
+		"install", "./" + TestContext.ChartPath,
+		"--namespace", ns,
+		"--name", release, "--values", TestContext.ChartValues, "--wait",
+		"--kube-context", TestContext.KubeContext,
+		"--set", fmt.Sprintf("image=%s", TestContext.OperatorImage),
+		"--set", fmt.Sprintf("helperImage=%s", TestContext.HelperImage),
 	}
 
 	cmd := exec.Command("helm", args...)
@@ -47,7 +45,7 @@ func HelmInstallChart(release string) {
 func HelmPurgeRelease(release string) {
 	args := []string{
 		"delete", "--purge", release,
-		"--kube-context", framework.TestContext.KubeContext,
+		"--kube-context", TestContext.KubeContext,
 	}
 	cmd := exec.Command("helm", args...)
 	cmd.Stdout = os.Stdout
