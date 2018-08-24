@@ -64,10 +64,10 @@ var _ = Describe("Mysql cluster tests", func() {
 		Expect(err).ToNot(HaveOccurred(), "Failed to create cluster: '%s'", cluster.Name)
 
 		By("testing the cluster readiness")
-		testClusterReadiness(f, cluster, "after creation")
+		testClusterReadiness(f, cluster)
 
 		By("testing that cluster is registered with orchestrator")
-		testClusterIsRegistredWithOrchestrator(f, cluster, "after creation")
+		testClusterIsRegistredWithOrchestrator(f, cluster)
 
 		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 		Expect(err).ToNot(HaveOccurred(), "Failed to get cluster %s", cluster.Name)
@@ -80,9 +80,12 @@ var _ = Describe("Mysql cluster tests", func() {
 		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: %s", cluster.Name)
 
 		// test cluster
-		testClusterReadiness(f, cluster, "after scale up")
-		testClusterIsRegistredWithOrchestrator(f, cluster, "after scale up")
-		testClusterEndpoints(f, cluster, []int{0}, []int{0, 1}, "after scale up")
+		By("test cluster is ready after scale up")
+		testClusterReadiness(f, cluster)
+		By("test cluster is registered in orchestrator after scale up")
+		testClusterIsRegistredWithOrchestrator(f, cluster)
+		By("test cluster endpoints are set correctly")
+		testClusterEndpoints(f, cluster, []int{0}, []int{0, 1})
 	})
 
 	It("failover cluster", func() {
@@ -92,10 +95,13 @@ var _ = Describe("Mysql cluster tests", func() {
 		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: '%s'", cluster.Name)
 
 		// test cluster to be ready
-		testClusterReadiness(f, cluster, "after cluster update")
-		testClusterIsRegistredWithOrchestrator(f, cluster, "after cluster update")
+		By("test cluster is ready after cluster update")
+		testClusterReadiness(f, cluster)
+		By("test cluster is registered in orchestrator after cluster update")
+		testClusterIsRegistredWithOrchestrator(f, cluster)
 
 		// check cluster to have a master and a slave
+		By("test cluster nodes master condition is properly set")
 		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(0), api.NodeConditionMaster, core.ConditionTrue, f.Timeout)
 		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(1), api.NodeConditionMaster, core.ConditionFalse, f.Timeout)
 
@@ -111,10 +117,12 @@ var _ = Describe("Mysql cluster tests", func() {
 		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(1), api.NodeConditionMaster, core.ConditionTrue, failoverTimeout)
 
 		// after some time node 0 should be up and should be slave
+		By("test cluster master condition is properly set")
 		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(0), api.NodeConditionMaster, core.ConditionFalse, f.Timeout)
 		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(0), api.NodeConditionReplicating, core.ConditionTrue, f.Timeout)
 
-		testClusterEndpoints(f, cluster, []int{1}, []int{0, 1}, "after failover")
+		By("test cluster endpoints after failover")
+		testClusterEndpoints(f, cluster, []int{1}, []int{0, 1})
 	})
 
 	It("scale down a cluster", func() {
@@ -124,8 +132,10 @@ var _ = Describe("Mysql cluster tests", func() {
 		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: '%s'", cluster.Name)
 
 		// test cluster to be ready
-		testClusterReadiness(f, cluster, "after cluster update")
-		testClusterIsRegistredWithOrchestrator(f, cluster, "after cluster update")
+		By("test cluster is ready after cluster update")
+		testClusterReadiness(f, cluster)
+		By("test cluster is registered in orchestartor after cluster update")
+		testClusterIsRegistredWithOrchestrator(f, cluster)
 
 		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to get cluster %s", cluster.Name)
@@ -135,7 +145,8 @@ var _ = Describe("Mysql cluster tests", func() {
 		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Update(cluster)
 		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: %s", cluster.Name)
 
-		testClusterReadiness(f, cluster, "after scale down")
+		By("test cluster is ready after scale down")
+		testClusterReadiness(f, cluster)
 
 		// TODO: check for PVCs
 	})
@@ -147,8 +158,10 @@ var _ = Describe("Mysql cluster tests", func() {
 		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: '%s'", cluster.Name)
 
 		// test cluster to be ready
-		testClusterReadiness(f, cluster, "after cluster update")
-		testClusterIsRegistredWithOrchestrator(f, cluster, "after cluster update")
+		By("test cluster is ready after cluster update")
+		testClusterReadiness(f, cluster)
+		By("test cluster is registered in orchestrator after cluster update")
+		testClusterIsRegistredWithOrchestrator(f, cluster)
 
 		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to get cluster %s", cluster.Name)
@@ -157,9 +170,11 @@ var _ = Describe("Mysql cluster tests", func() {
 		f.ExecSQLOnNode(cluster, 1, "root", pw, "STOP SLAVE;")
 
 		// expect node to be removed from service and status to be updated
+		By("test cluster node 1 replicating condition is set to false")
 		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(1), api.NodeConditionReplicating, core.ConditionFalse, 30*time.Second)
 		// node 1 should not be in healty service
-		testClusterEndpoints(f, cluster, []int{0}, []int{0}, "after stop slave")
+		By("test cluster endpoints after stop slave")
+		testClusterEndpoints(f, cluster, []int{0}, []int{0})
 	})
 
 	It("slave latency", func() {
@@ -171,8 +186,10 @@ var _ = Describe("Mysql cluster tests", func() {
 		Expect(err).NotTo(HaveOccurred(), "Failed to update cluster: '%s'", cluster.Name)
 
 		// test cluster to be ready
-		testClusterReadiness(f, cluster, "after cluster update")
-		testClusterIsRegistredWithOrchestrator(f, cluster, "after cluster update")
+		By("test cluster is ready after cluster update")
+		testClusterReadiness(f, cluster)
+		By("test cluster is registered in orchestrator after cluster update")
+		testClusterIsRegistredWithOrchestrator(f, cluster)
 
 		cluster, err = f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to get cluster %s", cluster.Name)
@@ -181,16 +198,17 @@ var _ = Describe("Mysql cluster tests", func() {
 		f.ExecSQLOnNode(cluster, 1, "root", pw, "STOP SLAVE; CHANGE MASTER TO MASTER_DELAY = 100; START SLAVE;")
 
 		// expect node to be marked as lagged and removed from service
+		By("test cluster node 1 to be lagged")
 		f.NodeEventuallyCondition(cluster, cluster.GetPodHostname(1), api.NodeConditionLagged, core.ConditionTrue, 20*time.Second)
 		// node 1 should not be in healty service
-		testClusterEndpoints(f, cluster, []int{0}, []int{0}, "after delayed slave")
+		By("test cluster endpoints after delayed slave")
+		testClusterEndpoints(f, cluster, []int{0}, []int{0})
 	})
 
 })
 
-func testClusterReadiness(f *framework.Framework, cluster *api.MysqlCluster, where string) {
+func testClusterReadiness(f *framework.Framework, cluster *api.MysqlCluster) {
 	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
-	By(fmt.Sprintf("Test cluster is ready: %s; timeout=%v", where, timeout))
 
 	// wait for pods to be ready
 	Eventually(func() int {
@@ -204,8 +222,7 @@ func testClusterReadiness(f *framework.Framework, cluster *api.MysqlCluster, whe
 }
 
 // tests if the cluster is in orchestrator and is properly configured
-func testClusterIsRegistredWithOrchestrator(f *framework.Framework, cluster *api.MysqlCluster, where string) {
-	By(fmt.Sprintf("Test cluster is in orchestrator: %s", where))
+func testClusterIsRegistredWithOrchestrator(f *framework.Framework, cluster *api.MysqlCluster) {
 	cluster, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 	Expect(err).NotTo(HaveOccurred(), "Failed to get cluster '%s'", cluster.Name)
 
@@ -250,8 +267,7 @@ func testClusterIsRegistredWithOrchestrator(f *framework.Framework, cluster *api
 
 // checks for cluster endpoints to exists when cluster is ready
 // TODO: check in more detail
-func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster, master []int, nodes []int, where string) {
-	By(fmt.Sprintf("Test cluster endpoints are configured corectly: %s", where))
+func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster, master []int, nodes []int) {
 	cluster, err := f.MyClientSet.MysqlV1alpha1().MysqlClusters(f.Namespace.Name).Get(cluster.Name, meta.GetOptions{})
 	Expect(err).NotTo(HaveOccurred(), "Failed to get cluster: '%s'", cluster.Name)
 

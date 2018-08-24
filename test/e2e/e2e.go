@@ -54,7 +54,7 @@ var orcTunnel *kutil_pf.Tunnel
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	// ginkgo node 1
 	ginkgo.By("Install operator")
-	HelmInstallChart(releaseName)
+	framework.HelmInstallChart(releaseName, operatorNamespace)
 
 	kubeCfg, err := framework.LoadConfig()
 	gomega.Expect(err).To(gomega.Succeed())
@@ -108,7 +108,7 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	orcTunnel.Close()
 
 	ginkgo.By("Remove operator release")
-	HelmPurgeRelease(releaseName)
+	framework.HelmPurgeRelease(releaseName)
 
 	ginkgo.By("Delete operator namespace")
 	client, _, err := framework.KubernetesClients()
