@@ -146,10 +146,9 @@ func (cs *Channel) Start(
 	}
 
 	// stop should have been injected before Start was called
-	// TODO: uncomment this when is fixed
-	// if cs.stop == nil {
-	// 	return fmt.Errorf("must call InjectStop on Channel before calling Start")
-	// }
+	if cs.stop == nil {
+		return fmt.Errorf("must call InjectStop on Channel before calling Start")
+	}
 
 	// use default value if DestBufferSize not specified
 	if cs.DestBufferSize == 0 {

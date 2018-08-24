@@ -19,72 +19,31 @@ package mysqlcluster
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	//"github.com/presslabs/mysql-operator/pkg/handler"
+	mysource "github.com/presslabs/mysql-operator/pkg/source"
 )
 
 const (
 	controllerName = "orchestrator-mysql-controller"
-	// the period of time in which reconciliation for a cluster is done
-	reconcilePeriod = 5
 )
 
 var log = logf.Log.WithName(controllerName)
 
-type eventLockMap struct {
-	lock sync.RWMutex
-	Map  map[string]event.GenericEvent
-}
-
-func NewEventLockMap() eventLockMap {
-	return eventLockMap{
-		Map: make(map[string]event.GenericEvent),
-	}
-}
-
-var clustersMap = NewEventLockMap()
-
-func (m *eventLockMap) getKey(meta metav1.Object) string {
-	return fmt.Sprintf("%s/%s", meta.GetNamespace(), meta.GetName())
-}
-
-func (m *eventLockMap) CreateEvent(evt event.CreateEvent) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	m.Map[m.getKey(evt.Meta)] = event.GenericEvent{
-		Meta:   evt.Meta,
-		Object: evt.Object,
-	}
-}
-
-func (m *eventLockMap) DeleteEvent(evt event.DeleteEvent) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	_, ok := m.Map[m.getKey(evt.Meta)]
-	if ok {
-		delete(m.Map, m.getKey(evt.Meta))
-	}
-}
+// reconcileTimePeriod represents the time in which a cluster shoud be reconciled
+var reconcileTimePeriod = time.Second * 5
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -107,54 +66,23 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to MysqlCluster
+	mapSource := &mysource.RecurentEventMap{
+		TimePeriod: reconcileTimePeriod,
+	}
+
+	// Watch for add/delete a MysqlCluster
 	err = c.Watch(&source.Kind{Type: &mysqlv1alpha1.MysqlCluster{}}, &handler.Funcs{
-		CreateFunc: func(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
-			if evt.Meta == nil {
-				log.Error(nil, "CreateEvent received with no metadata", "CreateEvent", evt)
-				return
-			}
-
-			clustersMap.CreateEvent(evt)
-		},
-		DeleteFunc: func(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
-			if evt.Meta == nil {
-				log.Error(nil, "DeleteEvent received with no metadata", "DeleteEvent", evt)
-				return
-			}
-
-			clustersMap.DeleteEvent(evt)
-		},
+		CreateFunc: mapSource.CreateEvent,
+		DeleteFunc: mapSource.DeleteEvent,
 	})
 	if err != nil {
 		return err
 	}
 
-	events := make(chan event.GenericEvent)
-	err = c.Watch(
-		&source.Channel{Source: events},
-		&handler.EnqueueRequestForObject{},
-	)
+	err = c.Watch(mapSource, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
-
-	// TODO: add a stop channel
-	go func() {
-		for {
-			select {
-			// case <-stop:
-			// 	return
-			case <-time.After(reconcilePeriod):
-				// write all clusters to envents chan to be processed
-				clustersMap.lock.RLock()
-				for _, clEvent := range clustersMap.Map {
-					events <- clEvent
-				}
-				clustersMap.lock.RUnlock()
-			}
-		}
-	}()
 
 	return nil
 }

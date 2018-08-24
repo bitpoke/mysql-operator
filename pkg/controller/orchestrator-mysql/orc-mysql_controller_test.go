@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -48,9 +47,14 @@ var _ = Describe("MysqlCluster controller", func() {
 		stop chan struct{}
 		// controller k8s client
 		c client.Client
+		// time between reconciliations
+		tPause time.Duration
 	)
 
 	BeforeEach(func() {
+		reconcileTimePeriod = time.Second
+		tPause = time.Second - 100*time.Millisecond
+
 		var recFn reconcile.Reconciler
 
 		mgr, err := manager.New(cfg, manager.Options{})
@@ -110,11 +114,11 @@ var _ = Describe("MysqlCluster controller", func() {
 			c.Delete(context.TODO(), secret)
 		})
 
-		It("should register the cluster", func() {
+		It("should register the cluster [Slow]", func() {
 			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
 			// expect to receive the creation event
-			//Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-			Eventually(func() map[string]event.GenericEvent { return clustersMap.Map }).Should(HaveKey(getKey(cluster)))
+			Consistently(requests, tPause).ShouldNot(Receive(Equal(expectedRequest)))
+			Eventually(requests).Should(Receive(Equal(expectedRequest)))
 
 			// stop the controller
 			close(stop)
@@ -128,24 +132,35 @@ var _ = Describe("MysqlCluster controller", func() {
 			Expect(add(mgr, recFn)).To(Succeed())
 			stop = StartTestManager(mgr)
 
-			Eventually(func() map[string]event.GenericEvent { return clustersMap.Map }).Should(HaveLen(1))
+			// wait a second for a request
+			Consistently(requests, tPause).ShouldNot(Receive(Equal(expectedRequest)))
+			Eventually(requests).Should(Receive(Equal(expectedRequest)))
 
+			// update the cluster
 			cluster.Spec.Replicas = 3
 			Expect(c.Update(context.TODO(), cluster)).To(Succeed())
 
-			Eventually(func() map[string]event.GenericEvent { return clustersMap.Map }).Should(HaveLen(1))
+			// wait a second for a request
+			Consistently(requests, tPause).ShouldNot(Receive(Equal(expectedRequest)))
+			Eventually(requests).Should(Receive(Equal(expectedRequest)))
 
+			// delete the cluster
 			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
-			Eventually(func() map[string]event.GenericEvent { return clustersMap.Map }).Should(HaveLen(0))
 
-			Eventually(requests, timeout).ShouldNot(Receive(Equal(expectedRequest)))
+			// wait two seconds without request
+			Consistently(requests, timeout).ShouldNot(Receive(Equal(expectedRequest)))
 
 		})
 
 		It("should be (un)registered in list", func() {
 			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
 			defer c.Delete(context.TODO(), cluster)
-			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			Consistently(requests, tPause).ShouldNot(Receive(Equal(expectedRequest)))
+			Eventually(requests).Should(Receive(Equal(expectedRequest)))
+
+			Consistently(requests, tPause).ShouldNot(Receive(Equal(expectedRequest)))
+			Eventually(requests).Should(Receive(Equal(expectedRequest)))
 
 		})
 	})
@@ -194,8 +209,4 @@ func removeAllCreatedResource(c client.Client, cluster *api.MysqlCluster) {
 	for _, obj := range objs {
 		c.Delete(context.TODO(), obj)
 	}
-}
-
-func getKey(cluster *api.MysqlCluster) string {
-	return fmt.Sprintf("%s/%s", cluster.Namespace, cluster.Name)
 }
