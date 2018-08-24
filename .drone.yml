@@ -58,7 +58,7 @@ pipeline:
       - helm repo add presslabs https://presslabs.github.io/charts
       - helm dependency update hack/charts/mysql-operator
     when:
-      # branch: master
+      branch: master
       event: push
 
   publish-operator:
@@ -172,7 +172,7 @@ pipeline:
             --pod-wait-timeout 150
             -timeout 30m
     when:
-      # branch: master
+      branch: master
       event: push
 
   stop-kubernetes:
@@ -188,6 +188,6 @@ pipeline:
      
     when:
       status: [ success, failure ]
-      # branch: master
+      branch: master
       event: push
 
