@@ -60,8 +60,12 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileMysqlCluster{Client: mgr.GetClient(), scheme: mgr.GetScheme(),
-		recorder: mgr.GetRecorder(controllerName)}
+	return &ReconcileMysqlCluster{
+		Client:   mgr.GetClient(),
+		scheme:   mgr.GetScheme(),
+		recorder: mgr.GetRecorder(controllerName),
+		opt:      options.GetOptions(),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -99,6 +103,7 @@ type ReconcileMysqlCluster struct {
 	client.Client
 	scheme   *runtime.Scheme
 	recorder record.EventRecorder
+	opt      *options.Options
 }
 
 // Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
@@ -129,8 +134,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// TODO: set default on a copy cluster
-	opt := options.GetOptions()
-	cluster.SetDefaults(opt)
+	cluster.SetDefaults(r.opt)
 
 	defer func() {
 		// TODO: update just status and not in a defer
@@ -163,7 +167,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		mysqlcluster.NewMasterSVCSyncer(cluster),
 		mysqlcluster.NewHealthySVCSyncer(cluster),
 
-		mysqlcluster.NewStatefulSetSyncer(cluster, configRev, secretRev, opt),
+		mysqlcluster.NewStatefulSetSyncer(cluster, configRev, secretRev, r.opt),
 	}
 
 	if len(cluster.Spec.MinAvailable) != 0 {

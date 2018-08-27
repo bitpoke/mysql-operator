@@ -33,10 +33,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/options"
+	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 	mysource "github.com/presslabs/mysql-operator/pkg/source"
 )
 
 const (
+	eventNormal = "Normal"
+	//eventWarning   = "Warning"
 	controllerName = "orchestrator-mysql-controller"
 )
 
@@ -54,8 +58,13 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileMysqlCluster{Client: mgr.GetClient(), scheme: mgr.GetScheme(),
-		recorder: mgr.GetRecorder(controllerName)}
+	opt := options.GetOptions()
+	return &ReconcileMysqlCluster{
+		Client:    mgr.GetClient(),
+		scheme:    mgr.GetScheme(),
+		recorder:  mgr.GetRecorder(controllerName),
+		orcClient: orc.NewFromURI(opt.OrchestratorURI),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -92,8 +101,9 @@ var _ reconcile.Reconciler = &ReconcileMysqlCluster{}
 // ReconcileMysqlCluster reconciles a MysqlCluster object
 type ReconcileMysqlCluster struct {
 	client.Client
-	scheme   *runtime.Scheme
-	recorder record.EventRecorder
+	scheme    *runtime.Scheme
+	recorder  record.EventRecorder
+	orcClient orc.Interface
 }
 
 // Reconcile reconcile for each mysql cluster state from orchestrator to
@@ -118,6 +128,10 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 	log.Info(fmt.Sprintf("Reconciling cluster: %s/%s", cluster.Name, cluster.Namespace))
 
-	// TODO: continue...
+	ou := NewOrcUpdater(cluster, r.recorder, r.orcClient)
+	if err := ou.Sync(); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	return reconcile.Result{}, nil
 }
