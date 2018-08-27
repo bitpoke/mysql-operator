@@ -892,7 +892,7 @@ func schema_pkg_apis_meta_v1_APIGroup(ref common.ReferenceCallback) common.OpenA
 						},
 					},
 				},
-				Required: []string{"name", "versions", "serverAddressByClientCIDRs"},
+				Required: []string{"name", "versions"},
 			},
 		},
 		Dependencies: []string{

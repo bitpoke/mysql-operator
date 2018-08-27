@@ -1,7 +1,7 @@
 package doctor
 
 import (
-	"github.com/hashicorp/go-version"
+	"github.com/appscode/go-version"
 	"github.com/pkg/errors"
 )
 

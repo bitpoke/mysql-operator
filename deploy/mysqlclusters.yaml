@@ -194,3 +194,7 @@ spec:
                     backing this claim.
                   type: string
   version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: false
+    storage: false

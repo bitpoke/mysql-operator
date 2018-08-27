@@ -43,12 +43,11 @@
 
 [[constraint]]
   name = "github.com/json-iterator/go"
-  version = "v1.0.0"
+  version = "v1.1.4"
 
 [[constraint]]
   branch = "master"
-  name = "github.com/hashicorp/go-version"
-  source = "https://github.com/appscode/go-version.git"
+  name = "github.com/appscode/go-version"
 
 [[override]]
   name = "github.com/russross/blackfriday"
@@ -64,27 +63,31 @@
 
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "k8s.io/apiserver"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "v7.0.0"
+  version = "=v8.0.0"
 
 [[override]]
   name = "k8s.io/kubernetes"
-  version = "=v1.10.0"
+  version = "=v1.11.0"
+
+[[override]]
+  name = "k8s.io/kube-openapi"
+  revision = "91cfa479c814065e420cee7ed227db0f63a5854e"
 
 [[override]]
   name = "github.com/appscode/docker-registry-client"
@@ -100,11 +103,11 @@
 
 [[override]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "v12.4.0-beta"
+  version = "v14.6.0"
 
 [[override]]
   name = "github.com/Azure/go-autorest"
-  version = "v9.9.0"
+  version = "v10.6.2"
 
 [[override]]
   name = "github.com/docker/distribution"
