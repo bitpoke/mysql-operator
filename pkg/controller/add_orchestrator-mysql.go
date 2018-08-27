@@ -17,10 +17,10 @@ limitations under the License.
 package controller
 
 import (
-	"github.com/presslabs/mysql-operator/pkg/controller/orchestrator_mysql"
+	"github.com/presslabs/mysql-operator/pkg/controller/orchestratormysql"
 )
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, orchestrator_mysql.Add)
+	AddToManagerFuncs = append(AddToManagerFuncs, orchestratormysql.Add)
 }
