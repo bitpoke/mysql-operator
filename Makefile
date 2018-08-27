@@ -1,18 +1,29 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= quay.io/presslabs/mysql-operator:build
+HELPER_IMG ?= quay.io/presslabs/mysql-helper:build
 
 KUBEBUILDER_VERSION ?= 1.0.0
 
-all: test manager
+CMDS     := $(shell find ./cmd/ -maxdepth 1 -type d -exec basename {} \; | grep -v cmd)
+GOFILES  := $(shell find cmd/ -name 'main.go' -type f )
+
+all: test build
+
+# Build binaries tag
+build: $(patsubst %, bin/%_linux_amd64, $(CMDS))
 
 # Run tests
 test: generate fmt vet manifests
 	go test ./pkg/... ./cmd/... -coverprofile cover.out
 
-# Build manager binary
-manager: generate fmt vet
-	go build -o bin/manager github.com/presslabs/mysql-operator/cmd/manager
+# Build binaries
+bin/%: $(GOFILES) Makefile
+	CGO_ENABLED=0 \
+	GOOS=$(shell echo "$*" | cut -d'_' -f2) \
+	GOARCH=$(shell echo "$*" | cut -d'_' -f3) \
+		go build $(GOFLAGS) \
+			-v -o $@ cmd/$(shell echo "$*" | cut -d'_' -f1)/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet
@@ -44,10 +55,12 @@ generate:
 	go generate ./pkg/... ./cmd/...
 
 # Build the docker image
-docker-build: test
-	docker build . -t ${IMG}
-	@echo "updating kustomize image patch file for manager resource"
-	sed -i 's@image: .*@image: '"${IMG}"'@' ./config/default/manager_image_patch.yaml
+docker-build: $(patsubst %, bin/%_linux_amd64, $(CMDS))
+	cp bin/mysql-operator_linux_amd64 hack/docker/mysql-operator/mysql-operator
+	docker build -t ${IMG} hack/docker/mysql-operator/
+
+	cp bin/mysql-helper_linux_amd64 hack/docker/mysql-helper/mysql-helper
+	docker build  -t ${HELPER_IMG} hack/docker/mysql-helper/
 
 # Push the docker image
 docker-push:

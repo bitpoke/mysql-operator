@@ -1,9 +1,0 @@
-apiVersion: mysql.presslabs.org/v1alpha1
-kind: MysqlCluster
-metadata:
-  labels:
-    controller-tools.k8s.io: "1.0"
-  name: mysqlcluster-sample
-spec:
-  # Add fields here
-  foo: bar
