@@ -43,7 +43,7 @@ type MysqlClusterSpec struct {
 	// Represents the percona image tag.
 	// Defaults to 5.7
 	// +optional
-	MysqlVersion string `json:"mysqlVersion"`
+	MysqlVersion string `json:"mysqlVersion,omitempty"`
 
 	// A bucket URI that contains a xtrabackup to initialize the mysql database.
 	// +optional

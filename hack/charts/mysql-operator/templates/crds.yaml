@@ -1,3 +1,75 @@
+{{- if .Values.installCRDs }}
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: mysqlbackups.mysql.presslabs.org
+spec:
+  group: mysql.presslabs.org
+  names:
+    kind: MysqlBackup
+    plural: mysqlbackups
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            backupSecretName:
+              type: string
+            backupURI:
+              type: string
+            clusterName:
+              type: string
+          required:
+          - clusterName
+          type: object
+        status:
+          properties:
+            backupURI:
+              type: string
+            completed:
+              type: boolean
+            conditions:
+              items:
+                properties:
+                  lastTransitionTime:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  reason:
+                    type: string
+                  status:
+                    type: string
+                  type:
+                    type: string
+                required:
+                - type
+                - status
+                - lastTransitionTime
+                - reason
+                - message
+                type: object
+              type: array
+          type: object
+      type: object
+  version: v1alpha1
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -173,3 +245,4 @@ status:
     kind: ""
     plural: ""
   conditions: null
+{{- end -}}

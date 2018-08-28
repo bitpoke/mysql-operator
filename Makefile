@@ -5,8 +5,10 @@ HELPER_IMG ?= quay.io/presslabs/mysql-helper:build
 
 KUBEBUILDER_VERSION ?= 1.0.0
 
-CMDS     := $(shell find ./cmd/ -maxdepth 1 -type d -exec basename {} \; | grep -v cmd)
-GOFILES  := $(shell find cmd/ -name 'main.go' -type f )
+CMDS    := $(shell find ./cmd/ -maxdepth 1 -type d -exec basename {} \; | grep -v cmd)
+GOFILES := $(shell find cmd/ -name 'main.go' -type f )
+GOOS    := linux
+GOARCH  := amd64
 
 all: test build
 
@@ -19,11 +21,8 @@ test: generate fmt vet manifests
 
 # Build binaries
 bin/%: $(GOFILES) Makefile
-	CGO_ENABLED=0 \
-	GOOS=$(shell echo "$*" | cut -d'_' -f2) \
-	GOARCH=$(shell echo "$*" | cut -d'_' -f3) \
-		go build $(GOFLAGS) \
-			-v -o $@ cmd/$(shell echo "$*" | cut -d'_' -f1)/main.go
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) \
+		go build $(GOFLAGS) -v -o $@ cmd/$(shell echo "$*" | cut -d'_' -f1)/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet
@@ -36,7 +35,6 @@ install: manifests
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests
 	kubectl apply -f config/crds
-	kustomize build config/default | kubectl apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests:
@@ -54,12 +52,17 @@ vet:
 generate:
 	go generate ./pkg/... ./cmd/...
 
-# Build the docker image
-docker-build: $(patsubst %, bin/%_linux_amd64, $(CMDS))
-	cp bin/mysql-operator_linux_amd64 hack/docker/mysql-operator/mysql-operator
-	docker build -t ${IMG} hack/docker/mysql-operator/
+# update docker context binaries
+$(patsubst %, hack/docker/%, $(CMDS)): $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
+	$(eval SRC := $(subst hack/docker/,,$@))
+	cp bin/${SRC}_$(GOOS)_$(GOARCH) $@
 
-	cp bin/mysql-helper_linux_amd64 hack/docker/mysql-helper/mysql-helper
+# update all docker binaries
+update-docker: $(patsubst %, hack/docker/%, $(CMDS))
+
+# Build the docker image
+docker-build: update-docker
+	docker build -t ${IMG} hack/docker/mysql-operator/
 	docker build  -t ${HELPER_IMG} hack/docker/mysql-helper/
 
 # Push the docker image
@@ -100,3 +103,7 @@ dependencies:
 	curl -L -O https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${KUBEBUILDER_VERSION}/kubebuilder_${KUBEBUILDER_VERSION}_linux_amd64.tar.gz
 	tar -zxvf kubebuilder_${KUBEBUILDER_VERSION}_linux_amd64.tar.gz
 	mv kubebuilder_${KUBEBUILDER_VERSION}_linux_amd64 -T /usr/local/kubebuilder
+
+
+helm: # generate manifests
+	hack/generate_chart.sh $(TAG)

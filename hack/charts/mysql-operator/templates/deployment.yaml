@@ -43,16 +43,13 @@ spec:
             {{- range $arg := .Values.extraArgs }}
             - {{ $arg }}
             {{- end }}
-            # TODO: fix install crds
-            # {{- if .Values.installCRDs }}
-            # - --install-crds
-            # {{- end }}
           resources:
             {{ toYaml .Values.resources | nindent 12 }}
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 80
+          # TODO: add livenessProbe to controller
+          # livenessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 80
     {{- with .Values.nodeSelector }}
       nodeSelector:
         {{ toYaml . | nindent 8 }}
