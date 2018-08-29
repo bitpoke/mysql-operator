@@ -102,7 +102,9 @@ func main() {
 	cmd.AddCommand(takeBackupCmd)
 
 	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
-	flag.CommandLine.Parse([]string{})
+	if err := flag.CommandLine.Parse([]string{}); err != nil {
+		glog.Errorf("Failed to parse args: %s", err)
+	}
 	if err := cmd.Execute(); err != nil {
 		glog.Fatal(err)
 	}

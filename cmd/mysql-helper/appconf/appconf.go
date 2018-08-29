@@ -32,8 +32,7 @@ const (
 	rStrLen = 18
 )
 
-// RunInitCommand generates my.cnf file.
-// With server-id, utility-user, and utility-user-password.
+// RunConfigCommand generates my.cnf, client.cnf and 10-dynamic.cnf files.
 func RunConfigCommand(stopCh <-chan struct{}) error {
 	role := tb.NodeRole()
 	glog.Infof("Configuring server: %s as %s", tb.GetHostname(), role)
@@ -43,65 +42,95 @@ func RunConfigCommand(stopCh <-chan struct{}) error {
 	}
 
 	uPass := util.RandomString(rStrLen)
-	reportHost := tb.GetHostFor(tb.GetServerId())
-	dynCFG := getDynamicConfigs(tb.GetServerId(), reportHost)
+	reportHost := tb.GetHostFor(tb.GetServerID())
 
-	if err := os.Mkdir(tb.ConfDPath, os.FileMode(0755)); err != nil {
+	var dynCFG, utilityCFG, clientCFG *ini.File
+	var err error
+
+	if dynCFG, err = getDynamicConfigs(tb.GetServerID(), reportHost); err != nil {
+		return fmt.Errorf("failed to get dynamic configs: %s", err)
+	}
+
+	if err = os.Mkdir(tb.ConfDPath, os.FileMode(0755)); err != nil {
 		if !os.IsExist(err) {
 			return fmt.Errorf("error mkdir %s/conf.d: %s", tb.ConfigDir, err)
 		}
 	}
-	if err := dynCFG.SaveTo(tb.ConfDPath + "/10-dynamic.cnf"); err != nil {
+	if err = dynCFG.SaveTo(tb.ConfDPath + "/10-dynamic.cnf"); err != nil {
 		return fmt.Errorf("failed to save configs: %s", err)
 	}
-
-	utilityCFG := getUtilityUserConfigs(tb.UtilityUser, uPass)
-	if err := utilityCFG.SaveTo(tb.ConfDPath + "/10-utility-user.cnf"); err != nil {
+	if utilityCFG, err = getUtilityUserConfigs(tb.UtilityUser, uPass); err != nil {
+		return fmt.Errorf("failed to configure utility user: %s", err)
+	}
+	if err = utilityCFG.SaveTo(tb.ConfDPath + "/10-utility-user.cnf"); err != nil {
 		return fmt.Errorf("failed to configure utility user: %s", err)
 	}
 
-	clientCFG := getClientConfigs(tb.UtilityUser, uPass)
-	if err := clientCFG.SaveTo(tb.ConfigDir + "/client.cnf"); err != nil {
+	if clientCFG, err = getClientConfigs(tb.UtilityUser, uPass); err != nil {
+		return fmt.Errorf("failed to get client configs: %s", err)
+	}
+
+	if err = clientCFG.SaveTo(tb.ConfigDir + "/client.cnf"); err != nil {
 		return fmt.Errorf("failed to save configs: %s", err)
 	}
 
 	return nil
 }
 
-func getClientConfigs(user, pass string) *ini.File {
+func getClientConfigs(user, pass string) (*ini.File, error) {
 	cfg := ini.Empty()
 	// create file /etc/mysql/client.cnf
 	client := cfg.Section("client")
 
-	client.NewKey("host", "127.0.0.1")
-	client.NewKey("port", tb.MysqlPort)
-	client.NewKey("user", user)
-	client.NewKey("password", pass)
+	if _, err := client.NewKey("host", "127.0.0.1"); err != nil {
+		return nil, err
+	}
+	if _, err := client.NewKey("port", tb.MysqlPort); err != nil {
+		return nil, err
+	}
+	if _, err := client.NewKey("user", user); err != nil {
+		return nil, err
+	}
+	if _, err := client.NewKey("password", pass); err != nil {
+		return nil, err
+	}
 
-	return cfg
+	return cfg, nil
 }
 
-func getDynamicConfigs(id int, reportHost string) *ini.File {
+func getDynamicConfigs(id int, reportHost string) (*ini.File, error) {
 	cfg := ini.Empty()
 	mysqld := cfg.Section("mysqld")
 
-	mysqld.NewKey("server-id", strconv.Itoa(id))
-	mysqld.NewKey("report-host", reportHost)
+	if _, err := mysqld.NewKey("server-id", strconv.Itoa(id)); err != nil {
+		return nil, err
+	}
+	if _, err := mysqld.NewKey("report-host", reportHost); err != nil {
+		return nil, err
+	}
 
-	return cfg
+	return cfg, nil
 }
 
-func getUtilityUserConfigs(user, pass string) *ini.File {
+func getUtilityUserConfigs(user, pass string) (*ini.File, error) {
 	cfg := ini.Empty()
 	mysqld := cfg.Section("mysqld")
 
-	mysqld.NewKey("utility-user", fmt.Sprintf("%s@%%", user))
-	mysqld.NewKey("utility-user-password", pass)
-	mysqld.NewKey("utility-user-schema-access", "mysql")
-	mysqld.NewKey("utility-user-privileges",
+	if _, err := mysqld.NewKey("utility-user", fmt.Sprintf("%s@%%", user)); err != nil {
+		return nil, err
+	}
+	if _, err := mysqld.NewKey("utility-user-password", pass); err != nil {
+		return nil, err
+	}
+	if _, err := mysqld.NewKey("utility-user-schema-access", "mysql"); err != nil {
+		return nil, err
+	}
+	if _, err := mysqld.NewKey("utility-user-privileges",
 		"SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,GRANT,ALTER,SHOW DATABASES,SUPER,CREATE USER,"+
 			"PROCESS,RELOAD,LOCK TABLES,REPLICATION CLIENT,REPLICATION SLAVE",
-	)
+	); err != nil {
+		return nil, err
+	}
 
-	return cfg
+	return cfg, nil
 }

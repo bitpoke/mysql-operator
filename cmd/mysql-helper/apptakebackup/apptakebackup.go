@@ -27,16 +27,15 @@ import (
 	"github.com/presslabs/mysql-operator/cmd/mysql-helper/util"
 )
 
-const (
-	ncatIdleTimeout = "30"
-)
-
+// RunTakeBackupCommand starts a backup command
+// nolint: unparam
 func RunTakeBackupCommand(stopCh <-chan struct{}, srcHost, destBucket string) error {
 	glog.Infof("Taking backup from '%s' to bucket '%s' ...", srcHost, destBucket)
-	destBucket = normalizeBucketUri(destBucket)
+	destBucket = normalizeBucketURI(destBucket)
 	return pushBackupFromTo(srcHost, destBucket)
 }
 
+// nolint: gas
 func pushBackupFromTo(srcHost, destBucket string) error {
 
 	backupBody, err := util.RequestABackup(srcHost, util.ServerBackupEndpoint)
@@ -78,6 +77,6 @@ func pushBackupFromTo(srcHost, destBucket string) error {
 	return nil
 }
 
-func normalizeBucketUri(bucket string) string {
+func normalizeBucketURI(bucket string) string {
 	return strings.Replace(bucket, "://", ":", 1)
 }

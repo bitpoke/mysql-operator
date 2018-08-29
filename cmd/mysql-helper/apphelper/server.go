@@ -32,7 +32,7 @@ type server struct {
 	http.Server
 }
 
-func NewServer(stop <-chan struct{}) *server {
+func newServer(stop <-chan struct{}) *server {
 	mux := http.NewServeMux()
 	srv := &server{
 		Server: http.Server{
@@ -56,11 +56,15 @@ func NewServer(stop <-chan struct{}) *server {
 	return srv
 }
 
+// nolint: unparam
 func (s *server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	if _, err := w.Write([]byte("OK")); err != nil {
+		glog.Errorf("Failed to write OK to health endpoint: %s", err)
+	}
 }
 
+// nolint: gas
 func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !s.isAuthenticated(r) {
@@ -90,7 +94,11 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer stdout.Close()
+	defer func() {
+		if err := stdout.Close(); err != nil {
+			glog.Errorf("Failed to close stdout of extrabackup: %s", err)
+		}
+	}()
 
 	if err := xtrabackup.Start(); err != nil {
 		glog.Errorf("Fail to start xtrabackup cmd: %s", err)

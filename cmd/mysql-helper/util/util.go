@@ -17,7 +17,6 @@ limitations under the License.
 package util
 
 import (
-	"bufio"
 	"database/sql"
 	"fmt"
 	"io"
@@ -28,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/go-ini/ini"
+	// add mysql driver
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang/glog"
 
@@ -40,7 +40,7 @@ var (
 	// BackupPort is the port on which xtrabackup expose backups, 3306
 	BackupPort = strconv.Itoa(mysqlcluster.HelperXtrabackupPort)
 
-	// MysqlPort represents port on wich mysql works
+	// MysqlPort represents port on which mysql works
 	MysqlPort = strconv.Itoa(mysqlcluster.MysqlPort)
 
 	// ConfigDir is the mysql configs path, /etc/mysql
@@ -57,49 +57,54 @@ var (
 
 	// ToolsDbName is the name of the tools table
 	ToolsDbName = mysqlcluster.HelperDbName
-	// ToolsTableName is the name of the init table
+	// ToolsInitTableName is the name of the init table
 	ToolsInitTableName = "init"
 
 	// UtilityUser is the name of the percona utility user.
 	UtilityUser = "sys_utility_helper"
 
-	// OrcTopologyDir contains the path where the secret with orc credentails is
+	// OrcTopologyDir contains the path where the secret with orc credentials is
 	// mounted.
 	OrcTopologyDir = mysqlcluster.OrcTopologyDir
 
-	NameOfStatefulSet = api.StatefulSet
-
-	// http server config
-	ServerPort           = mysqlcluster.HelperServerPort
-	ServerProbeEndpoint  = mysqlcluster.HelperServerProbePath
+	// ServerPort http server port
+	ServerPort = mysqlcluster.HelperServerPort
+	// ServerProbeEndpoint is the http server endpoint for probe
+	ServerProbeEndpoint = mysqlcluster.HelperServerProbePath
+	// ServerBackupEndpoint is the http server endpoint for backups
 	ServerBackupEndpoint = "/xbackup"
 )
 
 const (
-	// rcloneConfigFile represents the path to the file that contains rclon
+	// RcloneConfigFile represents the path to the file that contains rclon
 	// configs. This path should be the same as defined in docker entrypoint
 	// script from mysql-helper/docker-entrypoint.sh. /etc/rclone.conf
 	RcloneConfigFile = "/etc/rclone.conf"
 )
 
+// GetHostname returns the pod hostname from env HOSTNAME
 func GetHostname() string {
 	return os.Getenv("HOSTNAME")
 }
 
+// GetClusterName returns the mysql cluster name from env MY_CLUSTER_NAME
 func GetClusterName() string {
 	return getEnvValue("MY_CLUSTER_NAME")
 }
 
+// GetNamespace returns the namespace of the pod from env MY_NAMESPACE
 func GetNamespace() string {
 	return getEnvValue("MY_NAMESPACE")
 }
 
+// GetServiceName returns the headless service name from env MY_SERVICE_NAME
 func GetServiceName() string {
 	return getEnvValue("MY_SERVICE_NAME")
 }
 
+// NodeRole returns the node mysql role: master or slave
 func NodeRole() string {
-	if GetMasterHost() == GetHostFor(GetServerId()) {
+	if GetMasterHost() == GetHostFor(GetServerID()) {
 		return "master"
 	}
 	return "slave"
@@ -120,13 +125,14 @@ func getOrdinal() int {
 	return 0
 }
 
-func GetServerId() int {
+// GetServerID returns the mysql node ID
+func GetServerID() int {
 	return 100 + getOrdinal()
 }
 
 // GetHostFor returns the host for given server id
 func GetHostFor(id int) string {
-	base := api.GetNameForResource(NameOfStatefulSet, GetClusterName())
+	base := api.GetNameForResource(api.StatefulSet, GetClusterName())
 	govSVC := GetServiceName()
 	namespace := GetNamespace()
 	return fmt.Sprintf("%s-%d.%s.%s", base, id-100, govSVC, namespace)
@@ -171,27 +177,27 @@ func GetInitBucket() string {
 	return getEnvValue("INIT_BUCKET_URI")
 }
 
-// GetBackupAccessUser returns the basic auth credentials to access backup
+// GetBackupUser returns the basic auth credentials to access backup
 func GetBackupUser() string {
 	return getEnvValue("MYSQL_BACKUP_USER")
 }
 
-// GetBackupAccessUser returns the basic auth credentials to access backup
+// GetBackupPass returns the basic auth credentials to access backup
 func GetBackupPass() string {
 	return getEnvValue("MYSQL_BACKUP_PASSWORD")
 }
 
 // GetMasterHost returns the master host
 func GetMasterHost() string {
-	orcUri := getOrcUri()
-	if len(orcUri) == 0 {
+	orcURI := getOrcURI()
+	if len(orcURI) == 0 {
 		glog.Warning("Orchestrator is not used!")
 		return GetHostFor(100)
 	}
 
 	fqClusterName := fmt.Sprintf("%s.%s", GetClusterName(), GetNamespace())
 
-	client := orc.NewFromURI(orcUri)
+	client := orc.NewFromURI(orcURI)
 	inst, err := client.Master(fqClusterName)
 	if err != nil {
 		glog.Errorf("Failed to connect to orc for finding master, err: %s."+
@@ -202,65 +208,53 @@ func GetMasterHost() string {
 	return inst.Key.Hostname
 }
 
-// GetOrcTopologyUser returns the orchestrator topology user from env variable
+// GetOrcUser returns the orchestrator topology user from env variable
 // MYSQL_ORC_TOPOLOGY_USER
 func GetOrcUser() string {
 	return getEnvValue("MYSQL_ORC_TOPOLOGY_USER")
 }
 
-// GetOrcTopologyPass returns the orchestrator topology passowrd from env variable
+// GetOrcPass returns the orchestrator topology passowrd from env variable
 // MYSQL_ORC_TOPOLOGY_PASSWORD
 func GetOrcPass() string {
 	return getEnvValue("MYSQL_ORC_TOPOLOGY_PASSWORD")
 }
 
-func readFileContent(fileName string) string {
-	f, err := os.Open(fileName)
-	if err != nil {
-		glog.Warningf("%s is not set, or can't be readed, see err: %s", fileName, err)
-		return ""
-	}
-	defer f.Close()
-	scanner := bufio.NewScanner(f)
-	if !scanner.Scan() {
-		glog.Warningf("can't scan file: %s", fileName)
-		return ""
-	}
-
-	return scanner.Text()
-}
-
-func GetMySQLConnectionString() (dsn string, err error) {
+// GetMySQLConnectionString returns the mysql DSN
+func GetMySQLConnectionString() (string, error) {
 	cnfPath := path.Join(ConfigDir, "client.cnf")
 	cfg, err := ini.Load(cnfPath)
 	if err != nil {
 		return "", fmt.Errorf("Could not open %s: %s", cnfPath, err)
 	}
+
 	client := cfg.Section("client")
 	host := client.Key("host").String()
 	user := client.Key("user").String()
 	passowrd := client.Key("password").String()
 	port, err := client.Key("port").Int()
+
 	if err != nil {
 		return "", fmt.Errorf("Invalid port in %s: %s", cnfPath, err)
 	}
-	dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/?timeout=5s&multiStatements=true",
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/?timeout=5s&multiStatements=true",
 		user, passowrd, host, port,
 	)
-	return
+	return dsn, nil
 }
 
-func RunQuery(q string) (err error) {
+// RunQuery executes a query
+func RunQuery(q string) error {
 	dsn, err := GetMySQLConnectionString()
 	if err != nil {
 		glog.Warningf("Could not get mysql connection dsn: %s", err)
-		return
+		return err
 	}
 
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		glog.Warningf("Could not open mysql connection: %s", err)
-		return
+		return err
 	}
 
 	glog.V(4).Infof("Running query: %s", q)
@@ -269,10 +263,10 @@ func RunQuery(q string) (err error) {
 		return err
 	}
 
-	return
+	return nil
 }
 
-func getOrcUri() string {
+func getOrcURI() string {
 	return getEnvValue("ORCHESTRATOR_URI")
 }
 
@@ -283,13 +277,21 @@ func CopyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() {
+		if err1 := in.Close(); err1 != nil {
+			glog.Errorf("Failed to close source file: %s", err1)
+		}
+	}()
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() {
+		if err1 := out.Close(); err1 != nil {
+			glog.Errorf("Faield to close destination file: %s", err1)
+		}
+	}()
 
 	_, err = io.Copy(out, in)
 	if err != nil {
@@ -298,6 +300,7 @@ func CopyFile(src, dst string) error {
 	return out.Close()
 }
 
+// MaxClients limit an http endpoint to allow just n max concurrent connections
 func MaxClients(h http.Handler, n int) http.Handler {
 	sema := make(chan struct{}, n)
 
@@ -309,6 +312,7 @@ func MaxClients(h http.Handler, n int) http.Handler {
 	})
 }
 
+// RequestABackup connects to specified host and endpoint and gets the backup
 func RequestABackup(host, endpoint string) (io.Reader, error) {
 	glog.Infof("Initiate a backup from: %s endpoint: %s", host, endpoint)
 

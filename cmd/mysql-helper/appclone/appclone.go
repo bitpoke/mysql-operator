@@ -28,6 +28,7 @@ import (
 )
 
 // RunCloneCommand clone the data from source.
+// nolint: gocyclo
 func RunCloneCommand(stopCh <-chan struct{}) error {
 	glog.Infof("Cloning into node %s", tb.GetHostname())
 
@@ -40,7 +41,7 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		return nil
 	} else {
 		if checkIfDataExists() {
-			glog.Infof("Data alerady exists! Remove manualy PVC to cleanup or to reinitialize.")
+			glog.Infof("Data alerady exists! Remove manually PVC to cleanup or to reinitialize.")
 			return nil
 		}
 	}
@@ -62,8 +63,8 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		}
 	} else {
 		// clonging from prior node
-		if tb.GetServerId() > 100 {
-			sourceHost := tb.GetHostFor(tb.GetServerId() - 1)
+		if tb.GetServerID() > 100 {
+			sourceHost := tb.GetHostFor(tb.GetServerID() - 1)
 			err := cloneFromSource(sourceHost)
 			if err != nil {
 				return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)
@@ -83,6 +84,7 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 	return nil
 }
 
+// nolint: gas
 func cloneFromBucket(initBucket string) error {
 	initBucket = strings.Replace(initBucket, "://", ":", 1)
 
@@ -147,6 +149,7 @@ func cloneFromBucket(initBucket string) error {
 	return nil
 }
 
+// nolint: gas
 func cloneFromSource(host string) error {
 	glog.Infof("Cloning from node: %s", host)
 
@@ -174,6 +177,7 @@ func cloneFromSource(host string) error {
 	return nil
 }
 
+// nolint: gas
 func xtrabackupPreperData() error {
 	replUser := tb.GetReplUser()
 	replPass := tb.GetReplPass()
@@ -208,7 +212,7 @@ func checkIfDataExists() bool {
 
 	if os.IsNotExist(err) {
 		return false
-	} else {
+	} else if err != nil {
 		glog.Warning("[checkIfDataExists] faild to open %s with err: %s", path, err)
 	}
 

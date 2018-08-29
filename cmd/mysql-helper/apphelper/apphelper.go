@@ -31,6 +31,8 @@ const (
 	connRetry = 10
 )
 
+// RunRunCommand is the main command, and represents the runtime helper that
+// configures the mysql server
 func RunRunCommand(stopCh <-chan struct{}) error {
 	glog.Infof("Starting initialization...")
 
@@ -82,12 +84,13 @@ func RunRunCommand(stopCh <-chan struct{}) error {
 	}
 	glog.V(2).Info("Configured read only flag...")
 
-	srv := NewServer(stopCh)
+	srv := newServer(stopCh)
 	glog.V(2).Info("Starting http server...")
 
 	return srv.ListenAndServe()
 }
 
+// nolint: gas
 func configureOrchestratorUser() error {
 	query := fmt.Sprintf(`
     SET @@SESSION.SQL_LOG_BIN = 0;
@@ -197,6 +200,7 @@ func configTopology() error {
 	return nil
 }
 
+// nolint: gas
 func markConfigurationDone() error {
 	query := fmt.Sprintf(`
     SET @@SESSION.SQL_LOG_BIN = 0;
