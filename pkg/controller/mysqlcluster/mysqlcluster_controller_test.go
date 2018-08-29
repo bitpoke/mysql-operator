@@ -210,6 +210,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			for _, obj := range components {
 				o := obj.(metav1.Object)
 				key := types.NamespacedName{Name: o.GetName(), Namespace: o.GetNamespace()}
+
 				Eventually(func() error { return c.Get(context.TODO(), key, obj) }).Should(Succeed())
 				When("delete component", func() {
 					Expect(c.Delete(context.TODO(), obj)).To(Succeed())
@@ -267,6 +268,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			Expect(c.Status().Update(context.TODO(), statefulSet)).To(Succeed())
 
 			// expect a reconcile event
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 			Eventually(getClusterConditions(c, cluster), timeout).Should(haveCondWithStatus(api.ClusterConditionReady, core.ConditionTrue))
 		})

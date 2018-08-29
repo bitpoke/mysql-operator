@@ -27,6 +27,7 @@ import (
 // Important: Run "make" to regenerate code after modifying this file
 
 // MysqlClusterSpec defines the desired state of MysqlCluster
+// nolint: maligned
 type MysqlClusterSpec struct {
 	// The number of pods. This updates replicas filed
 	// Defaults to 0
@@ -181,6 +182,9 @@ const (
 	// ClusterConditionFailoverAck represents if the cluster has pending ack in
 	// orchestrator or not.
 	ClusterConditionFailoverAck ClusterConditionType = "PendingFailoverAck"
+	// ClusterConditionReadOnly describe cluster state if it's in read only or
+	// writable.
+	ClusterConditionReadOnly ClusterConditionType = "ReadOnly"
 )
 
 // NodeStatus defines type for status of a node into cluster.
@@ -207,6 +211,8 @@ const (
 	NodeConditionReplicating NodeConditionType = "Replicating"
 	// NodeConditionMaster represents if the node is master or not.
 	NodeConditionMaster NodeConditionType = "Master"
+	// NodeConditionReadOnly repesents if the node is read only or not
+	NodeConditionReadOnly NodeConditionType = "ReadOnly"
 )
 
 // MysqlClusterStatus defines the observed state of MysqlCluster

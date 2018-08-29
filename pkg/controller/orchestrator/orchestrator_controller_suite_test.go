@@ -15,11 +15,12 @@ limitations under the License.
 */
 
 // nolint: errcheck
-package mysqlcluster
+package orchestratormysql
 
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -38,10 +39,14 @@ var t *envtest.Environment
 
 func TestMysqlClusterController(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "MysqlCluster Controller Suite", []Reporter{envtest.NewlineReporter{}})
+	RunSpecsWithDefaultAndCustomReporters(t, "Orchestrator Controller Suite", []Reporter{envtest.NewlineReporter{}})
 }
 
 var _ = BeforeSuite(func() {
+
+	// set reconcile time to 1 second to speed up the tests.
+	reconcileTimePeriod = time.Second
+
 	var err error
 
 	t = &envtest.Environment{

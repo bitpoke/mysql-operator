@@ -92,6 +92,8 @@ spec:
               required:
               - maxQueryTime
               type: object
+            readOnly:
+              type: boolean
             replicas:
               format: int32
               type: integer

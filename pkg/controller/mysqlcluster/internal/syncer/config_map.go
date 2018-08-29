@@ -75,11 +75,10 @@ func (s *configMapSyncer) SyncFn(in runtime.Object) error {
 
 	if key, ok := out.ObjectMeta.Annotations["config_hash"]; ok {
 		if key == newHash {
-			log.V(2).Info(fmt.Sprintf("Skip updating configs, it's up to date: %s",
-				out.ObjectMeta.Annotations["config_hash"]))
+			log.V(2).Info("skip updating configs", "hash", out.ObjectMeta.Annotations["config_hash"])
 			return nil
 		}
-		log.V(2).Info(fmt.Sprintf("Config map hashes doesn't match: %s != %s. Updateing config map.", key, newHash))
+		log.V(2).Info("config map hashes doesn't match", "old_hash", key, "new_hash", newHash)
 	}
 
 	out.ObjectMeta.Annotations = map[string]string{
@@ -111,7 +110,7 @@ func (s *configMapSyncer) getMysqlConfData() (string, string, error) {
 	}
 	hash, err := hashstructure.Hash(cfg.Section("mysqld").KeysHash(), nil)
 	if err != nil {
-		log.Error(err, "Can't compute hash for map data.")
+		log.Error(err, "can't compute hash for map data.")
 		return "", "", err
 	}
 
@@ -125,7 +124,7 @@ func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
 	for _, extra := range extraMysqld {
 		for k, v := range extra {
 			if _, err := s.NewKey(k, v); err != nil {
-				log.Error(err, fmt.Sprintf("Failed to add '%s':'%s' to config section", k, v))
+				log.Error(err, "failed to add key to config section", "key", k, "value", v, "section", s)
 			}
 		}
 	}
