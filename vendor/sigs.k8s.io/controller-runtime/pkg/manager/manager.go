@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -76,18 +77,16 @@ type Options struct {
 	// MapperProvider provides the rest mapper used to map go types to Kubernetes APIs
 	MapperProvider func(c *rest.Config) (meta.RESTMapper, error)
 
-	// SyncPeriod determines the minimum frequency at which watched objects are
-	// reconciled. A lower period will correct entropy more quickly but reduce
-	// responsiveness to change. Choose a low value if reconciles are fast and/or
-	// there are few objects to reconcile. Choose a high value if reconciles are
-	// slow and/or there are many object to reconcile. Defaults to 10 hours if
-	// unset.
+	// SyncPeriod determines the minimum frequency at which watched resources are
+	// reconciled. A lower period will correct entropy more quickly, but reduce
+	// responsiveness to change if there are many watched resources. Change this
+	// value only if you know what you are doing. Defaults to 10 hours if unset.
 	SyncPeriod *time.Duration
 
 	// Dependency injection for testing
 	newCache            func(config *rest.Config, opts cache.Options) (cache.Cache, error)
 	newClient           func(config *rest.Config, options client.Options) (client.Client, error)
-	newRecorderProvider func(config *rest.Config, scheme *runtime.Scheme) (recorder.Provider, error)
+	newRecorderProvider func(config *rest.Config, scheme *runtime.Scheme, logger logr.Logger) (recorder.Provider, error)
 }
 
 // Runnable allows a component to be started.
@@ -132,10 +131,11 @@ func New(config *rest.Config, options Options) (Manager, error) {
 	cache, err := options.newCache(config, cache.Options{Scheme: options.Scheme, Mapper: mapper, Resync: options.SyncPeriod})
 	if err != nil {
 		return nil, err
-
 	}
 	// Create the recorder provider to inject event recorders for the components.
-	recorderProvider, err := options.newRecorderProvider(config, options.Scheme)
+	// TODO(directxman12): the log for the event provider should have a context (name, tags, etc) specific
+	// to the particular controller that it's being injected into, rather than a generic one like is here.
+	recorderProvider, err := options.newRecorderProvider(config, options.Scheme, log.WithName("events"))
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func New(config *rest.Config, options Options) (Manager, error) {
 		errChan:          make(chan error),
 		cache:            cache,
 		fieldIndexes:     cache,
-		client:           client.DelegatingClient{Reader: cache, Writer: writeObj},
+		client:           client.DelegatingClient{Reader: cache, Writer: writeObj, StatusClient: writeObj},
 		recorderProvider: recorderProvider,
 	}, nil
 }
