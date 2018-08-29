@@ -105,5 +105,5 @@ dependencies:
 	mv kubebuilder_${KUBEBUILDER_VERSION}_linux_amd64 -T /usr/local/kubebuilder
 
 
-helm: # generate manifests
+chart: generate manifests
 	hack/generate_chart.sh $(TAG)

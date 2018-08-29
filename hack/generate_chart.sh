@@ -34,14 +34,18 @@ echo "{{- end -}}" >> ${RBAC}
 # crds
 #
 CRDS=${CHART_TEMPLATE_DIR}/crds.yaml
-echo "{{- if .Values.installCRDs }}" > ${CRDS}
+echo "Updating CRDS file: ${CRDS}"
 
+echo "{{- if .Values.installCRDs }}" > ${CRDS}
 cat config/crds/*.yaml >> ${CRDS}
 sed -i '
 /apiVersion: apiextensions.k8s.io\/.*/ i\
 ---
+# search for name and add annotations after it
+/^metadata:/ a\
+  annotations:\
+    "helm.sh/hook": "crd-install"
 ' $CRDS
-
 echo "{{- end -}}" >> ${CRDS}
 
 #
