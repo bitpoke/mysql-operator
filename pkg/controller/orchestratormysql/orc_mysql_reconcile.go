@@ -91,13 +91,14 @@ func (ou *orcUpdater) Sync() error {
 	return nil
 }
 
+// nolint: gocyclo
 func (ou *orcUpdater) updateStatusFromOrc(insts []orc.Instance) {
-	// TODO: imporve this code by computing differences between what
+	// TODO: improve this code by computing differences between what
 	// orchestartor knows and what we know
 
 	updatedNodes := []string{}
 
-	var isReadOnly bool = true
+	isReadOnly := true
 	for _, node := range insts {
 		host := node.Key.Hostname
 		updatedNodes = append(updatedNodes, host)
@@ -286,18 +287,16 @@ func getMaster(node *orc.Instance, insts []orc.Instance) (*orc.Instance, error) 
 		next, err := getInstance(node.MasterKey.Hostname, insts)
 		if err == nil {
 			return getMaster(next, insts)
-		} else {
-			return nil, err
 		}
+		return nil, err
 	}
 
 	if node.IsCoMaster == true {
 		next, err := getInstance(node.MasterKey.Hostname, insts)
 		if err == nil {
 			return next, nil
-		} else {
-			return nil, err
 		}
+		return nil, err
 	}
 
 	return node, nil
@@ -318,20 +317,19 @@ func determineMasterFor(insts []orc.Instance) (*orc.Instance, error) {
 
 	if len(masterForNode) != 0 {
 		masterHostName := masterForNode[0]
-		var check bool = true
+		check := true
 		for _, node := range masterForNode {
 			if node.Key.Hostname != masterHostName.Key.Hostname {
 				check = false
 			}
 		}
-		if check == true {
-			return &masterHostName, nil
-		} else {
+		if check != true {
 			return nil, fmt.Errorf("multiple masters")
 		}
-	} else {
-		return nil, fmt.Errorf("0 elements in instance array")
+		return &masterHostName, nil
 	}
+
+	return nil, fmt.Errorf("0 elements in instance array")
 
 }
 
@@ -367,14 +365,19 @@ func (ou *orcUpdater) setInstReadOnly(inst orc.Instance) error {
 	return nil
 }
 
+// nolint: gocyclo
 func (ou *orcUpdater) updateNodesReadOnlyFlagInOrc(insts []orc.Instance) error {
 	master, err := determineMasterFor(insts)
 	if err != nil && err.Error() == "multiple masters" {
 		// master is not found
 		// set cluster read only
 		for _, inst := range insts {
-			ou.putNodeInMaintenance(inst)
-			ou.setInstReadOnly(inst)
+			if err = ou.putNodeInMaintenance(inst); err != nil {
+				log.Error(err, "Put node in maintenance")
+			}
+			if err = ou.setInstReadOnly(inst); err != nil {
+				log.Error(err, "Put node in read only")
+			}
 		}
 		return nil
 	} else if err != nil {
@@ -384,14 +387,24 @@ func (ou *orcUpdater) updateNodesReadOnlyFlagInOrc(insts []orc.Instance) error {
 	// master is determinated
 	for _, inst := range insts {
 		if ou.cluster.Spec.ReadOnly == true {
-			ou.putNodeInMaintenance(inst)
-			ou.setInstReadOnly(inst)
+			if err = ou.putNodeInMaintenance(inst); err != nil {
+				log.Error(err, "Put node in maintenance")
+			}
+			if err = ou.setInstReadOnly(inst); err != nil {
+				log.Error(err, "Put node in read only")
+			}
 		} else if ou.cluster.Spec.ReadOnly == false && err == nil {
-			ou.getNodeOutOfMaintenance(inst)
+			if err = ou.getNodeOutOfMaintenance(inst); err != nil {
+				log.Error(err, "Get node out of maintenance")
+			}
 			if inst.Key.Hostname == master.Key.Hostname {
-				ou.setInstWritable(inst)
+				if err = ou.setInstWritable(inst); err != nil {
+					log.Error(err, "Set node as writable")
+				}
 			} else {
-				ou.setInstReadOnly(inst)
+				if err = ou.setInstReadOnly(inst); err != nil {
+					log.Error(err, "Put node in read only")
+				}
 			}
 		}
 	}

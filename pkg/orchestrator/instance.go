@@ -21,15 +21,19 @@ import (
 	"time"
 )
 
+// InstanceKey is the node key
 type InstanceKey struct {
 	Hostname string
 	Port     int
 }
 
+// BinlogType can be BinaryLog or RelayLog
 type BinlogType int
 
 const (
+	// BinaryLog represents mysql binary logs
 	BinaryLog BinlogType = iota
+	// RelayLog represents mysql relay logs
 	RelayLog
 )
 
@@ -40,11 +44,15 @@ type BinlogCoordinates struct {
 	Type    BinlogType
 }
 
+// NullInt64 null or int
 type NullInt64 struct {
 	Int64 int64
 	Valid bool // Valid is true if Int64 is not NULL
 }
 
+// Instance represents the main structure that an node is represented in
+// orchestrator
+// nolint: golint,maligned
 type Instance struct {
 	Key                    InstanceKey
 	InstanceAlias          string
@@ -104,6 +112,9 @@ type Instance struct {
 	LastDiscoveryLatency time.Duration
 }
 
+// TopologyRecovery is the structure from orchestrator that represents a
+// recovery
+// nolint: golint,maligned
 type TopologyRecovery struct {
 	Id                     int64
 	UID                    string

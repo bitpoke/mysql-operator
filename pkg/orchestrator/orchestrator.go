@@ -20,6 +20,7 @@ import (
 	"fmt"
 )
 
+// Interface is the orchestrator client interface
 type Interface interface {
 	Discover(host string, port int) error
 	Forget(host string, port int) error
@@ -42,7 +43,7 @@ type orchestrator struct {
 	connectURI string
 }
 
-// NewFromURI returns a orchestrator client from a uri
+// NewFromURI returns the orchestrator client configured to specified uri api endpoint
 func NewFromURI(uri string) Interface {
 	return &orchestrator{
 		connectURI: uri,
