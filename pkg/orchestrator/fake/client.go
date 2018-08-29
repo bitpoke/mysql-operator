@@ -19,10 +19,13 @@ package fake
 import (
 	"fmt"
 
+	// nolint: golint
 	. "github.com/presslabs/mysql-operator/pkg/orchestrator"
 )
 
-type FakeOrc struct {
+// OrcFakeClient is a structure that implements orchestrator client interface used in
+// testing
+type OrcFakeClient struct {
 	Clusters   map[string][]*Instance
 	Recoveries map[string][]TopologyRecovery
 	AckRec     []int64
@@ -30,11 +33,13 @@ type FakeOrc struct {
 	Discovered []InstanceKey
 }
 
-func New() *FakeOrc {
-	return &FakeOrc{}
+// New fake orchestrator client
+func New() *OrcFakeClient {
+	return &OrcFakeClient{}
 }
 
-func (o *FakeOrc) AddInstance(cluster, host string, master bool, lag int64, slaveRunning, upToDate bool) *Instance {
+// AddInstance add a instance to orchestrator client
+func (o *OrcFakeClient) AddInstance(cluster, host string, master bool, lag int64, slaveRunning, upToDate bool) *Instance {
 	valid := true
 	if lag < 0 {
 		valid = false
@@ -68,7 +73,8 @@ func (o *FakeOrc) AddInstance(cluster, host string, master bool, lag int64, slav
 	return inst
 }
 
-func (o *FakeOrc) RemoveInstance(cluster, host string) {
+// RemoveInstance deletes a instance from orchestrator
+func (o *OrcFakeClient) RemoveInstance(cluster, host string) {
 	instances, ok := o.Clusters[cluster]
 	if !ok {
 		return
@@ -87,7 +93,8 @@ func (o *FakeOrc) RemoveInstance(cluster, host string) {
 	o.Clusters[cluster] = append(instances[:index], instances[index+1:]...)
 }
 
-func (o *FakeOrc) AddRecoveries(cluster string, id int64, ack bool) {
+// AddRecoveries add a recovery for a cluster
+func (o *OrcFakeClient) AddRecoveries(cluster string, id int64, ack bool) {
 	tr := TopologyRecovery{
 		Id:                     id,
 		Acknowledged:           ack,
@@ -103,7 +110,8 @@ func (o *FakeOrc) AddRecoveries(cluster string, id int64, ack bool) {
 	o.Recoveries[cluster] = []TopologyRecovery{tr}
 }
 
-func (o *FakeOrc) CheckAck(id int64) bool {
+// CheckAck verify is an ack is present
+func (o *OrcFakeClient) CheckAck(id int64) bool {
 	for _, a := range o.AckRec {
 		if a == id {
 			return true
@@ -113,7 +121,8 @@ func (o *FakeOrc) CheckAck(id int64) bool {
 	return false
 }
 
-func (o *FakeOrc) CheckDiscovered(key string) bool {
+// CheckDiscovered verify if a key was discovered or not
+func (o *OrcFakeClient) CheckDiscovered(key string) bool {
 	for _, d := range o.Discovered {
 		if d.Hostname == key {
 			return true
@@ -123,7 +132,8 @@ func (o *FakeOrc) CheckDiscovered(key string) bool {
 	return false
 }
 
-func (o *FakeOrc) Discover(host string, port int) error {
+// Discover register a host into orchestrator
+func (o *OrcFakeClient) Discover(host string, port int) error {
 	o.Discovered = append(o.Discovered, InstanceKey{
 		Hostname: host,
 		Port:     port,
@@ -131,11 +141,13 @@ func (o *FakeOrc) Discover(host string, port int) error {
 	return nil
 }
 
-func (o *FakeOrc) Forget(host string, port int) error {
+// Forget removes a host from orchestrator
+func (o *OrcFakeClient) Forget(host string, port int) error {
 	return nil
 }
 
-func (o *FakeOrc) Master(clusterHint string) (*Instance, error) {
+// Master returns the master of a cluster
+func (o *OrcFakeClient) Master(clusterHint string) (*Instance, error) {
 	insts, ok := o.Clusters[clusterHint]
 	if !ok {
 		return nil, fmt.Errorf("not found")
@@ -145,22 +157,26 @@ func (o *FakeOrc) Master(clusterHint string) (*Instance, error) {
 			return inst, nil
 		}
 	}
-	return nil, fmt.Errorf("[faker] master not found!!!!")
+	return nil, fmt.Errorf("[faker] master not found")
 }
 
-func (o *FakeOrc) Cluster(cluster string) ([]Instance, error) {
-	insts, ok := o.Clusters[cluster]
+// Cluster returns the list of instances from a cluster
+func (o *OrcFakeClient) Cluster(cluster string) ([]Instance, error) {
+	instsPointers, ok := o.Clusters[cluster]
 	if !ok {
 		return nil, fmt.Errorf("not found")
 	}
-	var Insts []Instance
-	for _, inst := range insts {
-		Insts = append(Insts, *inst)
+
+	var insts []Instance
+	for _, instP := range instsPointers {
+		insts = append(insts, *instP)
 	}
-	return Insts, nil
+
+	return insts, nil
 }
 
-func (o *FakeOrc) AuditRecovery(cluster string) ([]TopologyRecovery, error) {
+// AuditRecovery returns recoveries for a cluster
+func (o *OrcFakeClient) AuditRecovery(cluster string) ([]TopologyRecovery, error) {
 	recoveries, ok := o.Recoveries[cluster]
 	if !ok {
 		return nil, fmt.Errorf("not found")
@@ -169,12 +185,14 @@ func (o *FakeOrc) AuditRecovery(cluster string) ([]TopologyRecovery, error) {
 	return recoveries, nil
 }
 
-func (o *FakeOrc) AckRecovery(id int64, comment string) error {
+// AckRecovery ack a recovery
+func (o *OrcFakeClient) AckRecovery(id int64, comment string) error {
 	o.AckRec = append(o.AckRec, id)
 	return nil
 }
 
-func (o *FakeOrc) SetHostWritable(key InstanceKey) error {
+// SetHostWritable make a host writable
+func (o *OrcFakeClient) SetHostWritable(key InstanceKey) error {
 
 	check := false
 	for _, instances := range o.Clusters {
@@ -185,14 +203,15 @@ func (o *FakeOrc) SetHostWritable(key InstanceKey) error {
 			}
 		}
 	}
-	if check == true {
-		return nil
-	} else {
+	if check != true {
 		return fmt.Errorf("the desired host and port was not found")
 	}
+
+	return nil
 }
 
-func (o *FakeOrc) SetHostReadOnly(key InstanceKey) error {
+// SetHostReadOnly make a host read only
+func (o *OrcFakeClient) SetHostReadOnly(key InstanceKey) error {
 
 	check := false
 	for _, instances := range o.Clusters {
@@ -203,17 +222,18 @@ func (o *FakeOrc) SetHostReadOnly(key InstanceKey) error {
 			}
 		}
 	}
-	if check == true {
-		return nil
-	} else {
+	if check != true {
 		return fmt.Errorf("the desired host and port was not found")
 	}
-}
-
-func (o *FakeOrc) BeginMaintenance(key InstanceKey, owner, reason string) error {
 	return nil
 }
 
-func (o *FakeOrc) EndMaintenance(key InstanceKey) error {
+// BeginMaintenance set a host in maintenance
+func (o *OrcFakeClient) BeginMaintenance(key InstanceKey, owner, reason string) error {
+	return nil
+}
+
+// EndMaintenance set a host in maintenance
+func (o *OrcFakeClient) EndMaintenance(key InstanceKey) error {
 	return nil
 }

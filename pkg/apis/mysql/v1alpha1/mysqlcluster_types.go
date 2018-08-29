@@ -27,6 +27,7 @@ import (
 // Important: Run "make" to regenerate code after modifying this file
 
 // MysqlClusterSpec defines the desired state of MysqlCluster
+// nolint: maligned
 type MysqlClusterSpec struct {
 	// The number of pods. This updates replicas filed
 	// Defaults to 0
