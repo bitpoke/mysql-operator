@@ -39,7 +39,7 @@ spec:
               format: int64
               type: integer
             minAvailable:
-              type: object
+              type: string
             mysqlConf:
               type: object
             mysqlVersion:
@@ -115,7 +115,6 @@ spec:
           required:
           - replicas
           - secretName
-          - mysqlVersion
           type: object
         status:
           properties:

@@ -1,0 +1,64 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ template "mysql-operator.fullname" . }}
+  labels:
+    app: {{ template "mysql-operator.name" . }}
+    chart: {{ template "mysql-operator.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "mysql-operator.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "mysql-operator.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ template "mysql-operator.serviceAccountName" . }}
+      containers:
+        - name: mysql-operator
+          image: "{{ .Values.image }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            - name: ORC_TOPOLOGY_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "mysql-operator.orchestrator.fullname" . }}
+                  key: TOPOLOGY_USER
+            - name: ORC_TOPOLOGY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "mysql-operator.orchestrator.fullname" . }}
+                  key: TOPOLOGY_PASSWORD
+          args:
+            - --orchestrator-uri=http://{{ template "mysql-operator.orchestrator.fullname" . }}.{{ .Release.Namespace }}/api
+            {{- if .Values.helperImage }}
+            - --helper-image={{ .Values.helperImage }}
+            {{- end -}}
+            {{- range $arg := .Values.extraArgs }}
+            - {{ $arg }}
+            {{- end }}
+          resources:
+            {{ toYaml .Values.resources | nindent 12 }}
+          # TODO: add livenessProbe to controller
+          # livenessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 80
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{ toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{ toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{ toYaml . | nindent 8 }}
+    {{- end }}
