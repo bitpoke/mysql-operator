@@ -14,23 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package mysqlcluster
 
 import (
 	"time"
 
-	// TODO: dont use glog use logutil
 	"github.com/golang/glog"
 
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 // UpdateStatusCondition sets the condition to a status.
 // for example Ready condition to True, or False
-func (c *MysqlCluster) UpdateStatusCondition(condType ClusterConditionType,
+func (c *MysqlCluster) UpdateStatusCondition(condType api.ClusterConditionType,
 	status core.ConditionStatus, reason, msg string) {
-	newCondition := ClusterCondition{
+	newCondition := api.ClusterCondition{
 		Type:    condType,
 		Status:  status,
 		Reason:  reason,
@@ -43,7 +44,7 @@ func (c *MysqlCluster) UpdateStatusCondition(condType ClusterConditionType,
 		glog.V(4).Infof("Setting lastTransitionTime for mysql cluster "+
 			"%q condition %q to %v", c.Name, condType, t)
 		newCondition.LastTransitionTime = metav1.NewTime(t)
-		c.Status.Conditions = []ClusterCondition{newCondition}
+		c.Status.Conditions = []api.ClusterCondition{newCondition}
 	} else {
 		if i, exist := c.condExists(condType); exist {
 			cond := c.Status.Conditions[i]
@@ -67,7 +68,7 @@ func (c *MysqlCluster) UpdateStatusCondition(condType ClusterConditionType,
 	}
 }
 
-func (c *MysqlCluster) condExists(ty ClusterConditionType) (int, bool) {
+func (c *MysqlCluster) condExists(ty api.ClusterConditionType) (int, bool) {
 	for i, cond := range c.Status.Conditions {
 		if cond.Type == ty {
 			return i, true
@@ -77,73 +78,16 @@ func (c *MysqlCluster) condExists(ty ClusterConditionType) (int, bool) {
 	return 0, false
 }
 
-// GetCondition returns the backup condition of given type
-func (b *MysqlBackup) GetCondition(ty BackupConditionType) *BackupCondition {
-	for _, cond := range b.Status.Conditions {
-		if cond.Type == ty {
-			return &cond
-		}
-	}
-
-	return nil
-}
-
-// UpdateStatusCondition sets the condition to a status.
-// for example Ready condition to True, or False
-func (b *MysqlBackup) UpdateStatusCondition(condType BackupConditionType,
-	status core.ConditionStatus, reason, msg string) {
-	newCondition := BackupCondition{
-		Type:    condType,
-		Status:  status,
-		Reason:  reason,
-		Message: msg,
-	}
-
-	t := time.Now()
-
-	if len(b.Status.Conditions) == 0 {
-		glog.V(4).Infof("Setting lastTransitionTime for mysql backup "+
-			"%q condition %q to %v", b.Name, condType, t)
-		newCondition.LastTransitionTime = metav1.NewTime(t)
-		b.Status.Conditions = []BackupCondition{newCondition}
-	} else {
-		if i, exist := b.condExists(condType); exist {
-			cond := b.Status.Conditions[i]
-			if cond.Status != newCondition.Status {
-				glog.V(4).Infof("Found status change for mysql backup "+
-					"%q condition %q: %q -> %q; setting lastTransitionTime to %v",
-					b.Name, condType, cond.Status, status, t)
-				newCondition.LastTransitionTime = metav1.NewTime(t)
-			} else {
-				newCondition.LastTransitionTime = cond.LastTransitionTime
-			}
-			glog.V(4).Infof("Setting lastTransitionTime for mysql backup "+
-				"%q condition %q to %q", b.Name, condType, status)
-			b.Status.Conditions[i] = newCondition
-		} else {
-			glog.V(4).Infof("Setting new condition for mysql backup %q, condition %q to %q",
-				b.Name, condType, status)
-			newCondition.LastTransitionTime = metav1.NewTime(t)
-			b.Status.Conditions = append(b.Status.Conditions, newCondition)
-		}
-	}
-}
-
-func (b *MysqlBackup) condExists(ty BackupConditionType) (int, bool) {
-	for i, cond := range b.Status.Conditions {
-		if cond.Type == ty {
-			return i, true
-		}
-	}
-
-	return 0, false
+func (c *MysqlCluster) UpdateConditionForNode(name string, cType api.NodeConditionType, cStatus core.ConditionStatus) bool {
+	i := c.GetNodeStatusIndex(name)
+	return updateNodeCondition(&c.Status.Nodes[i], cType, cStatus)
 }
 
 // UpdateNodeCondition updates the condition for a given type
-func (ns *NodeStatus) UpdateNodeCondition(cType NodeConditionType,
+func updateNodeCondition(ns *api.NodeStatus, cType api.NodeConditionType,
 	cStatus core.ConditionStatus) bool {
 
-	newCondition := NodeCondition{
+	newCondition := api.NodeCondition{
 		Type:   cType,
 		Status: cStatus,
 	}
@@ -155,10 +99,10 @@ func (ns *NodeStatus) UpdateNodeCondition(cType NodeConditionType,
 		glog.V(4).Infof("Setting lastTransitionTime for node "+
 			"%q condition %q to %v", ns.Name, cType, t)
 		newCondition.LastTransitionTime = metav1.NewTime(t)
-		ns.Conditions = []NodeCondition{newCondition}
+		ns.Conditions = []api.NodeCondition{newCondition}
 		changed = true
 	} else {
-		if i, exist := ns.condExists(cType); exist {
+		if i, exist := nsCondExists(ns, cType); exist {
 			cond := ns.Conditions[i]
 			if cond.Status != newCondition.Status {
 				glog.V(4).Infof("Found status change for node "+
@@ -184,7 +128,7 @@ func (ns *NodeStatus) UpdateNodeCondition(cType NodeConditionType,
 	return changed
 }
 
-func (ns *NodeStatus) condExists(cType NodeConditionType) (int, bool) {
+func nsCondExists(ns *api.NodeStatus, cType api.NodeConditionType) (int, bool) {
 	for i, cond := range ns.Conditions {
 		if cond.Type == cType {
 			return i, true
@@ -194,21 +138,23 @@ func (ns *NodeStatus) condExists(cType NodeConditionType) (int, bool) {
 	return 0, false
 }
 
-// GetNodeStatusIndex returns the index of condition for a given node
-func (s *MysqlClusterStatus) GetNodeStatusIndex(name string) int {
-	for i := 0; i < len(s.Nodes); i++ {
-		if s.Nodes[i].Name == name {
+func (c *MysqlCluster) GetNodeStatusIndex(name string) int {
+	for i := 0; i < len(c.Status.Nodes); i++ {
+		if c.Status.Nodes[i].Name == name {
 			return i
 		}
 	}
-	s.Nodes = append(s.Nodes, NodeStatus{Name: name})
-	return s.GetNodeStatusIndex(name)
+
+	c.Status.Nodes = append(c.Status.Nodes, api.NodeStatus{Name: name})
+	return c.GetNodeStatusIndex(name)
+
 }
 
-// GetCondition returns node conditition for a given type
-func (ns *NodeStatus) GetCondition(cType NodeConditionType) *NodeCondition {
-	if i, exist := ns.condExists(cType); exist {
-		return &ns.Conditions[i]
+func (c *MysqlCluster) GetNodeCondition(name string, cType api.NodeConditionType) *api.NodeCondition {
+	nodeStatusIndex := c.GetNodeStatusIndex(name)
+	condIndex, exists := nsCondExists(&c.Status.Nodes[nodeStatusIndex], cType)
+	if exists {
+		return &c.Status.Nodes[nodeStatusIndex].Conditions[condIndex]
 	}
 
 	return nil
