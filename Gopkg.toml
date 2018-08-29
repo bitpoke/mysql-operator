@@ -219,7 +219,9 @@ revision="f08db293d3ef80052d6513ece19792642a289fea"
 
 [[override]]
 name="sigs.k8s.io/controller-runtime"
-branch="master"
+#TODO: remove this when PR is merged
+branch="create-or-update"
+source="github.com/presslabs/controller-runtime"
 
 [[override]]
 name="sigs.k8s.io/controller-tools"

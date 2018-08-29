@@ -18,29 +18,38 @@ package mysqlcluster
 
 import (
 	"context"
-	"log"
-	"reflect"
+	"fmt"
 
-	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/options"
+	"github.com/presslabs/mysql-operator/pkg/syncers"
+	"github.com/presslabs/mysql-operator/pkg/syncers/mysqlcluster"
 )
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
+const (
+	eventNormal  = "Normal"
+	eventWarning = "Warning"
+)
+
+var log = logf.Log.WithName(controllerName)
+
+const controllerName = "mysqlcluster-controller"
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -51,13 +60,18 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileMysqlCluster{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileMysqlCluster{
+		Client:   mgr.GetClient(),
+		scheme:   mgr.GetScheme(),
+		recorder: mgr.GetRecorder(controllerName),
+		opt:      options.GetOptions(),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("mysqlcluster-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -68,15 +82,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create
-	// Uncomment watch a Deployment created by MysqlCluster - change this for objects you create
-	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
+	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &mysqlv1alpha1.MysqlCluster{},
 	})
 	if err != nil {
 		return err
 	}
+
+	//TODO: watch other created resources
+	// related secret and config map
 
 	return nil
 }
@@ -86,20 +101,22 @@ var _ reconcile.Reconciler = &ReconcileMysqlCluster{}
 // ReconcileMysqlCluster reconciles a MysqlCluster object
 type ReconcileMysqlCluster struct {
 	client.Client
-	scheme *runtime.Scheme
+	scheme   *runtime.Scheme
+	recorder record.EventRecorder
+	opt      *options.Options
 }
 
 // Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
 // and what is in the MysqlCluster.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  The scaffolding writes
-// a Deployment as an example
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=configmaps;secrets;services;events;jobs;pods,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlclusters,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;create;update;patch;delete
 func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlCluster instance
-	instance := &mysqlv1alpha1.MysqlCluster{}
-	err := r.Get(context.TODO(), request.NamespacedName, instance)
+	cluster := &mysqlv1alpha1.MysqlCluster{}
+	err := r.Get(context.TODO(), request.NamespacedName, cluster)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
@@ -109,58 +126,119 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	log.Info(fmt.Sprintf("Syncing cluster: %s/%s", cluster.Name, cluster.Namespace))
 
-	// TODO(user): Change this to be the object type created by your controller
-	// Define the desired Deployment object
-	deploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name + "-deployment",
-			Namespace: instance.Namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"deployment": instance.Name + "-deployment"},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"deployment": instance.Name + "-deployment"}},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "nginx",
-							Image: "nginx",
-						},
-					},
-				},
-			},
-		},
+	// check for secretName to be specified
+	if len(cluster.Spec.SecretName) == 0 {
+		return reconcile.Result{}, fmt.Errorf("the spec.SecretName is empty")
 	}
-	if err := controllerutil.SetControllerReference(instance, deploy, r.scheme); err != nil {
+
+	// TODO: set default on a copy cluster
+	cluster.SetDefaults(r.opt)
+
+	defer func() {
+		// TODO: update just status and not in a defer
+		err := r.Update(context.TODO(), cluster) // nolint
+		if err != nil {
+			log.Error(err, "Failed to update cluster status!", "cluster", cluster)
+		}
+	}()
+
+	// run the config syncers
+	configSyncers := []syncers.Interface{
+		mysqlcluster.NewConfigMapSyncer(cluster),
+		mysqlcluster.NewSecretSyncer(cluster),
+	}
+
+	err = r.sync(cluster, configSyncers)
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// TODO(user): Change this for the object type created by your controller
-	// Check if the Deployment already exists
-	found := &appsv1.Deployment{}
-	err = r.Get(context.TODO(), types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		log.Printf("Creating Deployment %s/%s\n", deploy.Namespace, deploy.Name)
-		err = r.Create(context.TODO(), deploy)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-	} else if err != nil {
+	// get config map and secret revision to annotate the statefulset
+	// TODO: update this, no need to get secret and config again, already are updated
+	// in existing object provided to CreateOrUpdate
+	configRev, secretRev, err := r.getConfigAndSecretRevs(cluster)
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// TODO(user): Change this for the object type created by your controller
-	// Update the found object and write the result back if there are any changes
-	if !reflect.DeepEqual(deploy.Spec, found.Spec) {
-		found.Spec = deploy.Spec
-		log.Printf("Updating Deployment %s/%s\n", deploy.Namespace, deploy.Name)
-		err = r.Update(context.TODO(), found)
+	// run the syncers for services, pdb and statefulset
+	otherSyncers := []syncers.Interface{
+		mysqlcluster.NewHeadlessSVCSyncer(cluster),
+		mysqlcluster.NewMasterSVCSyncer(cluster),
+		mysqlcluster.NewHealthySVCSyncer(cluster),
+
+		mysqlcluster.NewStatefulSetSyncer(cluster, configRev, secretRev, r.opt),
+	}
+
+	if len(cluster.Spec.MinAvailable) != 0 {
+		otherSyncers = append(otherSyncers, mysqlcluster.NewPDBSyncer(cluster))
+	}
+
+	return reconcile.Result{}, r.sync(cluster, otherSyncers)
+}
+
+func (r *ReconcileMysqlCluster) sync(cluster *mysqlv1alpha1.MysqlCluster, syncers []syncers.Interface) error {
+	for _, s := range syncers {
+		existing := s.GetExistingObjectPlaceholder()
+
+		// set owner reference on objects that requires owner reference
+		syncFn := s.Sync
+		if s.ShouldHaveOwnerReference() {
+			syncFn = func(in runtime.Object) error {
+				// TODO: check this
+				metaIn := in.(metav1.Object)
+				if err := controllerutil.SetControllerReference(cluster, metaIn, r.scheme); err != nil {
+					return err
+				}
+				return s.Sync(in)
+			}
+		}
+
+		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, existing, syncFn)
+		reason := getErrorEventReason(existing, err)
+
+		log.Info(fmt.Sprintf("%T %s/%s %s", existing, cluster.Namespace, cluster.Name, op))
+
 		if err != nil {
-			return reconcile.Result{}, err
+			r.recorder.Eventf(cluster, eventWarning, reason, "%T %s/%s failed syncing: %s", existing, cluster.Namespace, cluster.Name, err)
+			return err
+		}
+		if op != controllerutil.OperationResultNone {
+			r.recorder.Eventf(cluster, eventNormal, reason, "%T %s/%s %s successfully", existing, cluster.Namespace, cluster.Name, op)
 		}
 	}
-	return reconcile.Result{}, nil
+	return nil
+}
+
+func (r *ReconcileMysqlCluster) getConfigAndSecretRevs(cluster *mysqlv1alpha1.MysqlCluster) (string, string, error) {
+	configMap := &core.ConfigMap{}
+	err := r.Get(context.TODO(), types.NamespacedName{
+		Name:      cluster.GetNameForResource(mysqlv1alpha1.ConfigMap),
+		Namespace: cluster.Namespace,
+	}, configMap)
+	if err != nil {
+		return "", "", err
+	}
+
+	secret := &core.Secret{}
+	err = r.Get(context.TODO(), types.NamespacedName{
+		Name:      cluster.Spec.SecretName,
+		Namespace: cluster.Namespace,
+	}, secret)
+	if err != nil {
+		return "", "", err
+	}
+
+	return configMap.ResourceVersion, secret.ResourceVersion, nil
+}
+
+func getErrorEventReason(obj runtime.Object, err error) string {
+	op := "Updated"
+	if err != nil {
+		op = "Failed"
+	}
+
+	return fmt.Sprintf("%T%s", obj, op)
 }

@@ -1,6 +1,5 @@
 /*
 Copyright 2018 Pressinfra SRL
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -17,65 +16,297 @@ limitations under the License.
 package mysqlcluster
 
 import (
-	"testing"
+	"fmt"
+	"math/rand"
 	"time"
 
-	"github.com/onsi/gomega"
-	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+
 	"golang.org/x/net/context"
-	appsv1 "k8s.io/api/apps/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apps "k8s.io/api/apps/v1"
+	core "k8s.io/api/core/v1"
+	policy "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
-var c client.Client
+const timeout = time.Second * 2
 
-var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: "foo", Namespace: "default"}}
-var depKey = types.NamespacedName{Name: "foo-deployment", Namespace: "default"}
+var _ = Describe("MysqlCluster controller", func() {
+	var (
+		// channel for incoming reconcile requests
+		requests chan reconcile.Request
+		// stop channel for controller manager
+		stop chan struct{}
+		// controller k8s client
+		c client.Client
+	)
 
-const timeout = time.Second * 5
+	BeforeEach(func() {
+		var recFn reconcile.Reconciler
 
-func TestReconcile(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
-	instance := &mysqlv1alpha1.MysqlCluster{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"}}
+		mgr, err := manager.New(cfg, manager.Options{})
+		Expect(err).NotTo(HaveOccurred())
+		c = mgr.GetClient()
 
-	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
-	// channel when it is finished.
-	mgr, err := manager.New(cfg, manager.Options{})
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-	c = mgr.GetClient()
+		recFn, requests = SetupTestReconcile(newReconciler(mgr))
+		Expect(add(mgr, recFn)).To(Succeed())
 
-	recFn, requests := SetupTestReconcile(newReconciler(mgr))
-	g.Expect(add(mgr, recFn)).NotTo(gomega.HaveOccurred())
-	defer close(StartTestManager(mgr, g))
+		stop = StartTestManager(mgr)
+	})
 
-	// Create the MysqlCluster object and expect the Reconcile and Deployment to be created
-	err = c.Create(context.TODO(), instance)
-	// The instance object may not be a valid object because it might be missing some required fields.
-	// Please modify the instance object by adding required fields and then remove the following if statement.
-	if apierrors.IsInvalid(err) {
-		t.Logf("failed to create object, got an invalid object error: %v", err)
-		return
+	AfterEach(func() {
+		time.Sleep(1 * time.Second)
+		close(stop)
+	})
+
+	Describe("when creating a new mysql cluster", func() {
+		var (
+			expectedRequest reconcile.Request
+			cluster         *api.MysqlCluster
+			secret          *core.Secret
+		)
+
+		BeforeEach(func() {
+			name := fmt.Sprintf("cluster-%d", rand.Int31())
+			ns := "default"
+
+			expectedRequest = reconcile.Request{
+				NamespacedName: types.NamespacedName{Name: name, Namespace: ns},
+			}
+
+			secret = &core.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "the-secret", Namespace: ns},
+				StringData: map[string]string{
+					"ROOT_PASSWORD": "this-is-secret",
+				},
+			}
+
+			cluster = &api.MysqlCluster{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
+				Spec: api.MysqlClusterSpec{
+					Replicas:   1,
+					SecretName: secret.Name,
+				},
+			}
+
+			Expect(c.Create(context.TODO(), secret)).To(Succeed())
+
+		})
+
+		AfterEach(func() {
+			// manually delete all created resources because GC isn't enabled in the test controller plane
+			removeAllCreatedResource(c, cluster)
+			c.Delete(context.TODO(), secret)
+		})
+
+		It("should reconcile the statefulset", func() {
+			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+			defer c.Delete(context.TODO(), cluster)
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			sfsKey := types.NamespacedName{
+				Name:      cluster.GetNameForResource(api.StatefulSet),
+				Namespace: cluster.Namespace,
+			}
+			statefulSet := &apps.StatefulSet{}
+			Eventually(func() error {
+				return c.Get(context.TODO(), sfsKey, statefulSet)
+			}, timeout).Should(Succeed())
+
+			When("delete the statefulset", func() {
+				Expect(c.Delete(context.TODO(), statefulSet)).To(Succeed())
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+				Eventually(func() error {
+					return c.Get(context.TODO(), sfsKey, statefulSet)
+				}, timeout).Should(Succeed())
+			})
+		})
+
+		It("should be created all cluster components", func() {
+			cluster.Spec.MinAvailable = "30%"
+
+			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+			defer c.Delete(context.TODO(), cluster)
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			clusterComps := []runtime.Object{
+				&apps.StatefulSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cluster.GetNameForResource(api.StatefulSet),
+						Namespace: cluster.Namespace,
+					},
+				},
+				&core.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cluster.GetNameForResource(api.HeadlessSVC),
+						Namespace: cluster.Namespace,
+					},
+				},
+				&core.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cluster.GetNameForResource(api.MasterService),
+						Namespace: cluster.Namespace,
+					},
+				},
+				&core.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cluster.GetNameForResource(api.HealthyNodesService),
+						Namespace: cluster.Namespace,
+					},
+				},
+				&core.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cluster.GetNameForResource(api.ConfigMap),
+						Namespace: cluster.Namespace,
+					},
+				},
+				&policy.PodDisruptionBudget{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cluster.GetNameForResource(api.PodDisruptionBudget),
+						Namespace: cluster.Namespace,
+					},
+				},
+			}
+
+			testfunc := func() error {
+				for _, obj := range clusterComps {
+					o := obj.(metav1.Object)
+					key := types.NamespacedName{
+						Name:      o.GetName(),
+						Namespace: o.GetNamespace(),
+					}
+					err := c.Get(context.TODO(), key, obj)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			}
+
+			Eventually(testfunc, timeout).Should(Succeed())
+		})
+
+		It("should have revision annotation on statefulset", func() {
+			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+			defer c.Delete(context.TODO(), cluster)
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			// wait for the second update, else a race condition can happened
+			// with secret resource version.
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			sfsKey := types.NamespacedName{
+				Name:      cluster.GetNameForResource(api.StatefulSet),
+				Namespace: cluster.Namespace,
+			}
+			statefulSet := &apps.StatefulSet{}
+			Eventually(func() error {
+				return c.Get(context.TODO(), sfsKey, statefulSet)
+			}, timeout).Should(Succeed())
+
+			cfgMap := &core.ConfigMap{}
+			Expect(c.Get(context.TODO(), types.NamespacedName{
+				Name:      cluster.GetNameForResource(api.ConfigMap),
+				Namespace: cluster.Namespace,
+			}, cfgMap)).To(Succeed())
+			Expect(c.Get(context.TODO(), types.NamespacedName{
+				Name:      secret.Name,
+				Namespace: secret.Namespace,
+			}, secret)).To(Succeed())
+
+			Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["config_rev"]).To(Equal(cfgMap.ResourceVersion))
+			Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["secret_rev"]).To(Equal(secret.ResourceVersion))
+		})
+
+		It("should have set ready condition", func() {
+			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+			defer c.Delete(context.TODO(), cluster)
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			// get statefulset
+			sfsKey := types.NamespacedName{
+				Name:      cluster.GetNameForResource(api.StatefulSet),
+				Namespace: cluster.Namespace,
+			}
+			statefulSet := &apps.StatefulSet{}
+			Eventually(func() error {
+				return c.Get(context.TODO(), sfsKey, statefulSet)
+			}, timeout).Should(Succeed())
+
+			// update statefulset condition
+			statefulSet.Status.Conditions = []apps.StatefulSetCondition{
+				apps.StatefulSetCondition{
+					Type:   apps.StatefulSetConditionType("Ready"),
+					Status: core.ConditionTrue,
+				},
+			}
+			Expect(c.Update(context.TODO(), statefulSet)).To(Succeed())
+
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			Eventually(func() []api.ClusterCondition {
+				cl := &api.MysqlCluster{}
+				c.Get(context.TODO(), types.NamespacedName{Name: cluster.Name, Namespace: cluster.Namespace}, cl)
+				return cl.Status.Conditions
+			}, timeout).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(api.ClusterConditionReady),
+				"Status": Equal(core.ConditionTrue),
+			})))
+		})
+	})
+
+})
+
+func removeAllCreatedResource(c client.Client, cluster *api.MysqlCluster) {
+	objs := []runtime.Object{
+		&apps.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.GetNameForResource(api.StatefulSet),
+				Namespace: cluster.Namespace,
+			},
+		},
+		&core.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.GetNameForResource(api.HeadlessSVC),
+				Namespace: cluster.Namespace,
+			},
+		},
+		&core.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.GetNameForResource(api.MasterService),
+				Namespace: cluster.Namespace,
+			},
+		},
+		&core.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.GetNameForResource(api.HealthyNodesService),
+				Namespace: cluster.Namespace,
+			},
+		},
+		&core.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.GetNameForResource(api.ConfigMap),
+				Namespace: cluster.Namespace,
+			},
+		},
+		&policy.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.GetNameForResource(api.PodDisruptionBudget),
+				Namespace: cluster.Namespace,
+			},
+		},
 	}
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-	defer c.Delete(context.TODO(), instance)
-	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
 
-	deploy := &appsv1.Deployment{}
-	g.Eventually(func() error { return c.Get(context.TODO(), depKey, deploy) }, timeout).
-		Should(gomega.Succeed())
-
-	// Delete the Deployment and expect Reconcile to be called for Deployment deletion
-	g.Expect(c.Delete(context.TODO(), deploy)).NotTo(gomega.HaveOccurred())
-	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
-	g.Eventually(func() error { return c.Get(context.TODO(), depKey, deploy) }, timeout).
-		Should(gomega.Succeed())
-
-	// Manually delete Deployment since GC isn't enabled in the test control plane
-	g.Expect(c.Delete(context.TODO(), deploy)).To(gomega.Succeed())
-
+	for _, obj := range objs {
+		c.Delete(context.TODO(), obj)
+	}
 }
