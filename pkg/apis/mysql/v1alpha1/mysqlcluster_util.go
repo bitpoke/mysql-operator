@@ -18,9 +18,6 @@ package v1alpha1
 
 import (
 	"fmt"
-
-	core "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetLabels returns cluster labels
@@ -65,43 +62,5 @@ func GetNameForResource(name ResourceName, clusterName string) string {
 		return fmt.Sprintf("%s-mysql-nodes", clusterName)
 	default:
 		return fmt.Sprintf("%s-mysql", clusterName)
-	}
-}
-
-// GetPodHostname returns for an index the pod hostname of a cluster
-func (c *MysqlCluster) GetPodHostname(p int) string {
-	return fmt.Sprintf("%s-%d.%s.%s", c.GetNameForResource(StatefulSet), p,
-		c.GetNameForResource(HeadlessSVC),
-		c.Namespace)
-}
-
-// GetClusterAlias returns the cluster alias that as it is in orchestrator
-func (c *MysqlCluster) GetClusterAlias() string {
-	return fmt.Sprintf("%s.%s", c.Name, c.Namespace)
-}
-
-// GetMasterHost returns name of current master host in a cluster
-func (c *MysqlCluster) GetMasterHost() string {
-	masterHost := c.GetPodHostname(0)
-
-	for _, ns := range c.Status.Nodes {
-		if cond := ns.GetCondition(NodeConditionMaster); cond != nil &&
-			cond.Status == core.ConditionTrue {
-			masterHost = ns.Name
-		}
-	}
-
-	return masterHost
-}
-
-// AsOwnerReference returns the MysqlCluster owner references.
-func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
-	trueVar := true
-	return metav1.OwnerReference{
-		APIVersion: SchemeGroupVersion.String(),
-		Kind:       "MysqlCluster",
-		Name:       c.Name,
-		UID:        c.UID,
-		Controller: &trueVar,
 	}
 }

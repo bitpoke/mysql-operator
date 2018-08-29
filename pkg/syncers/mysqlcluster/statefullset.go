@@ -29,6 +29,7 @@ import (
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/options"
 	"github.com/presslabs/mysql-operator/pkg/syncers"
+	clusterwrap "github.com/presslabs/mysql-operator/pkg/wrappers/mysqlcluster"
 )
 
 const (
@@ -48,7 +49,7 @@ const (
 )
 
 type sfsSyncer struct {
-	cluster           *api.MysqlCluster
+	cluster           *clusterwrap.MysqlCluster
 	configMapRevision string
 	secretRevision    string
 	opt               *options.Options
@@ -57,7 +58,7 @@ type sfsSyncer struct {
 // NewStatefulSetSyncer returns a syncer for stateful set
 func NewStatefulSetSyncer(cluster *api.MysqlCluster, cmRev, secRev string, opt *options.Options) syncers.Interface {
 	return &sfsSyncer{
-		cluster:           cluster,
+		cluster:           clusterwrap.NewMysqlClusterWrapper(cluster),
 		configMapRevision: cmRev,
 		secretRevision:    secRev,
 		opt:               opt,
