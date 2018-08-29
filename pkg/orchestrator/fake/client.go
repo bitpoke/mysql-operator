@@ -19,32 +19,27 @@ package fake
 import (
 	"fmt"
 
-	// nolint: golint
 	. "github.com/presslabs/mysql-operator/pkg/orchestrator"
 )
 
-// OrcFakeClient is a structure that implements orchestrator client interface used in
-// testing
-type OrcFakeClient struct {
-	Clusters   map[string][]Instance
+type FakeOrc struct {
+	Clusters   map[string][]*Instance
 	Recoveries map[string][]TopologyRecovery
 	AckRec     []int64
 
 	Discovered []InstanceKey
 }
 
-// New fake orchestrator client
-func New() *OrcFakeClient {
-	return &OrcFakeClient{}
+func New() *FakeOrc {
+	return &FakeOrc{}
 }
 
-// AddInstance add a instance to orchestrator client
-func (o *OrcFakeClient) AddInstance(cluster, host string, master bool, sls int64, slaveR, upToDate bool) {
+func (o *FakeOrc) AddInstance(cluster, host string, master bool, lag int64, slaveRunning, upToDate bool) *Instance {
 	valid := true
-	if sls < 0 {
+	if lag < 0 {
 		valid = false
 	}
-	inst := Instance{
+	inst := &Instance{
 		Key: InstanceKey{
 			Hostname: host,
 			Port:     3306,
@@ -52,26 +47,28 @@ func (o *OrcFakeClient) AddInstance(cluster, host string, master bool, sls int64
 		ReadOnly: !master,
 		SlaveLagSeconds: NullInt64{
 			Valid: valid,
-			Int64: sls,
+			Int64: lag,
 		},
 		ClusterName:       cluster,
-		Slave_SQL_Running: slaveR,
-		Slave_IO_Running:  slaveR,
+		Slave_SQL_Running: slaveRunning,
+		Slave_IO_Running:  slaveRunning,
 		IsUpToDate:        upToDate,
 		IsLastCheckValid:  upToDate,
 	}
 	if o.Clusters == nil {
-		o.Clusters = make(map[string][]Instance)
+		o.Clusters = make(map[string][]*Instance)
 	}
 	clusters, ok := o.Clusters[cluster]
 	if ok {
 		o.Clusters[cluster] = append(clusters, inst)
+	} else {
+		o.Clusters[cluster] = []*Instance{inst}
 	}
-	o.Clusters[cluster] = []Instance{inst}
+
+	return inst
 }
 
-// RemoveInstance deletes a instance from orchestrator
-func (o *OrcFakeClient) RemoveInstance(cluster, host string) {
+func (o *FakeOrc) RemoveInstance(cluster, host string) {
 	instances, ok := o.Clusters[cluster]
 	if !ok {
 		return
@@ -90,8 +87,7 @@ func (o *OrcFakeClient) RemoveInstance(cluster, host string) {
 	o.Clusters[cluster] = append(instances[:index], instances[index+1:]...)
 }
 
-// AddRecoveries add a recovery for a cluster
-func (o *OrcFakeClient) AddRecoveries(cluster string, id int64, ack bool) {
+func (o *FakeOrc) AddRecoveries(cluster string, id int64, ack bool) {
 	tr := TopologyRecovery{
 		Id:                     id,
 		Acknowledged:           ack,
@@ -107,8 +103,7 @@ func (o *OrcFakeClient) AddRecoveries(cluster string, id int64, ack bool) {
 	o.Recoveries[cluster] = []TopologyRecovery{tr}
 }
 
-// CheckAck verify is an ack is present
-func (o *OrcFakeClient) CheckAck(id int64) bool {
+func (o *FakeOrc) CheckAck(id int64) bool {
 	for _, a := range o.AckRec {
 		if a == id {
 			return true
@@ -118,8 +113,7 @@ func (o *OrcFakeClient) CheckAck(id int64) bool {
 	return false
 }
 
-// CheckDiscovered verify if a key was discovered or not
-func (o *OrcFakeClient) CheckDiscovered(key string) bool {
+func (o *FakeOrc) CheckDiscovered(key string) bool {
 	for _, d := range o.Discovered {
 		if d.Hostname == key {
 			return true
@@ -129,8 +123,7 @@ func (o *OrcFakeClient) CheckDiscovered(key string) bool {
 	return false
 }
 
-// Discover register a host into orchestrator
-func (o *OrcFakeClient) Discover(host string, port int) error {
+func (o *FakeOrc) Discover(host string, port int) error {
 	o.Discovered = append(o.Discovered, InstanceKey{
 		Hostname: host,
 		Port:     port,
@@ -138,37 +131,36 @@ func (o *OrcFakeClient) Discover(host string, port int) error {
 	return nil
 }
 
-// Forget removes a host from orchestrator
-func (o *OrcFakeClient) Forget(host string, port int) error {
+func (o *FakeOrc) Forget(host string, port int) error {
 	return nil
 }
 
-// Master returns the master of a cluster
-func (o *OrcFakeClient) Master(clusterHint string) (*Instance, error) {
+func (o *FakeOrc) Master(clusterHint string) (*Instance, error) {
 	insts, ok := o.Clusters[clusterHint]
 	if !ok {
 		return nil, fmt.Errorf("not found")
 	}
 	for _, inst := range insts {
 		if !inst.ReadOnly {
-			return &inst, nil
+			return inst, nil
 		}
 	}
-	return nil, fmt.Errorf("[faker] master not found")
+	return nil, fmt.Errorf("[faker] master not found!!!!")
 }
 
-// Cluster returns the list of instances from a cluster
-func (o *OrcFakeClient) Cluster(cluster string) ([]Instance, error) {
+func (o *FakeOrc) Cluster(cluster string) ([]Instance, error) {
 	insts, ok := o.Clusters[cluster]
 	if !ok {
 		return nil, fmt.Errorf("not found")
 	}
-
-	return insts, nil
+	var Insts []Instance
+	for _, inst := range insts {
+		Insts = append(Insts, *inst)
+	}
+	return Insts, nil
 }
 
-// AuditRecovery returns recoveries for a cluster
-func (o *OrcFakeClient) AuditRecovery(cluster string) ([]TopologyRecovery, error) {
+func (o *FakeOrc) AuditRecovery(cluster string) ([]TopologyRecovery, error) {
 	recoveries, ok := o.Recoveries[cluster]
 	if !ok {
 		return nil, fmt.Errorf("not found")
@@ -177,8 +169,51 @@ func (o *OrcFakeClient) AuditRecovery(cluster string) ([]TopologyRecovery, error
 	return recoveries, nil
 }
 
-// AckRecovery ack a recovery
-func (o *OrcFakeClient) AckRecovery(id int64, comment string) error {
+func (o *FakeOrc) AckRecovery(id int64, comment string) error {
 	o.AckRec = append(o.AckRec, id)
+	return nil
+}
+
+func (o *FakeOrc) SetHostWritable(key InstanceKey) error {
+
+	check := false
+	for _, instances := range o.Clusters {
+		for _, instance := range instances {
+			if instance.Key.Hostname == key.Hostname && instance.Key.Port == key.Port {
+				instance.ReadOnly = false
+				check = true
+			}
+		}
+	}
+	if check == true {
+		return nil
+	} else {
+		return fmt.Errorf("the desired host and port was not found")
+	}
+}
+
+func (o *FakeOrc) SetHostReadOnly(key InstanceKey) error {
+
+	check := false
+	for _, instances := range o.Clusters {
+		for _, instance := range instances {
+			if instance.Key.Hostname == key.Hostname && instance.Key.Port == key.Port {
+				instance.ReadOnly = true
+				check = true
+			}
+		}
+	}
+	if check == true {
+		return nil
+	} else {
+		return fmt.Errorf("the desired host and port was not found")
+	}
+}
+
+func (o *FakeOrc) BeginMaintenance(key InstanceKey, owner, reason string) error {
+	return nil
+}
+
+func (o *FakeOrc) EndMaintenance(key InstanceKey) error {
 	return nil
 }
