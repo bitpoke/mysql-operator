@@ -28,20 +28,20 @@ import (
 )
 
 type orcError struct {
-	HTTPStatus int
+	HttpStatus int
 	Message    string
 	Details    interface{}
 }
 
 func (e orcError) Error() string {
 	return fmt.Sprintf("[orc]: status: %d msg: %s, details: %v",
-		e.HTTPStatus, e.Message, e.Details)
+		e.HttpStatus, e.Message, e.Details)
 }
 
-// NewOrcError returns a specific orchestrator error with extra details
+// NewOrcError returns a orchestartor error from a http response
 func NewOrcError(resp *http.Response) error {
 	rsp := orcError{
-		HTTPStatus: resp.StatusCode,
+		HttpStatus: resp.StatusCode,
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -59,10 +59,10 @@ func NewOrcError(resp *http.Response) error {
 	return rsp
 }
 
-// NewOrcErrorMsg returns an orchestrator error with extra msg
+// NewOrcErrorMsg returns a orchestrator error with a message
 func NewOrcErrorMsg(msg string) error {
 	return orcError{
-		HTTPStatus: 0,
+		HttpStatus: 0,
 		Message:    msg,
 	}
 }
@@ -109,7 +109,7 @@ func (o *orchestrator) makeGetAPIRequest(path string, query map[string][]string)
 	return nil
 }
 
-func unmarshalJSON(in io.Reader, obj interface{}) error {
+func unmarshalJSON(in io.ReadCloser, obj interface{}) error {
 	body, err := ioutil.ReadAll(in)
 	if err != nil {
 		return fmt.Errorf("io read error: %s", err)

@@ -89,6 +89,10 @@ type MysqlClusterSpec struct {
 	// QueryLimits represents limits for a query
 	// +optional
 	QueryLimits *QueryLimits `json:"queryLimits,omitempty"`
+
+	// Makes the cluster READ ONLY. Set the master to writable or ReadOnly
+	// +optional
+	ReadOnly bool `json:"readOnly,omitempty"`
 }
 
 // MysqlConf defines type for extra cluster configs. It's a simple map between
@@ -177,6 +181,9 @@ const (
 	// ClusterConditionFailoverAck represents if the cluster has pending ack in
 	// orchestrator or not.
 	ClusterConditionFailoverAck ClusterConditionType = "PendingFailoverAck"
+	// ClusterConditionReadOnly describe cluster state if it's in read only or
+	// writable.
+	ClusterConditionReadOnly ClusterConditionType = "ReadOnly"
 )
 
 // NodeStatus defines type for status of a node into cluster.
@@ -203,6 +210,8 @@ const (
 	NodeConditionReplicating NodeConditionType = "Replicating"
 	// NodeConditionMaster represents if the node is master or not.
 	NodeConditionMaster NodeConditionType = "Master"
+	// NodeConditionReadOnly repesents if the node is read only or not
+	NodeConditionReadOnly NodeConditionType = "ReadOnly"
 )
 
 // MysqlClusterStatus defines the observed state of MysqlCluster
