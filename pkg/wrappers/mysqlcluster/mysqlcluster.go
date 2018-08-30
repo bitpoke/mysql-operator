@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	core "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
@@ -61,16 +60,4 @@ func (c *MysqlCluster) GetMasterHost() string {
 	}
 
 	return masterHost
-}
-
-// AsOwnerReference returns the MysqlCluster owner references.
-func (c *MysqlCluster) AsOwnerReference() metav1.OwnerReference {
-	trueVar := true
-	return metav1.OwnerReference{
-		APIVersion: api.SchemeGroupVersion.String(),
-		Kind:       "MysqlCluster",
-		Name:       c.Name,
-		UID:        c.UID,
-		Controller: &trueVar,
-	}
 }

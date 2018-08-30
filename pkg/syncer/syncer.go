@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package syncers
+package syncer
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"

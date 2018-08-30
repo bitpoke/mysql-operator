@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/syncers"
+	"github.com/presslabs/mysql-operator/pkg/syncer"
 )
 
 type pdbSyncer struct {
@@ -31,7 +31,7 @@ type pdbSyncer struct {
 }
 
 // NewPDBSyncer returns the syncer for pdb
-func NewPDBSyncer(cluster *api.MysqlCluster) syncers.Interface {
+func NewPDBSyncer(cluster *api.MysqlCluster) syncer.Interface {
 	return &pdbSyncer{
 		cluster: cluster,
 	}

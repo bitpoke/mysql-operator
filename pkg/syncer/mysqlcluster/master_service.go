@@ -22,50 +22,47 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/syncers"
+	"github.com/presslabs/mysql-operator/pkg/syncer"
 )
 
-type headlessSVCSyncer struct {
+type masterSVCSyncer struct {
 	cluster *api.MysqlCluster
 }
 
-// NewHeadlessSVCSyncer returns a service syncer
-func NewHeadlessSVCSyncer(cluster *api.MysqlCluster) syncers.Interface {
-	return &headlessSVCSyncer{
+// NewMasterSVCSyncer returns a service syncer for master service
+func NewMasterSVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
+	return &masterSVCSyncer{
 		cluster: cluster,
 	}
 }
 
-func (s *headlessSVCSyncer) GetExistingObjectPlaceholder() runtime.Object {
+func (s *masterSVCSyncer) GetExistingObjectPlaceholder() runtime.Object {
 	return &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.cluster.GetNameForResource(api.HeadlessSVC),
+			Name:      s.cluster.GetNameForResource(api.MasterService),
 			Namespace: s.cluster.Namespace,
 		},
 	}
 }
 
-func (s *headlessSVCSyncer) ShouldHaveOwnerReference() bool {
+func (s *masterSVCSyncer) ShouldHaveOwnerReference() bool {
 	return true
 }
 
-func (s *headlessSVCSyncer) Sync(in runtime.Object) error {
+func (s *masterSVCSyncer) Sync(in runtime.Object) error {
 	out := in.(*core.Service)
 
-	out.Spec.ClusterIP = "None"
+	out.Spec.Type = "ClusterIP"
 	out.Spec.Selector = s.cluster.GetLabels()
-	if len(out.Spec.Ports) != 2 {
-		out.Spec.Ports = make([]core.ServicePort, 2)
+	out.Spec.Selector["role"] = "master"
+
+	if len(out.Spec.Ports) != 1 {
+		out.Spec.Ports = make([]core.ServicePort, 1)
 	}
 	out.Spec.Ports[0].Name = MysqlPortName
 	out.Spec.Ports[0].Port = MysqlPort
 	out.Spec.Ports[0].TargetPort = TargetPort
 	out.Spec.Ports[0].Protocol = core.ProtocolTCP
-
-	out.Spec.Ports[1].Name = ExporterPortName
-	out.Spec.Ports[1].Port = ExporterPort
-	out.Spec.Ports[1].TargetPort = ExporterTargetPort
-	out.Spec.Ports[1].Protocol = core.ProtocolTCP
 
 	return nil
 

@@ -22,49 +22,50 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/syncers"
+	"github.com/presslabs/mysql-operator/pkg/syncer"
 )
 
-type healthySVCSyncer struct {
+type headlessSVCSyncer struct {
 	cluster *api.MysqlCluster
 }
 
-// NewHealthySVCSyncer returns a service syncer
-func NewHealthySVCSyncer(cluster *api.MysqlCluster) syncers.Interface {
-	return &healthySVCSyncer{
+// NewHeadlessSVCSyncer returns a service syncer
+func NewHeadlessSVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
+	return &headlessSVCSyncer{
 		cluster: cluster,
 	}
 }
 
-// GetExistingObjectPlaceholder returs a service object with Name and Namespace
-// specified
-func (s *healthySVCSyncer) GetExistingObjectPlaceholder() runtime.Object {
+func (s *headlessSVCSyncer) GetExistingObjectPlaceholder() runtime.Object {
 	return &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.cluster.GetNameForResource(api.HealthyNodesService),
+			Name:      s.cluster.GetNameForResource(api.HeadlessSVC),
 			Namespace: s.cluster.Namespace,
 		},
 	}
 }
 
-func (s *healthySVCSyncer) ShouldHaveOwnerReference() bool {
+func (s *headlessSVCSyncer) ShouldHaveOwnerReference() bool {
 	return true
 }
 
-func (s *healthySVCSyncer) Sync(in runtime.Object) error {
+func (s *headlessSVCSyncer) Sync(in runtime.Object) error {
 	out := in.(*core.Service)
 
-	out.Spec.Type = "ClusterIP"
+	out.Spec.ClusterIP = "None"
 	out.Spec.Selector = s.cluster.GetLabels()
-	out.Spec.Selector["mysql"] = "healthy"
-
-	if len(out.Spec.Ports) != 1 {
-		out.Spec.Ports = make([]core.ServicePort, 1)
+	if len(out.Spec.Ports) != 2 {
+		out.Spec.Ports = make([]core.ServicePort, 2)
 	}
 	out.Spec.Ports[0].Name = MysqlPortName
 	out.Spec.Ports[0].Port = MysqlPort
 	out.Spec.Ports[0].TargetPort = TargetPort
 	out.Spec.Ports[0].Protocol = core.ProtocolTCP
+
+	out.Spec.Ports[1].Name = ExporterPortName
+	out.Spec.Ports[1].Port = api.ExporterPort
+	out.Spec.Ports[1].TargetPort = api.ExporterTargetPort
+	out.Spec.Ports[1].Protocol = core.ProtocolTCP
 
 	return nil
 
