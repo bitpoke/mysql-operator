@@ -25,8 +25,12 @@ import (
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/options"
-	"github.com/presslabs/mysql-operator/pkg/syncers"
+	"github.com/presslabs/mysql-operator/pkg/syncer"
 	"github.com/presslabs/mysql-operator/pkg/util"
+)
+
+const (
+	rStrLen = 18
 )
 
 type secretSyncer struct {
@@ -35,7 +39,7 @@ type secretSyncer struct {
 }
 
 // NewSecretSyncer returns secret syncer
-func NewSecretSyncer(cluster *api.MysqlCluster) syncers.Interface {
+func NewSecretSyncer(cluster *api.MysqlCluster) syncer.Interface {
 	return &secretSyncer{
 		cluster: cluster,
 		opt:     options.GetOptions(),

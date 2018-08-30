@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/syncers"
+	"github.com/presslabs/mysql-operator/pkg/syncer"
 )
 
 type configMapSyncer struct {
@@ -37,7 +37,7 @@ type configMapSyncer struct {
 }
 
 // NewConfigMapSyncer returns config map syncer
-func NewConfigMapSyncer(cluster *api.MysqlCluster) syncers.Interface {
+func NewConfigMapSyncer(cluster *api.MysqlCluster) syncer.Interface {
 	return &configMapSyncer{
 		cluster: cluster,
 	}
@@ -91,8 +91,7 @@ func (s *configMapSyncer) getMysqlConfData() (string, string, error) {
 	cfg := ini.Empty()
 	sec := cfg.Section("mysqld")
 
-	addKVConfigsToSection(sec, MysqlMasterSlaveConfigs, s.cluster.Spec.MysqlConf)
-	addBConfigsToSection(sec, MysqlMasterSlaveBooleanConfigs)
+	addKVConfigsToSection(sec, api.MysqlMasterSlaveConfigs, s.cluster.Spec.MysqlConf)
 
 	// include configs from /etc/mysql/conf.d/*.cnf
 	_, err := sec.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
@@ -121,17 +120,6 @@ func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
 		for k, v := range extra {
 			if _, err := s.NewKey(k, v); err != nil {
 				glog.Errorf("Failed to add '%s':'%s' to config section, err: %s", k, v, err)
-			}
-		}
-	}
-}
-
-// helper function to add a string to a ini.Section
-func addBConfigsToSection(s *ini.Section, boolConfigs ...[]string) {
-	for _, extra := range boolConfigs {
-		for _, k := range extra {
-			if _, err := s.NewBooleanKey(k); err != nil {
-				glog.Errorf("Failed to add boolean key '%s' to config section, err: %s", k, err)
 			}
 		}
 	}

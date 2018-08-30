@@ -38,18 +38,19 @@ import (
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/options"
-	"github.com/presslabs/mysql-operator/pkg/syncers"
-	"github.com/presslabs/mysql-operator/pkg/syncers/mysqlcluster"
-)
-
-const (
-	eventNormal  = "Normal"
-	eventWarning = "Warning"
+	"github.com/presslabs/mysql-operator/pkg/syncer"
+	"github.com/presslabs/mysql-operator/pkg/syncer/mysqlcluster"
+	wrapcluster "github.com/presslabs/mysql-operator/pkg/wrappers/mysqlcluster"
 )
 
 var log = logf.Log.WithName(controllerName)
 
 const controllerName = "mysqlcluster-controller"
+
+const (
+	eventNormal  = "Normal"
+	eventWarning = "Warning"
+)
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -126,15 +127,15 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	log.Info(fmt.Sprintf("Syncing cluster: %s/%s", cluster.Name, cluster.Namespace))
+	log.Info("syncing cluster", "cluster", request.NamespacedName.String())
 
 	// check for secretName to be specified
 	if len(cluster.Spec.SecretName) == 0 {
-		return reconcile.Result{}, fmt.Errorf("the spec.SecretName is empty")
+		return reconcile.Result{}, fmt.Errorf("the spec.secretName is empty")
 	}
 
 	// TODO: set default on a copy cluster
-	cluster.SetDefaults(r.opt)
+	wrapcluster.NewMysqlClusterWrapper(cluster).SetDefaults(r.opt)
 
 	defer func() {
 		// TODO: update just status and not in a defer
@@ -145,7 +146,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}()
 
 	// run the config syncers
-	configSyncers := []syncers.Interface{
+	configSyncers := []syncer.Interface{
 		mysqlcluster.NewConfigMapSyncer(cluster),
 		mysqlcluster.NewSecretSyncer(cluster),
 	}
@@ -164,7 +165,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// run the syncers for services, pdb and statefulset
-	otherSyncers := []syncers.Interface{
+	otherSyncers := []syncer.Interface{
 		mysqlcluster.NewHeadlessSVCSyncer(cluster),
 		mysqlcluster.NewMasterSVCSyncer(cluster),
 		mysqlcluster.NewHealthySVCSyncer(cluster),
@@ -179,7 +180,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	return reconcile.Result{}, r.sync(cluster, otherSyncers)
 }
 
-func (r *ReconcileMysqlCluster) sync(cluster *mysqlv1alpha1.MysqlCluster, syncers []syncers.Interface) error {
+func (r *ReconcileMysqlCluster) sync(cluster *mysqlv1alpha1.MysqlCluster, syncers []syncer.Interface) error {
 	for _, s := range syncers {
 		existing := s.GetExistingObjectPlaceholder()
 
@@ -199,7 +200,12 @@ func (r *ReconcileMysqlCluster) sync(cluster *mysqlv1alpha1.MysqlCluster, syncer
 		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, existing, syncFn)
 		reason := getErrorEventReason(existing, err)
 
-		log.Info(fmt.Sprintf("%T %s/%s %s", existing, cluster.Namespace, cluster.Name, op))
+		key := types.NamespacedName{
+			Name:      cluster.GetName(),
+			Namespace: cluster.GetNamespace(),
+		}
+
+		log.Info(string(op), "key", key.String(), "kind", existing.GetObjectKind().GroupVersionKind().Kind)
 
 		if err != nil {
 			r.recorder.Eventf(cluster, eventWarning, reason, "%T %s/%s failed syncing: %s", existing, cluster.Namespace, cluster.Name, err)

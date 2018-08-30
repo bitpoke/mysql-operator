@@ -28,7 +28,7 @@ import (
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/options"
-	"github.com/presslabs/mysql-operator/pkg/syncers"
+	"github.com/presslabs/mysql-operator/pkg/syncer"
 	clusterwrap "github.com/presslabs/mysql-operator/pkg/wrappers/mysqlcluster"
 )
 
@@ -56,7 +56,7 @@ type sfsSyncer struct {
 }
 
 // NewStatefulSetSyncer returns a syncer for stateful set
-func NewStatefulSetSyncer(cluster *api.MysqlCluster, cmRev, secRev string, opt *options.Options) syncers.Interface {
+func NewStatefulSetSyncer(cluster *api.MysqlCluster, cmRev, secRev string, opt *options.Options) syncer.Interface {
 	return &sfsSyncer{
 		cluster:           clusterwrap.NewMysqlClusterWrapper(cluster),
 		configMapRevision: cmRev,
@@ -112,7 +112,7 @@ func (s *sfsSyncer) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec
 	in.ObjectMeta.Annotations["config_rev"] = s.configMapRevision
 	in.ObjectMeta.Annotations["secret_rev"] = s.secretRevision
 	in.ObjectMeta.Annotations["prometheus.io/scrape"] = "true"
-	in.ObjectMeta.Annotations["prometheus.io/port"] = fmt.Sprintf("%d", ExporterPort)
+	in.ObjectMeta.Annotations["prometheus.io/port"] = fmt.Sprintf("%d", api.ExporterPort)
 
 	in.Spec.InitContainers = s.ensureInitContainersSpec(in.Spec.InitContainers)
 	in.Spec.Containers = s.ensureContainersSpec(in.Spec.Containers)
@@ -129,7 +129,7 @@ func (s *sfsSyncer) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec
 const (
 	containerInitName      = "init-mysql"
 	containerCloneName     = "clone-mysql"
-	containerHelperName    = "helper"
+	containerSidecarName   = "mysql-operator-sidecar"
 	containerMysqlName     = "mysql"
 	containerExporterName  = "metrics-exporter"
 	containerHeartBeatName = "pt-heartbeat"
@@ -372,7 +372,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 	})
 	in[0] = mysql
 
-	helper := s.ensureContainer(in[1], containerHelperName,
+	helper := s.ensureContainer(in[1], containerSidecarName,
 		s.opt.HelperImage,
 		[]string{"config-and-serve"},
 	)
@@ -395,7 +395,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 	exporter := s.ensureContainer(in[2], containerExporterName,
 		s.opt.MetricsExporterImage,
 		[]string{
-			fmt.Sprintf("--web.listen-address=0.0.0.0:%d", ExporterPort),
+			fmt.Sprintf("--web.listen-address=0.0.0.0:%d", api.ExporterPort),
 			fmt.Sprintf("--web.telemetry-path=%s", ExporterPath),
 			"--collect.heartbeat",
 			fmt.Sprintf("--collect.heartbeat.database=%s", HelperDbName),
@@ -403,12 +403,12 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 	)
 	exporter.Ports = ensureContainerPorts(mysql.Ports, core.ContainerPort{
 		Name:          ExporterPortName,
-		ContainerPort: ExporterPort,
+		ContainerPort: api.ExporterPort,
 	})
 	exporter.LivenessProbe = ensureProbe(exporter.LivenessProbe, 30, 30, 30, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   ExporterPath,
-			Port:   ExporterTargetPort,
+			Port:   api.ExporterTargetPort,
 			Scheme: core.URISchemeHTTP,
 		},
 	})
@@ -479,6 +479,9 @@ func (s *sfsSyncer) ensureVolumes(in []core.Volume) []core.Volume {
 	return in
 }
 
+// TODO rework the condition here after kubernetes-sigs/controller-runtime#98 gets merged.
+//     we should be able to check s.cluster.ObjectMeta.CreationTimestamp.IsZero()
+
 func (s *sfsSyncer) ensureVolumeClaimTemplates(in []core.PersistentVolumeClaim) []core.PersistentVolumeClaim {
 	initPvc := false
 	if len(in) == 0 {
@@ -492,7 +495,17 @@ func (s *sfsSyncer) ensureVolumeClaimTemplates(in []core.PersistentVolumeClaim) 
 	if initPvc {
 		// This can be set only when creating new PVC. It ensures that PVC can be
 		// terminated after deleting parent MySQL cluster
-		data.ObjectMeta.OwnerReferences = s.getOwnerReferences()
+		trueVar := true
+
+		data.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
+			metav1.OwnerReference{
+				APIVersion: api.SchemeGroupVersion.String(),
+				Kind:       "MysqlCluster",
+				Name:       s.cluster.Name,
+				UID:        s.cluster.UID,
+				Controller: &trueVar,
+			},
+		}
 	}
 
 	data.Spec = s.cluster.Spec.VolumeSpec.PersistentVolumeClaimSpec
@@ -513,7 +526,7 @@ func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 			},
 		})
 	}
-	if name == containerHelperName {
+	if name == containerSidecarName {
 		envSources = append(envSources, core.EnvFromSource{
 			Prefix: "MYSQL_",
 			SecretRef: &core.SecretEnvSource{
@@ -540,7 +553,7 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 			},
 		}
 
-	case containerCloneName, containerMysqlName, containerHelperName:
+	case containerCloneName, containerMysqlName, containerSidecarName:
 		return []core.VolumeMount{
 			core.VolumeMount{
 				Name:      confVolumeName,
@@ -569,18 +582,6 @@ func ensureVolume(in core.Volume, name string, source core.VolumeSource) core.Vo
 	in.VolumeSource = source
 
 	return in
-}
-
-func (s *sfsSyncer) getOwnerReferences(ors ...[]metav1.OwnerReference) []metav1.OwnerReference {
-	rs := []metav1.OwnerReference{
-		s.cluster.AsOwnerReference(),
-	}
-	for _, or := range ors {
-		for _, o := range or {
-			rs = append(rs, o)
-		}
-	}
-	return rs
 }
 
 func (s *sfsSyncer) getLabels(extra map[string]string) map[string]string {

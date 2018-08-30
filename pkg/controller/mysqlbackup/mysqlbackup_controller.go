@@ -134,7 +134,7 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 			},
 		},
 	}
-	if err := controllerutil.SetControllerReference(instance, deploy, r.scheme); err != nil {
+	if err = controllerutil.SetControllerReference(instance, deploy, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 
