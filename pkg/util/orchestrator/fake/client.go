@@ -160,6 +160,10 @@ func (o *FakeOrc) Cluster(cluster string) ([]Instance, error) {
 	return Insts, nil
 }
 
+func (o *FakeOrc) ForgetCluster(cluster string) error {
+	return nil
+}
+
 func (o *FakeOrc) AuditRecovery(cluster string) ([]TopologyRecovery, error) {
 	recoveries, ok := o.Recoveries[cluster]
 	if !ok {
