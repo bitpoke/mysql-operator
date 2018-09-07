@@ -4,11 +4,8 @@
 
 package packages
 
-// This file defines the "go list" implementation of the Packages metadata query.
-
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -18,38 +15,137 @@ import (
 	"strings"
 )
 
-// A GoTooOldError indicates that the go command predates the Go
-// 1.11 features needed by this package. This error is a stopgap measure
-// until the necessary features can be emulated in terms of an older go
-// command, at which point this error will no longer be used.
-type GoTooOldError struct{ error }
+// A goTooOldError reports that the go command
+// found by exec.LookPath is too old to use the new go list behavior.
+type goTooOldError struct {
+	error
+}
 
-// golistPackages uses the "go list" command to expand the
-// pattern words and return metadata for the specified packages.
-// dir may be "" and env may be nil, as per os/exec.Command.
-func golistPackages(ctx context.Context, dir string, env []string, cgo, export, tests bool, words []string) ([]*Package, error) {
-	// Fields must match go list;
-	// see $GOROOT/src/cmd/go/internal/load/pkg.go.
-	type jsonPackage struct {
-		ImportPath   string
-		Dir          string
-		Name         string
-		Export       string
-		GoFiles      []string
-		CFiles       []string
-		CgoFiles     []string
-		SFiles       []string
-		Imports      []string
-		ImportMap    map[string]string
-		Deps         []string
-		TestGoFiles  []string
-		TestImports  []string
-		XTestGoFiles []string
-		XTestImports []string
-		ForTest      string // q in a "p [q.test]" package, else ""
-		DepOnly      bool
+// goListDriver uses the go list command to interpret the patterns and produce
+// the build system package structure.
+// See driver for more details.
+func goListDriver(cfg *Config, patterns ...string) (*driverResponse, error) {
+	// Determine files requested in contains patterns
+	var containFiles []string
+	restPatterns := make([]string, 0, len(patterns))
+	for _, pattern := range patterns {
+		if strings.HasPrefix(pattern, "contains:") {
+			containFile := strings.TrimPrefix(pattern, "contains:")
+			containFiles = append(containFiles, containFile)
+		} else {
+			restPatterns = append(restPatterns, pattern)
+		}
+	}
+	containFiles = absJoin(cfg.Dir, containFiles)
+	patterns = restPatterns
+
+	// TODO(matloob): Remove the definition of listfunc and just use golistPackages once go1.12 is released.
+	var listfunc driver
+	listfunc = func(cfg *Config, words ...string) (*driverResponse, error) {
+		response, err := golistDriverCurrent(cfg, patterns...)
+		if _, ok := err.(goTooOldError); ok {
+			listfunc = golistDriverFallback
+			return listfunc(cfg, patterns...)
+		}
+		listfunc = golistDriverCurrent
+		return response, err
 	}
 
+	var response *driverResponse
+	var err error
+
+	// see if we have any patterns to pass through to go list.
+	if len(patterns) > 0 {
+		response, err = listfunc(cfg, patterns...)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		response = &driverResponse{}
+	}
+
+	// Run go list for contains: patterns.
+	seenPkgs := make(map[string]*Package) // for deduplication. different containing queries could produce same packages
+	if len(containFiles) > 0 {
+		for _, pkg := range response.Packages {
+			seenPkgs[pkg.ID] = pkg
+		}
+	}
+	for _, f := range containFiles {
+		// TODO(matloob): Do only one query per directory.
+		fdir := filepath.Dir(f)
+		cfg.Dir = fdir
+		dirResponse, err := listfunc(cfg, ".")
+		if err != nil {
+			return nil, err
+		}
+		isRoot := make(map[string]bool, len(dirResponse.Roots))
+		for _, root := range dirResponse.Roots {
+			isRoot[root] = true
+		}
+		for _, pkg := range dirResponse.Packages {
+			// Add any new packages to the main set
+			// We don't bother to filter packages that will be dropped by the changes of roots,
+			// that will happen anyway during graph construction outside this function.
+			// Over-reporting packages is not a problem.
+			if _, ok := seenPkgs[pkg.ID]; !ok {
+				// it is a new package, just add it
+				seenPkgs[pkg.ID] = pkg
+				response.Packages = append(response.Packages, pkg)
+			}
+			// if the package was not a root one, it cannot have the file
+			if !isRoot[pkg.ID] {
+				continue
+			}
+			for _, pkgFile := range pkg.GoFiles {
+				if filepath.Base(f) == filepath.Base(pkgFile) {
+					response.Roots = append(response.Roots, pkg.ID)
+					break
+				}
+			}
+		}
+	}
+	return response, nil
+}
+
+// Fields must match go list;
+// see $GOROOT/src/cmd/go/internal/load/pkg.go.
+type jsonPackage struct {
+	ImportPath      string
+	Dir             string
+	Name            string
+	Export          string
+	GoFiles         []string
+	CompiledGoFiles []string
+	CFiles          []string
+	CgoFiles        []string
+	CXXFiles        []string
+	MFiles          []string
+	HFiles          []string
+	FFiles          []string
+	SFiles          []string
+	SwigFiles       []string
+	SwigCXXFiles    []string
+	SysoFiles       []string
+	Imports         []string
+	ImportMap       map[string]string
+	Deps            []string
+	TestGoFiles     []string
+	TestImports     []string
+	XTestGoFiles    []string
+	XTestImports    []string
+	ForTest         string // q in a "p [q.test]" package, else ""
+	DepOnly         bool
+}
+
+func otherFiles(p *jsonPackage) [][]string {
+	return [][]string{p.CFiles, p.CXXFiles, p.MFiles, p.HFiles, p.FFiles, p.SFiles, p.SwigFiles, p.SwigCXXFiles, p.SysoFiles}
+}
+
+// golistDriverCurrent uses the "go list" command to expand the
+// pattern words and return metadata for the specified packages.
+// dir may be "" and env may be nil, as per os/exec.Command.
+func golistDriverCurrent(cfg *Config, words ...string) (*driverResponse, error) {
 	// go list uses the following identifiers in ImportPath and Imports:
 	//
 	// 	"p"			-- importable package or main (command)
@@ -63,13 +159,12 @@ func golistPackages(ctx context.Context, dir string, env []string, cgo, export, 
 
 	// Run "go list" for complete
 	// information on the specified packages.
-
-	buf, err := golist(ctx, dir, env, cgo, export, tests, words)
+	buf, err := golist(cfg, golistargs(cfg, words))
 	if err != nil {
 		return nil, err
 	}
 	// Decode the JSON and convert it to Package form.
-	var result []*Package
+	var response driverResponse
 	for dec := json.NewDecoder(buf); dec.More(); {
 		p := new(jsonPackage)
 		if err := dec.Decode(p); err != nil {
@@ -107,10 +202,6 @@ func golistPackages(ctx context.Context, dir string, env []string, cgo, export, 
 			pkgpath = id[:i]
 		}
 
-		// Is this a test?
-		// ("foo [foo.test]" package or "foo.test" command)
-		isTest := p.ForTest != "" || strings.HasSuffix(pkgpath, ".test")
-
 		if pkgpath == "unsafe" {
 			p.GoFiles = nil // ignore fake unsafe.go file
 		}
@@ -133,40 +224,39 @@ func golistPackages(ctx context.Context, dir string, env []string, cgo, export, 
 		for _, id := range p.Imports {
 			ids[id] = true
 		}
-		imports := make(map[string]string)
+		imports := make(map[string]*Package)
 		for path, id := range p.ImportMap {
-			imports[path] = id // non-identity import
+			imports[path] = &Package{ID: id} // non-identity import
 			delete(ids, id)
 		}
 		for id := range ids {
-			// Go issue 26136: go list omits imports in cgo-generated files.
-			if id == "C" && cgo {
-				imports["unsafe"] = "unsafe"
-				imports["syscall"] = "syscall"
-				if pkgpath != "runtime/cgo" {
-					imports["runtime/cgo"] = "runtime/cgo"
-				}
+			if id == "C" {
 				continue
 			}
 
-			imports[id] = id // identity import
+			imports[id] = &Package{ID: id} // identity import
 		}
-
+		if !p.DepOnly {
+			response.Roots = append(response.Roots, id)
+		}
 		pkg := &Package{
-			ID:        id,
-			Name:      p.Name,
-			PkgPath:   pkgpath,
-			IsTest:    isTest,
-			Srcs:      absJoin(p.Dir, p.GoFiles, p.CgoFiles),
-			OtherSrcs: absJoin(p.Dir, p.SFiles, p.CFiles),
-			imports:   imports,
-			export:    export,
-			indirect:  p.DepOnly,
+			ID:              id,
+			Name:            p.Name,
+			PkgPath:         pkgpath,
+			GoFiles:         absJoin(p.Dir, p.GoFiles, p.CgoFiles),
+			CompiledGoFiles: absJoin(p.Dir, p.CompiledGoFiles),
+			OtherFiles:      absJoin(p.Dir, otherFiles(p)...),
+			Imports:         imports,
+			ExportFile:      export,
 		}
-		result = append(result, pkg)
+		// TODO(matloob): Temporary hack since CompiledGoFiles isn't always set.
+		if len(pkg.CompiledGoFiles) == 0 {
+			pkg.CompiledGoFiles = pkg.GoFiles
+		}
+		response.Packages = append(response.Packages, pkg)
 	}
 
-	return result, nil
+	return &response, nil
 }
 
 // absJoin absolutizes and flattens the lists of files.
@@ -182,28 +272,25 @@ func absJoin(dir string, fileses ...[]string) (res []string) {
 	return res
 }
 
-// golist returns the JSON-encoded result of a "go list args..." query.
-func golist(ctx context.Context, dir string, env []string, cgo, export, tests bool, args []string) (*bytes.Buffer, error) {
-	out := new(bytes.Buffer)
-	cmd := exec.CommandContext(ctx, "go", append([]string{
-		"list",
-		"-e",
-		fmt.Sprintf("-cgo=%t", cgo),
-		fmt.Sprintf("-test=%t", tests),
-		fmt.Sprintf("-export=%t", export),
-		"-deps",
-		"-json",
-		"--",
-	}, args...)...)
+func golistargs(cfg *Config, words []string) []string {
+	fullargs := []string{
+		"list", "-e", "-json", "-compiled",
+		fmt.Sprintf("-test=%t", cfg.Tests),
+		fmt.Sprintf("-export=%t", usesExportData(cfg)),
+		fmt.Sprintf("-deps=%t", cfg.Mode >= LoadImports),
+	}
+	fullargs = append(fullargs, cfg.BuildFlags...)
+	fullargs = append(fullargs, "--")
+	fullargs = append(fullargs, words...)
+	return fullargs
+}
 
-	if env == nil {
-		env = os.Environ()
-	}
-	if !cgo {
-		env = append(env, "CGO_ENABLED=0")
-	}
-	cmd.Env = env
-	cmd.Dir = dir
+// golist returns the JSON-encoded result of a "go list args..." query.
+func golist(cfg *Config, args []string) (*bytes.Buffer, error) {
+	out := new(bytes.Buffer)
+	cmd := exec.CommandContext(cfg.Context, "go", args...)
+	cmd.Env = cfg.Env
+	cmd.Dir = cfg.Dir
 	cmd.Stdout = out
 	cmd.Stderr = new(bytes.Buffer)
 	if err := cmd.Run(); err != nil {
@@ -217,14 +304,14 @@ func golist(ctx context.Context, dir string, env []string, cgo, export, tests bo
 
 		// Old go list?
 		if strings.Contains(fmt.Sprint(cmd.Stderr), "flag provided but not defined") {
-			return nil, GoTooOldError{fmt.Errorf("unsupported version of go list: %s: %s", exitErr, cmd.Stderr)}
+			return nil, goTooOldError{fmt.Errorf("unsupported version of go list: %s: %s", exitErr, cmd.Stderr)}
 		}
 
 		// Export mode entails a build.
 		// If that build fails, errors appear on stderr
 		// (despite the -e flag) and the Export field is blank.
 		// Do not fail in that case.
-		if !export {
+		if !usesExportData(cfg) {
 			return nil, fmt.Errorf("go list: %s: %s", exitErr, cmd.Stderr)
 		}
 	}
