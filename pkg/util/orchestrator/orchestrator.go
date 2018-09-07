@@ -28,6 +28,8 @@ type Interface interface {
 
 	Cluster(cluster string) ([]Instance, error)
 
+	ForgetCluster(cluster string) error
+
 	AuditRecovery(cluster string) ([]TopologyRecovery, error)
 	AckRecovery(id int64, commnet string) error
 
@@ -82,6 +84,13 @@ func (o *orchestrator) Cluster(cluster string) ([]Instance, error) {
 	}
 
 	return insts, nil
+}
+
+func (o *orchestrator) ForgetCluster(cluster string) error {
+	if err := o.makeGetAPIRequest(fmt.Sprintf("forget-cluster/%s", cluster), nil); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *orchestrator) AuditRecovery(cluster string) ([]TopologyRecovery, error) {

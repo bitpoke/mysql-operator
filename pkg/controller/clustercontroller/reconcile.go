@@ -67,13 +67,18 @@ func (c *Controller) addClusterInReconcileQueue(cluster *api.MysqlCluster, after
 	c.reconcileQueue.AddAfter(key, after)
 }
 
+func getAlias(name string, namespace string) string {
+	return fmt.Sprintf("%s.%s", name, namespace)
+}
 func (c *Controller) registerClusterInReconciliation(cluster *api.MysqlCluster) {
 	key, err := controllerpkg.KeyFunc(cluster)
 	if err != nil {
 		runtime.HandleError(err)
 		return
 	}
-	_, loaded := c.clustersSync.LoadOrStore(key, true)
+
+	clusterAlias := getAlias(cluster.Name, cluster.Namespace)
+	_, loaded := c.clustersSync.LoadOrStore(key, clusterAlias)
 
 	if !loaded {
 		glog.V(2).Infof("Register cluster '%s' in reconcile queue.", key)
@@ -83,5 +88,13 @@ func (c *Controller) registerClusterInReconciliation(cluster *api.MysqlCluster) 
 }
 
 func (c *Controller) removeClusterFromReconciliation(key string) {
+
+	if value, exists := c.clustersSync.Load(key); exists {
+		alias := value.(string)
+		glog.V(3).Infof("Removing cluster '%s' from orchestrator", alias)
+		if err := myfactory.Delete(alias); err != nil {
+			glog.Warningf("Could not remove cluster '%s' from orchestrator: %s", alias, err)
+		}
+	}
 	c.clustersSync.Delete(key)
 }
