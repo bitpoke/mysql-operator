@@ -145,11 +145,6 @@ func (c *ClusterSpec) GetMetricsExporterImage() string {
 	return opt.MetricsExporterImage
 }
 
-// GetOrcUri return the orchestrator uri
-func (c *ClusterSpec) GetOrcUri() string {
-	return opt.OrchestratorUri
-}
-
 // GetMysqlImage returns mysql image, composed from oprions and  Spec.MysqlVersion
 func (c *ClusterSpec) GetMysqlImage() string {
 	return opt.MysqlImage + ":" + c.MysqlVersion

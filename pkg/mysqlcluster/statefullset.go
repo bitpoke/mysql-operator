@@ -173,7 +173,7 @@ func (f *cFactory) getEnvFor(name string) (env []core.EnvVar) {
 	})
 	env = append(env, core.EnvVar{
 		Name:  "ORCHESTRATOR_URI",
-		Value: f.cluster.Spec.GetOrcUri(),
+		Value: f.opt.OrchestratorUri,
 	})
 
 	if len(f.cluster.Spec.InitBucketUri) > 0 && name == containerCloneName {

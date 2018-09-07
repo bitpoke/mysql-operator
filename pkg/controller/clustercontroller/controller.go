@@ -254,7 +254,7 @@ func (c *Controller) workerReconcile(stopCh <-chan struct{}) {
 				return nil
 			}
 
-			if value, exists := c.clustersSync.Load(key); exists && !value.(bool) {
+			if _, exists := c.clustersSync.Load(key); !exists {
 				// key is removed from map, don't execute reconciliation
 				return nil
 			}

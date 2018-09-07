@@ -18,6 +18,7 @@ package mysqlcluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -73,8 +74,8 @@ func New(cluster *api.MysqlCluster, opt *options.Options, klient kubernetes.Inte
 		configHash: "1",
 		secretHash: "1",
 	}
-	if len(cluster.Spec.GetOrcUri()) != 0 {
-		f.orcClient = orc.NewFromUri(cluster.Spec.GetOrcUri())
+	if len(opt.OrchestratorUri) != 0 {
+		f.orcClient = orc.NewFromUri(opt.OrchestratorUri)
 	}
 
 	return f
@@ -206,4 +207,21 @@ func (f *cFactory) getOwnerReferences(ors ...[]metav1.OwnerReference) []metav1.O
 
 func (f *cFactory) getClusterAlias() string {
 	return fmt.Sprintf("%s.%s", f.cluster.Name, f.cluster.Namespace)
+}
+
+func Delete(clusterAlias string) error {
+	// Removes cluster from Orchestrator
+	opt := options.GetOptions()
+
+	if len(opt.OrchestratorUri) != 0 {
+		orcClient := orc.NewFromUri(opt.OrchestratorUri)
+		if err := orcClient.ForgetCluster(clusterAlias); err != nil {
+			return err
+		}
+		glog.V(2).Infof("Removed cluster '%s' from orchestrator", clusterAlias)
+	} else {
+		return errors.New("Orchestrator Uri not set")
+	}
+
+	return nil
 }
