@@ -3,115 +3,62 @@
 // license that can be found in the LICENSE file.
 
 /*
+Package packages loads Go packages for inspection and analysis.
 
-Package packages provides information about Go packages,
-such as their path, source files, and imports.
-It can optionally load, parse, and type-check the source files of a
-package, and obtain type information for their dependencies either by
-loading export data files produced by the Go compiler or by
-recursively loading dependencies from source code.
+NOTE: THIS PACKAGE IS NOT YET READY FOR WIDESPREAD USE:
+ - The interface is still being revised and minor changes are likely.
+ - The implementation depends on the Go 1.11 go command;
+   support for earlier versions will be added soon.
+ - We intend to finalize the API before Go 1.11 is released.
 
-THIS INTERFACE IS EXPERIMENTAL AND IS LIKELY TO CHANGE.
+The Load function takes as input a list of patterns and return a list of Package
+structs describing individual packages matched by those patterns.
+The LoadMode controls the amount of detail in the loaded packages.
 
-This package currently requires a go1.11 version of go list;
-its functions will return a GoTooOldError for older toolchains.
+The patterns are used as arguments to the underlying build tool,
+such as the go command or Bazel, and are interpreted according to
+that tool's conventions.
 
-This package is intended to replace golang.org/x/tools/go/loader.
-It provides a simpler interface to the same functionality and serves
-as a foundation for analysis tools that work with 'go build',
-including its support for versioned packages,
-and also with alternative build systems such as Bazel and Blaze.
+The Package struct provides basic information about the package, including
 
-Its primary operation is to load packages through
-the Metadata, TypeCheck, and WholeProgram functions,
-which accept a list of string arguments that denote
-one or more packages according to the conventions
-of the underlying build system.
+  - ID, a unique identifier for the package in the returned set;
+  - GoFiles, the names of the package's Go source files;
+  - Imports, a map from source import strings to the Packages they name;
+  - Types, the type information for the package's exported symbols;
+  - Syntax, the parsed syntax trees for the package's source code; and
+  - TypeInfo, the result of a complete type-check of the package syntax trees.
 
-For example, in a 'go build' workspace,
-they may be a list of package names,
-or relative directory names,
-or even an ad-hoc list of source files:
+(See the documentation for type Package for the complete list of fields
+and more detailed descriptions.)
 
-	fmt
-	encoding/json
-	./json
-	a.go b.go
+For example,
 
-For a Bazel project, the arguments use Bazel's package notation:
+	Load(nil, "bytes", "unicode...")
 
-	@repo//project:target
-	//project:target
-	:target
-	target
+returns four Package structs describing the standard library packages
+bytes, unicode, unicode/utf16, and unicode/utf8. Note that one pattern
+can match multiple packages and that a package might be matched by
+multiple patterns: in general it is not possible to determine which
+packages correspond to which patterns.
 
-An application that loads packages can thus pass its command-line
-arguments directly to the loading functions and it will integrate with the
-usual conventions for that project.
+Note that the list returned by Load contains only the packages matched
+by the patterns. Their dependencies can be found by walking the import
+graph using the Imports fields.
 
-The result of a call to a loading function is a set of Package
-objects describing the packages denoted by the arguments.
-These "initial" packages are in fact the roots of a graph of Packages,
-the import graph, that includes complete transitive dependencies.
-Clients may traverse the import graph by following the edges in the
-Package.Imports map, which relates the import paths that appear in the
-package's source files to the packages they import.
+The Load function can be configured by passing a pointer to a Config as
+the first argument. A nil Config is equivalent to the zero Config, which
+causes Load to run in LoadFiles mode, collecting minimal information.
+See the documentation for type Config for details.
 
-Each package has three kinds of name: ID, PkgPath, and Name.
-A package's ID is an unspecified identifier that uniquely
-identifies it throughout the workspace, and thus may be used as a key in
-a map of packages. Clients should not interpret this string, no matter
-how intelligible it looks, as its structure varies across build systems.
-A package's PkgPath is the name by which the package is known to the
-compiler, linker, and runtime: it is the string returned by
-reflect.Type.PkgPath or fmt.Sprintf("%T", x). The PkgPath is not
-necessarily unique throughout the workspace; for example, an in-package
-test has the same PkgPath as the package under test.
-A package's Name is the identifier that appears in the "package"
-declaration at the start of each of its source files,
-and is the name declared when importing it into another file.
-A package whose Name is "main" is linked as an executable.
+As noted earlier, the Config.Mode controls the amount of detail
+reported about the loaded packages, with each mode returning all the data of the
+previous mode with some extra added. See the documentation for type LoadMode
+for details.
 
-The loader's three entry points, Metadata, TypeCheck, and
-WholeProgram, provide increasing levels of detail.
-
-Metadata returns only a description of each package,
-its source files and imports.
-Some build systems permit build steps to generate
-Go source files that are then compiled.
-The Packages describing such a program report
-the locations of the generated files.
-The process of loading packages invokes the
-underlying build system to ensure that these
-files are present and up-to-date.
-
-Although 'go build' does not in general allow code generation,
-it does in a limited form in its support for cgo.
-For a package whose source files import "C", subjecting them to cgo
-preprocessing, the loader reports the location of the pure-Go source
-files generated by cgo. This too may entail a partial build.
-Cgo processing is disabled for Metadata queries,
-or when the DisableCgo option is set.
-
-TypeCheck additionally loads, parses, and type-checks
-the source files of the initial packages,
-and exposes their syntax trees and type information.
-Type information for dependencies of the initial
-packages is obtained not from Go source code but from
-compiler-generated export data files.
-Again, loading invokes the underlying build system to
-ensure that these files are present and up-to-date.
-
-WholeProgram loads complete type information about
-the initial packages and all of their transitive dependencies.
-
-Example:
-
-	pkgs, err := packages.TypeCheck(nil, flag.Args()...)
-	if err != nil { ... }
-	for _, pkg := range pkgs {
-		...
-	}
+Most tools should pass their command-line arguments (after any flags)
+uninterpreted to the loader, so that the loader can interpret them
+according to the conventions of the underlying build system.
+See the Example function for typical usage.
 
 */
 package packages // import "golang.org/x/tools/go/packages"
@@ -146,12 +93,6 @@ about one package without visiting all its dependencies too, so there is
 no additional asymptotic cost to providing transitive information.
 (This property might not be true of a hypothetical 5th build system.)
 
-This package provides no parse-but-don't-typecheck operation because most tools
-that need only untyped syntax (such as gofmt, goimports, and golint)
-seem not to care about any files other than the ones they are directly
-instructed to look at.  Also, it is trivial for a client to supplement
-this functionality on top of a Metadata query.
-
 In calls to TypeCheck, all initial packages, and any package that
 transitively depends on one of them, must be loaded from source.
 Consider A->B->C->D->E: if A,C are initial, A,B,C must be loaded from
@@ -172,12 +113,9 @@ files were nearly always missing or stale. Now that 'go build' supports
 caching, all the underlying build systems can guarantee to produce
 export data in a reasonable (amortized) time.
 
-Packages that are part of a test are marked IsTest=true.
-Such packages include in-package tests, external tests,
-and the test "main" packages synthesized by the build system.
-The latter packages are reported as first-class packages,
-avoiding the need for clients (such as go/ssa) to reinvent this
-generation logic.
+Test "main" packages synthesized by the build system are now reported as
+first-class packages, avoiding the need for clients (such as go/ssa) to
+reinvent this generation logic.
 
 One way in which go/packages is simpler than the old loader is in its
 treatment of in-package tests. In-package tests are packages that
@@ -204,15 +142,13 @@ type-check again. This two-phase approach had four major problems:
    in several times in sequence as is now possible in WholeProgram mode.
    (TypeCheck mode has a similar one-shot restriction for a different reason.)
 
-Early drafts of this package supported "multi-shot" operation
-in the Metadata and WholeProgram modes, although this feature is not exposed
-through the API and will likely be removed.
+Early drafts of this package supported "multi-shot" operation.
 Although it allowed clients to make a sequence of calls (or concurrent
 calls) to Load, building up the graph of Packages incrementally,
 it was of marginal value: it complicated the API
 (since it allowed some options to vary across calls but not others),
 it complicated the implementation,
-it cannot be made to work in TypeCheck mode, as explained above,
+it cannot be made to work in Types mode, as explained above,
 and it was less efficient than making one combined call (when this is possible).
 Among the clients we have inspected, none made multiple calls to load
 but could not be easily and satisfactorily modified to make only a single call.
@@ -244,9 +180,6 @@ application, but not by the metadata query, so, for example:
 
 Questions & Tasks
 
-- Add this pass-through option for the underlying query tool:
-     Flags   []string
-
 - Add GOARCH/GOOS?
   They are not portable concepts, but could be made portable.
   Our goal has been to allow users to express themselves using the conventions
@@ -260,22 +193,12 @@ Questions & Tasks
   However, this approach is low-level, unwieldy, and non-portable.
   GOOS and GOARCH seem important enough to warrant a dedicated option.
 
-- Build tags: where do they fit in?  How does Bazel/Blaze handle them?
-
 - How should we handle partial failures such as a mixture of good and
-  malformed patterns, existing and non-existent packages, succesful and
+  malformed patterns, existing and non-existent packages, successful and
   failed builds, import failures, import cycles, and so on, in a call to
   Load?
 
-- Do we need a GeneratedBy map that maps the name of each generated Go
-  source file in Srcs to that of the original file, if known, or "" otherwise?
-  Or are //line directives and "Generated" comments in those files enough?
-
 - Support bazel, blaze, and go1.10 list, not just go1.11 list.
-
-- Support a "contains" query: a boolean option would cause the the
-  pattern words to be interpreted as filenames, and the query would
-  return the package(s) to which the file(s) belong.
 
 - Handle (and test) various partial success cases, e.g.
   a mixture of good packages and:
@@ -295,16 +218,5 @@ Questions & Tasks
 - "undeclared name" errors (for example) are reported out of source file
   order. I suspect this is due to the breadth-first resolution now used
   by go/types. Is that a bug? Discuss with gri.
-
-- https://github.com/golang/go/issues/25980 causes these commands to crash:
-  $ GOPATH=/none ./gopackages -all all
-  due to:
-  $ GOPATH=/none go list -e -test -json all
-  and:
-  $ go list -e -test ./relative/path
-
-- Modify stringer to use go/packages, perhaps initially under flag control.
-
-- Bug: "gopackages fmt a.go" doesn't produce an error.
 
 */
