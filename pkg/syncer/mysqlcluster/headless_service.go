@@ -64,7 +64,7 @@ func (s *headlessSVCSyncer) Sync(in runtime.Object) error {
 
 	out.Spec.Ports[1].Name = ExporterPortName
 	out.Spec.Ports[1].Port = api.ExporterPort
-	out.Spec.Ports[1].TargetPort = api.ExporterTargetPort
+	out.Spec.Ports[1].TargetPort = ExporterTargetPort
 	out.Spec.Ports[1].Protocol = core.ProtocolTCP
 
 	return nil

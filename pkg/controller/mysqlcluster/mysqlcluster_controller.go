@@ -91,8 +91,23 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	//TODO: watch other created resources
-	// related secret and config map
+	err = c.Watch(&source.Kind{Type: &core.Service{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &mysqlv1alpha1.MysqlCluster{},
+	})
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(&source.Kind{Type: &core.ConfigMap{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &mysqlv1alpha1.MysqlCluster{},
+	})
+	if err != nil {
+		return err
+	}
+
+	// TODO watch for secret
 
 	return nil
 }
@@ -134,7 +149,8 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, fmt.Errorf("the spec.secretName is empty")
 	}
 
-	// TODO: set default on a copy cluster
+	// Set defaults on cluster
+	r.scheme.Default(cluster)
 	wrapcluster.NewMysqlClusterWrapper(cluster).SetDefaults(r.opt)
 
 	defer func() {

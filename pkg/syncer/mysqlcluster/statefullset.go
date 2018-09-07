@@ -81,7 +81,8 @@ func (s *sfsSyncer) ShouldHaveOwnerReference() bool {
 func (s *sfsSyncer) Sync(in runtime.Object) error {
 	out := in.(*apps.StatefulSet)
 
-	if out.Status.ReadyReplicas == out.Status.Replicas {
+	fmt.Println("&&&&&&&&&&&&&&", out.Status, s.cluster.Spec.Replicas)
+	if out.Status.ReadyReplicas == s.cluster.Spec.Replicas {
 		s.cluster.UpdateStatusCondition(api.ClusterConditionReady,
 			core.ConditionTrue, "statefulset ready", "Cluster is ready.")
 	} else {
@@ -408,7 +409,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 	exporter.LivenessProbe = ensureProbe(exporter.LivenessProbe, 30, 30, 30, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   ExporterPath,
-			Port:   api.ExporterTargetPort,
+			Port:   ExporterTargetPort,
 			Scheme: core.URISchemeHTTP,
 		},
 	})

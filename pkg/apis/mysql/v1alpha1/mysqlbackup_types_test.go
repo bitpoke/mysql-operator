@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// nolint: errcheck
 var _ = Describe("MysqlBackup CRUD", func() {
 	var created *MysqlBackup
 	var key types.NamespacedName
