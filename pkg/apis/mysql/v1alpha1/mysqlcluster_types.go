@@ -176,7 +176,7 @@ const (
 	ClusterConditionReady ClusterConditionType = "Ready"
 	// ClusterConditionFailoverAck represents if the cluster has pending ack in
 	// orchestrator or not.
-	ClusterConditionFailoverAck = "PendingFailoverAck"
+	ClusterConditionFailoverAck ClusterConditionType = "PendingFailoverAck"
 )
 
 // NodeStatus defines type for status of a node into cluster.
@@ -200,9 +200,9 @@ const (
 	// orchestrator.
 	NodeConditionLagged NodeConditionType = "Lagged"
 	// NodeConditionReplicating represents if the node is replicating or not.
-	NodeConditionReplicating = "Replicating"
+	NodeConditionReplicating NodeConditionType = "Replicating"
 	// NodeConditionMaster represents if the node is master or not.
-	NodeConditionMaster = "Master"
+	NodeConditionMaster NodeConditionType = "Master"
 )
 
 // MysqlClusterStatus defines the observed state of MysqlCluster

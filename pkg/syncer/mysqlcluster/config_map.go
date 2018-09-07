@@ -22,15 +22,17 @@ import (
 	"strconv"
 
 	"github.com/go-ini/ini"
-	"github.com/golang/glog"
 	"github.com/mitchellh/hashstructure"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/syncer"
 )
+
+var log = logf.Log.WithName("config-map-syncer")
 
 type configMapSyncer struct {
 	cluster *api.MysqlCluster
@@ -69,11 +71,11 @@ func (s *configMapSyncer) Sync(in runtime.Object) error {
 
 	if key, ok := out.ObjectMeta.Annotations["config_hash"]; ok {
 		if key == newHash {
-			glog.V(2).Infof("Skip updating configs, it's up to date: %s",
-				out.ObjectMeta.Annotations["config_hash"])
+			log.V(2).Info(fmt.Sprintf("Skip updating configs, it's up to date: %s",
+				out.ObjectMeta.Annotations["config_hash"]))
 			return nil
 		}
-		glog.V(2).Infof("Config map hashes doesn't match: %s != %s. Updateing config map.", key, newHash)
+		log.V(2).Info(fmt.Sprintf("Config map hashes doesn't match: %s != %s. Updateing config map.", key, newHash))
 	}
 
 	out.ObjectMeta.Annotations = map[string]string{
@@ -91,7 +93,7 @@ func (s *configMapSyncer) getMysqlConfData() (string, string, error) {
 	cfg := ini.Empty()
 	sec := cfg.Section("mysqld")
 
-	addKVConfigsToSection(sec, api.MysqlMasterSlaveConfigs, s.cluster.Spec.MysqlConf)
+	addKVConfigsToSection(sec, MysqlMasterSlaveConfigs, s.cluster.Spec.MysqlConf)
 
 	// include configs from /etc/mysql/conf.d/*.cnf
 	_, err := sec.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
@@ -105,7 +107,7 @@ func (s *configMapSyncer) getMysqlConfData() (string, string, error) {
 	}
 	hash, err := hashstructure.Hash(cfg.Section("mysqld").KeysHash(), nil)
 	if err != nil {
-		glog.Errorf("Can't compute hash for map data: %s", err)
+		log.Error(err, "Can't compute hash for map data.")
 		return "", "", err
 	}
 
@@ -119,7 +121,7 @@ func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
 	for _, extra := range extraMysqld {
 		for k, v := range extra {
 			if _, err := s.NewKey(k, v); err != nil {
-				glog.Errorf("Failed to add '%s':'%s' to config section, err: %s", k, v, err)
+				log.Error(err, fmt.Sprintf("Failed to add '%s':'%s' to config section", k, v))
 			}
 		}
 	}

@@ -14,11 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint: errcheck
 package v1alpha1
 
 import (
-	//	"log"
-	//	"os"
 	"path/filepath"
 	"testing"
 
@@ -29,6 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
+
+// nolint: errcheck
 
 var t *envtest.Environment
 var cfg *rest.Config

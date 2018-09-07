@@ -17,15 +17,17 @@ limitations under the License.
 package mysqlcluster
 
 import (
+	"fmt"
 	"time"
-
-	"github.com/golang/glog"
 
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
+
+var log = logf.Log.WithName("update-status")
 
 // UpdateStatusCondition sets the condition to a status.
 // for example Ready condition to True, or False
@@ -41,27 +43,27 @@ func (c *MysqlCluster) UpdateStatusCondition(condType api.ClusterConditionType,
 	t := time.Now()
 
 	if len(c.Status.Conditions) == 0 {
-		glog.V(4).Infof("Setting lastTransitionTime for mysql cluster "+
-			"%q condition %q to %v", c.Name, condType, t)
+		log.V(4).Info(fmt.Sprintf("Setting lastTransitionTime for mysql cluster "+
+			"%q condition %q to %v", c.Name, condType, t))
 		newCondition.LastTransitionTime = metav1.NewTime(t)
 		c.Status.Conditions = []api.ClusterCondition{newCondition}
 	} else {
 		if i, exist := c.condIndex(condType); exist {
 			cond := c.Status.Conditions[i]
 			if cond.Status != newCondition.Status {
-				glog.V(3).Infof("Found status change for mysql cluster "+
+				log.V(3).Info(fmt.Sprintf("Found status change for mysql cluster "+
 					"%q condition %q: %q -> %q; setting lastTransitionTime to %v",
-					c.Name, condType, cond.Status, status, t)
+					c.Name, condType, cond.Status, status, t))
 				newCondition.LastTransitionTime = metav1.NewTime(t)
 			} else {
 				newCondition.LastTransitionTime = cond.LastTransitionTime
 			}
-			glog.V(4).Infof("Setting lastTransitionTime for mysql cluster "+
-				"%q condition %q to %q", c.Name, condType, status)
+			log.V(4).Info(fmt.Sprintf("Setting lastTransitionTime for mysql cluster "+
+				"%q condition %q to %q", c.Name, condType, status))
 			c.Status.Conditions[i] = newCondition
 		} else {
-			glog.V(4).Infof("Setting new condition for mysql cluster %q, condition %q to %q",
-				c.Name, condType, status)
+			log.V(4).Info(fmt.Sprintf("Setting new condition for mysql cluster %q, condition %q to %q",
+				c.Name, condType, status))
 			newCondition.LastTransitionTime = metav1.NewTime(t)
 			c.Status.Conditions = append(c.Status.Conditions, newCondition)
 		}
@@ -97,8 +99,8 @@ func updateNodeCondition(ns *api.NodeStatus, cType api.NodeConditionType,
 	t := time.Now()
 
 	if len(ns.Conditions) == 0 {
-		glog.V(4).Infof("Setting lastTransitionTime for node "+
-			"%q condition %q to %v", ns.Name, cType, t)
+		log.V(4).Info(fmt.Sprintf("Setting lastTransitionTime for node "+
+			"%q condition %q to %v", ns.Name, cType, t))
 		newCondition.LastTransitionTime = metav1.NewTime(t)
 		ns.Conditions = []api.NodeCondition{newCondition}
 		changed = true
@@ -106,20 +108,20 @@ func updateNodeCondition(ns *api.NodeStatus, cType api.NodeConditionType,
 		if i, exist := nodeConditionIndex(ns, cType); exist {
 			cond := ns.Conditions[i]
 			if cond.Status != newCondition.Status {
-				glog.V(4).Infof("Found status change for node "+
+				log.V(4).Info(fmt.Sprintf("Found status change for node "+
 					"%q condition %q: %q -> %q; setting lastTransitionTime to %v",
-					ns.Name, cType, cond.Status, cStatus, t)
+					ns.Name, cType, cond.Status, cStatus, t))
 				newCondition.LastTransitionTime = metav1.NewTime(t)
 				changed = true
 			} else {
 				newCondition.LastTransitionTime = cond.LastTransitionTime
 			}
-			glog.V(4).Infof("Setting lastTransitionTime for node "+
-				"%q condition %q to %q", ns.Name, cType, cStatus)
+			log.V(4).Info(fmt.Sprintf("Setting lastTransitionTime for node "+
+				"%q condition %q to %q", ns.Name, cType, cStatus))
 			ns.Conditions[i] = newCondition
 		} else {
-			glog.V(4).Infof("Setting new condition for node %q, condition %q to %q",
-				ns.Name, cType, cStatus)
+			log.V(4).Info(fmt.Sprintf("Setting new condition for node %q, condition %q to %q",
+				ns.Name, cType, cStatus))
 			newCondition.LastTransitionTime = metav1.NewTime(t)
 			ns.Conditions = append(ns.Conditions, newCondition)
 			changed = true

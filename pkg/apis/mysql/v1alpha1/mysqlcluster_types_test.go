@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint: errcheck
 package v1alpha1
 
 import (
@@ -59,6 +60,16 @@ var _ = Describe("MysqlCluster CRUD", func() {
 			// Test Delete
 			Expect(c.Delete(context.TODO(), fetched)).NotTo(HaveOccurred())
 			Expect(c.Get(context.TODO(), key, fetched)).To(HaveOccurred())
+
+		})
+	})
+
+	Context("setup defaults", func() {
+		It("should populate defaults fields", func() {
+			cluster := &MysqlCluster{ObjectMeta: metav1.ObjectMeta{Name: "foo1", Namespace: "default"}}
+			SetDefaults_MysqlCluster(cluster)
+
+			Expect(cluster.Spec.MysqlConf).NotTo(BeNil())
 
 		})
 	})

@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint: errcheck
 package mysqlcluster
 
 import (
@@ -21,9 +22,9 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 
 	"golang.org/x/net/context"
 	apps "k8s.io/api/apps/v1"
@@ -96,7 +97,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			cluster = &api.MysqlCluster{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
 				Spec: api.MysqlClusterSpec{
-					Replicas:   1,
+					Replicas:   2,
 					SecretName: secret.Name,
 				},
 			}
@@ -144,6 +145,9 @@ var _ = Describe("MysqlCluster controller", func() {
 			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
+			// wait for the second event
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
 		})
 
 		AfterEach(func() {
@@ -153,8 +157,27 @@ var _ = Describe("MysqlCluster controller", func() {
 			c.Delete(context.TODO(), cluster)
 		})
 
+		It("should create a cluster", func() {
+
+			newCluster := &api.MysqlCluster{
+				ObjectMeta: metav1.ObjectMeta{Name: "new-cluster", Namespace: "default"},
+				Spec: api.MysqlClusterSpec{
+					Replicas:   1,
+					SecretName: secret.Name,
+				},
+			}
+			defer c.Delete(context.TODO(), newCluster)
+			Expect(c.Create(context.TODO(), newCluster)).To(Succeed())
+
+			newER := reconcile.Request{
+				NamespacedName: types.NamespacedName{Name: "new-cluster", Namespace: "default"},
+			}
+
+			Eventually(requests, timeout).Should(Receive(Equal(newER)))
+			Eventually(requests, timeout).Should(Receive(Equal(newER)))
+		})
+
 		It("should reconcile the statefulset", func() {
-			defer c.Delete(context.TODO(), cluster)
 			sfsKey := types.NamespacedName{
 				Name:      cluster.GetNameForResource(api.StatefulSet),
 				Namespace: cluster.Namespace,
@@ -173,23 +196,26 @@ var _ = Describe("MysqlCluster controller", func() {
 			})
 		})
 
-		DescribeTable("it reconciles components", func(key types.NamespacedName, obj runtime.Object) {
-			Eventually(func() error { return c.Get(context.TODO(), key, obj) }).Should(Succeed())
-			When("delete component", func() {
-				Expect(c.Delete(context.TODO(), obj)).To(Succeed())
-				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-				Eventually(func() error {
-					return c.Get(context.TODO(), key, obj)
-				}, timeout).Should(Succeed())
-			})
-		}, components.asTableEntries()...,
-		)
+		It("should create all the components when cluster is created", func() {
+			for _, obj := range components {
+				o := obj.(metav1.Object)
+				key := types.NamespacedName{Name: o.GetName(), Namespace: o.GetNamespace()}
+				Eventually(func() error { return c.Get(context.TODO(), key, obj) }).Should(Succeed())
+				When("delete component", func() {
+					Expect(c.Delete(context.TODO(), obj)).To(Succeed())
+					Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+					Eventually(func() error {
+						return c.Get(context.TODO(), key, obj)
+					}, timeout).Should(Succeed())
+				})
+
+			}
+		})
 
 		It("should have revision annotation on statefulset", func() {
-			defer c.Delete(context.TODO(), cluster)
 			// wait for the second update, else a race condition can happened
 			// with secret resource version.
-			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			//Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 			sfsKey := types.NamespacedName{
 				Name:      cluster.GetNameForResource(api.StatefulSet),
@@ -215,7 +241,6 @@ var _ = Describe("MysqlCluster controller", func() {
 		})
 
 		It("should have set ready condition", func() {
-			defer c.Delete(context.TODO(), cluster)
 			// get statefulset
 			sfsKey := types.NamespacedName{
 				Name:      cluster.GetNameForResource(api.StatefulSet),
@@ -227,24 +252,13 @@ var _ = Describe("MysqlCluster controller", func() {
 			}, timeout).Should(Succeed())
 
 			// update statefulset condition
-			statefulSet.Status.Conditions = []apps.StatefulSetCondition{
-				apps.StatefulSetCondition{
-					Type:   apps.StatefulSetConditionType("Ready"),
-					Status: core.ConditionTrue,
-				},
-			}
-			Expect(c.Update(context.TODO(), statefulSet)).To(Succeed())
+			statefulSet.Status.ReadyReplicas = 2
+			statefulSet.Status.Replicas = 2
+			Expect(c.Status().Update(context.TODO(), statefulSet)).To(Succeed())
 
+			// expect a reconcile event
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-
-			Eventually(func() []api.ClusterCondition {
-				cl := &api.MysqlCluster{}
-				c.Get(context.TODO(), types.NamespacedName{Name: cluster.Name, Namespace: cluster.Namespace}, cl)
-				return cl.Status.Conditions
-			}, timeout).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(api.ClusterConditionReady),
-				"Status": Equal(core.ConditionTrue),
-			})))
+			Eventually(getClusterConditions(c, cluster), timeout).Should(haveCondWithStatus(api.ClusterConditionReady, core.ConditionTrue))
 		})
 	})
 
@@ -256,20 +270,19 @@ func removeAllCreatedResource(c client.Client, clusterComps []runtime.Object) {
 	}
 }
 
-func (c clusterComponents) asTableEntries() []TableEntry {
-	var tableEntries []TableEntry
-
-	for _, obj := range c {
-		o := obj.(metav1.Object)
-		key := types.NamespacedName{
-			Name:      o.GetName(),
-			Namespace: o.GetNamespace(),
-		}
-		desc := fmt.Sprintf("reconciles %s %s", key.String(), obj.GetObjectKind().GroupVersionKind())
-		tableEntry := Entry(desc, obj, key)
-		tableEntries = append(tableEntries, tableEntry)
+// getClusterConditions is a helper func that returns a functions that returns cluster status conditions
+func getClusterConditions(c client.Client, cluster *api.MysqlCluster) func() []api.ClusterCondition {
+	return func() []api.ClusterCondition {
+		cl := &api.MysqlCluster{}
+		c.Get(context.TODO(), types.NamespacedName{Name: cluster.Name, Namespace: cluster.Namespace}, cl)
+		return cl.Status.Conditions
 	}
+}
 
-	return tableEntries
-
+// haveCondWithStatus is a helper func that returns a matcher to check for an existing condition in a ClusterCondition list.
+func haveCondWithStatus(condType api.ClusterConditionType, status core.ConditionStatus) gomegatypes.GomegaMatcher {
+	return ContainElement(MatchFields(IgnoreExtras, Fields{
+		"Type":   Equal(condType),
+		"Status": Equal(status),
+	}))
 }
