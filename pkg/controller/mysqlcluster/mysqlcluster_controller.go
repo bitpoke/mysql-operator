@@ -154,10 +154,9 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	wrapcluster.NewMysqlClusterWrapper(cluster).SetDefaults(r.opt)
 
 	defer func() {
-		// TODO: update just status and not in a defer
-		err := r.Update(context.TODO(), cluster) // nolint
-		if err != nil {
-			log.Error(err, "Failed to update cluster status!", "cluster", cluster)
+		sErr := r.Status().Update(context.TODO(), cluster)
+		if sErr != nil {
+			log.Error(sErr, "Failed to update cluster status!", "cluster", cluster)
 		}
 	}()
 
