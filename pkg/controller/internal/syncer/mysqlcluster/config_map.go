@@ -29,7 +29,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/syncer"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/syncer"
 )
 
 var log = logf.Log.WithName("config-map-syncer")
