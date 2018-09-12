@@ -27,9 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/syncer"
+	clusterwrap "github.com/presslabs/mysql-operator/pkg/controller/internal/wrappers/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
-	"github.com/presslabs/mysql-operator/pkg/syncer"
-	clusterwrap "github.com/presslabs/mysql-operator/pkg/wrappers/mysqlcluster"
 )
 
 const (
@@ -81,7 +81,6 @@ func (s *sfsSyncer) ShouldHaveOwnerReference() bool {
 func (s *sfsSyncer) Sync(in runtime.Object) error {
 	out := in.(*apps.StatefulSet)
 
-	fmt.Println("&&&&&&&&&&&&&&", out.Status, s.cluster.Spec.Replicas)
 	if out.Status.ReadyReplicas == s.cluster.Spec.Replicas {
 		s.cluster.UpdateStatusCondition(api.ClusterConditionReady,
 			core.ConditionTrue, "statefulset ready", "Cluster is ready.")

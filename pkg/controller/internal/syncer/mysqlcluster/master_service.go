@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/syncer"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/syncer"
 )
 
 type masterSVCSyncer struct {

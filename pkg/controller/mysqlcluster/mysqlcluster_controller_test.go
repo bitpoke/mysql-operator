@@ -145,8 +145,18 @@ var _ = Describe("MysqlCluster controller", func() {
 			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
-			// wait for the second event
-			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			// We need to drain the requests queue because syncing a subresource
+			// might trigger reconciliation again and we want to isolate tests
+			// to their own reconciliation requests
+			done := time.After(time.Second)
+			for {
+				select {
+				case <-requests:
+					continue
+				case <-done:
+					return
+				}
+			}
 
 		})
 

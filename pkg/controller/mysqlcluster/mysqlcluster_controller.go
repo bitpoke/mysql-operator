@@ -37,10 +37,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/syncer"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/syncer/mysqlcluster"
+	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/wrappers/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
-	"github.com/presslabs/mysql-operator/pkg/syncer"
-	"github.com/presslabs/mysql-operator/pkg/syncer/mysqlcluster"
-	wrapcluster "github.com/presslabs/mysql-operator/pkg/wrappers/mysqlcluster"
 )
 
 var log = logf.Log.WithName(controllerName)
