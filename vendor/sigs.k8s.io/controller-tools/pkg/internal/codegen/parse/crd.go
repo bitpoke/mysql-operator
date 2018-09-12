@@ -93,6 +93,9 @@ func (b *APIs) parseCRDs() {
 						resource.CRD.Spec.Subresources.Status = &v1beta1.CustomResourceSubresourceStatus{}
 					}
 
+					resource.CRD.Status.Conditions = []v1beta1.CustomResourceDefinitionCondition{}
+					resource.CRD.Status.StoredVersions = []string{}
+
 					if hasScaleSubresource(resource.Type) {
 						if resource.CRD.Spec.Subresources == nil {
 							resource.CRD.Spec.Subresources = &v1beta1.CustomResourceSubresources{}

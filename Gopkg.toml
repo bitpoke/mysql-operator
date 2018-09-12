@@ -18,16 +18,19 @@ required = [
 [prune]
   go-tests = true
 
+[[override]]
+  name="sigs.k8s.io/controller-runtime"
+  revision = "2d4d049627bbc26a97a68b9b3c3e9d02d91ae706"
 
 # STANZAS BELOW ARE GENERATED AND MAY BE WRITTEN - DO NOT MODIFY BELOW THIS LINE.
 
 [[constraint]]
   name="sigs.k8s.io/controller-runtime"
-  branch="master"
+  version="v0.1.1"
 
 [[constraint]]
   name="sigs.k8s.io/controller-tools"
-  branch="master"
+  version="v0.1.1"
 
 # For dependency below: Refer to issue https://github.com/golang/dep/issues/1799
 [[override]]

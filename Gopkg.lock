@@ -243,7 +243,6 @@
   packages = [
     ".",
     "config",
-    "extensions/table",
     "internal/codelocation",
     "internal/containernode",
     "internal/failer",
@@ -740,7 +739,6 @@
   revision = "e3762e86a74c878ffed47484592986685639c2cd"
 
 [[projects]]
-  branch = "master"
   digest = "1:bc3ce84c9f7bd41df7e790eed3ad254d124dd1347ea9e9108c61b34ab24421bf"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
@@ -772,8 +770,7 @@
   revision = "2d4d049627bbc26a97a68b9b3c3e9d02d91ae706"
 
 [[projects]]
-  branch = "master"
-  digest = "1:60b8851cad0eb95e81fc3c845a0a465e8b6a13813ba7a1a454a605ba7ba0a194"
+  digest = "1:6dfe024674229af3c6e3791718837798eeada8ea41628e61e31f0774ffea41b3"
   name = "sigs.k8s.io/controller-tools"
   packages = [
     "cmd/controller-gen",
@@ -785,7 +782,8 @@
     "pkg/util",
   ]
   pruneopts = "T"
-  revision = "110fef43ab12deecdf7b55c0977d58f824075b39"
+  revision = "bfd3eefb7f22ed714b2acd38730c36992ee6af70"
+  version = "v0.1.5"
 
 [[projects]]
   branch = "master"
@@ -806,9 +804,9 @@
     "github.com/go-ini/ini",
     "github.com/mitchellh/hashstructure",
     "github.com/onsi/ginkgo",
-    "github.com/onsi/ginkgo/extensions/table",
     "github.com/onsi/gomega",
     "github.com/onsi/gomega/gstruct",
+    "github.com/onsi/gomega/types",
     "github.com/spf13/pflag",
     "golang.org/x/net/context",
     "k8s.io/api/apps/v1",
