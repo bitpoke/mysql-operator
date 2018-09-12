@@ -21,51 +21,50 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 )
 
-type headlessSVCSyncer struct {
-	cluster *api.MysqlCluster
+type masterSVCSyncer struct {
+	cluster   *api.MysqlCluster
+	masterSVC *core.Service
 }
 
-// NewHeadlessSVCSyncer returns a service syncer
-func NewHeadlessSVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
-	return &headlessSVCSyncer{
-		cluster: cluster,
-	}
-}
+// NewMasterSVCSyncer returns a service syncer for master service
+func NewMasterSVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
 
-func (s *headlessSVCSyncer) GetExistingObjectPlaceholder() runtime.Object {
-	return &core.Service{
+	obj := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.cluster.GetNameForResource(api.HeadlessSVC),
-			Namespace: s.cluster.Namespace,
+			Name:      cluster.GetNameForResource(api.MasterService),
+			Namespace: cluster.Namespace,
 		},
 	}
+	return &masterSVCSyncer{
+		cluster:   cluster,
+		masterSVC: obj,
+	}
 }
 
-func (s *headlessSVCSyncer) ShouldHaveOwnerReference() bool {
-	return true
+func (s *masterSVCSyncer) GetObject() runtime.Object { return s.masterSVC }
+func (s *masterSVCSyncer) GetOwner() runtime.Object  { return s.cluster }
+func (s *masterSVCSyncer) GetEventReasonForError(err error) syncer.EventReason {
+	return syncer.BasicEventReason("MasterSVC", err)
 }
 
-func (s *headlessSVCSyncer) Sync(in runtime.Object) error {
+func (s *masterSVCSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*core.Service)
 
-	out.Spec.ClusterIP = "None"
+	out.Spec.Type = "ClusterIP"
 	out.Spec.Selector = s.cluster.GetLabels()
-	if len(out.Spec.Ports) != 2 {
-		out.Spec.Ports = make([]core.ServicePort, 2)
+	out.Spec.Selector["role"] = "master"
+
+	if len(out.Spec.Ports) != 1 {
+		out.Spec.Ports = make([]core.ServicePort, 1)
 	}
 	out.Spec.Ports[0].Name = MysqlPortName
 	out.Spec.Ports[0].Port = MysqlPort
 	out.Spec.Ports[0].TargetPort = TargetPort
 	out.Spec.Ports[0].Protocol = core.ProtocolTCP
-
-	out.Spec.Ports[1].Name = ExporterPortName
-	out.Spec.Ports[1].Port = api.ExporterPort
-	out.Spec.Ports[1].TargetPort = ExporterTargetPort
-	out.Spec.Ports[1].Protocol = core.ProtocolTCP
 
 	return nil
 

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Pressinfra SRL
+Copyright 2018 Pressinfra SRL.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,15 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package syncer
-
-import (
-	"k8s.io/apimachinery/pkg/runtime"
-)
-
-// Interface represents the actions that a syncer should have
-type Interface interface {
-	Sync(in runtime.Object) error
-	GetExistingObjectPlaceholder() runtime.Object
-	ShouldHaveOwnerReference() bool
-}
+/*
+Package controllerutil provides various utility code for writing kubernetes
+controllers using kubebuilder and controller-runtime. We extract here common
+code from our controllers code base.
+*/
+package controllerutil

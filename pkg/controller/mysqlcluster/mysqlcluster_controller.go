@@ -23,34 +23,26 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/presslabs/controller-util/syncer"
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
 var log = logf.Log.WithName(controllerName)
 
 const controllerName = "mysqlcluster-controller"
-
-const (
-	eventNormal  = "Normal"
-	eventWarning = "Warning"
-)
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -160,24 +152,20 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		}
 	}()
 
-	// run the config syncers
-	configSyncers := []syncer.Interface{
-		mysqlcluster.NewConfigMapSyncer(cluster),
-		mysqlcluster.NewSecretSyncer(cluster),
-	}
-
-	err = r.sync(cluster, configSyncers)
+	configMapSyncer := mysqlcluster.NewConfigMapSyncer(cluster)
+	err = syncer.Sync(context.TODO(), configMapSyncer, r.Client, r.scheme, r.recorder)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// get config map and secret revision to annotate the statefulset
-	// TODO: update this, no need to get secret and config again, already are updated
-	// in existing object provided to CreateOrUpdate
-	configRev, secretRev, err := r.getConfigAndSecretRevs(cluster)
+	secretSyncer := mysqlcluster.NewSecretSyncer(cluster)
+	err = syncer.Sync(context.TODO(), secretSyncer, r.Client, r.scheme, r.recorder)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
+	configMapResourceVersion := configMapSyncer.GetObject().(*core.ConfigMap).ResourceVersion
+	secretResourceVersion := secretSyncer.GetObject().(*core.Secret).ResourceVersion
 
 	// run the syncers for services, pdb and statefulset
 	otherSyncers := []syncer.Interface{
@@ -185,81 +173,20 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		mysqlcluster.NewMasterSVCSyncer(cluster),
 		mysqlcluster.NewHealthySVCSyncer(cluster),
 
-		mysqlcluster.NewStatefulSetSyncer(cluster, configRev, secretRev, r.opt),
+		mysqlcluster.NewStatefulSetSyncer(cluster, configMapResourceVersion, secretResourceVersion, r.opt),
 	}
 
 	if len(cluster.Spec.MinAvailable) != 0 {
 		otherSyncers = append(otherSyncers, mysqlcluster.NewPDBSyncer(cluster))
 	}
 
-	return reconcile.Result{}, r.sync(cluster, otherSyncers)
-}
+	for _, sync := range otherSyncers {
 
-func (r *ReconcileMysqlCluster) sync(cluster *mysqlv1alpha1.MysqlCluster, syncers []syncer.Interface) error {
-	for _, s := range syncers {
-		existing := s.GetExistingObjectPlaceholder()
-
-		// set owner reference on objects that requires owner reference
-		syncFn := s.Sync
-		if s.ShouldHaveOwnerReference() {
-			syncFn = func(in runtime.Object) error {
-				// TODO: check this
-				metaIn := in.(metav1.Object)
-				if err := controllerutil.SetControllerReference(cluster, metaIn, r.scheme); err != nil {
-					return err
-				}
-				return s.Sync(in)
-			}
-		}
-
-		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, existing, syncFn)
-		reason := getErrorEventReason(existing, err)
-
-		key := types.NamespacedName{
-			Name:      cluster.GetName(),
-			Namespace: cluster.GetNamespace(),
-		}
-
-		log.Info(string(op), "key", key.String(), "kind", existing.GetObjectKind().GroupVersionKind().Kind)
-
+		err = syncer.Sync(context.TODO(), sync, r.Client, r.scheme, r.recorder)
 		if err != nil {
-			r.recorder.Eventf(cluster, eventWarning, reason, "%T %s/%s failed syncing: %s", existing, cluster.Namespace, cluster.Name, err)
-			return err
-		}
-		if op != controllerutil.OperationResultNone {
-			r.recorder.Eventf(cluster, eventNormal, reason, "%T %s/%s %s successfully", existing, cluster.Namespace, cluster.Name, op)
+			return reconcile.Result{}, err
 		}
 	}
-	return nil
-}
 
-func (r *ReconcileMysqlCluster) getConfigAndSecretRevs(cluster *mysqlv1alpha1.MysqlCluster) (string, string, error) {
-	configMap := &core.ConfigMap{}
-	err := r.Get(context.TODO(), types.NamespacedName{
-		Name:      cluster.GetNameForResource(mysqlv1alpha1.ConfigMap),
-		Namespace: cluster.Namespace,
-	}, configMap)
-	if err != nil {
-		return "", "", err
-	}
-
-	secret := &core.Secret{}
-	err = r.Get(context.TODO(), types.NamespacedName{
-		Name:      cluster.Spec.SecretName,
-		Namespace: cluster.Namespace,
-	}, secret)
-	if err != nil {
-		return "", "", err
-	}
-
-	return configMap.ResourceVersion, secret.ResourceVersion, nil
-}
-
-func getErrorEventReason(obj runtime.Object, err error) string {
-	op := "Updated"
-	if err != nil {
-		op = "Failed"
-	}
-
-	return fmt.Sprintf("%T%s", obj, op)
+	return reconcile.Result{}, nil
 }

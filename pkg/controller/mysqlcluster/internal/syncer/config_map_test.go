@@ -53,17 +53,17 @@ var _ = Describe("ConfigMap syncer", func() {
 		Context("for a valid config", func() {
 			It("should be created and updated", func() {
 				syncer := NewConfigMapSyncer(cluster)
-				cm := syncer.GetExistingObjectPlaceholder().(*core.ConfigMap)
+				cm := syncer.GetObject().(*core.ConfigMap)
 
 				Expect(cm.Name).To(Equal(cluster.GetNameForResource(api.ConfigMap)))
-				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
+				Expect(syncer.SyncFn(cm)).NotTo(HaveOccurred())
 
 				Expect(cm.ObjectMeta.Annotations).Should(HaveKey("config_hash"))
 				oldHash := cm.ObjectMeta.Annotations["config_hash"]
 
 				// update cluster config should reflect in
 				cluster.Spec.MysqlConf["ceva_nou"] = "1"
-				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
+				Expect(syncer.SyncFn(cm)).NotTo(HaveOccurred())
 				Expect(cm.ObjectMeta.Annotations["config_hash"]).ToNot(Equal(oldHash))
 			})
 		})
@@ -71,27 +71,27 @@ var _ = Describe("ConfigMap syncer", func() {
 		Context("update cluster MysqlConfig", func() {
 			It("should reflect in config hash", func() {
 				syncer := NewConfigMapSyncer(cluster)
-				cm := syncer.GetExistingObjectPlaceholder().(*core.ConfigMap)
-				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
+				cm := syncer.GetObject().(*core.ConfigMap)
+				Expect(syncer.SyncFn(cm)).NotTo(HaveOccurred())
 
 				oldHash := cm.ObjectMeta.Annotations["config_hash"]
 				cluster.Spec.MysqlConf["ceva_nou"] = "1"
 
-				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
+				Expect(syncer.SyncFn(cm)).NotTo(HaveOccurred())
 				Expect(cm.ObjectMeta.Annotations["config_hash"]).ToNot(Equal(oldHash))
 			})
 
 			It("should not change multiple times", func() {
 				syncer := NewConfigMapSyncer(cluster)
-				cm := syncer.GetExistingObjectPlaceholder().(*core.ConfigMap)
-				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
+				cm := syncer.GetObject().(*core.ConfigMap)
+				Expect(syncer.SyncFn(cm)).NotTo(HaveOccurred())
 
 				cluster.Spec.MysqlConf["ceva_nou"] = "1"
 
-				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
+				Expect(syncer.SyncFn(cm)).NotTo(HaveOccurred())
 				oldHash := cm.ObjectMeta.Annotations["config_hash"]
 
-				Expect(syncer.Sync(cm)).NotTo(HaveOccurred())
+				Expect(syncer.SyncFn(cm)).NotTo(HaveOccurred())
 				Expect(cm.ObjectMeta.Annotations["config_hash"]).To(Equal(oldHash))
 			})
 		})
