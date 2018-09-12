@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 )
@@ -31,22 +32,16 @@ type headlessSVCSyncer struct {
 
 // NewHeadlessSVCSyncer returns a service syncer
 func NewHeadlessSVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
-	return &headlessSVCSyncer{
-		cluster: cluster,
-	}
-}
 
-func (s *headlessSVCSyncer) GetExistingObjectPlaceholder() runtime.Object {
-	return &core.Service{
+	obj := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.cluster.GetNameForResource(api.HeadlessSVC),
-			Namespace: s.cluster.Namespace,
+			Name:      cluster.GetNameForResource(api.HeadlessSVC),
+			Namespace: cluster.Namespace,
 		},
 	}
-}
 
-func (s *headlessSVCSyncer) ShouldHaveOwnerReference() bool {
-	return true
+	return syncer.New("HeadLessSVCSyncer", cluster.AsOwnerReference(), obj, Sync)
+
 }
 
 func (s *headlessSVCSyncer) Sync(in runtime.Object) error {
@@ -69,4 +64,10 @@ func (s *headlessSVCSyncer) Sync(in runtime.Object) error {
 
 	return nil
 
+}
+
+func (s *headlessSVCSyncer) GetObject() runtime.Object { return s.obj }
+func (s *headlessSVCSyncer) GetOwner() runtime.Object  { return s.owner }
+func (s *headlessSVCSyncer) GetEventReasonForError(err error) EventReason {
+	return BasicEventReason(strcase.ToCamel(s.name), err)
 }
