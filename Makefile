@@ -2,7 +2,7 @@
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 BINDIR := $(PWD)/bin
-KUBEBUILDER_VERSION ?= 1.0.0
+KUBEBUILDER_VERSION ?= 1.0.4
 
 all: test manager
 

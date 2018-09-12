@@ -22,39 +22,41 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/internal/syncer"
+	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 )
 
-type masterSVCSyncer struct {
+type healthySVCSyncer struct {
 	cluster *api.MysqlCluster
 }
 
-// NewMasterSVCSyncer returns a service syncer for master service
-func NewMasterSVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
-	return &masterSVCSyncer{
+// NewHealthySVCSyncer returns a service syncer
+func NewHealthySVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
+	return &healthySVCSyncer{
 		cluster: cluster,
 	}
 }
 
-func (s *masterSVCSyncer) GetExistingObjectPlaceholder() runtime.Object {
+// GetExistingObjectPlaceholder returs a service object with Name and Namespace
+// specified
+func (s *healthySVCSyncer) GetExistingObjectPlaceholder() runtime.Object {
 	return &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.cluster.GetNameForResource(api.MasterService),
+			Name:      s.cluster.GetNameForResource(api.HealthyNodesService),
 			Namespace: s.cluster.Namespace,
 		},
 	}
 }
 
-func (s *masterSVCSyncer) ShouldHaveOwnerReference() bool {
+func (s *healthySVCSyncer) ShouldHaveOwnerReference() bool {
 	return true
 }
 
-func (s *masterSVCSyncer) Sync(in runtime.Object) error {
+func (s *healthySVCSyncer) Sync(in runtime.Object) error {
 	out := in.(*core.Service)
 
 	out.Spec.Type = "ClusterIP"
 	out.Spec.Selector = s.cluster.GetLabels()
-	out.Spec.Selector["role"] = "master"
+	out.Spec.Selector["mysql"] = "healthy"
 
 	if len(out.Spec.Ports) != 1 {
 		out.Spec.Ports = make([]core.ServicePort, 1)
