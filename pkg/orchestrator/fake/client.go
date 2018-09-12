@@ -167,7 +167,7 @@ func (o *OrcFakeClient) Cluster(cluster string) ([]Instance, error) {
 		return nil, fmt.Errorf("not found")
 	}
 
-	var insts []Instance
+	insts := []Instance{}
 	for _, instP := range instsPointers {
 		insts = append(insts, *instP)
 	}
@@ -203,7 +203,7 @@ func (o *OrcFakeClient) SetHostWritable(key InstanceKey) error {
 			}
 		}
 	}
-	if check != true {
+	if !check {
 		return fmt.Errorf("the desired host and port was not found")
 	}
 
@@ -222,7 +222,7 @@ func (o *OrcFakeClient) SetHostReadOnly(key InstanceKey) error {
 			}
 		}
 	}
-	if check != true {
+	if !check {
 		return fmt.Errorf("the desired host and port was not found")
 	}
 	return nil

@@ -72,7 +72,7 @@ func (m *eventLockMap) getKey(meta metav1.Object) string {
 }
 
 func (m *eventLockMap) CreateEvent(evt event.CreateEvent) {
-	m.Map.Store(m.getKey(evt.Meta), event.GenericEvent{
+	m.Map.Store(m.getKey(evt.Meta), event.GenericEvent{ // nolint: megacheck
 		Meta:   evt.Meta,
 		Object: evt.Object,
 	})
