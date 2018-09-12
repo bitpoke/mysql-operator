@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 )
@@ -31,24 +32,15 @@ type healthySVCSyncer struct {
 
 // NewHealthySVCSyncer returns a service syncer
 func NewHealthySVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
-	return &healthySVCSyncer{
-		cluster: cluster,
-	}
-}
 
-// GetExistingObjectPlaceholder returs a service object with Name and Namespace
-// specified
-func (s *healthySVCSyncer) GetExistingObjectPlaceholder() runtime.Object {
-	return &core.Service{
+	obj := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.cluster.GetNameForResource(api.HealthyNodesService),
-			Namespace: s.cluster.Namespace,
+			Name:      cluster.GetNameForResource(api.HealthyNodesService),
+			Namespace: cluster.Namespace,
 		},
 	}
-}
 
-func (s *healthySVCSyncer) ShouldHaveOwnerReference() bool {
-	return true
+	return syncer.New("HealthySVCSyncer", cluster.AsOwnerReference(), obj, Sync)
 }
 
 func (s *healthySVCSyncer) Sync(in runtime.Object) error {
@@ -68,4 +60,10 @@ func (s *healthySVCSyncer) Sync(in runtime.Object) error {
 
 	return nil
 
+}
+
+func (s *healthySVCSyncer) GetObject() runtime.Object { return s.obj }
+func (s *healthySVCSyncer) GetOwner() runtime.Object  { return s.owner }
+func (s *healthySVCSyncer) GetEventReasonForError(err error) EventReason {
+	return BasicEventReason(strcase.ToCamel(s.name), err)
 }

@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
+	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 )
@@ -36,6 +37,7 @@ var log = logf.Log.WithName("config-map-syncer")
 
 type configMapSyncer struct {
 	cluster *api.MysqlCluster
+	obj     runtime.Object
 }
 
 // mysqlMasterSlaveConfigs represents the configuration that mysql-operator needs by default
@@ -99,22 +101,16 @@ var mysqlMasterSlaveConfigs = map[string]string{
 
 // NewConfigMapSyncer returns config map syncer
 func NewConfigMapSyncer(cluster *api.MysqlCluster) syncer.Interface {
-	return &configMapSyncer{
-		cluster: cluster,
-	}
-}
 
-func (s *configMapSyncer) GetExistingObjectPlaceholder() runtime.Object {
-	return &core.ConfigMap{
+	obj := &core.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.cluster.GetNameForResource(api.ConfigMap),
-			Namespace: s.cluster.Namespace,
+			Name:      cluster.GetNameForResource(api.ConfigMap),
+			Namespace: cluster.Namespace,
 		},
 	}
-}
 
-func (s *configMapSyncer) ShouldHaveOwnerReference() bool {
-	return true
+	return syncer.New("ConfigMapSyncer", cluster.AsOwnerReference(), obj, Sync)
+
 }
 
 func (s *configMapSyncer) Sync(in runtime.Object) error {
@@ -194,4 +190,10 @@ func writeConfigs(cfg *ini.File) (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+func (s *configMapSyncer) GetObject() runtime.Object { return s.obj }
+func (s *configMapSyncer) GetOwner() runtime.Object  { return s.owner }
+func (s *configMapSyncer) GetEventReasonForError(err error) EventReason {
+	return BasicEventReason(strcase.ToCamel(s.name), err)
 }

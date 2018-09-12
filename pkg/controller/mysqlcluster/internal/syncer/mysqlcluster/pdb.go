@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 )
@@ -32,22 +33,15 @@ type pdbSyncer struct {
 
 // NewPDBSyncer returns the syncer for pdb
 func NewPDBSyncer(cluster *api.MysqlCluster) syncer.Interface {
-	return &pdbSyncer{
-		cluster: cluster,
-	}
-}
 
-func (s *pdbSyncer) GetExistingObjectPlaceholder() runtime.Object {
-	return &policy.PodDisruptionBudget{
+	obj := &policy.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.cluster.GetNameForResource(api.PodDisruptionBudget),
-			Namespace: s.cluster.Namespace,
+			Name:      cluster.GetNameForResource(api.PodDisruptionBudget),
+			Namespace: cluster.Namespace,
 		},
 	}
-}
 
-func (s *pdbSyncer) ShouldHaveOwnerReference() bool {
-	return true
+	return syncer.New("PdbSyncer", cluster.AsOwnerReference(), obj, Sync)
 }
 
 func (s *pdbSyncer) Sync(in runtime.Object) error {
@@ -60,4 +54,10 @@ func (s *pdbSyncer) Sync(in runtime.Object) error {
 	out.Spec.MinAvailable = &ma
 	out.Spec.Selector = metav1.SetAsLabelSelector(s.cluster.GetLabels())
 	return nil
+}
+
+func (s *pdbSyncer) GetObject() runtime.Object { return s.obj }
+func (s *pdbSyncer) GetOwner() runtime.Object  { return s.owner }
+func (s *pdbSyncer) GetEventReasonForError(err error) EventReason {
+	return BasicEventReason(strcase.ToCamel(s.name), err)
 }

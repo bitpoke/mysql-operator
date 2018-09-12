@@ -40,23 +40,15 @@ type secretSyncer struct {
 
 // NewSecretSyncer returns secret syncer
 func NewSecretSyncer(cluster *api.MysqlCluster) syncer.Interface {
-	return &secretSyncer{
-		cluster: cluster,
-		opt:     options.GetOptions(),
-	}
-}
 
-func (s *secretSyncer) GetExistingObjectPlaceholder() runtime.Object {
-	return &core.Secret{
+	obj := &core.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      s.cluster.Spec.SecretName,
 			Namespace: s.cluster.Namespace,
 		},
 	}
-}
 
-func (s *secretSyncer) ShouldHaveOwnerReference() bool {
-	return false
+	return syncer.New("SecretSyncer", cluster.AsOwnerReference(), obj, Sync)
 }
 
 func (s *secretSyncer) Sync(in runtime.Object) error {
@@ -91,4 +83,10 @@ func (s *secretSyncer) Sync(in runtime.Object) error {
 	}
 
 	return nil
+}
+
+func (s *secretSyncer) GetObject() runtime.Object { return s.obj }
+func (s *secretSyncer) GetOwner() runtime.Object  { return nil }
+func (s *secretSyncer) GetEventReasonForError(err error) EventReason {
+	return BasicEventReason(strcase.ToCamel(s.name), err)
 }
