@@ -39,7 +39,7 @@ import (
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/options"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
-	"github.com/presslabs/mysql-operator/pkg/util/stoppkg"
+	"github.com/presslabs/mysql-operator/pkg/util/stop"
 )
 
 const (
@@ -54,15 +54,14 @@ var log = logf.Log.WithName(controllerName)
 var reconcileTimePeriod = time.Second * 5
 
 type eventLockMap struct {
-	lock sync.RWMutex
-	Map  map[string]event.GenericEvent
+	Map sync.Map
 }
 
 // newEventLockMap returns a map of clusters to events with custom methods to
 // register an event or to remove an event
 func newEventLockMap() eventLockMap {
 	return eventLockMap{
-		Map: make(map[string]event.GenericEvent),
+		Map: sync.Map{},
 	}
 }
 
@@ -73,23 +72,21 @@ func (m *eventLockMap) getKey(meta metav1.Object) string {
 }
 
 func (m *eventLockMap) CreateEvent(evt event.CreateEvent) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	m.Map[m.getKey(evt.Meta)] = event.GenericEvent{
+	m.Map.Store(m.getKey(evt.Meta), event.GenericEvent{
 		Meta:   evt.Meta,
 		Object: evt.Object,
-	}
+	})
 }
 
 func (m *eventLockMap) DeleteEvent(evt event.DeleteEvent) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.Map.Delete(m.getKey(evt.Meta))
+}
 
-	_, ok := m.Map[m.getKey(evt.Meta)]
-	if ok {
-		delete(m.Map, m.getKey(evt.Meta))
-	}
+func (m *eventLockMap) PutEventsOn(eventChan chan event.GenericEvent) {
+	m.Map.Range(func(key, value interface{}) bool {
+		eventChan <- value.(event.GenericEvent)
+		return true
+	})
 }
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
@@ -141,7 +138,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	stop := stoppkg.Channel
+	stop := stop.Channel
 
 	// create source channel that listen for events on events chan
 	events := make(chan event.GenericEvent)
@@ -162,12 +159,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			case <-stop:
 				return
 			case <-time.After(reconcileTimePeriod):
-				// write all clusters to envents chan to be processed
-				clustersMap.lock.RLock()
-				for _, clEvent := range clustersMap.Map {
-					events <- clEvent
-				}
-				clustersMap.lock.RUnlock()
+				// write all clusters to envents chan to be processed\
+				clustersMap.PutEventsOn(events)
 			}
 		}
 	}()

@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 )
 
@@ -34,7 +35,7 @@ const (
 )
 
 type orcUpdater struct {
-	cluster   *api.MysqlCluster
+	cluster   *wrapcluster.MysqlCluster
 	recorder  record.EventRecorder
 	orcClient orc.Interface
 }
@@ -47,7 +48,7 @@ type Syncer interface {
 // NewOrcUpdater returns a syncer that updates cluster status from orchestrator.
 func NewOrcUpdater(cluster *api.MysqlCluster, r record.EventRecorder, orcClient orc.Interface) Syncer {
 	return &orcUpdater{
-		cluster:   cluster,
+		cluster:   wrapcluster.NewMysqlClusterWrapper(cluster),
 		recorder:  r,
 		orcClient: orcClient,
 	}
@@ -225,7 +226,7 @@ func (ou *orcUpdater) getRecoveriesToAck(recoveries []orc.TopologyRecovery) []or
 }
 
 // nolint: unparam
-func condIndexCluster(cluster *api.MysqlCluster, ty api.ClusterConditionType) (int, bool) {
+func condIndexCluster(cluster *wrapcluster.MysqlCluster, ty api.ClusterConditionType) (int, bool) {
 	for i, cond := range cluster.Status.Conditions {
 		if cond.Type == ty {
 			return i, true
@@ -236,8 +237,7 @@ func condIndexCluster(cluster *api.MysqlCluster, ty api.ClusterConditionType) (i
 }
 
 func (ou *orcUpdater) updateNodeCondition(host string, cType api.NodeConditionType, status core.ConditionStatus) {
-	i := ou.cluster.Status.GetNodeStatusIndex(host)
-	ou.cluster.Status.Nodes[i].UpdateNodeCondition(cType, status)
+	ou.cluster.UpdateNodeConditionStatus(host, cType, status)
 }
 
 func (ou *orcUpdater) removeNodeConditionNotIn(hosts []string) {
