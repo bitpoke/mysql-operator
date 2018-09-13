@@ -79,25 +79,28 @@ var _ = Describe("MysqlCluster controller", func() {
 			expectedRequest reconcile.Request
 			cluster         *api.MysqlCluster
 			secret          *core.Secret
+			clusterKey      types.NamespacedName
 		)
 
 		BeforeEach(func() {
-			name := fmt.Sprintf("cluster-%d", rand.Int31())
-			ns := "default"
+			clusterKey = types.NamespacedName{
+				Name:      fmt.Sprintf("cluster-%d", rand.Int31()),
+				Namespace: "default",
+			}
 
 			expectedRequest = reconcile.Request{
-				NamespacedName: types.NamespacedName{Name: name, Namespace: ns},
+				NamespacedName: clusterKey,
 			}
 
 			secret = &core.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "the-secret", Namespace: ns},
+				ObjectMeta: metav1.ObjectMeta{Name: "the-secret", Namespace: clusterKey.Namespace},
 				StringData: map[string]string{
 					"ROOT_PASSWORD": "this-is-secret",
 				},
 			}
 
 			cluster = &api.MysqlCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
+				ObjectMeta: metav1.ObjectMeta{Name: clusterKey.Name, Namespace: clusterKey.Namespace},
 				Spec: api.MysqlClusterSpec{
 					Replicas:   1,
 					SecretName: secret.Name,
@@ -105,6 +108,19 @@ var _ = Describe("MysqlCluster controller", func() {
 			}
 
 			Expect(c.Create(context.TODO(), secret)).To(Succeed())
+
+			// We need to drain the requests queue because syncing a subresource
+			// might trigger reconciliation again and we want to isolate tests
+			// to their own reconciliation requests
+			done := time.After(time.Second)
+			for {
+				select {
+				case <-requests:
+					continue
+				case <-done:
+					return
+				}
+			}
 
 		})
 
@@ -139,6 +155,7 @@ var _ = Describe("MysqlCluster controller", func() {
 
 			// update the cluster
 			cluster.Spec.Replicas = 3
+			Expect(c.Get(context.TODO(), clusterKey, cluster)).To(Succeed()) // update cluster
 			Expect(c.Update(context.TODO(), cluster)).To(Succeed())
 
 			// wait a second for a request

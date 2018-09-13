@@ -115,7 +115,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to MysqlCluster
+	// Watch for changes to MysqlCluster. just for add and delete events
 	err = c.Watch(&source.Kind{Type: &mysqlv1alpha1.MysqlCluster{}}, &handler.Funcs{
 		CreateFunc: func(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 			if evt.Meta == nil {
@@ -138,17 +138,18 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	stop := stop.Channel
-
 	// create source channel that listen for events on events chan
 	events := make(chan event.GenericEvent)
 	chSource := source.Channel{Source: events}
-	chSource.InjectStopChannel(stop) // nolint: errcheck
-	err = c.Watch(
-		&chSource,
-		&handler.EnqueueRequestForObject{},
-	)
-	if err != nil {
+
+	// inject stop channel into source
+	// this is done due to: https://github.com/kubernetes-sigs/controller-runtime/issues/103
+	if err = chSource.InjectStopChannel(stop.Channel); err != nil {
+		return err
+	}
+
+	// watch for events on channel `events`
+	if err = c.Watch(&chSource, &handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
 
@@ -156,7 +157,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	go func() {
 		for {
 			select {
-			case <-stop:
+			case <-stop.Channel:
 				return
 			case <-time.After(reconcileTimePeriod):
 				// write all clusters to envents chan to be processed\
@@ -195,7 +196,14 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+
 	log.Info(fmt.Sprintf("Reconciling cluster: %s/%s", cluster.Name, cluster.Namespace))
+
+	defer func() {
+		if sErr := r.Status().Update(context.TODO(), cluster); sErr != nil {
+			log.Error(sErr, "failed to update cluster status", "cluster", cluster)
+		}
+	}()
 
 	ou := NewOrcUpdater(cluster, r.recorder, r.orcClient)
 	if err := ou.Sync(); err != nil {
