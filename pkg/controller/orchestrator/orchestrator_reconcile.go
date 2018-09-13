@@ -58,8 +58,7 @@ func (ou *orcUpdater) Sync() error {
 	// sync status from orchestrator
 	if insts, err := ou.orcClient.Cluster(ou.cluster.GetClusterAlias()); err == nil {
 
-		err = ou.updateNodesReadOnlyFlagInOrc(insts)
-		if err != nil {
+		if err = ou.updateNodesReadOnlyFlagInOrc(insts); err != nil {
 			log.Error(err, "Error setting Master readOnly/writable", "instances", insts)
 		}
 
@@ -413,7 +412,7 @@ func (ou *orcUpdater) updateNodesReadOnlyFlagInOrc(insts []orc.Instance) error {
 			if err = ou.setInstReadOnly(inst); err != nil {
 				log.Error(err, "Put node in read only")
 			}
-		} else if !ou.cluster.Spec.ReadOnly && err == nil {
+		} else if !ou.cluster.Spec.ReadOnly {
 			if err = ou.getNodeOutOfMaintenance(inst); err != nil {
 				log.Error(err, "Get node out of maintenance")
 			}
