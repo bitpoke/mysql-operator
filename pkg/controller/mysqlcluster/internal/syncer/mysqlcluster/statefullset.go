@@ -26,9 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	clusterwrap "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
@@ -53,32 +53,35 @@ type sfsSyncer struct {
 	configMapRevision string
 	secretRevision    string
 	opt               *options.Options
+	sfs               *apps.StatefulSet
 }
 
 // NewStatefulSetSyncer returns a syncer for stateful set
 func NewStatefulSetSyncer(cluster *api.MysqlCluster, cmRev, secRev string, opt *options.Options) syncer.Interface {
+
+	obj := &apps.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cluster.GetNameForResource(api.StatefulSet),
+			Namespace: cluster.Namespace,
+		},
+	}
+
 	return &sfsSyncer{
 		cluster:           clusterwrap.NewMysqlClusterWrapper(cluster),
 		configMapRevision: cmRev,
 		secretRevision:    secRev,
 		opt:               opt,
+		sfs:               obj,
 	}
 }
 
-func (s *sfsSyncer) GetExistingObjectPlaceholder() runtime.Object {
-	return &apps.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.cluster.GetNameForResource(api.StatefulSet),
-			Namespace: s.cluster.Namespace,
-		},
-	}
+func (s *sfsSyncer) GetObject() runtime.Object { return s.sfs }
+func (s *sfsSyncer) GetOwner() runtime.Object  { return s.cluster }
+func (s *sfsSyncer) GetEventReasonForError(err error) syncer.EventReason {
+	return syncer.BasicEventReason("PdbSyncer", err)
 }
 
-func (s *sfsSyncer) ShouldHaveOwnerReference() bool {
-	return true
-}
-
-func (s *sfsSyncer) Sync(in runtime.Object) error {
+func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*apps.StatefulSet)
 
 	if out.Status.ReadyReplicas == s.cluster.Spec.Replicas {

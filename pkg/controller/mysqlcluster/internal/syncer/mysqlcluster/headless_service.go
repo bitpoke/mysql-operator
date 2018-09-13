@@ -23,11 +23,11 @@ import (
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 )
 
 type headlessSVCSyncer struct {
-	cluster *api.MysqlCluster
+	cluster     *api.MysqlCluster
+	headlessSVC *core.Service
 }
 
 // NewHeadlessSVCSyncer returns a service syncer
@@ -40,11 +40,20 @@ func NewHeadlessSVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
 		},
 	}
 
-	return syncer.New("HeadLessSVCSyncer", cluster.AsOwnerReference(), obj, Sync)
+	return &headlessSVCSyncer{
+		cluster:     cluster,
+		headlessSVC: obj,
+	}
 
 }
 
-func (s *headlessSVCSyncer) Sync(in runtime.Object) error {
+func (s *headlessSVCSyncer) GetObject() runtime.Object { return s.headlessSVC }
+func (s *headlessSVCSyncer) GetOwner() runtime.Object  { return s.cluster }
+func (s *headlessSVCSyncer) GetEventReasonForError(err error) syncer.EventReason {
+	return syncer.BasicEventReason("HeadlessSVC", err)
+}
+
+func (s *headlessSVCSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*core.Service)
 
 	out.Spec.ClusterIP = "None"
@@ -64,10 +73,4 @@ func (s *headlessSVCSyncer) Sync(in runtime.Object) error {
 
 	return nil
 
-}
-
-func (s *headlessSVCSyncer) GetObject() runtime.Object { return s.obj }
-func (s *headlessSVCSyncer) GetOwner() runtime.Object  { return s.owner }
-func (s *headlessSVCSyncer) GetEventReasonForError(err error) EventReason {
-	return BasicEventReason(strcase.ToCamel(s.name), err)
 }

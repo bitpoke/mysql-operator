@@ -23,11 +23,11 @@ import (
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 )
 
 type masterSVCSyncer struct {
-	cluster *api.MysqlCluster
+	cluster   *api.MysqlCluster
+	masterSVC *core.Service
 }
 
 // NewMasterSVCSyncer returns a service syncer for master service
@@ -39,10 +39,19 @@ func NewMasterSVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
 			Namespace: cluster.Namespace,
 		},
 	}
-	return syncer.New("MasterSVCSyncer", cluster.AsOwnerReference(), obj, Sync)
+	return &masterSVCSyncer{
+		cluster:   cluster,
+		masterSVC: obj,
+	}
 }
 
-func (s *masterSVCSyncer) Sync(in runtime.Object) error {
+func (s *masterSVCSyncer) GetObject() runtime.Object { return s.masterSVC }
+func (s *masterSVCSyncer) GetOwner() runtime.Object  { return s.cluster }
+func (s *masterSVCSyncer) GetEventReasonForError(err error) syncer.EventReason {
+	return syncer.BasicEventReason("MasterSVC", err)
+}
+
+func (s *masterSVCSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*core.Service)
 
 	out.Spec.Type = "ClusterIP"
@@ -59,10 +68,4 @@ func (s *masterSVCSyncer) Sync(in runtime.Object) error {
 
 	return nil
 
-}
-
-func (s *masterSVCSyncer) GetObject() runtime.Object { return s.obj }
-func (s *masterSVCSyncer) GetOwner() runtime.Object  { return s.owner }
-func (s *masterSVCSyncer) GetEventReasonForError(err error) EventReason {
-	return BasicEventReason(strcase.ToCamel(s.name), err)
 }

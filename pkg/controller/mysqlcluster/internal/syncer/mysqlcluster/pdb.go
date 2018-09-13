@@ -24,11 +24,11 @@ import (
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 )
 
 type pdbSyncer struct {
 	cluster *api.MysqlCluster
+	pdb     *policy.PodDisruptionBudget
 }
 
 // NewPDBSyncer returns the syncer for pdb
@@ -41,10 +41,19 @@ func NewPDBSyncer(cluster *api.MysqlCluster) syncer.Interface {
 		},
 	}
 
-	return syncer.New("PdbSyncer", cluster.AsOwnerReference(), obj, Sync)
+	return &pdbSyncer{
+		cluster: cluster,
+		pdb:     obj,
+	}
 }
 
-func (s *pdbSyncer) Sync(in runtime.Object) error {
+func (s *pdbSyncer) GetObject() runtime.Object { return s.pdb }
+func (s *pdbSyncer) GetOwner() runtime.Object  { return s.cluster }
+func (s *pdbSyncer) GetEventReasonForError(err error) syncer.EventReason {
+	return syncer.BasicEventReason("PdbSyncer", err)
+}
+
+func (s *pdbSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*policy.PodDisruptionBudget)
 	if out.Spec.MinAvailable != nil {
 		// this mean that pdb is created and should return because spec is imutable
@@ -54,10 +63,4 @@ func (s *pdbSyncer) Sync(in runtime.Object) error {
 	out.Spec.MinAvailable = &ma
 	out.Spec.Selector = metav1.SetAsLabelSelector(s.cluster.GetLabels())
 	return nil
-}
-
-func (s *pdbSyncer) GetObject() runtime.Object { return s.obj }
-func (s *pdbSyncer) GetOwner() runtime.Object  { return s.owner }
-func (s *pdbSyncer) GetEventReasonForError(err error) EventReason {
-	return BasicEventReason(strcase.ToCamel(s.name), err)
 }

@@ -23,8 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 	"github.com/presslabs/mysql-operator/pkg/options"
 	"github.com/presslabs/mysql-operator/pkg/util"
 )
@@ -36,6 +36,7 @@ const (
 type secretSyncer struct {
 	cluster *api.MysqlCluster
 	opt     *options.Options
+	secret  *core.Secret
 }
 
 // NewSecretSyncer returns secret syncer
@@ -43,15 +44,25 @@ func NewSecretSyncer(cluster *api.MysqlCluster) syncer.Interface {
 
 	obj := &core.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.cluster.Spec.SecretName,
-			Namespace: s.cluster.Namespace,
+			Name:      cluster.Spec.SecretName,
+			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.New("SecretSyncer", cluster.AsOwnerReference(), obj, Sync)
+	return &secretSyncer{
+		cluster: cluster,
+		opt:     options.GetOptions(),
+		secret:  obj,
+	}
 }
 
-func (s *secretSyncer) Sync(in runtime.Object) error {
+func (s *secretSyncer) GetObject() runtime.Object { return s.secret }
+func (s *secretSyncer) GetOwner() runtime.Object  { return nil }
+func (s *secretSyncer) GetEventReasonForError(err error) syncer.EventReason {
+	return syncer.BasicEventReason("SecretSyncer", err)
+}
+
+func (s *secretSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*core.Secret)
 
 	if _, ok := out.Data["ROOT_PASSWORD"]; !ok {
@@ -83,10 +94,4 @@ func (s *secretSyncer) Sync(in runtime.Object) error {
 	}
 
 	return nil
-}
-
-func (s *secretSyncer) GetObject() runtime.Object { return s.obj }
-func (s *secretSyncer) GetOwner() runtime.Object  { return nil }
-func (s *secretSyncer) GetEventReasonForError(err error) EventReason {
-	return BasicEventReason(strcase.ToCamel(s.name), err)
 }
