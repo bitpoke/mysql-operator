@@ -30,14 +30,13 @@ import (
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 )
 
 var log = logf.Log.WithName("config-map-syncer")
 
 type configMapSyncer struct {
-	cluster *api.MysqlCluster
-	obj     runtime.Object
+	cluster   *api.MysqlCluster
+	configMap *core.ConfigMap
 }
 
 // mysqlMasterSlaveConfigs represents the configuration that mysql-operator needs by default
@@ -109,11 +108,20 @@ func NewConfigMapSyncer(cluster *api.MysqlCluster) syncer.Interface {
 		},
 	}
 
-	return syncer.New("ConfigMapSyncer", cluster.AsOwnerReference(), obj, Sync)
+	return &configMapSyncer{
+		cluster:   cluster,
+		configMap: obj,
+	}
 
 }
 
-func (s *configMapSyncer) Sync(in runtime.Object) error {
+func (s *configMapSyncer) GetObject() runtime.Object { return s.configMap }
+func (s *configMapSyncer) GetOwner() runtime.Object  { return s.cluster }
+func (s *configMapSyncer) GetEventReasonForError(err error) syncer.EventReason {
+	return syncer.BasicEventReason("ConfigMap", err)
+}
+
+func (s *configMapSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*core.ConfigMap)
 
 	out.ObjectMeta.Labels = s.cluster.GetLabels()
@@ -190,10 +198,4 @@ func writeConfigs(cfg *ini.File) (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
-}
-
-func (s *configMapSyncer) GetObject() runtime.Object { return s.obj }
-func (s *configMapSyncer) GetOwner() runtime.Object  { return s.owner }
-func (s *configMapSyncer) GetEventReasonForError(err error) EventReason {
-	return BasicEventReason(strcase.ToCamel(s.name), err)
 }

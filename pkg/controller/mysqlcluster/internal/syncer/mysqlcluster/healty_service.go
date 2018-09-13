@@ -23,11 +23,11 @@ import (
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 )
 
 type healthySVCSyncer struct {
-	cluster *api.MysqlCluster
+	cluster    *api.MysqlCluster
+	healthySVC *core.Service
 }
 
 // NewHealthySVCSyncer returns a service syncer
@@ -40,10 +40,19 @@ func NewHealthySVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
 		},
 	}
 
-	return syncer.New("HealthySVCSyncer", cluster.AsOwnerReference(), obj, Sync)
+	return &healthySVCSyncer{
+		cluster:    cluster,
+		healthySVC: obj,
+	}
 }
 
-func (s *healthySVCSyncer) Sync(in runtime.Object) error {
+func (s *healthySVCSyncer) GetObject() runtime.Object { return s.healthySVC }
+func (s *healthySVCSyncer) GetOwner() runtime.Object  { return s.cluster }
+func (s *healthySVCSyncer) GetEventReasonForError(err error) syncer.EventReason {
+	return syncer.BasicEventReason("HealthySVC", err)
+}
+
+func (s *healthySVCSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*core.Service)
 
 	out.Spec.Type = "ClusterIP"
@@ -60,10 +69,4 @@ func (s *healthySVCSyncer) Sync(in runtime.Object) error {
 
 	return nil
 
-}
-
-func (s *healthySVCSyncer) GetObject() runtime.Object { return s.obj }
-func (s *healthySVCSyncer) GetOwner() runtime.Object  { return s.owner }
-func (s *healthySVCSyncer) GetEventReasonForError(err error) EventReason {
-	return BasicEventReason(strcase.ToCamel(s.name), err)
 }

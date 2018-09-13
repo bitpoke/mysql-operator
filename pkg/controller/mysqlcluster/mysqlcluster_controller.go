@@ -36,9 +36,9 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/presslabs/controller-util/syncer"
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
@@ -197,18 +197,18 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 
 func (r *ReconcileMysqlCluster) sync(cluster *mysqlv1alpha1.MysqlCluster, syncers []syncer.Interface) error {
 	for _, s := range syncers {
-		existing := s.GetExistingObjectPlaceholder()
+		existing := s.GetObject()
 
 		// set owner reference on objects that requires owner reference
-		syncFn := s.Sync
-		if s.ShouldHaveOwnerReference() {
+		syncFn := s.SyncFn
+		if s.GetOwner() != nil {
 			syncFn = func(in runtime.Object) error {
 				// TODO: check this
 				metaIn := in.(metav1.Object)
 				if err := controllerutil.SetControllerReference(cluster, metaIn, r.scheme); err != nil {
 					return err
 				}
-				return s.Sync(in)
+				return s.SyncFn(in)
 			}
 		}
 
