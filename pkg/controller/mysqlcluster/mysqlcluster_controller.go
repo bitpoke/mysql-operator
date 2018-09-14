@@ -160,21 +160,14 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		}
 	}()
 
-	// run the config syncers
-	configSyncers := []syncer.Interface{
-		mysqlcluster.NewConfigMapSyncer(cluster),
-		mysqlcluster.NewSecretSyncer(cluster),
-	}
-
-	err = r.sync(cluster, configSyncers)
+	configMapSyncer := mysqlcluster.NewConfigMapSyncer(cluster)
+	err = syncer.Sync(context.TODO(), configMapSyncer, r.Client, r.scheme, r.recorder)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// get config map and secret revision to annotate the statefulset
-	// TODO: update this, no need to get secret and config again, already are updated
-	// in existing object provided to CreateOrUpdate
-	configRev, secretRev, err := r.getConfigAndSecretRevs(cluster)
+	secretSyncer := mysqlcluster.NewSecretSyncer(cluster)
+	err = syncer.Sync(context.TODO(), secretSyncer, r.Client, r.scheme, r.recorder)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -185,14 +178,51 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		mysqlcluster.NewMasterSVCSyncer(cluster),
 		mysqlcluster.NewHealthySVCSyncer(cluster),
 
-		mysqlcluster.NewStatefulSetSyncer(cluster, configRev, secretRev, r.opt),
+		mysqlcluster.NewStatefulSetSyncer(cluster, configMapSyncer.GetObject().(*core.ConfigMap).ResourceVersion, secretSyncer.GetObject().(*core.Secret).ResourceVersion, r.opt),
+	}
+
+	headlessSVCSyncer := mysqlcluster.NewHeadlessSVCSyncer(cluster)
+	err = syncer.Sync(context.TODO(), headlessSVCSyncer, r.Client, r.scheme, r.recorder)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	masterSVCSyncer := mysqlcluster.NewMasterSVCSyncer(cluster)
+	err = syncer.Sync(context.TODO(), masterSVCSyncer, r.Client, r.scheme, r.recorder)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	healthySVCSyncer := mysqlcluster.NewHealthySVCSyncer(cluster)
+	err = syncer.Sync(context.TODO(), healthySVCSyncer, r.Client, r.scheme, r.recorder)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	configResourceVersion, secretResourceVersion, err := r.getConfigAndSecretRevs(cluster)
+
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	statefulSetSyncer := mysqlcluster.NewStatefulSetSyncer(cluster, configResourceVersion, secretResourceVersion, r.opt)
+	err = syncer.Sync(context.TODO(), statefulSetSyncer, r.Client, r.scheme, r.recorder)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 
 	if len(cluster.Spec.MinAvailable) != 0 {
 		otherSyncers = append(otherSyncers, mysqlcluster.NewPDBSyncer(cluster))
+
+		pdbSyncer := mysqlcluster.NewPDBSyncer(cluster)
+		err = syncer.Sync(context.TODO(), pdbSyncer, r.Client, r.scheme, r.recorder)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
 	}
 
-	return reconcile.Result{}, r.sync(cluster, otherSyncers)
+	return reconcile.Result{}, nil
 }
 
 func (r *ReconcileMysqlCluster) sync(cluster *mysqlv1alpha1.MysqlCluster, syncers []syncer.Interface) error {

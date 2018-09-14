@@ -53,7 +53,7 @@ type sfsSyncer struct {
 	configMapRevision string
 	secretRevision    string
 	opt               *options.Options
-	sfs               *apps.StatefulSet
+	statefulset       *apps.StatefulSet
 }
 
 // NewStatefulSetSyncer returns a syncer for stateful set
@@ -71,11 +71,11 @@ func NewStatefulSetSyncer(cluster *api.MysqlCluster, cmRev, secRev string, opt *
 		configMapRevision: cmRev,
 		secretRevision:    secRev,
 		opt:               opt,
-		sfs:               obj,
+		statefulset:       obj,
 	}
 }
 
-func (s *sfsSyncer) GetObject() runtime.Object { return s.sfs }
+func (s *sfsSyncer) GetObject() runtime.Object { return s.statefulset }
 func (s *sfsSyncer) GetOwner() runtime.Object  { return s.cluster }
 func (s *sfsSyncer) GetEventReasonForError(err error) syncer.EventReason {
 	return syncer.BasicEventReason("PdbSyncer", err)
