@@ -50,7 +50,7 @@ func NewPDBSyncer(cluster *api.MysqlCluster) syncer.Interface {
 func (s *pdbSyncer) GetObject() runtime.Object { return s.pdb }
 func (s *pdbSyncer) GetOwner() runtime.Object  { return s.cluster }
 func (s *pdbSyncer) GetEventReasonForError(err error) syncer.EventReason {
-	return syncer.BasicEventReason("PdbSyncer", err)
+	return syncer.BasicEventReason("Pdb", err)
 }
 
 func (s *pdbSyncer) SyncFn(in runtime.Object) error {

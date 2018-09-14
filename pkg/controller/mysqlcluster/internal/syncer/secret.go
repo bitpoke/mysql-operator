@@ -57,9 +57,11 @@ func NewSecretSyncer(cluster *api.MysqlCluster) syncer.Interface {
 }
 
 func (s *secretSyncer) GetObject() runtime.Object { return s.secret }
-func (s *secretSyncer) GetOwner() runtime.Object  { return nil }
+
+//Secret doesn't need an owner because it is created by the user, not the operator
+func (s *secretSyncer) GetOwner() runtime.Object { return nil }
 func (s *secretSyncer) GetEventReasonForError(err error) syncer.EventReason {
-	return syncer.BasicEventReason("SecretSyncer", err)
+	return syncer.BasicEventReason("Secret", err)
 }
 
 func (s *secretSyncer) SyncFn(in runtime.Object) error {

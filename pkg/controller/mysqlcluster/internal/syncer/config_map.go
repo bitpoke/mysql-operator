@@ -39,65 +39,6 @@ type configMapSyncer struct {
 	configMap *core.ConfigMap
 }
 
-// mysqlMasterSlaveConfigs represents the configuration that mysql-operator needs by default
-var mysqlMasterSlaveConfigs = map[string]string{
-	"log-bin":           "/var/lib/mysql/mysql-bin",
-	"log-slave-updates": "on",
-
-	"read-only":        "on",
-	"skip-slave-start": "on",
-
-	// Crash safe
-	"relay-log-info-repository": "TABLE",
-	"relay-log-recovery":        "on",
-
-	// https://github.com/github/orchestrator/issues/323#issuecomment-338451838
-	"master_info_repository": "TABLE",
-
-	"default-storage-engine":   "InnoDB",
-	"gtid-mode":                "on",
-	"enforce-gtid-consistency": "on",
-
-	// MyISAM
-	"key-buffer-size":        "32M",
-	"myisam-recover-options": "FORCE,BACKUP",
-
-	// Safety
-	"max-allowed-packet": "16M",
-	"max-connect-errors": "1000000",
-	"sql-mode": "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER," +
-		"NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
-	"sysdate-is-now": "1",
-
-	// Binary logging
-	"expire-logs-days": "14",
-	"sync-binlog":      "1",
-	"binlog-format":    "ROW",
-
-	// CACHES AND LIMITS
-	"tmp-table-size":         "32M",
-	"max-heap-table-size":    "32M",
-	"query-cache-type":       "0",
-	"query-cache-size":       "0",
-	"max-connections":        "500",
-	"thread-cache-size":      "50",
-	"open-files-limit":       "65535",
-	"table-definition-cache": "4096",
-	"table-open-cache":       "4096",
-
-	// InnoDB
-	"innodb-flush-method":            "O_DIRECT",
-	"innodb-log-files-in-group":      "2",
-	"innodb-flush-log-at-trx-commit": "2",
-	"innodb-file-per-table":          "1",
-
-	"character-set-server": "utf8mb4",
-	"collation-server":     "utf8mb4_unicode_ci",
-
-	"skip-name-resolve": "on",
-	"skip-host-cache":   "on",
-}
-
 // NewConfigMapSyncer returns config map syncer
 func NewConfigMapSyncer(cluster *api.MysqlCluster) syncer.Interface {
 
@@ -198,4 +139,63 @@ func writeConfigs(cfg *ini.File) (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+// mysqlMasterSlaveConfigs represents the configuration that mysql-operator needs by default
+var mysqlMasterSlaveConfigs = map[string]string{
+	"log-bin":           "/var/lib/mysql/mysql-bin",
+	"log-slave-updates": "on",
+
+	"read-only":        "on",
+	"skip-slave-start": "on",
+
+	// Crash safe
+	"relay-log-info-repository": "TABLE",
+	"relay-log-recovery":        "on",
+
+	// https://github.com/github/orchestrator/issues/323#issuecomment-338451838
+	"master_info_repository": "TABLE",
+
+	"default-storage-engine":   "InnoDB",
+	"gtid-mode":                "on",
+	"enforce-gtid-consistency": "on",
+
+	// MyISAM
+	"key-buffer-size":        "32M",
+	"myisam-recover-options": "FORCE,BACKUP",
+
+	// Safety
+	"max-allowed-packet": "16M",
+	"max-connect-errors": "1000000",
+	"sql-mode": "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER," +
+		"NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
+	"sysdate-is-now": "1",
+
+	// Binary logging
+	"expire-logs-days": "14",
+	"sync-binlog":      "1",
+	"binlog-format":    "ROW",
+
+	// CACHES AND LIMITS
+	"tmp-table-size":         "32M",
+	"max-heap-table-size":    "32M",
+	"query-cache-type":       "0",
+	"query-cache-size":       "0",
+	"max-connections":        "500",
+	"thread-cache-size":      "50",
+	"open-files-limit":       "65535",
+	"table-definition-cache": "4096",
+	"table-open-cache":       "4096",
+
+	// InnoDB
+	"innodb-flush-method":            "O_DIRECT",
+	"innodb-log-files-in-group":      "2",
+	"innodb-flush-log-at-trx-commit": "2",
+	"innodb-file-per-table":          "1",
+
+	"character-set-server": "utf8mb4",
+	"collation-server":     "utf8mb4_unicode_ci",
+
+	"skip-name-resolve": "on",
+	"skip-host-cache":   "on",
 }
