@@ -164,3 +164,9 @@ func (c *MysqlCluster) GetNodeCondition(name string, condType api.NodeConditionT
 
 	return nil
 }
+
+// GetNodeStatusFor returns the node status for specified hostname
+func (c *MysqlCluster) GetNodeStatusFor(name string) api.NodeStatus {
+	nodeStatusIndex := c.GetNodeStatusIndex(name)
+	return c.Status.Nodes[nodeStatusIndex]
+}
