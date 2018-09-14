@@ -76,9 +76,9 @@ func NewStatefulSetSyncer(cluster *api.MysqlCluster, cmRev, secRev string, opt *
 }
 
 func (s *sfsSyncer) GetObject() runtime.Object { return s.statefulset }
-func (s *sfsSyncer) GetOwner() runtime.Object  { return s.cluster }
+func (s *sfsSyncer) GetOwner() runtime.Object  { return s.cluster.MysqlCluster }
 func (s *sfsSyncer) GetEventReasonForError(err error) syncer.EventReason {
-	return syncer.BasicEventReason("PdbSyncer", err)
+	return syncer.BasicEventReason("StatefulSet", err)
 }
 
 func (s *sfsSyncer) SyncFn(in runtime.Object) error {

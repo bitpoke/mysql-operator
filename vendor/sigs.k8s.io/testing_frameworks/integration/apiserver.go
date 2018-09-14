@@ -92,7 +92,7 @@ func (s *APIServer) Start() error {
 	s.URL = &s.processState.URL
 	s.CertDir = s.processState.Dir
 	s.Path = s.processState.Path
-	s.StartTimeout = 60 * time.Second //s.processState.StartTimeout
+	s.StartTimeout = s.processState.StartTimeout
 	s.StopTimeout = s.processState.StopTimeout
 
 	s.processState.Args, err = internal.RenderTemplates(
