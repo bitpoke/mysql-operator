@@ -53,41 +53,7 @@ var log = logf.Log.WithName(controllerName)
 // reconcileTimePeriod represents the time in which a cluster shoud be reconciled
 var reconcileTimePeriod = time.Second * 5
 
-type eventLockMap struct {
-	Map sync.Map
-}
-
-// newEventLockMap returns a map of clusters to events with custom methods to
-// register an event or to remove an event
-func newEventLockMap() eventLockMap {
-	return eventLockMap{
-		Map: sync.Map{},
-	}
-}
-
-var clustersMap = newEventLockMap()
-
-func (m *eventLockMap) getKey(meta metav1.Object) string {
-	return fmt.Sprintf("%s/%s", meta.GetNamespace(), meta.GetName())
-}
-
-func (m *eventLockMap) CreateEvent(evt event.CreateEvent) {
-	m.Map.Store(m.getKey(evt.Meta), event.GenericEvent{ // nolint: megacheck
-		Meta:   evt.Meta,
-		Object: evt.Object,
-	})
-}
-
-func (m *eventLockMap) DeleteEvent(evt event.DeleteEvent) {
-	m.Map.Delete(m.getKey(evt.Meta))
-}
-
-func (m *eventLockMap) PutEventsOn(eventChan chan event.GenericEvent) {
-	m.Map.Range(func(key, value interface{}) bool {
-		eventChan <- value.(event.GenericEvent)
-		return true
-	})
-}
+var clustersMap = sync.Map{}
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -123,7 +89,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				return
 			}
 
-			clustersMap.CreateEvent(evt)
+			clustersMap.Store(getKey(evt.Meta), event.GenericEvent{ // nolint: megacheck
+				Meta:   evt.Meta,
+				Object: evt.Object,
+			})
 		},
 		DeleteFunc: func(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 			if evt.Meta == nil {
@@ -131,7 +100,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				return
 			}
 
-			clustersMap.DeleteEvent(evt)
+			clustersMap.Delete(getKey(evt.Meta))
 		},
 	})
 	if err != nil {
@@ -160,8 +129,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			case <-stop.Channel:
 				return
 			case <-time.After(reconcileTimePeriod):
-				// write all clusters to envents chan to be processed\
-				clustersMap.PutEventsOn(events)
+				// write all clusters to envents chan to be processed
+				clustersMap.Range(func(key, value interface{}) bool {
+					events <- value.(event.GenericEvent)
+					return true
+				})
+
 			}
 		}
 	}()
@@ -211,4 +184,9 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	return reconcile.Result{}, nil
+}
+
+// getKey returns a string that represents the key under which cluster is registered
+func getKey(meta metav1.Object) string {
+	return fmt.Sprintf("%s.%s", meta.GetName(), meta.GetNamespace())
 }

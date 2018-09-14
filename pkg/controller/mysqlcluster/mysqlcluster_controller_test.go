@@ -269,6 +269,7 @@ var _ = Describe("MysqlCluster controller", func() {
 
 			// expect a reconcile event
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 			Eventually(getClusterConditions(c, cluster), timeout).Should(haveCondWithStatus(api.ClusterConditionReady, core.ConditionTrue))
 		})
 	})
