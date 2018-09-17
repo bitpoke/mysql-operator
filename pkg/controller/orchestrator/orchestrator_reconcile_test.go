@@ -298,6 +298,35 @@ var _ = Describe("MysqlCluster controller", func() {
 					Expect(insts).To(HaveLen(1))
 				})
 			})
+
+			It("should mark nodes as unknown when scale down", func() {
+				cluster.Spec.Replicas = 2
+				cluster.Status.ReadyNodes = 2
+
+				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
+				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
+					true, -1, false, true)
+				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(1),
+					false, -1, true, true)
+
+				// sync
+				Expect(orcSyncer.Sync()).Should(Succeed())
+
+				// scale down the cluster
+				cluster.Spec.Replicas = 1
+				cluster.Status.ReadyNodes = 1
+
+				// sync
+				Expect(orcSyncer.Sync()).Should(Succeed())
+
+				// check for conditions on node 1 to be unknown
+				Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(1))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionUnknown))
+				Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(1))).To(haveNodeCondWithStatus(api.NodeConditionLagged, core.ConditionUnknown))
+				Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(1))).To(haveNodeCondWithStatus(api.NodeConditionReadOnly, core.ConditionUnknown))
+
+				// node 0 should be ok
+				Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
+			})
 		})
 	})
 })
