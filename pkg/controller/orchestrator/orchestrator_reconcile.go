@@ -75,6 +75,10 @@ func (ou *orcUpdater) Sync() error {
 	if instances, err = ou.registerUnregisterNodesInOrc(instances); err != nil {
 		log.Error(err, "Failed registering nodes into orchestrator", "cluster", ou.cluster)
 	}
+
+	// remove nodes that are not in orchestrator
+	ou.removeNodeConditionNotInOrc(instances)
+
 	// set readonly in orchestrator if needed
 	if err = ou.updateNodesReadOnlyFlagInOrc(instances); err != nil {
 		log.Error(err, "Error setting Master readOnly/writable", "instances", instances, "cluster", ou.cluster)
@@ -99,9 +103,6 @@ func (ou *orcUpdater) Sync() error {
 
 // nolint: gocyclo
 func (ou *orcUpdater) updateStatusFromOrc(insts InstancesSet) {
-	// TODO: improve this code by computing differences between what
-	// orchestartor knows and what we know
-
 	// we assume that cluster is in ReadOnly
 	isReadOnly := true
 
@@ -111,14 +112,11 @@ func (ou *orcUpdater) updateStatusFromOrc(insts InstancesSet) {
 		maxSlaveLatency = *ou.cluster.Spec.MaxSlaveLatency
 	}
 
-	// nodes that where updated
-	updatedNodes := []string{}
-
 	// update conditions for every node
 	for _, node := range insts {
 		host := node.Key.Hostname
-		updatedNodes = append(updatedNodes, host)
 
+		// nodes that are not up to date in orchestrator should be marked as unknown
 		if !node.IsUpToDate {
 			if !node.IsLastCheckValid {
 				ou.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionUnknown)
@@ -174,8 +172,6 @@ func (ou *orcUpdater) updateStatusFromOrc(insts InstancesSet) {
 		ou.cluster.UpdateStatusCondition(api.ClusterConditionReadOnly,
 			core.ConditionFalse, "initializedFalse", "settingReadOnlyFalse")
 	}
-
-	ou.removeNodeConditionNotIn(updatedNodes)
 }
 
 // registerUnregisterNodesInOrc is the functions that tries to register
@@ -304,23 +300,24 @@ func condIndexCluster(cluster *wrapcluster.MysqlCluster, ty api.ClusterCondition
 	return 0, false
 }
 
+// updateNodeCondition is a helper function that updates condition for a specific node
 func (ou *orcUpdater) updateNodeCondition(host string, cType api.NodeConditionType, status core.ConditionStatus) {
 	ou.cluster.UpdateNodeConditionStatus(host, cType, status)
 }
 
-func (ou *orcUpdater) removeNodeConditionNotIn(hosts []string) {
+// removeNodeConditionNotInOrc marks nodes not in orc with unknown condition
+// TODO: this function should remove completly from cluster.Status.Nodes nodes
+// that are no longer in orchestrator and in k8s
+func (ou *orcUpdater) removeNodeConditionNotInOrc(insts InstancesSet) {
 	for _, ns := range ou.cluster.Status.Nodes {
-		updated := false
-		for _, h := range hosts {
-			if h == ns.Name {
-				updated = true
-			}
-		}
+		node := insts.GetInstance(ns.Name)
+		if node == nil {
+			// node is NOT updated so will be marked as unknwon all conditions types
 
-		if !updated {
 			ou.updateNodeCondition(ns.Name, api.NodeConditionLagged, core.ConditionUnknown)
 			ou.updateNodeCondition(ns.Name, api.NodeConditionReplicating, core.ConditionUnknown)
 			ou.updateNodeCondition(ns.Name, api.NodeConditionMaster, core.ConditionUnknown)
+			ou.updateNodeCondition(ns.Name, api.NodeConditionReadOnly, core.ConditionUnknown)
 		}
 	}
 }
