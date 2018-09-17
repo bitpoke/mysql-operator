@@ -143,6 +143,16 @@ func (o *OrcFakeClient) Discover(host string, port int) error {
 
 // Forget removes a host from orchestrator
 func (o *OrcFakeClient) Forget(host string, port int) error {
+	// determine cluster name
+	cluster := ""
+	for c, insts := range o.Clusters {
+		for _, inst := range insts {
+			if inst.Key.Hostname == host && inst.Key.Port == port {
+				cluster = c
+			}
+		}
+	}
+	o.RemoveInstance(cluster, host)
 	return nil
 }
 
