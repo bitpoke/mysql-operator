@@ -238,44 +238,66 @@ var _ = Describe("MysqlCluster controller", func() {
 				Expect(master).To(BeNil())
 			})
 
-			It("set master readOnly/Writable", func() {
+			Describe("orc updater unit tests", func() {
+				var (
+					updater *orcUpdater
+				)
 
-				updater := &orcUpdater{
-					cluster:   wrapcluster.NewMysqlClusterWrapper(cluster.MysqlCluster),
-					recorder:  rec,
-					orcClient: orcClient,
-				}
-
-				//Set ReadOnly to true in order to get master ReadOnly
-				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
-				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-					true, -1, false, true)
-
-				// set cluster on readonly, master should be in read only state
-				cluster.Spec.ReadOnly = true
-
-				insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-				Expect(updater.updateNodesReadOnlyFlagInOrc(insts)).To(Succeed())
-
-				insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-				for _, instance := range insts {
-					if instance.Key.Hostname == cluster.GetPodHostname(0) {
-						Expect(instance.ReadOnly).To(Equal(true))
+				BeforeEach(func() {
+					updater = &orcUpdater{
+						cluster:   wrapcluster.NewMysqlClusterWrapper(cluster.MysqlCluster),
+						recorder:  rec,
+						orcClient: orcClient,
 					}
-				}
+				})
+				It("set master readOnly/Writable", func() {
+					//Set ReadOnly to true in order to get master ReadOnly
+					//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
+					orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
+						true, -1, false, true)
 
-				//Set ReadOnly to false in order to get the master Writable
-				cluster.Spec.ReadOnly = false
+					// set cluster on readonly, master should be in read only state
+					cluster.Spec.ReadOnly = true
 
-				insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-				Expect(updater.updateNodesReadOnlyFlagInOrc(insts)).To(Succeed())
+					insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+					Expect(updater.updateNodesReadOnlyFlagInOrc(insts)).To(Succeed())
 
-				insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-				master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
-				Expect(master.ReadOnly).To(Equal(false))
+					insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+					for _, instance := range insts {
+						if instance.Key.Hostname == cluster.GetPodHostname(0) {
+							Expect(instance.ReadOnly).To(Equal(true))
+						}
+					}
 
+					//Set ReadOnly to false in order to get the master Writable
+					cluster.Spec.ReadOnly = false
+
+					insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+					Expect(updater.updateNodesReadOnlyFlagInOrc(insts)).To(Succeed())
+
+					insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+					master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
+					Expect(master.ReadOnly).To(Equal(false))
+
+				})
+
+				It("should remove from orc nodes that does not exists anymore", func() {
+					//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
+					orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
+						true, -1, false, true)
+					orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(1),
+						true, -1, false, true)
+
+					// call register and unregister nodes in orc
+					insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+					_, err := updater.registerUnregisterNodesInOrc(insts)
+					Expect(err).Should(Succeed())
+
+					// check for instances in orc
+					insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+					Expect(insts).To(HaveLen(1))
+				})
 			})
-
 		})
 	})
 })
