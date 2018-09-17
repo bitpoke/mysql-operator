@@ -60,10 +60,10 @@ var _ = Describe("MysqlCluster controller", func() {
 	})
 
 	Describe("Update status from orc", func() {
-		Context("cluster does not exists in orc", func() {
+		When("cluster does not exists in orc", func() {
 			It("should register into orc", func() {
 				cluster.Status.ReadyNodes = 1
-				Expect(orcSyncer.Sync()).Should(Succeed())
+				Expect(orcSyncer.Sync()).To(Succeed())
 				Expect(orcClient.CheckDiscovered(cluster.GetPodHostname(0))).To(Equal(true))
 			})
 
@@ -74,7 +74,7 @@ var _ = Describe("MysqlCluster controller", func() {
 					true, -1, false, true)
 				orcClient.AddRecoveries(cluster.GetClusterAlias(), 1, true)
 
-				Expect(orcSyncer.Sync()).Should(Succeed())
+				Expect(orcSyncer.Sync()).To(Succeed())
 				Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
 				Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionReadOnly, core.ConditionFalse))
 				Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionFalse))
@@ -85,7 +85,7 @@ var _ = Describe("MysqlCluster controller", func() {
 				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
 					true, -1, false, true)
 				orcClient.AddRecoveries(cluster.GetClusterAlias(), 11, false)
-				Expect(orcSyncer.Sync()).Should(Succeed())
+				Expect(orcSyncer.Sync()).To(Succeed())
 				Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
 			})
 
@@ -95,7 +95,7 @@ var _ = Describe("MysqlCluster controller", func() {
 					true, -1, false, true)
 				orcClient.AddRecoveries(cluster.GetClusterAlias(), 111, false)
 				cluster.UpdateStatusCondition(api.ClusterConditionReady, core.ConditionTrue, "", "")
-				Expect(orcSyncer.Sync()).Should(Succeed())
+				Expect(orcSyncer.Sync()).To(Succeed())
 				Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
 				Expect(orcClient.CheckAck(111)).To(Equal(false))
 			})
@@ -114,12 +114,12 @@ var _ = Describe("MysqlCluster controller", func() {
 					},
 				}
 
-				Expect(orcSyncer.Sync()).Should(Succeed())
+				Expect(orcSyncer.Sync()).To(Succeed())
 				Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
 				Expect(orcClient.CheckAck(112)).To(Equal(true))
 
 				var event string
-				Expect(rec.Events).Should(Receive(&event))
+				Expect(rec.Events).To(Receive(&event))
 				Expect(event).To(ContainSubstring("RecoveryAcked"))
 			})
 
@@ -127,7 +127,7 @@ var _ = Describe("MysqlCluster controller", func() {
 				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
 					true, -1, false, false)
-				Expect(orcSyncer.Sync()).Should(Succeed())
+				Expect(orcSyncer.Sync()).To(Succeed())
 				Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
 			})
 
@@ -135,11 +135,11 @@ var _ = Describe("MysqlCluster controller", func() {
 				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
 					true, -1, false, true)
-				Expect(orcSyncer.Sync()).Should(Succeed())
+				Expect(orcSyncer.Sync()).To(Succeed())
 				Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
 
 				orcClient.RemoveInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0))
-				Expect(orcSyncer.Sync()).Should(Succeed())
+				Expect(orcSyncer.Sync()).To(Succeed())
 				Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionUnknown))
 			})
 
@@ -260,7 +260,7 @@ var _ = Describe("MysqlCluster controller", func() {
 					cluster.Spec.ReadOnly = true
 
 					insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-					Expect(updater.updateNodesReadOnlyFlagInOrc(insts)).To(Succeed())
+					Expect(updater.markReadOnlyNodeInOrc(insts)).To(Succeed())
 
 					insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
 					for _, instance := range insts {
@@ -273,7 +273,7 @@ var _ = Describe("MysqlCluster controller", func() {
 					cluster.Spec.ReadOnly = false
 
 					insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-					Expect(updater.updateNodesReadOnlyFlagInOrc(insts)).To(Succeed())
+					Expect(updater.markReadOnlyNodeInOrc(insts)).To(Succeed())
 
 					insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
 					master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
@@ -291,7 +291,7 @@ var _ = Describe("MysqlCluster controller", func() {
 					// call register and unregister nodes in orc
 					insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
 					_, err := updater.registerUnregisterNodesInOrc(insts)
-					Expect(err).Should(Succeed())
+					Expect(err).To(Succeed())
 
 					// check for instances in orc
 					insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
@@ -310,14 +310,14 @@ var _ = Describe("MysqlCluster controller", func() {
 					false, -1, true, true)
 
 				// sync
-				Expect(orcSyncer.Sync()).Should(Succeed())
+				Expect(orcSyncer.Sync()).To(Succeed())
 
 				// scale down the cluster
 				cluster.Spec.Replicas = 1
 				cluster.Status.ReadyNodes = 1
 
 				// sync
-				Expect(orcSyncer.Sync()).Should(Succeed())
+				Expect(orcSyncer.Sync()).To(Succeed())
 
 				// check for conditions on node 1 to be unknown
 				Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(1))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionUnknown))

@@ -49,12 +49,12 @@ var _ = Describe("MysqlCluster controller", func() {
 		// controller k8s client
 		c client.Client
 		// time between reconciliations
-		tPause time.Duration
+		reconcileTime time.Duration
 	)
 
 	BeforeEach(func() {
 		reconcileTimePeriod = time.Second
-		tPause = time.Second - 100*time.Millisecond
+		reconcileTime = time.Second - 100*time.Millisecond
 
 		var recFn reconcile.Reconciler
 
@@ -132,9 +132,12 @@ var _ = Describe("MysqlCluster controller", func() {
 		})
 
 		It("should register the cluster [Slow]", func() {
+			// create a cluster, the cluster is not created.
 			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
-			// expect to receive the creation event
-			Consistently(requests, tPause).ShouldNot(Receive(Equal(expectedRequest)))
+
+			// expect to not receive any event when a cluster is created, but
+			// just after reconcile time passed then receive a reconcile event
+			Consistently(requests, reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
 			Eventually(requests).Should(Receive(Equal(expectedRequest)))
 
 			// stop the controller
@@ -150,7 +153,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			stop = StartTestManager(mgr)
 
 			// wait a second for a request
-			Consistently(requests, tPause).ShouldNot(Receive(Equal(expectedRequest)))
+			Consistently(requests, reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
 			Eventually(requests).Should(Receive(Equal(expectedRequest)))
 
 			// update the cluster
@@ -159,7 +162,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			Expect(c.Update(context.TODO(), cluster)).To(Succeed())
 
 			// wait a second for a request
-			Consistently(requests, tPause).ShouldNot(Receive(Equal(expectedRequest)))
+			Consistently(requests, reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
 			Eventually(requests).Should(Receive(Equal(expectedRequest)))
 
 			// delete the cluster
@@ -174,10 +177,10 @@ var _ = Describe("MysqlCluster controller", func() {
 			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
 			defer c.Delete(context.TODO(), cluster)
 
-			Consistently(requests, tPause).ShouldNot(Receive(Equal(expectedRequest)))
+			Consistently(requests, reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
 			Eventually(requests).Should(Receive(Equal(expectedRequest)))
 
-			Consistently(requests, tPause).ShouldNot(Receive(Equal(expectedRequest)))
+			Consistently(requests, reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
 			Eventually(requests).Should(Receive(Equal(expectedRequest)))
 
 		})

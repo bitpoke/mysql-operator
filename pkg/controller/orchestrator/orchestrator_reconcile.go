@@ -80,7 +80,7 @@ func (ou *orcUpdater) Sync() error {
 	ou.removeNodeConditionNotInOrc(instances)
 
 	// set readonly in orchestrator if needed
-	if err = ou.updateNodesReadOnlyFlagInOrc(instances); err != nil {
+	if err = ou.markReadOnlyNodeInOrc(instances); err != nil {
 		log.Error(err, "Error setting Master readOnly/writable", "instances", instances, "cluster", ou.cluster)
 	}
 	// update cluster status accordingly with orchestrator
@@ -214,7 +214,6 @@ func (ou *orcUpdater) registerUnregisterNodesInOrc(instSet InstancesSet) (Instan
 }
 
 func (ou *orcUpdater) getRecoveriesToAck(recoveries []orc.TopologyRecovery) []orc.TopologyRecovery {
-	// TODO: check for recoveries that need acknowledge, by excluding already acked recoveries
 	toAck := []orc.TopologyRecovery{}
 
 	if len(recoveries) == 0 {
@@ -223,12 +222,12 @@ func (ou *orcUpdater) getRecoveriesToAck(recoveries []orc.TopologyRecovery) []or
 
 	i, find := condIndexCluster(ou.cluster, api.ClusterConditionReady)
 	if !find || ou.cluster.Status.Conditions[i].Status != core.ConditionTrue {
-		log.Info("[getRecoveriesToAck]: Cluster is not ready for ack.")
+		log.Info("Cluster is not ready for ack.")
 		return toAck
 	}
 
 	if time.Since(ou.cluster.Status.Conditions[i].LastTransitionTime.Time).Minutes() < healtyMoreThanMinutes {
-		log.Info("Stateful set is not ready more then 10 minutes. Don't ack.")
+		log.Info(fmt.Sprintf("Stateful set is not ready more then %d minutes. Don't ack.", healtyMoreThanMinutes))
 		return toAck
 	}
 
@@ -255,8 +254,8 @@ func (ou *orcUpdater) getRecoveriesToAck(recoveries []orc.TopologyRecovery) []or
 }
 
 func (ou *orcUpdater) acknowledgeRecoveries(toAck []orc.TopologyRecovery) error {
-	comment := fmt.Sprintf("Statefulset '%s' is healty more then 10 minutes",
-		ou.cluster.GetNameForResource(api.StatefulSet),
+	comment := fmt.Sprintf("Statefulset '%s' is healty for more then %d minutes",
+		ou.cluster.GetNameForResource(api.StatefulSet), healtyMoreThanMinutes,
 	)
 
 	// acknowledge recoveries
@@ -312,7 +311,7 @@ func (ou *orcUpdater) removeNodeConditionNotInOrc(insts InstancesSet) {
 	for _, ns := range ou.cluster.Status.Nodes {
 		node := insts.GetInstance(ns.Name)
 		if node == nil {
-			// node is NOT updated so will be marked as unknwon all conditions types
+			// node is NOT updated so will be marked as unknown all conditions types
 
 			ou.updateNodeCondition(ns.Name, api.NodeConditionLagged, core.ConditionUnknown)
 			ou.updateNodeCondition(ns.Name, api.NodeConditionReplicating, core.ConditionUnknown)
@@ -323,7 +322,7 @@ func (ou *orcUpdater) removeNodeConditionNotInOrc(insts InstancesSet) {
 }
 
 // set a host writable just if needed
-func (ou *orcUpdater) setInstWritable(inst orc.Instance) error {
+func (ou *orcUpdater) setWritableNode(inst orc.Instance) error {
 	if inst.ReadOnly {
 		log.V(2).Info(fmt.Sprintf("set instance %s writable", inst.Key.Hostname))
 		return ou.orcClient.SetHostWritable(inst.Key)
@@ -331,14 +330,14 @@ func (ou *orcUpdater) setInstWritable(inst orc.Instance) error {
 	return nil
 }
 
-func (ou *orcUpdater) putNodeInMaintenance(inst orc.Instance) error {
+func (ou *orcUpdater) beginNodeMaintenance(inst orc.Instance) error {
 
 	log.V(2).Info(fmt.Sprintf("set instance %s in maintenance", inst.Key.Hostname))
 	return ou.orcClient.BeginMaintenance(inst.Key, "mysqlcontroller", "clusterReadOnly")
 
 }
 
-func (ou *orcUpdater) getNodeOutOfMaintenance(inst orc.Instance) error {
+func (ou *orcUpdater) endNodeMaintenance(inst orc.Instance) error {
 
 	log.V(2).Info(fmt.Sprintf("set instance %s out of maintenance", inst.Key.Hostname))
 	return ou.orcClient.EndMaintenance(inst.Key)
@@ -346,7 +345,7 @@ func (ou *orcUpdater) getNodeOutOfMaintenance(inst orc.Instance) error {
 }
 
 // set a host read only just if needed
-func (ou *orcUpdater) setInstReadOnly(inst orc.Instance) error {
+func (ou *orcUpdater) setReadOnlyNode(inst orc.Instance) error {
 	if !inst.ReadOnly {
 		log.V(2).Info(fmt.Sprintf("set instance %s read only", inst.Key.Hostname))
 		return ou.orcClient.SetHostReadOnly(inst.Key)
@@ -355,17 +354,17 @@ func (ou *orcUpdater) setInstReadOnly(inst orc.Instance) error {
 }
 
 // nolint: gocyclo
-func (ou *orcUpdater) updateNodesReadOnlyFlagInOrc(insts InstancesSet) error {
+func (ou *orcUpdater) markReadOnlyNodeInOrc(insts InstancesSet) error {
 	var err error
 	master := insts.DetermineMaster()
 	if master == nil {
 		// master is not found
 		// set cluster read only
 		for _, inst := range insts {
-			if err = ou.putNodeInMaintenance(inst); err != nil {
+			if err = ou.beginNodeMaintenance(inst); err != nil {
 				log.Error(err, "Put node in maintenance")
 			}
-			if err = ou.setInstReadOnly(inst); err != nil {
+			if err = ou.setReadOnlyNode(inst); err != nil {
 				log.Error(err, "Put node in read only")
 			}
 		}
@@ -375,22 +374,22 @@ func (ou *orcUpdater) updateNodesReadOnlyFlagInOrc(insts InstancesSet) error {
 	// master is determinated
 	for _, inst := range insts {
 		if ou.cluster.Spec.ReadOnly {
-			if err = ou.putNodeInMaintenance(inst); err != nil {
+			if err = ou.beginNodeMaintenance(inst); err != nil {
 				log.Error(err, "Put node in maintenance")
 			}
-			if err = ou.setInstReadOnly(inst); err != nil {
+			if err = ou.setReadOnlyNode(inst); err != nil {
 				log.Error(err, "Put node in read only")
 			}
 		} else if !ou.cluster.Spec.ReadOnly {
-			if err = ou.getNodeOutOfMaintenance(inst); err != nil {
+			if err = ou.endNodeMaintenance(inst); err != nil {
 				log.Error(err, "Get node out of maintenance")
 			}
 			if inst.Key.Hostname == master.Key.Hostname {
-				if err = ou.setInstWritable(inst); err != nil {
+				if err = ou.setWritableNode(inst); err != nil {
 					log.Error(err, "Set node as writable")
 				}
 			} else {
-				if err = ou.setInstReadOnly(inst); err != nil {
+				if err = ou.setReadOnlyNode(inst); err != nil {
 					log.Error(err, "Put node in read only")
 				}
 			}

@@ -135,8 +135,8 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 		},
 	}
 
-	if err1 := controllerutil.SetControllerReference(instance, deploy, r.scheme); err1 != nil {
-		return reconcile.Result{}, err1
+	if err = controllerutil.SetControllerReference(instance, deploy, r.scheme); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// TODO(user): Change this for the object type created by your controller
