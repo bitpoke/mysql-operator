@@ -50,6 +50,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 			Name:      fmt.Sprintf("cluster-%d", rand.Int31()),
 			Namespace: "default",
 		}
+
 		rec = record.NewFakeRecorder(100)
 		orcClient = fakeOrc.New()
 		theCluster := &api.MysqlCluster{
@@ -59,7 +60,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 			},
 			Spec: api.MysqlClusterSpec{
 				Replicas:   1,
-				SecretName: "a-name",
+				SecretName: clusterKey.Name,
 			},
 		}
 		orcSyncer = NewOrcUpdater(theCluster, rec, orcClient)
