@@ -150,6 +150,11 @@ var _ = Describe("Orchestrator controller", func() {
 			// delete the cluster
 			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
 
+			// wait a second for a request
+			// This is the request thats removes the finalizers from cluster
+			Consistently(requests, reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
+			Eventually(requests).Should(Receive(Equal(expectedRequest)))
+
 			// wait two seconds without request
 			Consistently(requests, 2*reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
 

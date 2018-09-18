@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/presslabs/controller-util/syncer"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,6 +47,10 @@ const (
 	eventNormal = "Normal"
 	//eventWarning   = "Warning"
 	controllerName = "controller.orchestrator"
+
+	// OrchestratorFinalizer is set when the cluster is registered in
+	// orchestrator and is removed when no nodes are in orchestrator
+	OrchestratorFinalizer = "OrchestratorFinalizer"
 )
 
 var log = logf.Log.WithName(controllerName)
@@ -179,6 +184,13 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 			log.Error(sErr, "failed to update cluster status", "cluster", cluster)
 		}
 	}()
+
+	// this syncer mutuates the cluster and updates it. Should be the first syncer
+	finalizerSyncer := newFinalizerSyncer(cluster, r.orcClient)
+	err = syncer.Sync(context.TODO(), finalizerSyncer, r.Client, r.scheme, r.recorder)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
 	ou := NewOrcUpdater(cluster, r.recorder, r.orcClient)
 	if err := ou.Sync(); err != nil {
