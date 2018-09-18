@@ -33,6 +33,11 @@ type OrcFakeClient struct {
 	Discovered []InstanceKey
 }
 
+const (
+	// NoLag is the constant that sets an instance as no lag
+	NoLag int64 = -1
+)
+
 // New fake orchestrator client
 func New() *OrcFakeClient {
 	return &OrcFakeClient{}
@@ -41,7 +46,7 @@ func New() *OrcFakeClient {
 // AddInstance add a instance to orchestrator client
 func (o *OrcFakeClient) AddInstance(cluster, host string, master bool, lag int64, slaveRunning, upToDate bool) *Instance {
 	valid := true
-	if lag < 0 {
+	if lag == NoLag {
 		valid = false
 	}
 	inst := &Instance{

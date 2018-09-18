@@ -34,7 +34,7 @@ import (
 	fakeOrc "github.com/presslabs/mysql-operator/pkg/orchestrator/fake"
 )
 
-var _ = Describe("MysqlCluster controller", func() {
+var _ = Describe("Orchestrator controller", func() {
 	var (
 		cluster   *wrapcluster.MysqlCluster
 		orcClient *fakeOrc.OrcFakeClient
@@ -71,7 +71,8 @@ var _ = Describe("MysqlCluster controller", func() {
 
 				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-					true, -1, false, true)
+					true, fakeOrc.NoLag, false, true)
+				// AddRecoveries signature: cluster, id, acked
 				orcClient.AddRecoveries(cluster.GetClusterAlias(), 1, true)
 
 				Expect(orcSyncer.Sync()).To(Succeed())
@@ -83,7 +84,8 @@ var _ = Describe("MysqlCluster controller", func() {
 			It("should have pending recoveries", func() {
 				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-					true, -1, false, true)
+					true, fakeOrc.NoLag, false, true)
+				// AddRecoveries signature: cluster, id, acked
 				orcClient.AddRecoveries(cluster.GetClusterAlias(), 11, false)
 				Expect(orcSyncer.Sync()).To(Succeed())
 				Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
@@ -92,7 +94,8 @@ var _ = Describe("MysqlCluster controller", func() {
 			It("should have pending recoveries but cluster not ready enough", func() {
 				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-					true, -1, false, true)
+					true, fakeOrc.NoLag, false, true)
+				// AddRecoveries signature: cluster, id, acked
 				orcClient.AddRecoveries(cluster.GetClusterAlias(), 111, false)
 				cluster.UpdateStatusCondition(api.ClusterConditionReady, core.ConditionTrue, "", "")
 				Expect(orcSyncer.Sync()).To(Succeed())
@@ -103,7 +106,8 @@ var _ = Describe("MysqlCluster controller", func() {
 			It("should have pending recoveries that will be recovered", func() {
 				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-					true, -1, false, true)
+					true, fakeOrc.NoLag, false, true)
+				// AddRecoveries signature: cluster, id, acked
 				orcClient.AddRecoveries(cluster.GetClusterAlias(), 112, false)
 				min20, _ := time.ParseDuration("-20m")
 				cluster.Status.Conditions = []api.ClusterCondition{
@@ -126,7 +130,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			It("master is in orc", func() {
 				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-					true, -1, false, false)
+					true, fakeOrc.NoLag, false, false)
 				Expect(orcSyncer.Sync()).To(Succeed())
 				Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
 			})
@@ -134,7 +138,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			It("node not in orc", func() {
 				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-					true, -1, false, true)
+					true, fakeOrc.NoLag, false, true)
 				Expect(orcSyncer.Sync()).To(Succeed())
 				Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
 
@@ -146,27 +150,27 @@ var _ = Describe("MysqlCluster controller", func() {
 			It("existence of a single master", func() {
 				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 				inst := orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-					false, -1, false, true)
+					false, fakeOrc.NoLag, false, true)
 				inst.Key.Port = 3306
 				inst.MasterKey = orc.InstanceKey{Hostname: "", Port: 3306}
 
 				inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(1),
-					false, -1, false, true)
+					false, fakeOrc.NoLag, false, true)
 				inst.Key.Port = 3306
 				inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(0), Port: 3306}
 
 				inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(2),
-					false, -1, false, true)
+					false, fakeOrc.NoLag, false, true)
 				inst.Key.Port = 3306
 				inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(0), Port: 3306}
 
 				inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(3),
-					false, -1, false, true)
+					false, fakeOrc.NoLag, false, true)
 				inst.Key.Port = 3306
 				inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(2), Port: 3306}
 
 				inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(4),
-					false, -1, false, true)
+					false, fakeOrc.NoLag, false, true)
 				inst.Key.Port = 3306
 				inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(3), Port: 3306}
 
@@ -185,33 +189,33 @@ var _ = Describe("MysqlCluster controller", func() {
 			It("existence of multiple masters", func() {
 				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 				inst := orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-					false, -1, false, true)
+					false, fakeOrc.NoLag, false, true)
 				inst.Key.Port = 3306
 				inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(5), Port: 3306}
 				inst.IsCoMaster = true
 
 				inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(1),
-					false, -1, false, true)
+					false, fakeOrc.NoLag, false, true)
 				inst.Key.Port = 3306
 				inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(0), Port: 3306}
 
 				inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(2),
-					false, -1, false, true)
+					false, fakeOrc.NoLag, false, true)
 				inst.Key.Port = 3306
 				inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(0), Port: 3306}
 
 				inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(3),
-					false, -1, false, true)
+					false, fakeOrc.NoLag, false, true)
 				inst.Key.Port = 3306
 				inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(2), Port: 3306}
 
 				inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(4),
-					false, -1, false, true)
+					false, fakeOrc.NoLag, false, true)
 				inst.Key.Port = 3306
 				inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(5), Port: 3306}
 
 				inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(5),
-					false, -1, false, true)
+					false, fakeOrc.NoLag, false, true)
 				inst.Key.Port = 3306
 				inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(0), Port: 3306}
 				inst.IsCoMaster = true
@@ -254,13 +258,13 @@ var _ = Describe("MysqlCluster controller", func() {
 					//Set ReadOnly to true in order to get master ReadOnly
 					//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 					orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-						true, -1, false, true)
+						true, fakeOrc.NoLag, false, true)
 
 					// set cluster on readonly, master should be in read only state
 					cluster.Spec.ReadOnly = true
 
 					insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-					Expect(updater.markReadOnlyNodeInOrc(insts)).To(Succeed())
+					Expect(updater.markReadOnlyNodesInOrc(insts)).To(Succeed())
 
 					insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
 					for _, instance := range insts {
@@ -273,7 +277,7 @@ var _ = Describe("MysqlCluster controller", func() {
 					cluster.Spec.ReadOnly = false
 
 					insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-					Expect(updater.markReadOnlyNodeInOrc(insts)).To(Succeed())
+					Expect(updater.markReadOnlyNodesInOrc(insts)).To(Succeed())
 
 					insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
 					master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
@@ -284,14 +288,13 @@ var _ = Describe("MysqlCluster controller", func() {
 				It("should remove from orc nodes that does not exists anymore", func() {
 					//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 					orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-						true, -1, false, true)
+						true, fakeOrc.NoLag, false, true)
 					orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(1),
-						true, -1, false, true)
+						true, fakeOrc.NoLag, false, true)
 
 					// call register and unregister nodes in orc
 					insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-					_, err := updater.registerUnregisterNodesInOrc(insts)
-					Expect(err).To(Succeed())
+					updater.registerUnregisterNodesInOrc(insts)
 
 					// check for instances in orc
 					insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
@@ -305,9 +308,9 @@ var _ = Describe("MysqlCluster controller", func() {
 
 				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
 				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-					true, -1, false, true)
+					true, fakeOrc.NoLag, false, true)
 				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(1),
-					false, -1, true, true)
+					false, fakeOrc.NoLag, true, true)
 
 				// sync
 				Expect(orcSyncer.Sync()).To(Succeed())

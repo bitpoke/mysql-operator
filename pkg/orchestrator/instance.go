@@ -21,6 +21,10 @@ import (
 	"time"
 )
 
+// Note that this code is copied from:
+// https://github.com/github/orchestrator/blob/master/go/inst/instance.go We
+// need just the types that's way is copied instead of imported.
+
 // InstanceKey is the node key
 type InstanceKey struct {
 	Hostname string

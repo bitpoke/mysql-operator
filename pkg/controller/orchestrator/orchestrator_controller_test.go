@@ -40,7 +40,7 @@ import (
 
 const timeout = time.Second * 2
 
-var _ = Describe("MysqlCluster controller", func() {
+var _ = Describe("Orchestrator controller", func() {
 	var (
 		// channel for incoming reconcile requests
 		requests chan reconcile.Request
