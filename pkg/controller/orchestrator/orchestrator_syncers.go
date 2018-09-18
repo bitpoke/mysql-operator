@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package orchestratormysql
+package orchestrator
 
 import (
 	"github.com/presslabs/controller-util/syncer"
@@ -43,7 +43,7 @@ func newFinalizerSyncer(cluster *api.MysqlCluster, orcClient orc.Interface) sync
 			)
 			// get status from orchestrator
 			if instances, err = orcClient.Cluster(wrapcluster.NewMysqlClusterWrapper(cluster).GetClusterAlias()); err != nil {
-				log.Error(err, "Can't get instances from orchestrator", "cluster", cluster)
+				log.Error(err, "can't get instances from orchestrator", "cluster", cluster)
 			}
 
 			if len(instances) == 0 {

@@ -18,6 +18,7 @@ package orchestrator
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"time"
 
@@ -62,17 +63,18 @@ var reconcileTimePeriod = time.Second * 5
 // and Start it when the Manager is Started.
 // USER ACTION REQUIRED: update cmd/manager/main.go to call this mysql.Add(mgr) to install this Controller
 func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+	opt := options.GetOptions()
+	orcClient := orc.NewFromURI(opt.OrchestratorURI)
+	return add(mgr, newReconciler(mgr, orcClient))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	opt := options.GetOptions()
+func newReconciler(mgr manager.Manager, orcClient orc.Interface) reconcile.Reconciler {
 	return &ReconcileMysqlCluster{
 		Client:    mgr.GetClient(),
 		scheme:    mgr.GetScheme(),
 		recorder:  mgr.GetRecorder(controllerName),
-		orcClient: orc.NewFromURI(opt.OrchestratorURI),
+		orcClient: orcClient,
 	}
 }
 
@@ -178,10 +180,12 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	log.Info("reconciling cluster", "cluster", cluster)
-
+	status := *cluster.Status.DeepCopy()
 	defer func() {
-		if sErr := r.Status().Update(context.TODO(), cluster); sErr != nil {
-			log.Error(sErr, "failed to update cluster status", "cluster", cluster)
+		if !reflect.DeepEqual(status, cluster.Status) {
+			if sErr := r.Status().Update(context.TODO(), cluster); sErr != nil {
+				log.Error(sErr, "failed to update cluster status", "cluster", cluster)
+			}
 		}
 	}()
 

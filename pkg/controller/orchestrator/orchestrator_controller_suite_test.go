@@ -56,6 +56,7 @@ var _ = BeforeSuite(func() {
 
 	cfg, err = t.Start()
 	Expect(err).NotTo(HaveOccurred())
+
 })
 
 var _ = AfterSuite(func() {
