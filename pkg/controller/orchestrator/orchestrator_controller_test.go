@@ -53,7 +53,6 @@ var _ = Describe("Orchestrator controller", func() {
 	)
 
 	BeforeEach(func() {
-		reconcileTimePeriod = time.Second
 		reconcileTime = time.Second - 100*time.Millisecond
 
 		var recFn reconcile.Reconciler

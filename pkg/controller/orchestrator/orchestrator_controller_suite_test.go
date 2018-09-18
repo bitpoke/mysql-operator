@@ -20,6 +20,7 @@ package orchestratormysql
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -42,6 +43,10 @@ func TestMysqlClusterController(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
+
+	// set reconcile time to 1 second to speed up the tests.
+	reconcileTimePeriod = time.Second
+
 	var err error
 
 	t = &envtest.Environment{
