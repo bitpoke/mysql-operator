@@ -170,7 +170,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	log.Info(fmt.Sprintf("Reconciling cluster: %s/%s", cluster.Name, cluster.Namespace))
+	log.Info("reconciling cluster", "cluster", cluster)
 
 	defer func() {
 		if sErr := r.Status().Update(context.TODO(), cluster); sErr != nil {
