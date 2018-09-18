@@ -170,6 +170,9 @@ spec:
                 - name
                 type: object
               type: array
+            readyNodes:
+              format: int64
+              type: integer
           type: object
   version: v1alpha1
 status:

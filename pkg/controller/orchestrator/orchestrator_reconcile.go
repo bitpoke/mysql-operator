@@ -90,14 +90,18 @@ func (ou *orcUpdater) Sync() error {
 	if recoveries, err = ou.orcClient.AuditRecovery(ou.cluster.GetClusterAlias()); err != nil {
 		log.Error(err, "can't get recoveries from orchestrator", "alias", ou.cluster.GetClusterAlias())
 	}
+
 	// update cluster status
 	ou.updateStatusForRecoveries(recoveries)
+
 	// filter recoveries that can be acknowledged
 	toAck := ou.getRecoveriesToAck(recoveries)
+
 	// acknowledge recoveries
 	if err = ou.acknowledgeRecoveries(toAck); err != nil {
 		log.Error(err, "failed to acknowledge recoveries", "alias", ou.cluster.GetClusterAlias(), "ack_recoveries", toAck)
 	}
+
 	return nil
 }
 
@@ -186,6 +190,8 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) InstancesSet {
 		instancesFiltered InstancesSet
 	)
 
+	log.Info("nodes (un)registrations", "instances", instances, "readyNodes", ou.cluster.Status.ReadyNodes)
+
 	for i := 0; i < ou.cluster.Status.ReadyNodes; i++ {
 		host := ou.cluster.GetPodHostname(i)
 		if inst := instances.GetInstance(host); inst == nil {
@@ -204,14 +210,23 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) InstancesSet {
 			shouldForget = append(shouldForget, inst.Key.Hostname)
 		}
 	}
-
-	ou.discoverNodesInOrc(shouldDiscover)
-	ou.forgetNodesFromOrc(shouldForget)
+	if ou.cluster.DeletionTimestamp == nil {
+		ou.discoverNodesInOrc(shouldDiscover)
+		ou.forgetNodesFromOrc(shouldForget)
+	} else {
+		// cluster is deleted, remove all hosts from orchestrator
+		var hosts []string
+		for _, i := range instances {
+			hosts = append(hosts, i.Key.Hostname)
+		}
+		ou.forgetNodesFromOrc(hosts)
+	}
 
 	return instancesFiltered
 }
 
 func (ou *orcUpdater) discoverNodesInOrc(hosts []string) {
+	log.Info("discovering hosts", "hosts", hosts)
 	for _, host := range hosts {
 		if err := ou.orcClient.Discover(host, mysqlPort); err != nil {
 			log.Error(err, "failed to discover host with orchestrator", "host", host)
@@ -220,6 +235,7 @@ func (ou *orcUpdater) discoverNodesInOrc(hosts []string) {
 }
 
 func (ou *orcUpdater) forgetNodesFromOrc(hosts []string) {
+	log.Info("forgeting hosts", "hosts", hosts)
 	for _, host := range hosts {
 		if err := ou.orcClient.Forget(host, mysqlPort); err != nil {
 			log.Error(err, "failed to forget host with orchestrator", "host", host)

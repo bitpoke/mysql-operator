@@ -18,6 +18,7 @@ package fake
 
 import (
 	"fmt"
+	"strings"
 
 	// nolint: golint
 	. "github.com/presslabs/mysql-operator/pkg/orchestrator"
@@ -96,7 +97,13 @@ func (o *OrcFakeClient) RemoveInstance(cluster, host string) {
 		return
 	}
 
+	// remove instance from cluster
 	o.Clusters[cluster] = append(instances[:index], instances[index+1:]...)
+
+	// remove cluster key from map if has no instance
+	if len(o.Clusters[cluster]) == 0 {
+		delete(o.Clusters, cluster)
+	}
 }
 
 // AddRecoveries add a recovery for a cluster
@@ -140,26 +147,42 @@ func (o *OrcFakeClient) CheckDiscovered(key string) bool {
 	return false
 }
 
+func (o *OrcFakeClient) getHostClusterAlias(host string) string {
+	// input: cluster-1943285891-mysql-0.cluster-1943285891-mysql-nodes.default
+	// output: cluster-1943285891.default
+	s := strings.Split(host, ".")
+	ns := s[2]
+	cluster := strings.Replace(s[1], "-mysql-nodes", "", 1)
+	return fmt.Sprintf("%s.%s", cluster, ns)
+}
+
 // Discover register a host into orchestrator
 func (o *OrcFakeClient) Discover(host string, port int) error {
 	o.Discovered = append(o.Discovered, InstanceKey{
 		Hostname: host,
 		Port:     port,
 	})
+
+	cluster := o.getHostClusterAlias(host)
+	o.AddInstance(Instance{
+		ClusterName: cluster,
+		Key:         InstanceKey{Hostname: host},
+		ReadOnly:    false,
+		SlaveLagSeconds: NullInt64{
+			Valid: false,
+			Int64: 0,
+		},
+		IsUpToDate:       true,
+		IsLastCheckValid: true,
+	})
+
 	return nil
 }
 
 // Forget removes a host from orchestrator
 func (o *OrcFakeClient) Forget(host string, port int) error {
 	// determine cluster name
-	cluster := ""
-	for c, insts := range o.Clusters {
-		for _, inst := range insts {
-			if inst.Key.Hostname == host {
-				cluster = c
-			}
-		}
-	}
+	cluster := o.getHostClusterAlias(host)
 	o.RemoveInstance(cluster, host)
 	return nil
 }

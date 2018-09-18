@@ -218,7 +218,7 @@ const (
 // MysqlClusterStatus defines the observed state of MysqlCluster
 type MysqlClusterStatus struct {
 	// ReadyNodes represents number of the nodes that are in ready state
-	ReadyNodes int
+	ReadyNodes int `json:"readyNodes,omitempty"`
 	// Conditions contains the list of the cluster conditions fulfilled
 	Conditions []ClusterCondition `json:"conditions,omitempty"`
 	// Nodes contains informations from orchestrator
