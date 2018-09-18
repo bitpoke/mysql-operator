@@ -90,14 +90,18 @@ func (ou *orcUpdater) Sync() error {
 	if recoveries, err = ou.orcClient.AuditRecovery(ou.cluster.GetClusterAlias()); err != nil {
 		log.Error(err, "can't get recoveries from orchestrator", "alias", ou.cluster.GetClusterAlias())
 	}
+
 	// update cluster status
 	ou.updateStatusForRecoveries(recoveries)
+
 	// filter recoveries that can be acknowledged
 	toAck := ou.getRecoveriesToAck(recoveries)
+
 	// acknowledge recoveries
 	if err = ou.acknowledgeRecoveries(toAck); err != nil {
 		log.Error(err, "failed to acknowledge recoveries", "alias", ou.cluster.GetClusterAlias(), "ack_recoveries", toAck)
 	}
+
 	return nil
 }
 
