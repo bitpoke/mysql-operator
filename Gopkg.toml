@@ -20,7 +20,7 @@ required = [
 
 [[override]]
   name="sigs.k8s.io/controller-runtime"
-  revision = "2d4d049627bbc26a97a68b9b3c3e9d02d91ae706"
+  version = "v0.1.3"
 
 # STANZAS BELOW ARE GENERATED AND MAY BE WRITTEN - DO NOT MODIFY BELOW THIS LINE.
 
