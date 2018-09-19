@@ -32,13 +32,13 @@ type MysqlClusterSpec struct {
 	// The number of pods. This updates replicas filed
 	// Defaults to 0
 	// +optional
-	Replicas int32 `json:"replicas"`
+	Replicas int32 `json:"replicas,omitempty"`
 	// The secret name that contains connection information to initialize database, like
 	// USER, PASSWORD, ROOT_PASSWORD and so on
 	// This secret will be updated with DB_CONNECT_URL and some more configs.
 	// Can be specified partially
-	// Defaults is <name>-db-credentials (with random values)
-	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
 	SecretName string `json:"secretName"`
 
 	// Represents the percona image tag.
