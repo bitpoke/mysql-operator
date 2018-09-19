@@ -98,6 +98,8 @@ spec:
               format: int32
               type: integer
             secretName:
+              maxLength: 63
+              minLength: 1
               type: string
             volumeSpec:
               properties:
@@ -117,7 +119,6 @@ spec:
                   type: string
               type: object
           required:
-          - replicas
           - secretName
           type: object
         status:

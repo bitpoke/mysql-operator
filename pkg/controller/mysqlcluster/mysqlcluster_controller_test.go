@@ -22,14 +22,15 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 
 	"golang.org/x/net/context"
-	apps "k8s.io/api/apps/v1"
-	core "k8s.io/api/core/v1"
-	policy "k8s.io/api/policy/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -75,7 +76,7 @@ var _ = Describe("MysqlCluster controller", func() {
 		var (
 			expectedRequest reconcile.Request
 			cluster         *api.MysqlCluster
-			secret          *core.Secret
+			secret          *corev1.Secret
 			components      clusterComponents
 		)
 
@@ -87,7 +88,7 @@ var _ = Describe("MysqlCluster controller", func() {
 				NamespacedName: types.NamespacedName{Name: name, Namespace: ns},
 			}
 
-			secret = &core.Secret{
+			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "the-secret", Namespace: ns},
 				StringData: map[string]string{
 					"ROOT_PASSWORD": "this-is-secret",
@@ -103,37 +104,37 @@ var _ = Describe("MysqlCluster controller", func() {
 			}
 
 			components = []runtime.Object{
-				&apps.StatefulSet{
+				&appsv1.StatefulSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-mysql", name),
 						Namespace: cluster.Namespace,
 					},
 				},
-				&core.Service{
+				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-mysql-nodes", name),
 						Namespace: cluster.Namespace,
 					},
 				},
-				&core.Service{
+				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-mysql-master", name),
 						Namespace: cluster.Namespace,
 					},
 				},
-				&core.Service{
+				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-mysql", name),
 						Namespace: cluster.Namespace,
 					},
 				},
-				&core.ConfigMap{
+				&corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-mysql", name),
 						Namespace: cluster.Namespace,
 					},
 				},
-				&policy.PodDisruptionBudget{
+				&policyv1beta1.PodDisruptionBudget{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-mysql", name),
 						Namespace: cluster.Namespace,
@@ -143,21 +144,16 @@ var _ = Describe("MysqlCluster controller", func() {
 
 			Expect(c.Create(context.TODO(), secret)).To(Succeed())
 			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+
+			// Initial reconciliation
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			// Reconcile triggered by components being created and status being
+			// updated
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
-			// We need to drain the requests queue because syncing a subresource
-			// might trigger reconciliation again and we want to isolate tests
-			// to their own reconciliation requests
-			done := time.After(time.Second)
-			for {
-				select {
-				case <-requests:
-					continue
-				case <-done:
-					return
-				}
-			}
-
+			// We need to make sure that the controller does not create infinite
+			// loops
+			Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 		})
 
 		AfterEach(func() {
@@ -167,113 +163,76 @@ var _ = Describe("MysqlCluster controller", func() {
 			c.Delete(context.TODO(), cluster)
 		})
 
-		It("should create a cluster", func() {
+		DescribeTable("the reconciler",
+			func(nameFmt string, obj runtime.Object) {
+				key := types.NamespacedName{
+					Name:      fmt.Sprintf(nameFmt, cluster.Name),
+					Namespace: cluster.Namespace,
+				}
 
-			newCluster := &api.MysqlCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "new-cluster", Namespace: "default"},
-				Spec: api.MysqlClusterSpec{
-					Replicas:   1,
-					SecretName: secret.Name,
-				},
-			}
-			defer c.Delete(context.TODO(), newCluster)
-			Expect(c.Create(context.TODO(), newCluster)).To(Succeed())
+				By("creating the resource when the cluster is created")
+				Eventually(func() error { return c.Get(context.TODO(), key, obj) }, timeout).Should(Succeed())
 
-			newER := reconcile.Request{
-				NamespacedName: types.NamespacedName{Name: "new-cluster", Namespace: "default"},
-			}
-
-			Eventually(requests, timeout).Should(Receive(Equal(newER)))
-			Eventually(requests, timeout).Should(Receive(Equal(newER)))
-		})
-
-		It("should reconcile the statefulset", func() {
-			sfsKey := types.NamespacedName{
-				Name:      cluster.GetNameForResource(api.StatefulSet),
-				Namespace: cluster.Namespace,
-			}
-			statefulSet := &apps.StatefulSet{}
-			Eventually(func() error {
-				return c.Get(context.TODO(), sfsKey, statefulSet)
-			}, timeout).Should(Succeed())
-
-			When("delete the statefulset", func() {
-				Expect(c.Delete(context.TODO(), statefulSet)).To(Succeed())
+				By("reacreating the resource when it gets deleted")
+				// Delete the resource and expect Reconcile to be called
+				Expect(c.Delete(context.TODO(), obj)).To(Succeed())
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+				Eventually(func() error { return c.Get(context.TODO(), key, obj) }, timeout).Should(Succeed())
+			},
+			Entry("reconciles the statefulset", "%s-mysql", &appsv1.StatefulSet{}),
+			Entry("reconciles the headless service", "%s-mysql-nodes", &corev1.Service{}),
+			Entry("reconciles the master service", "%s-mysql-master", &corev1.Service{}),
+			Entry("reconciles the config map", "%s-mysql", &corev1.ConfigMap{}),
+			Entry("reconciles the pod disruption budget", "%s-mysql", &policyv1beta1.PodDisruptionBudget{}),
+		)
+
+		Describe("the reconciler", func() {
+			It("should update secret and configmap revision annotations on statefulset", func() {
+				sfsKey := types.NamespacedName{
+					Name:      cluster.GetNameForResource(api.StatefulSet),
+					Namespace: cluster.Namespace,
+				}
+				statefulSet := &appsv1.StatefulSet{}
 				Eventually(func() error {
 					return c.Get(context.TODO(), sfsKey, statefulSet)
 				}, timeout).Should(Succeed())
+
+				cfgMap := &corev1.ConfigMap{}
+				Expect(c.Get(context.TODO(), types.NamespacedName{
+					Name:      cluster.GetNameForResource(api.ConfigMap),
+					Namespace: cluster.Namespace,
+				}, cfgMap)).To(Succeed())
+				Expect(c.Get(context.TODO(), types.NamespacedName{
+					Name:      secret.Name,
+					Namespace: secret.Namespace,
+				}, secret)).To(Succeed())
+
+				Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["config_rev"]).To(Equal(cfgMap.ResourceVersion))
+				Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["secret_rev"]).To(Equal(secret.ResourceVersion))
+			})
+			It("should update cluster ready condition", func() {
+				// get statefulset
+				sfsKey := types.NamespacedName{
+					Name:      cluster.GetNameForResource(api.StatefulSet),
+					Namespace: cluster.Namespace,
+				}
+				statefulSet := &appsv1.StatefulSet{}
+				Eventually(func() error {
+					return c.Get(context.TODO(), sfsKey, statefulSet)
+				}, timeout).Should(Succeed())
+
+				// update statefulset condition
+				statefulSet.Status.ReadyReplicas = 2
+				statefulSet.Status.Replicas = 2
+				Expect(c.Status().Update(context.TODO(), statefulSet)).To(Succeed())
+
+				// expect a reconcile event
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+				Eventually(getClusterConditions(c, cluster), timeout).Should(haveCondWithStatus(api.ClusterConditionReady, corev1.ConditionTrue))
 			})
 		})
-
-		It("should create all the components when cluster is created", func() {
-			for _, obj := range components {
-				o := obj.(metav1.Object)
-				key := types.NamespacedName{Name: o.GetName(), Namespace: o.GetNamespace()}
-
-				Eventually(func() error { return c.Get(context.TODO(), key, obj) }).Should(Succeed())
-				When("delete component", func() {
-					Expect(c.Delete(context.TODO(), obj)).To(Succeed())
-					Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-					Eventually(func() error {
-						return c.Get(context.TODO(), key, obj)
-					}, timeout).Should(Succeed())
-				})
-
-			}
-		})
-
-		It("should have revision annotation on statefulset", func() {
-			// wait for the second update, else a race condition can happened
-			// with secret resource version.
-			//Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-
-			sfsKey := types.NamespacedName{
-				Name:      cluster.GetNameForResource(api.StatefulSet),
-				Namespace: cluster.Namespace,
-			}
-			statefulSet := &apps.StatefulSet{}
-			Eventually(func() error {
-				return c.Get(context.TODO(), sfsKey, statefulSet)
-			}, timeout).Should(Succeed())
-
-			cfgMap := &core.ConfigMap{}
-			Expect(c.Get(context.TODO(), types.NamespacedName{
-				Name:      cluster.GetNameForResource(api.ConfigMap),
-				Namespace: cluster.Namespace,
-			}, cfgMap)).To(Succeed())
-			Expect(c.Get(context.TODO(), types.NamespacedName{
-				Name:      secret.Name,
-				Namespace: secret.Namespace,
-			}, secret)).To(Succeed())
-
-			Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["config_rev"]).To(Equal(cfgMap.ResourceVersion))
-			Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["secret_rev"]).To(Equal(secret.ResourceVersion))
-		})
-
-		It("should have set ready condition", func() {
-			// get statefulset
-			sfsKey := types.NamespacedName{
-				Name:      cluster.GetNameForResource(api.StatefulSet),
-				Namespace: cluster.Namespace,
-			}
-			statefulSet := &apps.StatefulSet{}
-			Eventually(func() error {
-				return c.Get(context.TODO(), sfsKey, statefulSet)
-			}, timeout).Should(Succeed())
-
-			// update statefulset condition
-			statefulSet.Status.ReadyReplicas = 2
-			statefulSet.Status.Replicas = 2
-			Expect(c.Status().Update(context.TODO(), statefulSet)).To(Succeed())
-
-			// expect a reconcile event
-			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-			Eventually(getClusterConditions(c, cluster), timeout).Should(haveCondWithStatus(api.ClusterConditionReady, core.ConditionTrue))
-		})
 	})
-
 })
 
 func removeAllCreatedResource(c client.Client, clusterComps []runtime.Object) {
@@ -292,7 +251,7 @@ func getClusterConditions(c client.Client, cluster *api.MysqlCluster) func() []a
 }
 
 // haveCondWithStatus is a helper func that returns a matcher to check for an existing condition in a ClusterCondition list.
-func haveCondWithStatus(condType api.ClusterConditionType, status core.ConditionStatus) gomegatypes.GomegaMatcher {
+func haveCondWithStatus(condType api.ClusterConditionType, status corev1.ConditionStatus) gomegatypes.GomegaMatcher {
 	return ContainElement(MatchFields(IgnoreExtras, Fields{
 		"Type":   Equal(condType),
 		"Status": Equal(status),

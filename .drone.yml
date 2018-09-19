@@ -3,9 +3,17 @@ workspace:
   path: src/github.com/presslabs/mysql-operator
 
 pipeline:
-  test:
+  dependencies:
     image: golang:1.11
     commands:
       - make dependencies
+
+  lint:
+    image: golang:1.11
+    commands:
       - make lint
+
+  test:
+    image: golang:1.11
+    commands:
       - make test

@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package orchestratormysql
+package orchestrator
 
 import (
+	"fmt"
+	"math/rand"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -26,6 +28,7 @@ import (
 
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -43,10 +46,14 @@ var _ = Describe("Orchestrator reconciler", func() {
 	)
 
 	BeforeEach(func() {
+		clusterKey := types.NamespacedName{
+			Name:      fmt.Sprintf("cluster-%d", rand.Int31()),
+			Namespace: "default",
+		}
 		rec = record.NewFakeRecorder(100)
 		orcClient = fakeOrc.New()
 		theCluster := &api.MysqlCluster{
-			ObjectMeta: metav1.ObjectMeta{Name: "the-name", Namespace: "the-namespace"},
+			ObjectMeta: metav1.ObjectMeta{Name: clusterKey.Name, Namespace: clusterKey.Namespace},
 			Status: api.MysqlClusterStatus{
 				ReadyNodes: 1,
 			},
@@ -59,58 +66,65 @@ var _ = Describe("Orchestrator reconciler", func() {
 		cluster = wrapcluster.NewMysqlClusterWrapper(theCluster)
 	})
 
-	When("cluster does not exists in orc", func() {
-		It("should register into orc", func() {
+	When("cluster does not exists in orchestrator", func() {
+		It("should register into orchestrator", func() {
 			cluster.Status.ReadyNodes = 1
 			Expect(orcSyncer.Sync()).To(Succeed())
 			Expect(orcClient.CheckDiscovered(cluster.GetPodHostname(0))).To(Equal(true))
 		})
+	})
 
-		It("should update status", func() {
+	When("cluster is registered in orchestrator", func() {
+		BeforeEach(func() {
+			// AddRecoveries signature: cluster, acked
+			orcClient.AddRecoveries(cluster.GetClusterAlias(), true)
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				ReadOnly:    false,
+				SlaveLagSeconds: orc.NullInt64{
+					Valid: false,
+					Int64: 0,
+				},
+				Slave_SQL_Running: false,
+				Slave_IO_Running:  false,
+				IsUpToDate:        true,
+				IsLastCheckValid:  true,
+			})
+		})
 
-			//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
-			orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-				true, fakeOrc.NoLag, false, true)
-			// AddRecoveries signature: cluster, id, acked
-			orcClient.AddRecoveries(cluster.GetClusterAlias(), 1, true)
-
+		It("should update cluster status", func() {
 			Expect(orcSyncer.Sync()).To(Succeed())
-			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
 			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionReadOnly, core.ConditionFalse))
 			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionFalse))
+			Expect(cluster.Status.Nodes).To(HaveLen(1))
 		})
 
-		It("should have pending recoveries", func() {
-			//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
-			orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-				true, fakeOrc.NoLag, false, true)
-			// AddRecoveries signature: cluster, id, acked
-			orcClient.AddRecoveries(cluster.GetClusterAlias(), 11, false)
+		It("should mark cluster having pending recoveries", func() {
+			// AddRecoveries signature: cluster, acked
+			orcClient.AddRecoveries(cluster.GetClusterAlias(), false)
 			Expect(orcSyncer.Sync()).To(Succeed())
 			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
 		})
 
-		It("should have pending recoveries but cluster not ready enough", func() {
-			//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
-			orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-				true, fakeOrc.NoLag, false, true)
-			// AddRecoveries signature: cluster, id, acked
-			orcClient.AddRecoveries(cluster.GetClusterAlias(), 111, false)
+		It("should not acknowledge pending recoveries when cluster is not ready for enough time", func() {
+			// AddRecoveries signature: cluster, acked
+			id := orcClient.AddRecoveries(cluster.GetClusterAlias(), false)
+
+			// mark cluster as ready
 			cluster.UpdateStatusCondition(api.ClusterConditionReady, core.ConditionTrue, "", "")
 			Expect(orcSyncer.Sync()).To(Succeed())
+
 			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
-			Expect(orcClient.CheckAck(111)).To(Equal(false))
+			Expect(orcClient.CheckAck(id)).To(Equal(false))
 		})
 
-		It("should have pending recoveries that will be recovered", func() {
-			//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
-			orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-				true, fakeOrc.NoLag, false, true)
+		It("should acknowledge pending recoveries after a grace period", func() {
 			// AddRecoveries signature: cluster, id, acked
-			orcClient.AddRecoveries(cluster.GetClusterAlias(), 112, false)
+			id := orcClient.AddRecoveries(cluster.GetClusterAlias(), false)
 			min20, _ := time.ParseDuration("-20m")
 			cluster.Status.Conditions = []api.ClusterCondition{
-				api.ClusterCondition{
+				{
 					Type:               api.ClusterConditionReady,
 					Status:             core.ConditionTrue,
 					LastTransitionTime: metav1.NewTime(time.Now().Add(min20)),
@@ -119,197 +133,47 @@ var _ = Describe("Orchestrator reconciler", func() {
 
 			Expect(orcSyncer.Sync()).To(Succeed())
 			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
-			Expect(orcClient.CheckAck(112)).To(Equal(true))
+			Expect(orcClient.CheckAck(id)).To(Equal(true))
 
 			var event string
 			Expect(rec.Events).To(Receive(&event))
 			Expect(event).To(ContainSubstring("RecoveryAcked"))
 		})
 
-		It("should master condition be set", func() {
-			//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
-			orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-				true, fakeOrc.NoLag, false, false)
+		It("should mark master in cluster nodes status", func() {
 			Expect(orcSyncer.Sync()).To(Succeed())
 			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
 		})
 
-		It("should remove the master condition if node not in orc", func() {
-			//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
-			orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-				true, fakeOrc.NoLag, false, true)
+		It("should remove master status when node is unregistered from orchestrator", func() {
+			// sync once to update cluster status
 			Expect(orcSyncer.Sync()).To(Succeed())
-			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
 
+			// remove node from orchestrator
 			orcClient.RemoveInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0))
+
+			// sync again
 			Expect(orcSyncer.Sync()).To(Succeed())
+
+			// check for node status
 			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionUnknown))
-		})
-
-		It("should determine the master", func() {
-			//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
-			inst := orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-				false, fakeOrc.NoLag, false, true)
-			inst.Key.Port = 3306
-			inst.MasterKey = orc.InstanceKey{Hostname: "", Port: 3306}
-
-			inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(1),
-				false, fakeOrc.NoLag, false, true)
-			inst.Key.Port = 3306
-			inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(0), Port: 3306}
-
-			inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(2),
-				false, fakeOrc.NoLag, false, true)
-			inst.Key.Port = 3306
-			inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(0), Port: 3306}
-
-			inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(3),
-				false, fakeOrc.NoLag, false, true)
-			inst.Key.Port = 3306
-			inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(2), Port: 3306}
-
-			inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(4),
-				false, fakeOrc.NoLag, false, true)
-			inst.Key.Port = 3306
-			inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(3), Port: 3306}
-
-			// Topology:
-			// 0 < - 1
-			//    \ - 2 < - 3 < - 4
-
-			var insts InstancesSet
-			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-
-			// should determin the master as 0
-			master := insts.DetermineMaster()
-			Expect(master.Key.Hostname).To(Equal(cluster.GetPodHostname(0)))
-		})
-
-		It("should not determine the master", func() {
-			//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
-			inst := orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-				false, fakeOrc.NoLag, false, true)
-			inst.Key.Port = 3306
-			inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(5), Port: 3306}
-			inst.IsCoMaster = true
-
-			inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(1),
-				false, fakeOrc.NoLag, false, true)
-			inst.Key.Port = 3306
-			inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(0), Port: 3306}
-
-			inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(2),
-				false, fakeOrc.NoLag, false, true)
-			inst.Key.Port = 3306
-			inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(0), Port: 3306}
-
-			inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(3),
-				false, fakeOrc.NoLag, false, true)
-			inst.Key.Port = 3306
-			inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(2), Port: 3306}
-
-			inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(4),
-				false, fakeOrc.NoLag, false, true)
-			inst.Key.Port = 3306
-			inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(5), Port: 3306}
-
-			inst = orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(5),
-				false, fakeOrc.NoLag, false, true)
-			inst.Key.Port = 3306
-			inst.MasterKey = orc.InstanceKey{Hostname: cluster.GetPodHostname(0), Port: 3306}
-			inst.IsCoMaster = true
-
-			// Topology:
-			//  0 <- 1
-			//  |  \_ 2 <- 3
-			//  5 <- 4
-
-			var insts InstancesSet
-			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-
-			// should not determin any master because there are two masters
-			master := insts.DetermineMaster()
-			Expect(master).To(BeNil())
-
-		})
-
-		It("should not determine the master for no instance", func() {
-			var insts InstancesSet
-			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-
-			master := insts.DetermineMaster()
-			Expect(master).To(BeNil())
-		})
-
-		Describe("the orchestrator updater unit tests", func() {
-			var (
-				updater *orcUpdater
-			)
-
-			BeforeEach(func() {
-				updater = &orcUpdater{
-					cluster:   wrapcluster.NewMysqlClusterWrapper(cluster.MysqlCluster),
-					recorder:  rec,
-					orcClient: orcClient,
-				}
-			})
-			It("should set master readOnly/Writable", func() {
-				//Set ReadOnly to true in order to get master ReadOnly
-				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
-				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-					true, fakeOrc.NoLag, false, true)
-
-				// set cluster on readonly, master should be in read only state
-				cluster.Spec.ReadOnly = true
-
-				insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-				Expect(updater.markReadOnlyNodesInOrc(insts)).To(Succeed())
-
-				insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-				for _, instance := range insts {
-					if instance.Key.Hostname == cluster.GetPodHostname(0) {
-						Expect(instance.ReadOnly).To(Equal(true))
-					}
-				}
-
-				//Set ReadOnly to false in order to get the master Writable
-				cluster.Spec.ReadOnly = false
-
-				insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-				Expect(updater.markReadOnlyNodesInOrc(insts)).To(Succeed())
-
-				insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-				master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
-				Expect(master.ReadOnly).To(Equal(false))
-
-			})
-
-			It("should remove from orc nodes that does not exists anymore", func() {
-				//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
-				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-					true, fakeOrc.NoLag, false, true)
-				orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(1),
-					true, fakeOrc.NoLag, false, true)
-
-				// call register and unregister nodes in orc
-				insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-				updater.registerUnregisterNodesInOrc(insts)
-
-				// check for instances in orc
-				insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-				Expect(insts).To(HaveLen(1))
-			})
 		})
 
 		It("should mark nodes as unknown when scale down", func() {
 			cluster.Spec.Replicas = 2
 			cluster.Status.ReadyNodes = 2
 
-			//AddInstance signature: cluster, host string, master bool, lag int64, slaveRunning, upToDate bool
-			orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0),
-				true, fakeOrc.NoLag, false, true)
-			orcClient.AddInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(1),
-				false, fakeOrc.NoLag, true, true)
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				ReadOnly:    false,
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				ReadOnly:    true,
+			})
 
 			// sync
 			Expect(orcSyncer.Sync()).To(Succeed())
@@ -328,6 +192,194 @@ var _ = Describe("Orchestrator reconciler", func() {
 
 			// node 0 should be ok
 			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
+		})
+	})
+
+	When("topology has a single master", func() {
+		It("should successfully find the master", func() {
+			// Topology:
+			// 0 < - 1
+			//    \ - 2 < - 3
+
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(2)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(3)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(2)},
+			})
+			var insts InstancesSet
+			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+
+			// should determine the master as 0
+			master := insts.DetermineMaster()
+			Expect(master.Key.Hostname).To(Equal(cluster.GetPodHostname(0)))
+		})
+	})
+
+	When("topology has co-master", func() {
+		It("should be unable to find a clear master", func() {
+			// Topology:
+			//  0 <- 1
+			//  |  \_ 2 <- 3
+			//  5 <- 4
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(5)},
+				IsCoMaster:  true,
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(2)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(3)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(2)},
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(4)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(5)},
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(5)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				IsCoMaster:  true,
+			})
+			var insts InstancesSet
+			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+
+			// should not determine any master because there are two masters
+			master := insts.DetermineMaster()
+			Expect(master).To(BeNil())
+
+		})
+	})
+
+	When("there is no node registered in orchestrator", func() {
+		It("should be unable to find a master", func() {
+			var insts InstancesSet
+			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+
+			master := insts.DetermineMaster()
+			Expect(master).To(BeNil())
+		})
+	})
+
+	Describe("status updater unit tests", func() {
+		var (
+			updater *orcUpdater
+		)
+
+		BeforeEach(func() {
+			updater = &orcUpdater{
+				cluster:   wrapcluster.NewMysqlClusterWrapper(cluster.MysqlCluster),
+				recorder:  rec,
+				orcClient: orcClient,
+			}
+
+		})
+
+		It("should set the master readOnly when cluster is read only", func() {
+			// set cluster on readonly, master should be in read only state
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				ReadOnly:    false,
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				ReadOnly:    true,
+			})
+
+			cluster.Spec.ReadOnly = true
+
+			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+			Expect(updater.markReadOnlyNodesInOrc(insts)).To(Succeed())
+
+			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+			for _, instance := range insts {
+				if instance.Key.Hostname == cluster.GetPodHostname(0) {
+					Expect(instance.ReadOnly).To(Equal(true))
+				}
+			}
+
+		})
+
+		It("should set the master writable when cluster is writable", func() {
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				ReadOnly:    true,
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				ReadOnly:    true,
+			})
+
+			//Set ReadOnly to false in order to get the master Writable
+			cluster.Spec.ReadOnly = false
+
+			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+			Expect(updater.markReadOnlyNodesInOrc(insts)).To(Succeed())
+
+			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+			master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
+			Expect(master.ReadOnly).To(Equal(false))
+
+			slave := InstancesSet(insts).GetInstance(cluster.GetPodHostname(1))
+			Expect(slave.ReadOnly).To(Equal(true))
+
+		})
+
+		It("should remove old nodes from orchestrator", func() {
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				ReadOnly:    false,
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				ReadOnly:    true,
+			})
+
+			cluster.Spec.Replicas = 1
+			cluster.Status.ReadyNodes = 1
+
+			// call register and unregister nodes in orc
+			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+			updater.updateNodesInOrc(insts)
+
+			// check for instances in orc
+			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+			Expect(insts).To(HaveLen(1))
 		})
 	})
 })
