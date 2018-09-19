@@ -206,6 +206,7 @@ func checkIfWasInit() (bool, error) {
 	return true, nil
 }
 
+// nolint: gosec
 func checkIfDataExists() bool {
 	path := fmt.Sprintf("%s/mysql", tb.DataDir)
 	_, err := os.Open(path)

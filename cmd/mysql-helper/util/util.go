@@ -272,6 +272,7 @@ func getOrcURI() string {
 
 // CopyFile the src file to dst. Any existing file will be overwritten and will not
 // copy file attributes.
+// nolint: gosec
 func CopyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
