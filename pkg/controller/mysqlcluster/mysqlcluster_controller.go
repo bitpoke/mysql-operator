@@ -21,7 +21,8 @@ import (
 	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
-	core "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -83,7 +84,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	err = c.Watch(&source.Kind{Type: &core.Service{}}, &handler.EnqueueRequestForOwner{
+	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &mysqlv1alpha1.MysqlCluster{},
 	})
@@ -91,7 +92,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	err = c.Watch(&source.Kind{Type: &core.ConfigMap{}}, &handler.EnqueueRequestForOwner{
+	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &mysqlv1alpha1.MysqlCluster{},
+	})
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(&source.Kind{Type: &policyv1beta1.PodDisruptionBudget{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &mysqlv1alpha1.MysqlCluster{},
 	})
@@ -162,11 +171,11 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	configMapResourceVersion := configMapSyncer.GetObject().(*core.ConfigMap).ResourceVersion
-	secretResourceVersion := secretSyncer.GetObject().(*core.Secret).ResourceVersion
+	configMapResourceVersion := configMapSyncer.GetObject().(*corev1.ConfigMap).ResourceVersion
+	secretResourceVersion := secretSyncer.GetObject().(*corev1.Secret).ResourceVersion
 
 	// run the syncers for services, pdb and statefulset
-	otherSyncers := []syncer.Interface{
+	syncers := []syncer.Interface{
 		mysqlcluster.NewHeadlessSVCSyncer(cluster),
 		mysqlcluster.NewMasterSVCSyncer(cluster),
 		mysqlcluster.NewHealthySVCSyncer(cluster),
@@ -175,11 +184,10 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	if len(cluster.Spec.MinAvailable) != 0 {
-		otherSyncers = append(otherSyncers, mysqlcluster.NewPDBSyncer(cluster))
+		syncers = append(syncers, mysqlcluster.NewPDBSyncer(cluster))
 	}
 
-	for _, sync := range otherSyncers {
-
+	for _, sync := range syncers {
 		err = syncer.Sync(context.TODO(), sync, r.Client, r.scheme, r.recorder)
 		if err != nil {
 			return reconcile.Result{}, err
