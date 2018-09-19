@@ -33,19 +33,9 @@ import (
 )
 
 const (
-	confVolumeName = "conf"
-	// ConfVolumeMountPath is the path where mysql configs will be mounted
-	ConfVolumeMountPath = "/etc/mysql"
-	// ConfDPath is the path to extra mysql configs dir
-	ConfDPath = "/etc/mysql/conf.d"
-
+	confVolumeName    = "conf"
 	confMapVolumeName = "config-map"
-	// ConfMapVolumeMountPath represents the temp config mount path in init containers
-	ConfMapVolumeMountPath = "/mnt/conf"
-
-	dataVolumeName = "data"
-	// DataVolumeMountPath is the path to mysql data
-	DataVolumeMountPath = "/var/lib/mysql"
+	dataVolumeName    = "data"
 )
 
 type sfsSyncer struct {
