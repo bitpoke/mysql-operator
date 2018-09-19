@@ -18,7 +18,7 @@ package mysqlcluster
 
 import (
 	"context"
-	"fmt"
+	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
@@ -136,19 +136,17 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 	log.Info("syncing cluster", "cluster", request.NamespacedName.String())
 
-	// check for secretName to be specified
-	if len(cluster.Spec.SecretName) == 0 {
-		return reconcile.Result{}, fmt.Errorf("the spec.secretName is empty")
-	}
-
 	// Set defaults on cluster
 	r.scheme.Default(cluster)
 	wrapcluster.NewMysqlClusterWrapper(cluster).SetDefaults(r.opt)
 
+	status := *cluster.Status.DeepCopy()
 	defer func() {
-		sErr := r.Status().Update(context.TODO(), cluster)
-		if sErr != nil {
-			log.Error(sErr, "failed to update cluster status", "cluster", cluster)
+		if !reflect.DeepEqual(status, cluster.Status) {
+			sErr := r.Status().Update(context.TODO(), cluster)
+			if sErr != nil {
+				log.Error(sErr, "failed to update cluster status", "cluster", cluster)
+			}
 		}
 	}()
 

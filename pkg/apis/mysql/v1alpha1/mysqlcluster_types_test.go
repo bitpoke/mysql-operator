@@ -32,8 +32,15 @@ var _ = Describe("MysqlCluster CRUD", func() {
 
 	BeforeEach(func() {
 		key = types.NamespacedName{Name: "foo", Namespace: "default"}
-		created = &MysqlCluster{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"}}
-
+		created = &MysqlCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+			},
+			Spec: MysqlClusterSpec{
+				SecretName: "foo",
+			},
+		}
 	})
 
 	AfterEach(func() {
@@ -64,13 +71,12 @@ var _ = Describe("MysqlCluster CRUD", func() {
 		})
 	})
 
-	Context("setup defaults", func() {
-		It("should populate defaults fields", func() {
+	Context("defaulting functions", func() {
+		It("should populate fields defaults", func() {
 			cluster := &MysqlCluster{ObjectMeta: metav1.ObjectMeta{Name: "foo1", Namespace: "default"}}
 			SetDefaults_MysqlCluster(cluster)
 
 			Expect(cluster.Spec.MysqlConf).NotTo(BeNil())
-
 		})
 	})
 })

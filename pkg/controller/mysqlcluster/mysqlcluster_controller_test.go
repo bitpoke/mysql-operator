@@ -143,21 +143,16 @@ var _ = Describe("MysqlCluster controller", func() {
 
 			Expect(c.Create(context.TODO(), secret)).To(Succeed())
 			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+
+			// Initial reconciliation
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			// Reconcile triggered by components being created and status being
+			// updated
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
-			// We need to drain the requests queue because syncing a subresource
-			// might trigger reconciliation again and we want to isolate tests
-			// to their own reconciliation requests
-			done := time.After(time.Second)
-			for {
-				select {
-				case <-requests:
-					continue
-				case <-done:
-					return
-				}
-			}
-
+			// We need to make sure that the controller does not create infinite
+			// loops
+			Consistently(requests, time.Second).ShouldNot(Receive(Equal(expectedRequest)))
 		})
 
 		AfterEach(func() {
