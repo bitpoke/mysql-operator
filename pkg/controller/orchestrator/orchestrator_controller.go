@@ -45,7 +45,7 @@ import (
 const (
 	eventNormal = "Normal"
 	//eventWarning   = "Warning"
-	controllerName = "orchestrator-mysql-controller"
+	controllerName = "controller.orchestrator"
 )
 
 var log = logf.Log.WithName(controllerName)
