@@ -33,30 +33,30 @@ import (
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
-	"github.com/presslabs/mysql-operator/pkg/syncers/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 var (
 	// BackupPort is the port on which xtrabackup expose backups, 3306
-	BackupPort = strconv.Itoa(mysqlcluster.HelperXtrabackupPort)
+	BackupPort = strconv.Itoa(constants.HelperXtrabackupPort)
 
 	// MysqlPort represents port on which mysql works
-	MysqlPort = strconv.Itoa(mysqlcluster.MysqlPort)
+	MysqlPort = strconv.Itoa(constants.MysqlPort)
 
 	// ConfigDir is the mysql configs path, /etc/mysql
-	ConfigDir = mysqlcluster.ConfVolumeMountPath
+	ConfigDir = constants.ConfVolumeMountPath
 
 	// ConfDPath is /etc/mysql/conf.d
-	ConfDPath = mysqlcluster.ConfDPath
+	ConfDPath = constants.ConfDPath
 
 	// MountConfigDir is the mounted configs that needs processing
-	MountConfigDir = mysqlcluster.ConfMapVolumeMountPath
+	MountConfigDir = constants.ConfMapVolumeMountPath
 
 	// DataDir is the mysql data. /var/lib/mysql
-	DataDir = mysqlcluster.DataVolumeMountPath
+	DataDir = constants.DataVolumeMountPath
 
 	// ToolsDbName is the name of the tools table
-	ToolsDbName = mysqlcluster.HelperDbName
+	ToolsDbName = constants.HelperDbName
 	// ToolsInitTableName is the name of the init table
 	ToolsInitTableName = "init"
 
@@ -65,12 +65,12 @@ var (
 
 	// OrcTopologyDir contains the path where the secret with orc credentials is
 	// mounted.
-	OrcTopologyDir = mysqlcluster.OrcTopologyDir
+	OrcTopologyDir = constants.OrcTopologyDir
 
 	// ServerPort http server port
-	ServerPort = mysqlcluster.HelperServerPort
+	ServerPort = constants.HelperServerPort
 	// ServerProbeEndpoint is the http server endpoint for probe
-	ServerProbeEndpoint = mysqlcluster.HelperServerProbePath
+	ServerProbeEndpoint = constants.HelperServerProbePath
 	// ServerBackupEndpoint is the http server endpoint for backups
 	ServerBackupEndpoint = "/xbackup"
 )

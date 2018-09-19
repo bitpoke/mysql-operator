@@ -213,7 +213,7 @@ func checkIfDataExists() bool {
 	if os.IsNotExist(err) {
 		return false
 	} else if err != nil {
-		glog.Warning("[checkIfDataExists] faild to open %s with err: %s", path, err)
+		glog.Warningf("[checkIfDataExists] faild to open %s with err: %s", path, err)
 	}
 
 	return true

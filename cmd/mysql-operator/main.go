@@ -30,7 +30,7 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/apis"
 	"github.com/presslabs/mysql-operator/pkg/controller"
 	"github.com/presslabs/mysql-operator/pkg/options"
-	"github.com/presslabs/mysql-operator/pkg/util/stoppkg"
+	"github.com/presslabs/mysql-operator/pkg/util/stop"
 )
 
 var log = logf.Log.WithName("mysql-operator")
@@ -82,7 +82,7 @@ func main() {
 	}
 
 	// Start the Cmd
-	if err := mgr.Start(stoppkg.Channel); err != nil {
+	if err := mgr.Start(stop.Channel); err != nil {
 		log.Error(err, "unable to start the manager")
 		os.Exit(1)
 	}

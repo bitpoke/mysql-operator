@@ -121,7 +121,7 @@ func configureReplicationUser() error {
 func configureExporterUser() error {
 	query := fmt.Sprintf(`
     SET @@SESSION.SQL_LOG_BIN = 0;
-    GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO '%s'@'%%' IDENTIFIED BY '%s' WITH MAX_USER_CONNECTIONS 3;
+    GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO '%s'@'127.0.0.1' IDENTIFIED BY '%s' WITH MAX_USER_CONNECTIONS 3;
     `, tb.GetExporterUser(), tb.GetExporterPass())
 	if err := tb.RunQuery(query); err != nil {
 		return fmt.Errorf("failed to metrics exporter user: %s", err)
@@ -182,7 +182,7 @@ func configTopology() error {
         START SLAVE;
         `
 		if err := tb.RunQuery(query); err != nil {
-			glog.Warning("Failed to start slave simple, err: %s, try second method.")
+			glog.Warning("Failed to start slave simple, try second method.")
 			// TODO: https://bugs.mysql.com/bug.php?id=83713
 			query2 := `
 			reset slave;
