@@ -42,7 +42,7 @@ import (
 
 var log = logf.Log.WithName(controllerName)
 
-const controllerName = "mysqlcluster-controller"
+const controllerName = "controller.mysqlcluster"
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -148,7 +148,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	defer func() {
 		sErr := r.Status().Update(context.TODO(), cluster)
 		if sErr != nil {
-			log.Error(sErr, "Failed to update cluster status!", "cluster", cluster)
+			log.Error(sErr, "failed to update cluster status", "cluster", cluster)
 		}
 	}()
 

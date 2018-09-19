@@ -67,7 +67,7 @@ func (ou *orcUpdater) Sync() error {
 	}
 
 	if len(instances) == 0 {
-		log.Info("no instances in orchestrator!", "clusterAlias", ou.cluster.GetClusterAlias(), "cluster", ou.cluster)
+		log.Info("no instances in orchestrator", "clusterAlias", ou.cluster.GetClusterAlias(), "cluster", ou.cluster)
 	}
 
 	// register nodes in orchestrator if needed, or remove nodes from status

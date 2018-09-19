@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	//logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"github.com/presslabs/mysql-operator/pkg/apis"
 )
@@ -53,7 +53,7 @@ var _ = BeforeSuite(func() {
 	cfg, err = t.Start()
 	Expect(err).NotTo(HaveOccurred())
 
-	logf.SetLogger(logf.ZapLogger(true))
+	// logf.SetLogger(logf.ZapLogger(true))
 })
 
 var _ = AfterSuite(func() {
