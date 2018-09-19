@@ -53,6 +53,18 @@ const (
 	// HelperDbName represent the database name that is used by operator to
 	// manage the mysql cluster.
 	HelperDbName = constants.HelperDbName
+
+	// ConfVolumeMountPath is the path where mysql configs will be mounted
+	ConfVolumeMountPath = constants.ConfVolumeMountPath
+
+	// DataVolumeMountPath is the path to mysql data
+	DataVolumeMountPath = constants.DataVolumeMountPath
+
+	// ConfMapVolumeMountPath represents the temp config mount path in init containers
+	ConfMapVolumeMountPath = constants.ConfMapVolumeMountPath
+
+	// ConfDPath is the path to extra mysql configs dir
+	ConfDPath = constants.ConfDPath
 )
 
 var (

@@ -43,4 +43,16 @@ const (
 	// when changeing this value to update the orchestrator chart value for
 	// SlaveLagQuery in hack/charts/mysql-operator/values.yaml.
 	HelperDbName = "sys_operator"
+
+	// ConfVolumeMountPath is the path where mysql configs will be mounted
+	ConfVolumeMountPath = "/etc/mysql"
+
+	// DataVolumeMountPath is the path to mysql data
+	DataVolumeMountPath = "/var/lib/mysql"
+
+	// ConfMapVolumeMountPath represents the temp config mount path in init containers
+	ConfMapVolumeMountPath = "/mnt/conf"
+
+	// ConfDPath is the path to extra mysql configs dir
+	ConfDPath = "/etc/mysql/conf.d"
 )
