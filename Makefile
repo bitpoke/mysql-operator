@@ -62,7 +62,7 @@ docker-build: test
 docker-push:
 	docker push ${IMG}
 
-lint: vet
+lint:
 	$(BINDIR)/golangci-lint run ./pkg/... ./cmd/...
 
 dependencies:
