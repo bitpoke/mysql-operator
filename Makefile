@@ -16,8 +16,8 @@ all: test manager
 test: generate fmt vet manifests
 	KUBEBUILDER_ASSETS=$(BINDIR) ginkgo \
 			--randomizeAllSpecs --randomizeSuites --failOnPending \
-			--cover --coverprofile cover.out --trace --race -v\
-			./pkg/... ./cmd/... $(TEST_ARGS)
+			--cover --coverprofile cover.out --trace --race -v  $(TEST_ARGS)\
+			./pkg/... ./cmd/...
 
 # Build manager binary
 manager: generate fmt vet

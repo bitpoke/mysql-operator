@@ -33,6 +33,13 @@ type OrcFakeClient struct {
 	Discovered []InstanceKey
 }
 
+var nextID int64
+
+func getNextID() int64 {
+	nextID = nextID + 1
+	return nextID
+}
+
 const (
 	// NoLag is the constant that sets an instance as no lag
 	NoLag int64 = -1
@@ -43,39 +50,33 @@ func New() *OrcFakeClient {
 	return &OrcFakeClient{}
 }
 
+// Reset removes all instances and ack from a client
+func (o *OrcFakeClient) Reset() {
+	o.Clusters = *new(map[string][]*Instance)
+	o.Recoveries = *new(map[string][]TopologyRecovery)
+	o.AckRec = []int64{}
+	o.Discovered = []InstanceKey{}
+}
+
 // AddInstance add a instance to orchestrator client
-func (o *OrcFakeClient) AddInstance(cluster, host string, master bool, lag int64, slaveRunning, upToDate bool) *Instance {
-	valid := true
-	if lag == NoLag {
-		valid = false
-	}
-	inst := &Instance{
-		Key: InstanceKey{
-			Hostname: host,
-			Port:     3306,
-		},
-		ReadOnly: !master,
-		SlaveLagSeconds: NullInt64{
-			Valid: valid,
-			Int64: lag,
-		},
-		ClusterName:       cluster,
-		Slave_SQL_Running: slaveRunning,
-		Slave_IO_Running:  slaveRunning,
-		IsUpToDate:        upToDate,
-		IsLastCheckValid:  upToDate,
-	}
+func (o *OrcFakeClient) AddInstance(instance Instance) *Instance {
+	cluster := instance.ClusterName
+
+	instance.Key.Port = 3306
+	instance.MasterKey.Port = 3306
+
 	if o.Clusters == nil {
 		o.Clusters = make(map[string][]*Instance)
 	}
+
 	clusters, ok := o.Clusters[cluster]
 	if ok {
-		o.Clusters[cluster] = append(clusters, inst)
+		o.Clusters[cluster] = append(clusters, &instance)
 	} else {
-		o.Clusters[cluster] = []*Instance{inst}
+		o.Clusters[cluster] = []*Instance{&instance}
 	}
 
-	return inst
+	return &instance
 }
 
 // RemoveInstance deletes a instance from orchestrator
@@ -99,7 +100,8 @@ func (o *OrcFakeClient) RemoveInstance(cluster, host string) {
 }
 
 // AddRecoveries add a recovery for a cluster
-func (o *OrcFakeClient) AddRecoveries(cluster string, id int64, ack bool) {
+func (o *OrcFakeClient) AddRecoveries(cluster string, ack bool) int64 {
+	id := getNextID()
 	tr := TopologyRecovery{
 		Id:                     id,
 		Acknowledged:           ack,
@@ -113,6 +115,7 @@ func (o *OrcFakeClient) AddRecoveries(cluster string, id int64, ack bool) {
 		o.Recoveries = make(map[string][]TopologyRecovery)
 	}
 	o.Recoveries[cluster] = []TopologyRecovery{tr}
+	return id
 }
 
 // CheckAck verify is an ack is present
@@ -152,7 +155,7 @@ func (o *OrcFakeClient) Forget(host string, port int) error {
 	cluster := ""
 	for c, insts := range o.Clusters {
 		for _, inst := range insts {
-			if inst.Key.Hostname == host && inst.Key.Port == port {
+			if inst.Key.Hostname == host {
 				cluster = c
 			}
 		}
@@ -209,38 +212,29 @@ func (o *OrcFakeClient) AckRecovery(id int64, comment string) error {
 // SetHostWritable make a host writable
 func (o *OrcFakeClient) SetHostWritable(key InstanceKey) error {
 
-	check := false
 	for _, instances := range o.Clusters {
 		for _, instance := range instances {
-			if instance.Key.Hostname == key.Hostname && instance.Key.Port == key.Port {
+			if instance.Key.Hostname == key.Hostname {
 				instance.ReadOnly = false
-				check = true
+				return nil
 			}
 		}
 	}
-	if !check {
-		return fmt.Errorf("the desired host and port was not found")
-	}
-
-	return nil
+	return fmt.Errorf("the desired host and port was not found")
 }
 
 // SetHostReadOnly make a host read only
 func (o *OrcFakeClient) SetHostReadOnly(key InstanceKey) error {
 
-	check := false
 	for _, instances := range o.Clusters {
 		for _, instance := range instances {
-			if instance.Key.Hostname == key.Hostname && instance.Key.Port == key.Port {
+			if instance.Key.Hostname == key.Hostname {
 				instance.ReadOnly = true
-				check = true
+				return nil
 			}
 		}
 	}
-	if !check {
-		return fmt.Errorf("the desired host and port was not found")
-	}
-	return nil
+	return fmt.Errorf("the desired host and port was not found")
 }
 
 // BeginMaintenance set a host in maintenance

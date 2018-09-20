@@ -73,7 +73,7 @@ var _ = Describe("Orchestrator controller", func() {
 		close(stop)
 	})
 
-	Describe("when creating a new mysql cluster", func() {
+	Describe("after creating a new mysql cluster", func() {
 		var (
 			expectedRequest reconcile.Request
 			cluster         *api.MysqlCluster
@@ -107,20 +107,20 @@ var _ = Describe("Orchestrator controller", func() {
 			}
 
 			Expect(c.Create(context.TODO(), secret)).To(Succeed())
+			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
 
-			// We need to drain the requests queue because syncing a subresource
-			// might trigger reconciliation again and we want to isolate tests
-			// to their own reconciliation requests
-			done := time.After(time.Second)
-			for {
-				select {
-				case <-requests:
-					continue
-				case <-done:
-					return
-				}
-			}
+			// expect to not receive any event when a cluster is created, but
+			// just after reconcile time passed then receive a reconcile event
+			Consistently(requests, reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
+			// Initial reconciliation
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			// Reconcile triggered by components being created and status being
+			// updated
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
+			// We need to make sure that the controller does not create infinite
+			// loops
+			Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 		})
 
 		AfterEach(func() {
@@ -130,19 +130,9 @@ var _ = Describe("Orchestrator controller", func() {
 			c.Delete(context.TODO(), secret)
 		})
 
-		It("should register the cluster [Slow]", func() {
-			// create a cluster, the cluster is not created.
-			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
-
-			// expect to not receive any event when a cluster is created, but
-			// just after reconcile time passed then receive a reconcile event
-			Consistently(requests, reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
-			Eventually(requests).Should(Receive(Equal(expectedRequest)))
-
-			// stop the controller
+		It("should re-register cluster for orchestrator sync when re-starting the controller", func() {
+			// restart the controller
 			close(stop)
-
-			// start the controller
 			var recFn reconcile.Reconciler
 			mgr, err := manager.New(cfg, manager.Options{})
 			Expect(err).NotTo(HaveOccurred())
@@ -154,33 +144,14 @@ var _ = Describe("Orchestrator controller", func() {
 			// wait a second for a request
 			Consistently(requests, reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
 			Eventually(requests).Should(Receive(Equal(expectedRequest)))
+		})
 
-			// update the cluster
-			cluster.Spec.Replicas = 3
-			Expect(c.Get(context.TODO(), clusterKey, cluster)).To(Succeed()) // update cluster
-			Expect(c.Update(context.TODO(), cluster)).To(Succeed())
-
-			// wait a second for a request
-			Consistently(requests, reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
-			Eventually(requests).Should(Receive(Equal(expectedRequest)))
-
+		It("should unregister cluster when deleting it from kubernetes", func() {
 			// delete the cluster
 			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
 
 			// wait two seconds without request
-			Consistently(requests, timeout).ShouldNot(Receive(Equal(expectedRequest)))
-
-		})
-
-		It("should be (un)registered in list", func() {
-			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
-			defer c.Delete(context.TODO(), cluster)
-
-			Consistently(requests, reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
-			Eventually(requests).Should(Receive(Equal(expectedRequest)))
-
-			Consistently(requests, reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
-			Eventually(requests).Should(Receive(Equal(expectedRequest)))
+			Consistently(requests, 2*reconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
 
 		})
 	})

@@ -392,7 +392,7 @@ func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet) error {
 			if err = ou.setReadOnlyNode(inst); err != nil {
 				log.Error(err, "failed to set read only", "instance", inst)
 			}
-		} else if !ou.cluster.Spec.ReadOnly {
+		} else {
 			if err = ou.endNodeMaintenance(inst); err != nil {
 				log.Error(err, "failed to end maintenance", "instance", inst)
 			}

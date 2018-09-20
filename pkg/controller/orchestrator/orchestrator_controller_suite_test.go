@@ -58,7 +58,7 @@ var _ = BeforeSuite(func() {
 	cfg, err = t.Start()
 	Expect(err).NotTo(HaveOccurred())
 
-	// logf.SetLogger(logf.ZapLogger(true))
+	//logf.SetLogger(logf.ZapLogger(true))
 })
 
 var _ = AfterSuite(func() {

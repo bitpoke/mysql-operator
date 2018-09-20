@@ -18,13 +18,13 @@ package orchestratormysql
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,8 +53,6 @@ var log = logf.Log.WithName(controllerName)
 // reconcileTimePeriod represents the time in which a cluster shoud be reconciled
 var reconcileTimePeriod = time.Second * 5
 
-var clustersMap = sync.Map{}
-
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 // USER ACTION REQUIRED: update cmd/manager/main.go to call this mysql.Add(mgr) to install this Controller
@@ -75,6 +73,10 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
+	// stores a mapping between cluster and it's creation event,
+	// so that we know what clusters to sync with orchestrator
+	clusters := &sync.Map{}
+
 	// Create a new controller
 	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -89,7 +91,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				return
 			}
 
-			clustersMap.Store(getKey(evt.Meta), event.GenericEvent{ // nolint: megacheck
+			clusters.Store(getKey(evt.Meta), event.GenericEvent{ // nolint: megacheck
 				Meta:   evt.Meta,
 				Object: evt.Object,
 			})
@@ -100,7 +102,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				return
 			}
 
-			clustersMap.Delete(getKey(evt.Meta))
+			clusters.Delete(getKey(evt.Meta))
 		},
 	})
 	if err != nil {
@@ -130,7 +132,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				return
 			case <-time.After(reconcileTimePeriod):
 				// write all clusters to envents chan to be processed
-				clustersMap.Range(func(key, value interface{}) bool {
+				clusters.Range(func(key, value interface{}) bool {
 					events <- value.(event.GenericEvent)
 					return true
 				})
@@ -188,5 +190,8 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 
 // getKey returns a string that represents the key under which cluster is registered
 func getKey(meta metav1.Object) string {
-	return fmt.Sprintf("%s.%s", meta.GetName(), meta.GetNamespace())
+	return types.NamespacedName{
+		Namespace: meta.GetNamespace(),
+		Name:      meta.GetName(),
+	}.String()
 }
