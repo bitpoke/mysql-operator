@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 // nolint: errcheck
-package orchestratormysql
+package orchestrator
 
 import (
 	"path/filepath"
