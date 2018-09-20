@@ -14,7 +14,7 @@ limitations under the License.
 */
 
 // nolint: errcheck
-package orchestratormysql
+package orchestrator
 
 import (
 	"fmt"
