@@ -17,43 +17,56 @@ limitations under the License.
 package main
 
 import (
-	"log"
+	"flag"
+	"os"
 
-	"github.com/presslabs/mysql-operator/pkg/apis"
-	"github.com/presslabs/mysql-operator/pkg/controller"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+
+	"github.com/presslabs/mysql-operator/pkg/apis"
+	"github.com/presslabs/mysql-operator/pkg/controller"
+	"github.com/presslabs/mysql-operator/pkg/util/stop"
 )
 
+var log = logf.Log.WithName("wordpress-operator")
+
 func main() {
+	flag.Parse()
+	logf.SetLogger(logf.ZapLogger(true))
+
+	log.Info("Starting mysql-operator...")
+
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err, "unable to get configuration")
+		os.Exit(1)
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{})
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err, "unable to create a new manager")
+		os.Exit(1)
 	}
-
-	log.Printf("Registering Components.")
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Fatal(err)
+		log.Error(err, "unable to register types to scheme")
+		os.Exit(1)
 	}
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
-		log.Fatal(err)
+		log.Error(err, "unable to setup controllers")
+		os.Exit(1)
 	}
 
-	log.Printf("Starting the Cmd.")
-
 	// Start the Cmd
-	log.Fatal(mgr.Start(signals.SetupSignalHandler()))
+	if err := mgr.Start(stop.Channel); err != nil {
+		log.Error(err, "unable to start the manager")
+		os.Exit(1)
+	}
 }
