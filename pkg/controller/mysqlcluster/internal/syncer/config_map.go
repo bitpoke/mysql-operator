@@ -78,7 +78,7 @@ func (s *configMapSyncer) SyncFn(in runtime.Object) error {
 			log.V(2).Info("skip updating configs", "hash", out.ObjectMeta.Annotations["config_hash"])
 			return nil
 		}
-		log.V(2).Info("config map hashes doesn't match", "old_hash", key, "new_hash", newHash)
+		log.V(2).Info("config map hashes don't match", "old_hash", key, "new_hash", newHash)
 	}
 
 	out.ObjectMeta.Annotations = map[string]string{

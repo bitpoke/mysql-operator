@@ -15,15 +15,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package orchestrator note
+// NOTE that this code is copied from:
+// https://github.com/github/orchestrator/blob/master/go/inst/instance.go We
+// need just the types that's why is copied instead of imported.
 package orchestrator
 
 import (
 	"time"
 )
-
-// Note that this code is copied from:
-// https://github.com/github/orchestrator/blob/master/go/inst/instance.go We
-// need just the types that's way is copied instead of imported.
 
 // InstanceKey is the node key
 type InstanceKey struct {

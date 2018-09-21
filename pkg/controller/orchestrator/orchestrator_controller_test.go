@@ -25,9 +25,9 @@ import (
 	. "github.com/onsi/gomega"
 
 	"golang.org/x/net/context"
-	apps "k8s.io/api/apps/v1"
-	core "k8s.io/api/core/v1"
-	policy "k8s.io/api/policy/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -77,7 +77,7 @@ var _ = Describe("Orchestrator controller", func() {
 		var (
 			expectedRequest reconcile.Request
 			cluster         *api.MysqlCluster
-			secret          *core.Secret
+			secret          *corev1.Secret
 			clusterKey      types.NamespacedName
 		)
 
@@ -91,7 +91,7 @@ var _ = Describe("Orchestrator controller", func() {
 				NamespacedName: clusterKey,
 			}
 
-			secret = &core.Secret{
+			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "the-secret", Namespace: clusterKey.Namespace},
 				StringData: map[string]string{
 					"ROOT_PASSWORD": "this-is-secret",
@@ -159,37 +159,37 @@ var _ = Describe("Orchestrator controller", func() {
 
 func removeAllCreatedResource(c client.Client, cluster *api.MysqlCluster) {
 	objs := []runtime.Object{
-		&apps.StatefulSet{
+		&appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cluster.GetNameForResource(api.StatefulSet),
 				Namespace: cluster.Namespace,
 			},
 		},
-		&core.Service{
+		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cluster.GetNameForResource(api.HeadlessSVC),
 				Namespace: cluster.Namespace,
 			},
 		},
-		&core.Service{
+		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cluster.GetNameForResource(api.MasterService),
 				Namespace: cluster.Namespace,
 			},
 		},
-		&core.Service{
+		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cluster.GetNameForResource(api.HealthyNodesService),
 				Namespace: cluster.Namespace,
 			},
 		},
-		&core.ConfigMap{
+		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cluster.GetNameForResource(api.ConfigMap),
 				Namespace: cluster.Namespace,
 			},
 		},
-		&policy.PodDisruptionBudget{
+		&policyv1beta1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cluster.GetNameForResource(api.PodDisruptionBudget),
 				Namespace: cluster.Namespace,
