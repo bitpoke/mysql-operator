@@ -151,6 +151,17 @@ var _ = Describe("MysqlCluster controller", func() {
 			// updated
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
+			// some extra reconcile requests may appear
+		drain:
+			for {
+				select {
+				case <-requests:
+					continue
+				case <-time.After(100 * time.Millisecond):
+					break drain
+				}
+			}
+
 			// We need to make sure that the controller does not create infinite
 			// loops
 			Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
