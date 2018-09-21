@@ -18,6 +18,7 @@ package orchestrator
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	core "k8s.io/api/core/v1"
@@ -29,7 +30,9 @@ import (
 )
 
 const (
-	healtyMoreThanMinutes        = 10
+	// recoveryGraceTime is the time, in seconds, that has to pass since cluster
+	// is marked as Ready and to acknowledge a recovery for a cluster
+	recoveryGraceTime            = 600
 	defaultMaxSlaveLatency int64 = 30
 	mysqlPort                    = 3306
 )
@@ -63,29 +66,29 @@ func (ou *orcUpdater) Sync() error {
 	)
 
 	if instances, err = ou.orcClient.Cluster(ou.cluster.GetClusterAlias()); err != nil {
-		log.Error(err, "can't get instances from orchestrator", "alias", ou.cluster.GetClusterAlias(), "cluster", ou.cluster)
+		log.Error(err, "can't get instances from orchestrator", "alias", ou.cluster.GetClusterAlias())
 	}
 
 	if len(instances) == 0 {
-		log.Info("no instances in orchestrator", "clusterAlias", ou.cluster.GetClusterAlias(), "cluster", ou.cluster)
+		log.V(2).Info("no instances in orchestrator", "clusterAlias", ou.cluster.GetClusterAlias())
 	}
 
 	// register nodes in orchestrator if needed, or remove nodes from status
-	instances = ou.registerUnregisterNodesInOrc(instances)
+	instances = ou.updateNodesInOrc(instances)
 
 	// remove nodes that are not in orchestrator
 	ou.removeNodeConditionNotInOrc(instances)
 
 	// set readonly in orchestrator if needed
 	if err = ou.markReadOnlyNodesInOrc(instances); err != nil {
-		log.Error(err, "error setting Master readOnly/writable", "instances", instances, "cluster", ou.cluster)
+		log.Error(err, "error setting Master readOnly/writable", "instances", instances)
 	}
 	// update cluster status accordingly with orchestrator
 	ou.updateStatusFromOrc(instances)
 
 	// get reecoveries for this cluster
 	if recoveries, err = ou.orcClient.AuditRecovery(ou.cluster.GetClusterAlias()); err != nil {
-		log.Error(err, "can't get recoveries from orchestrator", "alias", ou.cluster.GetClusterAlias(), "cluster", ou.cluster)
+		log.Error(err, "can't get recoveries from orchestrator", "alias", ou.cluster.GetClusterAlias())
 	}
 	// update cluster status
 	ou.updateStatusForRecoveries(recoveries)
@@ -93,7 +96,7 @@ func (ou *orcUpdater) Sync() error {
 	toAck := ou.getRecoveriesToAck(recoveries)
 	// acknowledge recoveries
 	if err = ou.acknowledgeRecoveries(toAck); err != nil {
-		log.Error(err, "failed to acknowledge recoveries", "cluster", ou.cluster, "ack_recoveries", toAck)
+		log.Error(err, "failed to acknowledge recoveries", "alias", ou.cluster.GetClusterAlias(), "ack_recoveries", toAck)
 	}
 	return nil
 }
@@ -171,14 +174,14 @@ func (ou *orcUpdater) updateStatusFromOrc(insts InstancesSet) {
 	}
 }
 
-// registerUnregisterNodesInOrc is the functions that tries to register
+// updateNodesInOrc is the functions that tries to register
 // unregistered nodes and to remove nodes that does not exists.
-func (ou *orcUpdater) registerUnregisterNodesInOrc(instances InstancesSet) InstancesSet {
+func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) InstancesSet {
 	var (
 		// hosts that should be discovered
-		shouldBeDiscovered []string
+		shouldDiscover []string
 		// list of instances from orchestrator that should be removed
-		shouldBeRemoved []string
+		shouldForget []string
 		// the list of instances that are in orchestrator and k8s
 		instancesFiltered InstancesSet
 	)
@@ -188,7 +191,7 @@ func (ou *orcUpdater) registerUnregisterNodesInOrc(instances InstancesSet) Insta
 		if inst := instances.GetInstance(host); inst == nil {
 			// host is not present into orchestrator
 			// register new host into orchestrator
-			shouldBeDiscovered = append(shouldBeDiscovered, host)
+			shouldDiscover = append(shouldDiscover, host)
 		} else {
 			// this instance is present in both k8s and orchestrator
 			instancesFiltered = append(instancesFiltered, *inst)
@@ -198,12 +201,12 @@ func (ou *orcUpdater) registerUnregisterNodesInOrc(instances InstancesSet) Insta
 	// remove all instances from orchestrator that does not exists in k8s
 	for _, inst := range instances {
 		if i := instancesFiltered.GetInstance(inst.Key.Hostname); i == nil {
-			shouldBeRemoved = append(shouldBeRemoved, inst.Key.Hostname)
+			shouldForget = append(shouldForget, inst.Key.Hostname)
 		}
 	}
 
-	ou.discoverNodesInOrc(shouldBeDiscovered)
-	ou.forgetNodesFromOrc(shouldBeRemoved)
+	ou.discoverNodesInOrc(shouldDiscover)
+	ou.forgetNodesFromOrc(shouldForget)
 
 	return instancesFiltered
 }
@@ -211,7 +214,7 @@ func (ou *orcUpdater) registerUnregisterNodesInOrc(instances InstancesSet) Insta
 func (ou *orcUpdater) discoverNodesInOrc(hosts []string) {
 	for _, host := range hosts {
 		if err := ou.orcClient.Discover(host, mysqlPort); err != nil {
-			log.Error(err, "failed to register host with orchestrator", "host", host)
+			log.Error(err, "failed to discover host with orchestrator", "host", host)
 		}
 	}
 }
@@ -233,29 +236,27 @@ func (ou *orcUpdater) getRecoveriesToAck(recoveries []orc.TopologyRecovery) []or
 
 	i, found := condIndexCluster(ou.cluster, api.ClusterConditionReady)
 	if !found || ou.cluster.Status.Conditions[i].Status != core.ConditionTrue {
-		log.Info("cluster not ready for acknowledge", "cluster", ou.cluster)
+		log.Info("skip acknowledging recovery since cluster is not ready yet", "cluster", ou.cluster)
 		return toAck
 	}
 
-	timeSinceReady := time.Since(ou.cluster.Status.Conditions[i].LastTransitionTime.Time).Minutes()
-	if timeSinceReady < healtyMoreThanMinutes {
-		log.Info("cluster not ready for acknowledge", "timeSinceReady", timeSinceReady, "trashold", healtyMoreThanMinutes)
+	timeSinceReady := time.Since(ou.cluster.Status.Conditions[i].LastTransitionTime.Time).Seconds()
+	if timeSinceReady < recoveryGraceTime {
+		log.Info("cluster not ready for acknowledge", "timeSinceReady", timeSinceReady, "threshold", recoveryGraceTime)
 		return toAck
 	}
 
 	for _, recovery := range recoveries {
 		if !recovery.Acknowledged {
-			// skip if it's a new recovery, recovery should be older then <healtyMoreThanMinutes> minutes
-			startTime, err := time.Parse(time.RFC3339, recovery.RecoveryStartTimestamp)
+			// skip if it's a new recovery, recovery should be older then <recoveryGraceTime> seconds
+			recoveryStartTime, err := time.Parse(time.RFC3339, recovery.RecoveryStartTimestamp)
 			if err != nil {
-				log.Error(err, "time parse error",
-					"recovery", recovery,
-				)
+				log.Error(err, "time parse error", "recovery", recovery)
 				continue
 			}
-			if time.Since(startTime).Minutes() < healtyMoreThanMinutes {
+			if time.Since(recoveryStartTime).Seconds() < recoveryGraceTime {
 				// skip this recovery
-				log.Error(nil, "tries to recover to sson", "recovery", recovery)
+				log.V(2).Info("tries to recover to sson", "recovery", recovery)
 				continue
 			}
 
@@ -266,8 +267,8 @@ func (ou *orcUpdater) getRecoveriesToAck(recoveries []orc.TopologyRecovery) []or
 }
 
 func (ou *orcUpdater) acknowledgeRecoveries(toAck []orc.TopologyRecovery) error {
-	comment := fmt.Sprintf("Statefulset '%s' is healty for more then %d minutes",
-		ou.cluster.GetNameForResource(api.StatefulSet), healtyMoreThanMinutes,
+	comment := fmt.Sprintf("Statefulset '%s' is healty for more then %d seconds",
+		ou.cluster.GetNameForResource(api.StatefulSet), recoveryGraceTime,
 	)
 
 	// acknowledge recoveries
@@ -291,7 +292,7 @@ func (ou *orcUpdater) updateStatusForRecoveries(recoveries []orc.TopologyRecover
 	}
 
 	if len(unack) > 0 {
-		msg := getRecoveryTextMsg(unack)
+		msg := makeRecoveryMessage(unack)
 		ou.cluster.UpdateStatusCondition(api.ClusterConditionFailoverAck,
 			core.ConditionTrue, "PendingFailoverAckExists", msg)
 	} else {
@@ -323,7 +324,7 @@ func (ou *orcUpdater) removeNodeConditionNotInOrc(insts InstancesSet) {
 	for _, ns := range ou.cluster.Status.Nodes {
 		node := insts.GetInstance(ns.Name)
 		if node == nil {
-			// node is NOT updated so will be marked as unknown all conditions types
+			// node is NOT updated so all conditions will be marked as unknown
 
 			ou.updateNodeCondition(ns.Name, api.NodeConditionLagged, core.ConditionUnknown)
 			ou.updateNodeCondition(ns.Name, api.NodeConditionReplicating, core.ConditionUnknown)
@@ -466,13 +467,13 @@ func (is InstancesSet) DetermineMaster() *orc.Instance {
 	return nil
 }
 
-// getRecoveryTextMsg returns a string human readable for cluster recoveries
-func getRecoveryTextMsg(acks []orc.TopologyRecovery) string {
-	text := ""
+// makeRecoveryMessage returns a string human readable for cluster recoveries
+func makeRecoveryMessage(acks []orc.TopologyRecovery) string {
+	texts := []string{}
 	for _, a := range acks {
-		text += fmt.Sprintf(" {id: %d, uid: %s, success: %t, time: %s}",
-			a.Id, a.UID, a.IsSuccessful, a.RecoveryStartTimestamp)
+		texts = append(texts, fmt.Sprintf("{id: %d, uid: %s, success: %t, time: %s}",
+			a.Id, a.UID, a.IsSuccessful, a.RecoveryStartTimestamp))
 	}
 
-	return fmt.Sprintf("[%s]", text)
+	return strings.Join(texts, " ")
 }

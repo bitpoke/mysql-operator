@@ -375,7 +375,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 
 			// call register and unregister nodes in orc
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-			updater.registerUnregisterNodesInOrc(insts)
+			updater.updateNodesInOrc(insts)
 
 			// check for instances in orc
 			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
