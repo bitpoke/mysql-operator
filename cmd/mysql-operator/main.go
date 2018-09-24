@@ -18,8 +18,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
+	"github.com/spf13/pflag"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -27,16 +29,31 @@ import (
 
 	"github.com/presslabs/mysql-operator/pkg/apis"
 	"github.com/presslabs/mysql-operator/pkg/controller"
+	"github.com/presslabs/mysql-operator/pkg/options"
 	"github.com/presslabs/mysql-operator/pkg/util/stop"
 )
 
-var log = logf.Log.WithName("wordpress-operator")
+var log = logf.Log.WithName("mysql-operator")
 
 func main() {
-	flag.Parse()
 	logf.SetLogger(logf.ZapLogger(true))
 
-	log.Info("Starting mysql-operator...")
+	fs := pflag.NewFlagSet(os.Args[0], pflag.ExitOnError)
+	fs.AddGoFlagSet(flag.CommandLine)
+
+	opt := options.GetOptions()
+	opt.AddFlags(fs)
+	if err := fs.Parse(os.Args); err != nil {
+		log.Error(err, "failed to parse command line args, see help.")
+		os.Exit(1)
+	}
+
+	if err := opt.Validate(); err != nil {
+		log.Error(err, "failed to validate command line args, see help.")
+		os.Exit(1)
+	}
+
+	fmt.Fprintln(os.Stderr, "Starting mysql-operator...")
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()

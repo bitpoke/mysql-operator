@@ -61,6 +61,14 @@
   revision = "7536572e8d55209135cd5e7ccf7fce43dca217ab"
 
 [[projects]]
+  digest = "1:d6bd34d9f9b8cb40469c1e5cca1e5d866f139f1c762e954f95d07e9f936aa86d"
+  name = "github.com/go-sql-driver/mysql"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "d523deb1b23d913de5bdada721a6071e71283618"
+  version = "v1.4.0"
+
+[[projects]]
   digest = "1:011e8eca01fb5af3497e6f1b79d670bb6b8519b4b0c287b710f984b364aaafb8"
   name = "github.com/gobuffalo/envy"
   packages = ["."]
@@ -522,6 +530,7 @@
   name = "google.golang.org/appengine"
   packages = [
     ".",
+    "cloudsql",
     "internal",
     "internal/app_identity",
     "internal/base",
@@ -852,13 +861,15 @@
   input-imports = [
     "github.com/emicklei/go-restful",
     "github.com/go-ini/ini",
-    "github.com/golang/glog",
+    "github.com/go-sql-driver/mysql",
+    github.com/golang/glog",
     "github.com/mitchellh/hashstructure",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
     "github.com/onsi/gomega/gstruct",
     "github.com/onsi/gomega/types",
     "github.com/presslabs/controller-util/syncer",
+    "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "golang.org/x/net/context",
     "k8s.io/api/apps/v1",

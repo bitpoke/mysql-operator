@@ -1,6 +1,8 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= quay.io/presslabs/mysql-operator:build
+SIDECAR_IMG ?= quay.io/presslabs/mysql-operator-sidecar:build
+
 BINDIR := $(PWD)/bin
 KUBEBUILDER_VERSION ?= 1.0.4
 
@@ -10,7 +12,13 @@ GOARCH ?= amd64
 PATH := $(BINDIR):$(PATH)
 SHELL := env PATH=$(PATH) /bin/sh
 
-all: test manager
+CMDS    := $(shell find ./cmd/ -maxdepth 1 -type d -exec basename {} \; | grep -v cmd)
+GOFILES := $(shell find cmd/ -name 'main.go' -type f )
+
+all: test build
+
+# Build binaries tag
+build: $(patsubst %, bin/%_linux_amd64, $(CMDS))
 
 # Run tests
 test: generate fmt vet manifests
@@ -19,9 +27,10 @@ test: generate fmt vet manifests
 			--cover --coverprofile cover.out --trace --race -v  $(TEST_ARGS)\
 			./pkg/... ./cmd/...
 
-# Build manager binary
-manager: generate fmt vet
-	go build -o bin/manager github.com/presslabs/mysql-operator/cmd/manager
+# Build binaries
+bin/%: $(GOFILES) Makefile
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) \
+		go build $(GOFLAGS) -v -o $@ cmd/$(shell echo "$*" | cut -d'_' -f1)/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet
@@ -34,7 +43,6 @@ install: manifests
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests
 	kubectl apply -f config/crds
-	kustomize build config/default | kubectl apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests:
@@ -52,11 +60,18 @@ vet:
 generate:
 	go generate ./pkg/... ./cmd/...
 
+# update docker context binaries
+$(patsubst %, hack/docker/%, $(CMDS)): $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
+	$(eval SRC := $(subst hack/docker/,,$@))
+	cp bin/${SRC}_$(GOOS)_$(GOARCH) $@
+
+# update all docker binaries
+update-docker: $(patsubst %, hack/docker/%, $(CMDS))
+
 # Build the docker image
-docker-build: test
-	docker build . -t ${IMG}
-	@echo "updating kustomize image patch file for manager resource"
-	sed -i 's@image: .*@image: '"${IMG}"'@' ./config/default/manager_image_patch.yaml
+docker-build: update-docker
+	docker build -t ${IMG} hack/docker/mysql-operator/
+	docker build  -t ${SIDECAR_IMG} hack/docker/mysql-operator-sidecar/
 
 # Push the docker image
 docker-push:
