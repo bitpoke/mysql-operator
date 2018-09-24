@@ -18,7 +18,7 @@ GOFILES := $(shell find cmd/ -name 'main.go' -type f )
 all: test build
 
 # Build binaries tag
-build: $(patsubst %, bin/%_linux_amd64, $(CMDS))
+build: $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
 
 # Run tests
 test: generate fmt vet manifests
@@ -47,6 +47,7 @@ deploy: manifests
 # Generate manifests e.g. CRD, RBAC etc.
 manifests:
 	go run vendor/sigs.k8s.io/controller-tools/cmd/controller-gen/main.go all
+	cd hack && ./generate_chart_manifests.sh
 
 # Run go fmt against code
 fmt:
@@ -63,7 +64,7 @@ generate:
 # update docker context binaries
 $(patsubst %, hack/docker/%, $(CMDS)): $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
 	$(eval SRC := $(subst hack/docker/,,$@))
-	cp bin/${SRC}_$(GOOS)_$(GOARCH) $@
+	cp bin/${SRC}_$(GOOS)_$(GOARCH) $@/${SRC}
 
 # update all docker binaries
 update-docker: $(patsubst %, hack/docker/%, $(CMDS))
@@ -80,9 +81,14 @@ docker-push:
 lint:
 	$(BINDIR)/golangci-lint run ./pkg/... ./cmd/...
 
+chart: generate manifests
+	cd hack && ./generate_chart.sh $(TAG)
+
 dependencies:
 	test -d $(BINDIR) || mkdir $(BINDIR)
 	GOBIN=$(BINDIR) go install ./vendor/github.com/onsi/ginkgo/ginkgo
+	curl -sL https://github.com/mikefarah/yq/releases/download/2.1.1/yq_$(GOOS)_$(GOARCH) -o $(BINDIR)/yq
+	chmod +x $(BINDIR)/yq
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v1.10.2
 	curl -sL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_$(GOOS)_$(GOARCH).tar.gz | \
 				tar -zx -C $(BINDIR) --strip-components=2
