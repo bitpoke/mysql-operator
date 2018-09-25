@@ -29,12 +29,14 @@ import (
 	"github.com/go-ini/ini"
 	// add mysql driver
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/golang/glog"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
+
+var log = logf.Log.WithName("sidecar.util")
 
 var (
 	// BackupPort is the port on which xtrabackup expose backups, 3306
@@ -141,7 +143,7 @@ func GetHostFor(id int) string {
 func getEnvValue(key string) string {
 	value := os.Getenv(key)
 	if len(value) == 0 {
-		glog.Warning(fmt.Sprintf("%s is not set!", key))
+		log.Info("envirorment is not set", "key", key)
 	}
 
 	return value
@@ -191,7 +193,7 @@ func GetBackupPass() string {
 func GetMasterHost() string {
 	orcURI := getOrcURI()
 	if len(orcURI) == 0 {
-		glog.Warning("Orchestrator is not used!")
+		log.Info("orchestrator is not used")
 		return GetHostFor(100)
 	}
 
@@ -200,8 +202,7 @@ func GetMasterHost() string {
 	client := orc.NewFromURI(orcURI)
 	inst, err := client.Master(fqClusterName)
 	if err != nil {
-		glog.Errorf("Failed to connect to orc for finding master, err: %s."+
-			" Fallback to determine master by its id.", err)
+		log.Error(err, "failed to connect to orchestrator for master", "master", GetHostFor(100))
 		return GetHostFor(100)
 	}
 
@@ -244,22 +245,22 @@ func GetMySQLConnectionString() (string, error) {
 }
 
 // RunQuery executes a query
-func RunQuery(q string) error {
+func RunQuery(q string, args ...sql.NamedArg) error {
 	dsn, err := GetMySQLConnectionString()
 	if err != nil {
-		glog.Warningf("Could not get mysql connection dsn: %s", err)
+		log.Error(err, "could not get mysql connection DSN")
 		return err
 	}
 
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		glog.Warningf("Could not open mysql connection: %s", err)
+		log.Error(err, "could not open mysql connection")
 		return err
 	}
 
-	glog.V(4).Infof("Running query: %s", q)
-	if _, err := db.Query(q); err != nil {
-		glog.Warningf("Could not query mysql: %s", err)
+	log.V(4).Info("running query", "query", q, "args", args)
+	if _, err := db.Query(q, args); err != nil {
+		log.Error(err, "could not query mysql", "query", q)
 		return err
 	}
 
@@ -280,7 +281,7 @@ func CopyFile(src, dst string) error {
 	}
 	defer func() {
 		if err1 := in.Close(); err1 != nil {
-			glog.Errorf("Failed to close source file: %s", err1)
+			log.Error(err1, "failed to close source file", "src_file", src)
 		}
 	}()
 
@@ -290,7 +291,7 @@ func CopyFile(src, dst string) error {
 	}
 	defer func() {
 		if err1 := out.Close(); err1 != nil {
-			glog.Errorf("Faield to close destination file: %s", err1)
+			log.Error(err1, "failed to close destination file", "dest_file", dst)
 		}
 	}()
 
@@ -315,7 +316,7 @@ func MaxClients(h http.Handler, n int) http.Handler {
 
 // RequestABackup connects to specified host and endpoint and gets the backup
 func RequestABackup(host, endpoint string) (io.Reader, error) {
-	glog.Infof("Initiate a backup from: %s endpoint: %s", host, endpoint)
+	log.Info("initialize a backup", "host", host, "endpoint", endpoint)
 
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d%s", host, ServerPort, endpoint), nil)
 	if err != nil {

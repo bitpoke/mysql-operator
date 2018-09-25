@@ -24,7 +24,6 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/golang/glog"
 	"github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/util"
 )
 
@@ -49,7 +48,8 @@ func newServer(stop <-chan struct{}) *server {
 	go func() {
 		<-stop // wait for stop signal
 		if err := srv.Shutdown(context.Background()); err != nil {
-			glog.Errorf("Failed to stop probe server, err: %s", err)
+			log.Error(err, "failed to stop http server")
+
 		}
 	}()
 
@@ -60,11 +60,10 @@ func newServer(stop <-chan struct{}) *server {
 func (s *server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte("OK")); err != nil {
-		glog.Errorf("Failed to write OK to health endpoint: %s", err)
+		log.Error(err, "failed writing request")
 	}
 }
 
-// nolint: gas
 func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !s.isAuthenticated(r) {
@@ -81,33 +80,34 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Connection", "keep-alive")
 
+	// nolint: gosec
 	xtrabackup := exec.Command("xtrabackup", "--backup", "--slave-info", "--stream=xbstream",
 		"--host=127.0.0.1", fmt.Sprintf("--user=%s", util.GetReplUser()),
-		fmt.Sprintf("--password=%s", util.GetReplPass()))
+		fmt.Sprintf("--password=%s", util.GetReplPass())) // nolint: gosec
 
 	xtrabackup.Stderr = os.Stderr
 
 	stdout, err := xtrabackup.StdoutPipe()
 	if err != nil {
-		glog.Errorf("Fail to create stdoutpipe: %s", err)
+		log.Error(err, "failed to create stdout pipe")
 		http.Error(w, "xtrabackup failed", http.StatusInternalServerError)
 		return
 	}
 
 	defer func() {
 		if err := stdout.Close(); err != nil {
-			glog.Errorf("Failed to close stdout of extrabackup: %s", err)
+			log.Error(err, "failed to close stdout pipe of extrabackup")
 		}
 	}()
 
 	if err := xtrabackup.Start(); err != nil {
-		glog.Errorf("Fail to start xtrabackup cmd: %s", err)
+		log.Error(err, "failed to start extrabackup command")
 		http.Error(w, "xtrabackup failed", http.StatusInternalServerError)
 		return
 	}
 
 	if _, err := io.Copy(w, stdout); err != nil {
-		glog.Errorf("Fail to copy buffer: %s", err)
+		log.Error(err, "failed to copy buffer")
 		http.Error(w, "buffer copy failed", http.StatusInternalServerError)
 		return
 	}
@@ -115,7 +115,7 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 	flusher.Flush()
 
 	if err := xtrabackup.Wait(); err != nil {
-		glog.Errorf("Fail waiting for xtrabackup to finish: %s", err)
+		log.Error(err, "failed waiting for xtrabackup to finish")
 		http.Error(w, "xtrabackup failed", http.StatusInternalServerError)
 		return
 	}

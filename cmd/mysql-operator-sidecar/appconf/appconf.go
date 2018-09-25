@@ -22,11 +22,13 @@ import (
 	"strconv"
 
 	"github.com/go-ini/ini"
-	"github.com/golang/glog"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	tb "github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/util"
 	"github.com/presslabs/mysql-operator/pkg/util"
 )
+
+var log = logf.Log.WithName("sidecar.appconf")
 
 const (
 	rStrLen = 18
@@ -35,7 +37,7 @@ const (
 // RunConfigCommand generates my.cnf, client.cnf and 10-dynamic.cnf files.
 func RunConfigCommand(stopCh <-chan struct{}) error {
 	role := tb.NodeRole()
-	glog.Infof("Configuring server: %s as %s", tb.GetHostname(), role)
+	log.Info("configuring server", "host", tb.GetHostname(), "role", role)
 
 	if err := tb.CopyFile(tb.MountConfigDir+"/my.cnf", tb.ConfigDir+"/my.cnf"); err != nil {
 		return fmt.Errorf("copy file my.cnf: %s", err)
