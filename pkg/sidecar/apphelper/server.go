@@ -24,7 +24,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/util"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/util"
 )
 
 type server struct {

@@ -24,7 +24,7 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	"github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/util"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/util"
 )
 
 var log = logf.Log.WithName("sidecar.apptakebackup")

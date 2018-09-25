@@ -23,7 +23,7 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	tb "github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/util"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/util"
 )
 
 var log = logf.Log.WithName("sidecar.apphelper")
@@ -47,13 +47,13 @@ func RunRunCommand(stopCh <-chan struct{}) error {
 
 	// deactivate super read only
 	log.V(2).Info("temporary disable SUPER_READ_ONLY")
-	if err := tb.RunQuery("SET GLOBAL READ_ONLY = 1; SET GLOBAL SUPER_READ_ONLY = 0;"); err != nil {
+	if err := util.RunQuery("SET GLOBAL READ_ONLY = 1; SET GLOBAL SUPER_READ_ONLY = 0;"); err != nil {
 		return fmt.Errorf("failed to configure master node, err: %s", err)
 	}
 
 	// update orchestrator user and password if orchestrator is configured
 	log.V(2).Info("configure orchestrator credentials")
-	if len(tb.GetOrcUser()) > 0 {
+	if len(util.GetOrcUser()) > 0 {
 		if err := configureOrchestratorUser(); err != nil {
 			return err
 		}
@@ -102,9 +102,9 @@ func configureOrchestratorUser() error {
     GRANT SELECT ON mysql.slave_master_info TO '@user'@'%';
     `
 
-	if err := tb.RunQuery(query, sql.Named("user", tb.GetOrcUser()),
-		sql.Named("password", tb.GetOrcPass()),
-		sql.Named("db_name", tb.ToolsDbName),
+	if err := util.RunQuery(query, sql.Named("user", util.GetOrcUser()),
+		sql.Named("password", util.GetOrcPass()),
+		sql.Named("db_name", util.ToolsDbName),
 	); err != nil {
 		return fmt.Errorf("failed to configure orchestrator (user/pass/access), err: %s", err)
 	}
@@ -117,7 +117,7 @@ func configureReplicationUser() error {
     SET @@SESSION.SQL_LOG_BIN = 0;
     GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO '@user'@'%' IDENTIFIED BY '@password';
     `
-	if err := tb.RunQuery(query, sql.Named("user", tb.GetReplUser()), sql.Named("password", tb.GetReplPass())); err != nil {
+	if err := util.RunQuery(query, sql.Named("user", util.GetReplUser()), sql.Named("password", util.GetReplPass())); err != nil {
 		return fmt.Errorf("failed to configure replication user: %s", err)
 	}
 
@@ -130,7 +130,7 @@ func configureExporterUser() error {
     GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO '@user'@'127.0.0.1' IDENTIFIED BY '@password' WITH MAX_USER_CONNECTIONS 3;
     `
 
-	if err := tb.RunQuery(query, sql.Named("user", tb.GetExporterUser()), sql.Named("password", tb.GetExporterPass())); err != nil {
+	if err := util.RunQuery(query, sql.Named("user", util.GetExporterUser()), sql.Named("password", util.GetExporterPass())); err != nil {
 		return fmt.Errorf("failed to metrics exporter user: %s", err)
 	}
 
@@ -142,11 +142,11 @@ func waitForMysqlReady() error {
 
 	for i := 0; i < timeOut; i++ {
 		time.Sleep(1 * time.Second)
-		if err := tb.RunQuery("SELECT 1"); err == nil {
+		if err := util.RunQuery("SELECT 1"); err == nil {
 			break
 		}
 	}
-	if err := tb.RunQuery("SELECT 1"); err != nil {
+	if err := util.RunQuery("SELECT 1"); err != nil {
 		log.V(2).Info("mysql is not ready", "error", err)
 		return err
 	}
@@ -158,19 +158,19 @@ func waitForMysqlReady() error {
 
 func configReadOnly() error {
 	var query string
-	if tb.NodeRole() == "master" {
+	if util.NodeRole() == "master" {
 		query = "SET GLOBAL READ_ONLY = 0"
 	} else {
 		query = "SET GLOBAL SUPER_READ_ONLY = 1"
 	}
-	if err := tb.RunQuery(query); err != nil {
+	if err := util.RunQuery(query); err != nil {
 		return fmt.Errorf("failed to set read_only config, err: %s", err)
 	}
 	return nil
 }
 
 func configTopology() error {
-	if tb.NodeRole() == "slave" {
+	if util.NodeRole() == "slave" {
 		// slave node
 		query := `
 		  STOP SLAVE;
@@ -181,16 +181,16 @@ func configTopology() error {
 			MASTER_CONNECT_RETRY=@retry;
          `
 
-		if err := tb.RunQuery(query, sql.Named("host", tb.GetMasterHost()),
-			sql.Named("user", tb.GetReplUser()),
-			sql.Named("password", tb.GetReplPass()),
+		if err := util.RunQuery(query, sql.Named("host", util.GetMasterHost()),
+			sql.Named("user", util.GetReplUser()),
+			sql.Named("password", util.GetReplPass()),
 			sql.Named("retry", connRetry),
 		); err != nil {
 			return fmt.Errorf("failed to configure slave node, err: %s", err)
 		}
 
 		query = "START SLAVE;"
-		if err := tb.RunQuery(query); err != nil {
+		if err := util.RunQuery(query); err != nil {
 			log.Info("failed to start slave in the simple mode, trying a second method")
 			// TODO: https://bugs.mysql.com/bug.php?id=83713
 			query2 := `
@@ -200,7 +200,7 @@ func configTopology() error {
 			  reset slave;
 			  start slave;
             `
-			if err := tb.RunQuery(query2); err != nil {
+			if err := util.RunQuery(query2); err != nil {
 				return fmt.Errorf("failed to start slave node, err: %s", err)
 			}
 		}
@@ -224,9 +224,9 @@ func markConfigurationDone() error {
     COMMIT;
     `
 
-	if err := tb.RunQuery(query, sql.Named("db", tb.ToolsDbName),
-		sql.Named("table", tb.ToolsInitTableName),
-		sql.Named("host", tb.GetHostname()),
+	if err := util.RunQuery(query, sql.Named("db", util.ToolsDbName),
+		sql.Named("table", util.ToolsInitTableName),
+		sql.Named("host", util.GetHostname()),
 	); err != nil {
 		return fmt.Errorf("failed to mark configuration done, err: %s", err)
 	}
