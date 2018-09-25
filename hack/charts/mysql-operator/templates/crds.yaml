@@ -64,13 +64,13 @@ spec:
                 type: object
               type: array
           type: object
-      type: object
   version: v1alpha1
 status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: null
+  conditions: []
+  storedVersions: []
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -87,6 +87,8 @@ spec:
     kind: MysqlCluster
     plural: mysqlclusters
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -166,10 +168,14 @@ spec:
               required:
               - maxQueryTime
               type: object
+            readOnly:
+              type: boolean
             replicas:
               format: int32
               type: integer
             secretName:
+              maxLength: 63
+              minLength: 1
               type: string
             volumeSpec:
               properties:
@@ -189,7 +195,6 @@ spec:
                   type: string
               type: object
           required:
-          - replicas
           - secretName
           type: object
         status:
@@ -242,11 +247,11 @@ spec:
                 type: object
               type: array
           type: object
-      type: object
   version: v1alpha1
 status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: null
+  conditions: []
+  storedVersions: []
 {{- end -}}
