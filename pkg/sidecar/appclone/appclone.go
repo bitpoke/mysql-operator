@@ -24,7 +24,7 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	tb "github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/util"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/util"
 )
 
 var log = logf.Log.WithName("sidecar.appclone")
@@ -32,7 +32,7 @@ var log = logf.Log.WithName("sidecar.appclone")
 // RunCloneCommand clone the data from source.
 // nolint: gocyclo
 func RunCloneCommand(stopCh <-chan struct{}) error {
-	log.Info("clonning command", "host", tb.GetHostname())
+	log.Info("clonning command", "host", util.GetHostname())
 
 	// skip cloning if data exists.
 	init, err := checkIfWasInit()
@@ -52,8 +52,8 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		return fmt.Errorf("removing lost+found: %s", err)
 	}
 
-	if tb.NodeRole() == "master" {
-		initBucket := tb.GetInitBucket()
+	if util.NodeRole() == "master" {
+		initBucket := util.GetInitBucket()
 		if len(initBucket) == 0 {
 			log.Info("skip cloning init bucket uri is not set.")
 			// let mysqld initialize data dir
@@ -65,8 +65,8 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		}
 	} else {
 		// clonging from prior node
-		if tb.GetServerID() > 100 {
-			sourceHost := tb.GetHostFor(tb.GetServerID() - 1)
+		if util.GetServerID() > 100 {
+			sourceHost := util.GetHostFor(util.GetServerID() - 1)
 			err := cloneFromSource(sourceHost)
 			if err != nil {
 				return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)
@@ -91,7 +91,7 @@ func cloneFromBucket(initBucket string) error {
 
 	log.Info("cloning from bucket", "bucket", initBucket)
 
-	if _, err := os.Stat(tb.RcloneConfigFile); os.IsNotExist(err) {
+	if _, err := os.Stat(util.RcloneConfigFile); os.IsNotExist(err) {
 		log.Error(err, "rclone config file does not exists")
 		return err
 	}
@@ -99,7 +99,7 @@ func cloneFromBucket(initBucket string) error {
 	// writes to stdout the content of the bucket uri
 	// nolint: gosec
 	rclone := exec.Command("rclone", "-vv",
-		fmt.Sprintf("--config=%s", tb.RcloneConfigFile), "cat", initBucket)
+		fmt.Sprintf("--config=%s", util.RcloneConfigFile), "cat", initBucket)
 
 	// gzip reads from stdin decompress and then writes to stdout
 	// nolint: gosec
@@ -109,7 +109,7 @@ func cloneFromBucket(initBucket string) error {
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
 	// nolint: gosec
-	xbstream := exec.Command("xbstream", "-x", "-C", tb.DataDir)
+	xbstream := exec.Command("xbstream", "-x", "-C", util.DataDir)
 
 	var err error
 	// rclone | gzip | xbstream
@@ -156,7 +156,7 @@ func cloneFromBucket(initBucket string) error {
 func cloneFromSource(host string) error {
 	log.Info("cloning from node", "host", host)
 
-	backupBody, err := tb.RequestABackup(host, tb.ServerBackupEndpoint)
+	backupBody, err := util.RequestABackup(host, util.ServerBackupEndpoint)
 	if err != nil {
 		return fmt.Errorf("fail to get backup: %s", err)
 	}
@@ -165,7 +165,7 @@ func cloneFromSource(host string) error {
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
 	// nolint: gosec
-	xbstream := exec.Command("xbstream", "-x", "-C", tb.DataDir)
+	xbstream := exec.Command("xbstream", "-x", "-C", util.DataDir)
 
 	xbstream.Stdin = backupBody
 	xbstream.Stderr = os.Stderr
@@ -182,13 +182,13 @@ func cloneFromSource(host string) error {
 }
 
 func xtrabackupPreperData() error {
-	replUser := tb.GetReplUser()
-	replPass := tb.GetReplPass()
+	replUser := util.GetReplUser()
+	replPass := util.GetReplPass()
 
 	// TODO: remove user and password for here, not needed.
 	// nolint: gosec
 	xtbkCmd := exec.Command("xtrabackup", "--prepare",
-		fmt.Sprintf("--target-dir=%s", tb.DataDir),
+		fmt.Sprintf("--target-dir=%s", util.DataDir),
 		fmt.Sprintf("--user=%s", replUser), fmt.Sprintf("--password=%s", replPass))
 
 	xtbkCmd.Stderr = os.Stderr
@@ -197,8 +197,8 @@ func xtrabackupPreperData() error {
 }
 
 func checkIfWasInit() (bool, error) {
-	_, err := os.Open(fmt.Sprintf("%s/%s/%s.CSV", tb.DataDir, tb.ToolsDbName,
-		tb.ToolsInitTableName))
+	_, err := os.Open(fmt.Sprintf("%s/%s/%s.CSV", util.DataDir, util.ToolsDbName,
+		util.ToolsInitTableName))
 
 	if os.IsNotExist(err) {
 		return false, nil
@@ -212,7 +212,7 @@ func checkIfWasInit() (bool, error) {
 
 // nolint: gosec
 func checkIfDataExists() bool {
-	path := fmt.Sprintf("%s/mysql", tb.DataDir)
+	path := fmt.Sprintf("%s/mysql", util.DataDir)
 	_, err := os.Open(path)
 
 	if os.IsNotExist(err) {
@@ -225,6 +225,6 @@ func checkIfDataExists() bool {
 }
 
 func deleteLostFound() error {
-	path := fmt.Sprintf("%s/lost+found", tb.DataDir)
+	path := fmt.Sprintf("%s/lost+found", util.DataDir)
 	return os.RemoveAll(path)
 }

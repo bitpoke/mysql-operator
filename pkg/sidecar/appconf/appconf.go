@@ -24,8 +24,8 @@ import (
 	"github.com/go-ini/ini"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	tb "github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/util"
-	"github.com/presslabs/mysql-operator/pkg/util"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/util"
+	pkgutil "github.com/presslabs/mysql-operator/pkg/util"
 )
 
 var log = logf.Log.WithName("sidecar.appconf")
@@ -36,43 +36,43 @@ const (
 
 // RunConfigCommand generates my.cnf, client.cnf and 10-dynamic.cnf files.
 func RunConfigCommand(stopCh <-chan struct{}) error {
-	role := tb.NodeRole()
-	log.Info("configuring server", "host", tb.GetHostname(), "role", role)
+	role := util.NodeRole()
+	log.Info("configuring server", "host", util.GetHostname(), "role", role)
 
-	if err := tb.CopyFile(tb.MountConfigDir+"/my.cnf", tb.ConfigDir+"/my.cnf"); err != nil {
+	if err := util.CopyFile(util.MountConfigDir+"/my.cnf", util.ConfigDir+"/my.cnf"); err != nil {
 		return fmt.Errorf("copy file my.cnf: %s", err)
 	}
 
-	uPass := util.RandomString(rStrLen)
-	reportHost := tb.GetHostFor(tb.GetServerID())
+	uPass := pkgutil.RandomString(rStrLen)
+	reportHost := util.GetHostFor(util.GetServerID())
 
 	var dynCFG, utilityCFG, clientCFG *ini.File
 	var err error
 
-	if dynCFG, err = getDynamicConfigs(tb.GetServerID(), reportHost); err != nil {
+	if dynCFG, err = getDynamicConfigs(util.GetServerID(), reportHost); err != nil {
 		return fmt.Errorf("failed to get dynamic configs: %s", err)
 	}
 
-	if err = os.Mkdir(tb.ConfDPath, os.FileMode(0755)); err != nil {
+	if err = os.Mkdir(util.ConfDPath, os.FileMode(0755)); err != nil {
 		if !os.IsExist(err) {
-			return fmt.Errorf("error mkdir %s/conf.d: %s", tb.ConfigDir, err)
+			return fmt.Errorf("error mkdir %s/conf.d: %s", util.ConfigDir, err)
 		}
 	}
-	if err = dynCFG.SaveTo(tb.ConfDPath + "/10-dynamic.cnf"); err != nil {
+	if err = dynCFG.SaveTo(util.ConfDPath + "/10-dynamic.cnf"); err != nil {
 		return fmt.Errorf("failed to save configs: %s", err)
 	}
-	if utilityCFG, err = getUtilityUserConfigs(tb.UtilityUser, uPass); err != nil {
+	if utilityCFG, err = getUtilityUserConfigs(util.UtilityUser, uPass); err != nil {
 		return fmt.Errorf("failed to configure utility user: %s", err)
 	}
-	if err = utilityCFG.SaveTo(tb.ConfDPath + "/10-utility-user.cnf"); err != nil {
+	if err = utilityCFG.SaveTo(util.ConfDPath + "/10-utility-user.cnf"); err != nil {
 		return fmt.Errorf("failed to configure utility user: %s", err)
 	}
 
-	if clientCFG, err = getClientConfigs(tb.UtilityUser, uPass); err != nil {
+	if clientCFG, err = getClientConfigs(util.UtilityUser, uPass); err != nil {
 		return fmt.Errorf("failed to get client configs: %s", err)
 	}
 
-	if err = clientCFG.SaveTo(tb.ConfigDir + "/client.cnf"); err != nil {
+	if err = clientCFG.SaveTo(util.ConfigDir + "/client.cnf"); err != nil {
 		return fmt.Errorf("failed to save configs: %s", err)
 	}
 
@@ -87,7 +87,7 @@ func getClientConfigs(user, pass string) (*ini.File, error) {
 	if _, err := client.NewKey("host", "127.0.0.1"); err != nil {
 		return nil, err
 	}
-	if _, err := client.NewKey("port", tb.MysqlPort); err != nil {
+	if _, err := client.NewKey("port", util.MysqlPort); err != nil {
 		return nil, err
 	}
 	if _, err := client.NewKey("user", user); err != nil {

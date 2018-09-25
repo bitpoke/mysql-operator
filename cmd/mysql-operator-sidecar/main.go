@@ -25,10 +25,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/appclone"
-	"github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/appconf"
-	"github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/apphelper"
-	"github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/apptakebackup"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/appclone"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/appconf"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/apphelper"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/apptakebackup"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
