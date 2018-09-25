@@ -22,26 +22,28 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/golang/glog"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	tb "github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/util"
 )
 
+var log = logf.Log.WithName("sidecar.appclone")
+
 // RunCloneCommand clone the data from source.
 // nolint: gocyclo
 func RunCloneCommand(stopCh <-chan struct{}) error {
-	glog.Infof("Cloning into node %s", tb.GetHostname())
+	log.Info("clonning command", "host", tb.GetHostname())
 
 	// skip cloning if data exists.
 	init, err := checkIfWasInit()
 	if err != nil {
 		return fmt.Errorf("failed to read init file: %s", err)
 	} else if init {
-		glog.Info("Data exists and is initialized. Skip clonging.")
+		log.Info("data exists and is initialized, skipping cloning.")
 		return nil
 	} else {
 		if checkIfDataExists() {
-			glog.Infof("Data alerady exists! Remove manually PVC to cleanup or to reinitialize.")
+			log.Info("data alerady exists! Remove manually PVC to cleanup or to reinitialize.")
 			return nil
 		}
 	}
@@ -53,7 +55,7 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 	if tb.NodeRole() == "master" {
 		initBucket := tb.GetInitBucket()
 		if len(initBucket) == 0 {
-			glog.Info("Skip cloning init bucket uri is not set.")
+			log.Info("skip cloning init bucket uri is not set.")
 			// let mysqld initialize data dir
 			return nil
 		}
@@ -84,27 +86,29 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 	return nil
 }
 
-// nolint: gas
 func cloneFromBucket(initBucket string) error {
 	initBucket = strings.Replace(initBucket, "://", ":", 1)
 
-	glog.Infof("Cloning from bucket: %s", initBucket)
+	log.Info("cloning from bucket", "bucket", initBucket)
 
 	if _, err := os.Stat(tb.RcloneConfigFile); os.IsNotExist(err) {
-		glog.Fatalf("Rclone config file does not exists. err: %s", err)
+		log.Error(err, "rclone config file does not exists")
 		return err
 	}
 	// rclone --config={conf file} cat {bucket uri}
 	// writes to stdout the content of the bucket uri
+	// nolint: gosec
 	rclone := exec.Command("rclone", "-vv",
 		fmt.Sprintf("--config=%s", tb.RcloneConfigFile), "cat", initBucket)
 
 	// gzip reads from stdin decompress and then writes to stdout
+	// nolint: gosec
 	gzip := exec.Command("gzip", "-d")
 
 	// xbstream -x -C {mysql data target dir}
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
+	// nolint: gosec
 	xbstream := exec.Command("xbstream", "-x", "-C", tb.DataDir)
 
 	var err error
@@ -145,13 +149,12 @@ func cloneFromBucket(initBucket string) error {
 		return fmt.Errorf("xbstream wait error: %s", err)
 	}
 
-	glog.Info("Cloning done successfully.")
+	log.Info("cloning done successfully")
 	return nil
 }
 
-// nolint: gas
 func cloneFromSource(host string) error {
-	glog.Infof("Cloning from node: %s", host)
+	log.Info("cloning from node", "host", host)
 
 	backupBody, err := tb.RequestABackup(host, tb.ServerBackupEndpoint)
 	if err != nil {
@@ -161,6 +164,7 @@ func cloneFromSource(host string) error {
 	// xbstream -x -C {mysql data target dir}
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
+	// nolint: gosec
 	xbstream := exec.Command("xbstream", "-x", "-C", tb.DataDir)
 
 	xbstream.Stdin = backupBody
@@ -177,12 +181,12 @@ func cloneFromSource(host string) error {
 	return nil
 }
 
-// nolint: gas
 func xtrabackupPreperData() error {
 	replUser := tb.GetReplUser()
 	replPass := tb.GetReplPass()
 
 	// TODO: remove user and password for here, not needed.
+	// nolint: gosec
 	xtbkCmd := exec.Command("xtrabackup", "--prepare",
 		fmt.Sprintf("--target-dir=%s", tb.DataDir),
 		fmt.Sprintf("--user=%s", replUser), fmt.Sprintf("--password=%s", replPass))
@@ -214,7 +218,7 @@ func checkIfDataExists() bool {
 	if os.IsNotExist(err) {
 		return false
 	} else if err != nil {
-		glog.Warningf("[checkIfDataExists] faild to open %s with err: %s", path, err)
+		log.Error(err, "failed to open file", "file", path)
 	}
 
 	return true

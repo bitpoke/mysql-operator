@@ -23,7 +23,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 
 	"github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/appclone"
@@ -32,6 +31,8 @@ import (
 	"github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/apptakebackup"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
+
+var log = logf.Log.WithName("sidecar")
 
 func main() {
 	logf.SetLogger(logf.ZapLogger(true))
@@ -42,7 +43,9 @@ func main() {
 		Short: fmt.Sprintf("Helper for mysql operator."),
 		Long:  `mysql-operator-sidecar: helper for config pods`,
 		Run: func(cmd *cobra.Command, args []string) {
-			glog.Fatal("you run mysql-operator-sidecar, see help section.")
+			log.Error(nil, "you run mysql-operator-sidecar, see help section")
+			os.Exit(1)
+
 		},
 	}
 
@@ -52,9 +55,9 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			err := appconf.RunConfigCommand(stopCh)
 			if err != nil {
-				glog.Fatalf("Init command failed with error: %s .", err)
+				log.Error(err, "init command failed")
+				os.Exit(1)
 			}
-
 		},
 	}
 	cmd.AddCommand(confCmd)
@@ -65,7 +68,8 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			err := appclone.RunCloneCommand(stopCh)
 			if err != nil {
-				glog.Fatalf("Clone command failed with error: %s .", err)
+				log.Error(err, "clone command failed")
+				os.Exit(1)
 			}
 		},
 	}
@@ -77,7 +81,8 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			err := apphelper.RunRunCommand(stopCh)
 			if err != nil {
-				glog.Fatalf("Run command failed with error: %s .", err)
+				log.Error(err, "run command failed")
+				os.Exit(1)
 			}
 		},
 	}
@@ -95,7 +100,9 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			err := apptakebackup.RunTakeBackupCommand(stopCh, args[0], args[1])
 			if err != nil {
-				glog.Fatalf("Take backup command failed with error: %s .", err)
+				log.Error(err, "take backup command failed")
+				os.Exit(1)
+
 			}
 		},
 	}
@@ -103,10 +110,13 @@ func main() {
 
 	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 	if err := flag.CommandLine.Parse([]string{}); err != nil {
-		glog.Errorf("Failed to parse args: %s", err)
+		log.Error(err, "failed to parse args")
+		os.Exit(1)
 	}
+
 	if err := cmd.Execute(); err != nil {
-		glog.Fatal(err)
+		log.Error(err, "failed to execute command", "cmd", cmd)
+		os.Exit(1)
 	}
 }
 

@@ -17,12 +17,16 @@ limitations under the License.
 package apphelper
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
-	"github.com/golang/glog"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+
 	tb "github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/util"
 )
+
+var log = logf.Log.WithName("sidecar.apphelper")
 
 const (
 	// timeOut represents the number of tries to check mysql to be ready.
@@ -34,7 +38,7 @@ const (
 // RunRunCommand is the main command, and represents the runtime helper that
 // configures the mysql server
 func RunRunCommand(stopCh <-chan struct{}) error {
-	glog.Infof("Starting initialization...")
+	log.Info("start initialization")
 
 	// wait for mysql to be ready
 	if err := waitForMysqlReady(); err != nil {
@@ -42,64 +46,66 @@ func RunRunCommand(stopCh <-chan struct{}) error {
 	}
 
 	// deactivate super read only
+	log.V(2).Info("temporary disable SUPER_READ_ONLY")
 	if err := tb.RunQuery("SET GLOBAL READ_ONLY = 1; SET GLOBAL SUPER_READ_ONLY = 0;"); err != nil {
 		return fmt.Errorf("failed to configure master node, err: %s", err)
 	}
-	glog.V(2).Info("Temporary disabled SUPER_READ_ONLY...")
 
 	// update orchestrator user and password if orchestrator is configured
+	log.V(2).Info("configure orchestrator credentials")
 	if len(tb.GetOrcUser()) > 0 {
 		if err := configureOrchestratorUser(); err != nil {
 			return err
 		}
 	}
-	glog.V(2).Info("Configured orchestrator user...")
 
 	// update replication user and password
+	log.V(2).Info("configure replication credentials")
 	if err := configureReplicationUser(); err != nil {
 		return err
 	}
-	glog.V(2).Info("Configured replication user...")
 
 	// update metrics exporter user and password
+	log.V(2).Info("configure metrics exporter credentials")
 	if err := configureExporterUser(); err != nil {
 		return err
 	}
-	glog.V(2).Info("Configured metrics exporter user...")
 
 	// if it's slave set replication source (master host)
+	log.V(2).Info("configure topology")
 	if err := configTopology(); err != nil {
 		return err
 	}
-	glog.V(2).Info("Configured topology...")
 
+	// mark setup as complete by writing a row in config table
+	log.V(2).Info("flag setup as complet")
 	if err := markConfigurationDone(); err != nil {
 		return err
 	}
-	glog.V(2).Info("Flag setup as complete...")
 
 	// if it's master node then make it writtable else make it read only
+	log.V(2).Info("configure read only flag")
 	if err := configReadOnly(); err != nil {
 		return err
 	}
-	glog.V(2).Info("Configured read only flag...")
 
+	log.V(2).Info("start http server")
 	srv := newServer(stopCh)
-	glog.V(2).Info("Starting http server...")
-
 	return srv.ListenAndServe()
 }
 
-// nolint: gas
 func configureOrchestratorUser() error {
-	query := fmt.Sprintf(`
+	query := `
     SET @@SESSION.SQL_LOG_BIN = 0;
-    GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO '%[1]s'@'%%' IDENTIFIED BY '%[2]s';
-    GRANT SELECT ON %[3]s.* TO '%[1]s'@'%%';
-    GRANT SELECT ON mysql.slave_master_info TO '%[1]s'@'%%';
-    `, tb.GetOrcUser(), tb.GetOrcPass(), tb.ToolsDbName)
+    GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO '@user'@'%' IDENTIFIED BY '@password';
+    GRANT SELECT ON @db_name.* TO '@user'@'%';
+    GRANT SELECT ON mysql.slave_master_info TO '@user'@'%';
+    `
 
-	if err := tb.RunQuery(query); err != nil {
+	if err := tb.RunQuery(query, sql.Named("user", tb.GetOrcUser()),
+		sql.Named("password", tb.GetOrcPass()),
+		sql.Named("db_name", tb.ToolsDbName),
+	); err != nil {
 		return fmt.Errorf("failed to configure orchestrator (user/pass/access), err: %s", err)
 	}
 
@@ -107,11 +113,11 @@ func configureOrchestratorUser() error {
 }
 
 func configureReplicationUser() error {
-	query := fmt.Sprintf(`
+	query := `
     SET @@SESSION.SQL_LOG_BIN = 0;
-    GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO '%s'@'%%' IDENTIFIED BY '%s';
-    `, tb.GetReplUser(), tb.GetReplPass())
-	if err := tb.RunQuery(query); err != nil {
+    GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO '@user'@'%' IDENTIFIED BY '@password';
+    `
+	if err := tb.RunQuery(query, sql.Named("user", tb.GetReplUser()), sql.Named("password", tb.GetReplPass())); err != nil {
 		return fmt.Errorf("failed to configure replication user: %s", err)
 	}
 
@@ -119,11 +125,12 @@ func configureReplicationUser() error {
 }
 
 func configureExporterUser() error {
-	query := fmt.Sprintf(`
+	query := `
     SET @@SESSION.SQL_LOG_BIN = 0;
-    GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO '%s'@'127.0.0.1' IDENTIFIED BY '%s' WITH MAX_USER_CONNECTIONS 3;
-    `, tb.GetExporterUser(), tb.GetExporterPass())
-	if err := tb.RunQuery(query); err != nil {
+    GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO '@user'@'127.0.0.1' IDENTIFIED BY '@password' WITH MAX_USER_CONNECTIONS 3;
+    `
+
+	if err := tb.RunQuery(query, sql.Named("user", tb.GetExporterUser()), sql.Named("password", tb.GetExporterPass())); err != nil {
 		return fmt.Errorf("failed to metrics exporter user: %s", err)
 	}
 
@@ -131,7 +138,7 @@ func configureExporterUser() error {
 }
 
 func waitForMysqlReady() error {
-	glog.V(2).Info("Wait for mysql to be ready.")
+	log.V(2).Info("wait for mysql to be ready")
 
 	for i := 0; i < timeOut; i++ {
 		time.Sleep(1 * time.Second)
@@ -140,11 +147,11 @@ func waitForMysqlReady() error {
 		}
 	}
 	if err := tb.RunQuery("SELECT 1"); err != nil {
-		glog.V(2).Info("Mysql is not ready.")
+		log.V(2).Info("mysql is not ready", "error", err)
 		return err
 	}
-	glog.V(2).Info("Mysql is ready.")
 
+	log.V(2).Info("mysql is ready")
 	return nil
 
 }
@@ -165,31 +172,33 @@ func configReadOnly() error {
 func configTopology() error {
 	if tb.NodeRole() == "slave" {
 		// slave node
-		query := fmt.Sprintf(`
-			STOP SLAVE;
-            CHANGE MASTER TO MASTER_AUTO_POSITION=1,
-			  MASTER_HOST='%s',
-			  MASTER_USER='%s',
-			  MASTER_PASSWORD='%s',
-			  MASTER_CONNECT_RETRY=%d;
-         `, tb.GetMasterHost(), tb.GetReplUser(), tb.GetReplPass(), connRetry)
+		query := `
+		  STOP SLAVE;
+		  CHANGE MASTER TO MASTER_AUTO_POSITION=1,
+			MASTER_HOST='@host',
+			MASTER_USER='@user',
+			MASTER_PASSWORD='@password',
+			MASTER_CONNECT_RETRY=@retry;
+         `
 
-		if err := tb.RunQuery(query); err != nil {
+		if err := tb.RunQuery(query, sql.Named("host", tb.GetMasterHost()),
+			sql.Named("user", tb.GetReplUser()),
+			sql.Named("password", tb.GetReplPass()),
+			sql.Named("retry", connRetry),
+		); err != nil {
 			return fmt.Errorf("failed to configure slave node, err: %s", err)
 		}
 
-		query = `
-        START SLAVE;
-        `
+		query = "START SLAVE;"
 		if err := tb.RunQuery(query); err != nil {
-			glog.Warning("Failed to start slave simple, try second method.")
+			log.Info("failed to start slave in the simple mode, trying a second method")
 			// TODO: https://bugs.mysql.com/bug.php?id=83713
 			query2 := `
-			reset slave;
-			start slave IO_THREAD;
-			stop slave IO_THREAD;
-			reset slave;
-			start slave;
+			  reset slave;
+			  start slave IO_THREAD;
+			  stop slave IO_THREAD;
+			  reset slave;
+			  start slave;
             `
 			if err := tb.RunQuery(query2); err != nil {
 				return fmt.Errorf("failed to start slave node, err: %s", err)
@@ -200,23 +209,25 @@ func configTopology() error {
 	return nil
 }
 
-// nolint: gas
 func markConfigurationDone() error {
-	query := fmt.Sprintf(`
+	query := `
     SET @@SESSION.SQL_LOG_BIN = 0;
     BEGIN;
-    CREATE DATABASE IF NOT EXISTS %[1]s;
-	CREATE TABLE IF NOT EXISTS %[1]s.%[2]s  (
+    CREATE DATABASE IF NOT EXISTS @db;
+	CREATE TABLE IF NOT EXISTS @db.@table  (
 	  name varchar(255) NOT NULL,
 	  value varchar(255) NOT NULL,
 	  inserted_at datetime NOT NULL
 	) ENGINE=csv;
 
-    INSERT INTO %[1]s.%[2]s VALUES ("init_completed", "%s", now());
+    INSERT INTO @db.@table VALUES ("init_completed", "@host", now());
     COMMIT;
-    `, tb.ToolsDbName, tb.ToolsInitTableName, tb.GetHostname())
+    `
 
-	if err := tb.RunQuery(query); err != nil {
+	if err := tb.RunQuery(query, sql.Named("db", tb.ToolsDbName),
+		sql.Named("table", tb.ToolsInitTableName),
+		sql.Named("host", tb.GetHostname()),
+	); err != nil {
 		return fmt.Errorf("failed to mark configuration done, err: %s", err)
 	}
 

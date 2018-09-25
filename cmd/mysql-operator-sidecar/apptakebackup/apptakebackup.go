@@ -22,20 +22,21 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/golang/glog"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar/util"
 )
 
+var log = logf.Log.WithName("sidecar.apptakebackup")
+
 // RunTakeBackupCommand starts a backup command
 // nolint: unparam
 func RunTakeBackupCommand(stopCh <-chan struct{}, srcHost, destBucket string) error {
-	glog.Infof("Taking backup from '%s' to bucket '%s' ...", srcHost, destBucket)
+	log.Info("take a backup", "host", srcHost, "bucket", destBucket)
 	destBucket = normalizeBucketURI(destBucket)
 	return pushBackupFromTo(srcHost, destBucket)
 }
 
-// nolint: gas
 func pushBackupFromTo(srcHost, destBucket string) error {
 
 	backupBody, err := util.RequestABackup(srcHost, util.ServerBackupEndpoint)
@@ -43,8 +44,10 @@ func pushBackupFromTo(srcHost, destBucket string) error {
 		return fmt.Errorf("getting backup: %s", err)
 	}
 
+	// nolint: gosec
 	gzip := exec.Command("gzip", "-c")
 
+	// nolint: gosec
 	rclone := exec.Command("rclone",
 		fmt.Sprintf("--config=%s", util.RcloneConfigFile), "rcat", destBucket)
 
@@ -64,12 +67,12 @@ func pushBackupFromTo(srcHost, destBucket string) error {
 		return fmt.Errorf("rclone start error: %s", err)
 	}
 
-	glog.V(2).Info("Wait for gzip to finish.")
+	log.V(2).Info("wait for gzip to finish")
 	if err := gzip.Wait(); err != nil {
 		return fmt.Errorf("gzip wait error: %s", err)
 	}
 
-	glog.V(2).Info("Wait for rclone to finish.")
+	log.V(2).Info("wait for rclone to finish")
 	if err := rclone.Wait(); err != nil {
 		return fmt.Errorf("rclone wait error: %s", err)
 	}
