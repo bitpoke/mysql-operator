@@ -80,6 +80,9 @@ docker-push:
 lint:
 	$(BINDIR)/golangci-lint run ./pkg/... ./cmd/...
 
+chart: generate manifests
+	hack/generate_chart.sh $(TAG)
+
 dependencies:
 	test -d $(BINDIR) || mkdir $(BINDIR)
 	GOBIN=$(BINDIR) go install ./vendor/github.com/onsi/ginkgo/ginkgo
