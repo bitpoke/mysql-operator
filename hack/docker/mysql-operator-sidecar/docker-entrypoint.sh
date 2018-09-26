@@ -31,29 +31,30 @@ cat <<EOF > /tmp/google-credentials.json
 ${GCS_SERVICE_ACCOUNT_JSON_KEY}
 EOF
 
+SIDECAR_BIN=mysql-operator-sidecar
 VERBOSE="-v 3"
 
 # exec command
 case "$1" in
     files-config)
         shift 1
-        mysql-helper  $VERBOSE init-configs "$@"
+        $SIDECAR_BIN $VERBOSE init-configs "$@"
         ;;
     clone)
         shift 1
-        mysql-helper $VERBOSE clone "$@"
+        $SIDECAR_BIN $VERBOSE clone "$@"
         ;;
     config-and-serve)
         shift 1
-        mysql-helper $VERBOSE run "$@"
+        $SIDECAR_BIN $VERBOSE run "$@"
         ;;
     take-backup-to)
         shift 1
-        mysql-helper $VERBOSE take-backup-to "$@"
+        $SIDECAR_BIN $VERBOSE take-backup-to "$@"
         ;;
     schedule-backup)
         shift 1
-        mysql-helper $VERBOSE schedule-backup "$@"
+        $SIDECAR_BIN $VERBOSE schedule-backup "$@"
         ;;
     *)
         echo "Usage: $0 {files-config|clone|config-and-serve}"

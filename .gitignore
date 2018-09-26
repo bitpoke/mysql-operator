@@ -41,7 +41,7 @@ docs/_build/
 
 # ignore bin
 bin/
-hack/docker/mysql-helper/mysql-helper
+hack/docker/mysql-operator-sidecar/mysql-operator-sidecar
 hack/docker/mysql-operator/mysql-operator
 **/charts/*.tgz
 

@@ -61,6 +61,7 @@ rules:
   - mysql.presslabs.org
   resources:
   - mysqlclusters
+  - mysqlclusters/status
   verbs:
   - get
   - list
@@ -75,6 +76,8 @@ rules:
   - poddisruptionbudgets
   verbs:
   - get
+  - list
+  - watch
   - create
   - update
   - patch
