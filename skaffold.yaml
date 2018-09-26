@@ -1,0 +1,21 @@
+apiVersion: skaffold/v1alpha2
+kind: Config
+build:
+  #tagPolicy:
+  #  sha256: {}
+  artifacts:
+  - imageName: quay.io/presslabs/mysql-operator
+    workspace: hack/docker/mysql-operator
+  - imageName: quay.io/presslabs/mysql-operator-sidecar
+    workspace: hack/docker/mysql-operator-sidecar
+  local:
+    skipPush: true
+deploy:
+  helm:
+    releases:
+    - name: test
+      chartPath: hack/charts/mysql-operator
+      valuesFilePath: hack/dev-values.yaml
+      values:
+        image: quay.io/presslabs/mysql-operator
+        sidecarImage: quay.io/presslabs/mysql-operator-sidecar

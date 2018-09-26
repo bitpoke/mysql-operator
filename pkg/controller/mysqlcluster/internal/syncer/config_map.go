@@ -97,6 +97,7 @@ func (s *configMapSyncer) getMysqlConfData() (string, string, error) {
 	sec := cfg.Section("mysqld")
 
 	addKVConfigsToSection(sec, mysqlMasterSlaveConfigs, s.cluster.Spec.MysqlConf)
+	addBConfigsToSection(sec, mysqlMasterSlaveBooleanConfigs)
 
 	// include configs from /etc/mysql/conf.d/*.cnf
 	_, err := sec.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
@@ -125,6 +126,17 @@ func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
 		for k, v := range extra {
 			if _, err := s.NewKey(k, v); err != nil {
 				log.Error(err, "failed to add key to config section", "key", k, "value", v, "section", s)
+			}
+		}
+	}
+}
+
+// helper function to add a string to a ini.Section
+func addBConfigsToSection(s *ini.Section, boolConfigs ...[]string) {
+	for _, extra := range boolConfigs {
+		for _, k := range extra {
+			if _, err := s.NewBooleanKey(k); err != nil {
+				log.Error(err, "failed to add boolean key to config section", "key", k)
 			}
 		}
 	}
@@ -194,7 +206,10 @@ var mysqlMasterSlaveConfigs = map[string]string{
 
 	"character-set-server": "utf8mb4",
 	"collation-server":     "utf8mb4_unicode_ci",
+}
 
-	"skip-name-resolve": "on",
-	"skip-host-cache":   "on",
+var mysqlMasterSlaveBooleanConfigs = []string{
+	// Safety
+	"skip-name-resolve",
+	"skip-host-cache",
 }

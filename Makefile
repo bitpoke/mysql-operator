@@ -18,7 +18,7 @@ GOFILES := $(shell find cmd/ -name 'main.go' -type f )
 all: test build
 
 # Build binaries tag
-build: $(patsubst %, bin/%_linux_amd64, $(CMDS))
+build: $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
 
 # Run tests
 test: generate fmt vet manifests
@@ -63,7 +63,7 @@ generate:
 # update docker context binaries
 $(patsubst %, hack/docker/%, $(CMDS)): $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
 	$(eval SRC := $(subst hack/docker/,,$@))
-	cp bin/${SRC}_$(GOOS)_$(GOARCH) $@
+	cp bin/${SRC}_$(GOOS)_$(GOARCH) $@/${SRC}
 
 # update all docker binaries
 update-docker: $(patsubst %, hack/docker/%, $(CMDS))
