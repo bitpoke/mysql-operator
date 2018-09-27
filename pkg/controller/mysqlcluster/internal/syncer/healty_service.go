@@ -57,7 +57,7 @@ func (s *healthySVCSyncer) SyncFn(in runtime.Object) error {
 
 	out.Spec.Type = "ClusterIP"
 	out.Spec.Selector = s.cluster.GetLabels()
-	out.Spec.Selector["mysql"] = "healthy"
+	out.Spec.Selector["healty"] = "yes"
 
 	if len(out.Spec.Ports) != 1 {
 		out.Spec.Ports = make([]core.ServicePort, 1)
