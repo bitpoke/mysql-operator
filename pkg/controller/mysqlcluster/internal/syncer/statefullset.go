@@ -105,7 +105,7 @@ func (s *sfsSyncer) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec
 	in.ObjectMeta.Annotations["config_rev"] = s.configMapRevision
 	in.ObjectMeta.Annotations["secret_rev"] = s.secretRevision
 	in.ObjectMeta.Annotations["prometheus.io/scrape"] = "true"
-	in.ObjectMeta.Annotations["prometheus.io/port"] = fmt.Sprintf("%d", api.ExporterPort)
+	in.ObjectMeta.Annotations["prometheus.io/port"] = fmt.Sprintf("%d", ExporterPort)
 
 	in.Spec.InitContainers = s.ensureInitContainersSpec(in.Spec.InitContainers)
 	in.Spec.Containers = s.ensureContainersSpec(in.Spec.Containers)
@@ -388,7 +388,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 	exporter := s.ensureContainer(in[2], containerExporterName,
 		s.opt.MetricsExporterImage,
 		[]string{
-			fmt.Sprintf("--web.listen-address=0.0.0.0:%d", api.ExporterPort),
+			fmt.Sprintf("--web.listen-address=0.0.0.0:%d", ExporterPort),
 			fmt.Sprintf("--web.telemetry-path=%s", ExporterPath),
 			"--collect.heartbeat",
 			fmt.Sprintf("--collect.heartbeat.database=%s", HelperDbName),
@@ -396,7 +396,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 	)
 	exporter.Ports = ensureContainerPorts(mysql.Ports, core.ContainerPort{
 		Name:          ExporterPortName,
-		ContainerPort: api.ExporterPort,
+		ContainerPort: ExporterPort,
 	})
 	exporter.LivenessProbe = ensureProbe(exporter.LivenessProbe, 30, 30, 30, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
