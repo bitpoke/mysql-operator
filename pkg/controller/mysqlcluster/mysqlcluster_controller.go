@@ -125,6 +125,7 @@ type ReconcileMysqlCluster struct {
 
 // Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
 // and what is in the MysqlCluster.Spec
+// nolint: gocyclo
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps;secrets;services;events;jobs;pods,verbs=get;list;watch;create;update;patch;delete
@@ -171,8 +172,8 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	configMapResourceVersion := configMapSyncer.GetObject().(*corev1.ConfigMap).ResourceVersion
-	secretResourceVersion := secretSyncer.GetObject().(*corev1.Secret).ResourceVersion
+	cmRV := configMapSyncer.GetObject().(*corev1.ConfigMap).ResourceVersion
+	sRV := secretSyncer.GetObject().(*corev1.Secret).ResourceVersion
 
 	// run the syncers for services, pdb and statefulset
 	syncers := []syncer.Interface{
@@ -180,11 +181,16 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		mysqlcluster.NewMasterSVCSyncer(cluster),
 		mysqlcluster.NewHealthySVCSyncer(cluster),
 
-		mysqlcluster.NewStatefulSetSyncer(cluster, configMapResourceVersion, secretResourceVersion, r.opt),
+		mysqlcluster.NewStatefulSetSyncer(cluster, cmRV, sRV, r.opt),
 	}
 
 	if len(cluster.Spec.MinAvailable) != 0 {
 		syncers = append(syncers, mysqlcluster.NewPDBSyncer(cluster))
+	}
+
+	// add pods syncers for every node status
+	for _, ns := range cluster.Status.Nodes {
+		syncers = append(syncers, mysqlcluster.NewPodSyncer(cluster, ns.Name))
 	}
 
 	for _, sync := range syncers {
