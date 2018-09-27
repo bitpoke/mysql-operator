@@ -63,7 +63,7 @@ var (
 	ToolsInitTableName = "init"
 
 	// UtilityUser is the name of the percona utility user.
-	UtilityUser = "sys_utility_helper"
+	UtilityUser = "sys_utility_sidecar"
 
 	// OrcTopologyDir contains the path where the secret with orc credentials is
 	// mounted.
@@ -245,7 +245,7 @@ func GetMySQLConnectionString() (string, error) {
 }
 
 // RunQuery executes a query
-func RunQuery(q string, args ...sql.NamedArg) error {
+func RunQuery(q string, args ...interface{}) error {
 	dsn, err := GetMySQLConnectionString()
 	if err != nil {
 		log.Error(err, "could not get mysql connection DSN")
@@ -258,9 +258,10 @@ func RunQuery(q string, args ...sql.NamedArg) error {
 		return err
 	}
 
-	log.V(4).Info("running query", "query", q, "args", args)
-	if _, err := db.Query(q, args); err != nil {
-		log.Error(err, "could not query mysql", "query", q)
+	fmtedQuery := fmt.Sprintf(q, args...)
+	log.V(4).Info("running query", "query", fmtedQuery, "args", args)
+	if _, err := db.Exec(fmtedQuery); err != nil {
+		log.Error(err, "could not query mysql", "query", fmtedQuery)
 		return err
 	}
 

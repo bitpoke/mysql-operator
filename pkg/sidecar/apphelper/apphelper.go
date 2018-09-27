@@ -17,7 +17,6 @@ limitations under the License.
 package apphelper
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
 
@@ -96,16 +95,13 @@ func RunRunCommand(stopCh <-chan struct{}) error {
 
 func configureOrchestratorUser() error {
 	query := `
-    SET @@SESSION.SQL_LOG_BIN = 0;
-    GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO '@user'@'%' IDENTIFIED BY '@password';
-    GRANT SELECT ON @db_name.* TO '@user'@'%';
-    GRANT SELECT ON mysql.slave_master_info TO '@user'@'%';
-    `
+	  SET @@SESSION.SQL_LOG_BIN = 0;
+	  GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO '%[1]s'@'%%' IDENTIFIED BY '%[2]s';
+	  GRANT SELECT ON %[3]s.* TO '%[1]s'@'%%';
+	  GRANT SELECT ON mysql.slave_master_info TO '%[1]s'@'%%';
+	`
 
-	if err := util.RunQuery(query, sql.Named("user", util.GetOrcUser()),
-		sql.Named("password", util.GetOrcPass()),
-		sql.Named("db_name", util.ToolsDbName),
-	); err != nil {
+	if err := util.RunQuery(query, util.GetOrcUser(), util.GetOrcPass(), util.ToolsDbName); err != nil {
 		return fmt.Errorf("failed to configure orchestrator (user/pass/access), err: %s", err)
 	}
 
@@ -114,10 +110,10 @@ func configureOrchestratorUser() error {
 
 func configureReplicationUser() error {
 	query := `
-    SET @@SESSION.SQL_LOG_BIN = 0;
-    GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO '@user'@'%' IDENTIFIED BY '@password';
-    `
-	if err := util.RunQuery(query, sql.Named("user", util.GetReplUser()), sql.Named("password", util.GetReplPass())); err != nil {
+	  SET @@SESSION.SQL_LOG_BIN = 0;
+	  GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO '%s'@'%%' IDENTIFIED BY '%s';
+	`
+	if err := util.RunQuery(query, util.GetReplUser(), util.GetReplPass()); err != nil {
 		return fmt.Errorf("failed to configure replication user: %s", err)
 	}
 
@@ -126,11 +122,10 @@ func configureReplicationUser() error {
 
 func configureExporterUser() error {
 	query := `
-    SET @@SESSION.SQL_LOG_BIN = 0;
-    GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO '@user'@'127.0.0.1' IDENTIFIED BY '@password' WITH MAX_USER_CONNECTIONS 3;
-    `
-
-	if err := util.RunQuery(query, sql.Named("user", util.GetExporterUser()), sql.Named("password", util.GetExporterPass())); err != nil {
+	  SET @@SESSION.SQL_LOG_BIN = 0;
+	  GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO '%s'@'127.0.0.1' IDENTIFIED BY '%s' WITH MAX_USER_CONNECTIONS 3;
+	`
+	if err := util.RunQuery(query, util.GetExporterUser(), util.GetExporterPass()); err != nil {
 		return fmt.Errorf("failed to metrics exporter user: %s", err)
 	}
 
@@ -175,16 +170,13 @@ func configTopology() error {
 		query := `
 		  STOP SLAVE;
 		  CHANGE MASTER TO MASTER_AUTO_POSITION=1,
-			MASTER_HOST='@host',
-			MASTER_USER='@user',
-			MASTER_PASSWORD='@password',
-			MASTER_CONNECT_RETRY=@retry;
-         `
-
-		if err := util.RunQuery(query, sql.Named("host", util.GetMasterHost()),
-			sql.Named("user", util.GetReplUser()),
-			sql.Named("password", util.GetReplPass()),
-			sql.Named("retry", connRetry),
+		    MASTER_HOST='%s',
+		    MASTER_USER='%s',
+		    MASTER_PASSWORD='%s',
+		    MASTER_CONNECT_RETRY=%d;
+		`
+		if err := util.RunQuery(query,
+			util.GetMasterHost(), util.GetReplUser(), util.GetReplPass(), connRetry,
 		); err != nil {
 			return fmt.Errorf("failed to configure slave node, err: %s", err)
 		}
@@ -199,7 +191,7 @@ func configTopology() error {
 			  stop slave IO_THREAD;
 			  reset slave;
 			  start slave;
-            `
+			`
 			if err := util.RunQuery(query2); err != nil {
 				return fmt.Errorf("failed to start slave node, err: %s", err)
 			}
@@ -211,23 +203,19 @@ func configTopology() error {
 
 func markConfigurationDone() error {
 	query := `
-    SET @@SESSION.SQL_LOG_BIN = 0;
-    BEGIN;
-    CREATE DATABASE IF NOT EXISTS @db;
-	CREATE TABLE IF NOT EXISTS @db.@table  (
-	  name varchar(255) NOT NULL,
-	  value varchar(255) NOT NULL,
-	  inserted_at datetime NOT NULL
-	) ENGINE=csv;
+	  SET @@SESSION.SQL_LOG_BIN = 0;
+	  BEGIN;
+	  CREATE DATABASE IF NOT EXISTS %[1]s;
+	      CREATE TABLE IF NOT EXISTS %[1]s.%[2]s  (
+		name varchar(255) NOT NULL,
+		value varchar(255) NOT NULL,
+		inserted_at datetime NOT NULL
+	      ) ENGINE=csv;
 
-    INSERT INTO @db.@table VALUES ("init_completed", "@host", now());
-    COMMIT;
-    `
-
-	if err := util.RunQuery(query, sql.Named("db", util.ToolsDbName),
-		sql.Named("table", util.ToolsInitTableName),
-		sql.Named("host", util.GetHostname()),
-	); err != nil {
+	  INSERT INTO %[1]s.%[2]s VALUES ("init_completed", "%s", now());
+	  COMMIT;
+	`
+	if err := util.RunQuery(query, util.ToolsDbName, util.ToolsInitTableName, util.GetHostname()); err != nil {
 		return fmt.Errorf("failed to mark configuration done, err: %s", err)
 	}
 

@@ -23,9 +23,6 @@ import (
 
 const (
 	defaultMinAvailable = "50%"
-
-	// ExporterPort is the port on which metrics exporter expose metrics
-	ExporterPort = 9104
 )
 
 var (
