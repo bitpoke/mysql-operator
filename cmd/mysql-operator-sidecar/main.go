@@ -20,10 +20,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
 	"github.com/presslabs/mysql-operator/pkg/sidecar/appclone"
 	"github.com/presslabs/mysql-operator/pkg/sidecar/appconf"
@@ -36,7 +35,7 @@ var log = logf.Log.WithName("sidecar")
 
 func main() {
 	logf.SetLogger(logf.ZapLogger(true))
-	stopCh := SetupSignalHandler()
+	stopCh := signals.SetupSignalHandler()
 
 	cmd := &cobra.Command{
 		Use:   "mysql-operator-sidecar",
@@ -118,27 +117,4 @@ func main() {
 		log.Error(err, "failed to execute command", "cmd", cmd)
 		os.Exit(1)
 	}
-}
-
-var shutdownSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
-var onlyOneSignalHandler = make(chan struct{})
-
-// SetupSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
-// which is closed on one of these signals. If a second signal is caught, the program
-// is terminated with exit code 1.
-func SetupSignalHandler() (stopCh <-chan struct{}) {
-	close(onlyOneSignalHandler) // panics when called twice
-
-	stop := make(chan struct{})
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, shutdownSignals...)
-	go func() {
-		<-c
-		close(stop)
-		fmt.Println("Press C-c again to exit.")
-		<-c
-		os.Exit(1) // second signal. Exit directly.
-	}()
-
-	return stop
 }
