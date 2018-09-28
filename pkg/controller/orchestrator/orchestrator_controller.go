@@ -79,6 +79,7 @@ func newReconciler(mgr manager.Manager, orcClient orc.Interface) reconcile.Recon
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
+// nolint: gocyclo
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// stores a mapping between cluster and it's creation event,
 	// so that we know what clusters to sync with orchestrator
@@ -131,12 +132,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// start the go routine that dispatch events
-	go func() {
+	// create a runnable function that dispatch events to events channel
+	// this runnableFunc is passed to the manager that starts it.
+	var f manager.RunnableFunc = func(stop <-chan struct{}) error {
 		for {
 			select {
-			case <-stop.Channel:
-				return
+			case <-stop:
+				return nil
 			case <-time.After(reconcileTimePeriod):
 				// write all clusters to envents chan to be processed
 				clusters.Range(func(key, value interface{}) bool {
@@ -146,7 +148,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 			}
 		}
-	}()
+	}
+
+	err = mgr.Add(f)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

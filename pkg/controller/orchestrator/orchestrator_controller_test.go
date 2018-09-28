@@ -65,7 +65,7 @@ var _ = Describe("Orchestrator controller", func() {
 		// it is set to 90% of the reconcileTimePeriod
 		noReconcileTime = reconcileTimePeriod * 9 / 10
 		// reconcileTimeout represents time to wait AFTER noReconcileTimeout has passed for a reconciliation to happen
-		reconcileTimeout = 2 * (reconcileTimePeriod - noReconcileTime)
+		reconcileTimeout = 3 * (reconcileTimePeriod - noReconcileTime)
 
 		var recFn reconcile.Reconciler
 
@@ -128,7 +128,7 @@ var _ = Describe("Orchestrator controller", func() {
 			// expect to not receive any event when a cluster is created, but
 			// just after reconcile time passed then receive a reconcile event
 			Consistently(requests, noReconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
-			Eventually(requests).Should(Receive(Equal(expectedRequest)))
+			Eventually(requests, reconcileTimeout).Should(Receive(Equal(expectedRequest)))
 
 		})
 
