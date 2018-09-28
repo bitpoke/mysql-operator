@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/spf13/pflag"
@@ -53,7 +52,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Fprintln(os.Stderr, "Starting mysql-operator...")
+	log.Info("Starting mysql-operator...")
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
