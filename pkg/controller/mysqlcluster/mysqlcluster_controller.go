@@ -20,6 +20,7 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/presslabs/controller-util/syncer"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -34,7 +35,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/presslabs/controller-util/syncer"
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
@@ -172,8 +172,8 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	cmRV := configMapSyncer.GetObject().(*corev1.ConfigMap).ResourceVersion
-	sRV := secretSyncer.GetObject().(*corev1.Secret).ResourceVersion
+	configMapResourceVersion := configMapSyncer.GetObject().(*corev1.ConfigMap).ResourceVersion
+	secretResourceVersion := secretSyncer.GetObject().(*corev1.Secret).ResourceVersion
 
 	// run the syncers for services, pdb and statefulset
 	syncers := []syncer.Interface{
@@ -181,18 +181,16 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		mysqlcluster.NewMasterSVCSyncer(cluster),
 		mysqlcluster.NewHealthySVCSyncer(cluster),
 
-		mysqlcluster.NewStatefulSetSyncer(cluster, cmRV, sRV, r.opt),
+		mysqlcluster.NewStatefulSetSyncer(cluster, configMapResourceVersion, secretResourceVersion, r.opt),
 	}
 
 	if len(cluster.Spec.MinAvailable) != 0 {
 		syncers = append(syncers, mysqlcluster.NewPDBSyncer(cluster))
 	}
 
-	// add pods syncers for every node status
-	for _, ns := range cluster.Status.Nodes {
-		syncers = append(syncers, mysqlcluster.NewPodSyncer(cluster, ns.Name))
-	}
+	syncers = append(syncers, r.getPodSyncers(cluster)...)
 
+	// add pods syncers for every node status
 	for _, sync := range syncers {
 		err = syncer.Sync(context.TODO(), sync, r.Client, r.scheme, r.recorder)
 		if err != nil {
@@ -201,4 +199,35 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	return reconcile.Result{}, nil
+}
+
+// getPodSyncers returns a list of syncers for every pod of the cluster. The
+// list is sorted by node roles, first are replicas and the last is the master
+// pod syncer. We need to have replicas first to avoid having two pods with
+// master label in the same time. This can happen for a small period of time
+// when master changes.
+func (r *ReconcileMysqlCluster) getPodSyncers(cluster *mysqlv1alpha1.MysqlCluster) []syncer.Interface {
+	syncers := []syncer.Interface{}
+
+	// add replica syncers, those should be the first in this list.
+	for _, ns := range cluster.Status.Nodes {
+		if !getCondAsBool(&ns, mysqlv1alpha1.NodeConditionMaster) {
+			syncers = append(syncers, mysqlcluster.NewPodSyncer(cluster, ns.Name))
+		}
+	}
+
+	// add master syncers, this should be the last, and should be only one
+	for _, ns := range cluster.Status.Nodes {
+		if getCondAsBool(&ns, mysqlv1alpha1.NodeConditionMaster) {
+			syncers = append(syncers, mysqlcluster.NewPodSyncer(cluster, ns.Name))
+		}
+	}
+
+	return syncers
+
+}
+
+func getCondAsBool(status *mysqlv1alpha1.NodeStatus, cond mysqlv1alpha1.NodeConditionType) bool {
+	index, exists := wrapcluster.GetNodeConditionIndex(status, cond)
+	return exists && status.Conditions[index].Status == corev1.ConditionTrue
 }
