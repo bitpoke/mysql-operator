@@ -17,6 +17,7 @@ limitations under the License.
 package mysqlcluster
 
 import (
+	"fmt"
 	"strings"
 
 	core "k8s.io/api/core/v1"
@@ -63,17 +64,26 @@ func (s *podSyncer) GetEventReasonForError(err error) syncer.EventReason {
 	return syncer.BasicEventReason("Pod", err)
 }
 
+// nolint: gocyclo
 func (s *podSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*core.Pod)
 
-	// do nothing if the pod is not created
-	if !out.CreationTimestamp.IsZero() {
-		return nil
+	// raise error if pod is not created
+	if out.CreationTimestamp.IsZero() {
+		return fmt.Errorf("pod is not created")
 	}
 
-	isMaster := condToBool(s.cluster.GetNodeCondition(s.hostname, api.NodeConditionMaster))
-	isReplicating := condToBool(s.cluster.GetNodeCondition(s.hostname, api.NodeConditionReplicating))
-	isLagged := condToBool(s.cluster.GetNodeCondition(s.hostname, api.NodeConditionLagged))
+	master := s.cluster.GetNodeCondition(s.hostname, api.NodeConditionMaster)
+	replicating := s.cluster.GetNodeCondition(s.hostname, api.NodeConditionReplicating)
+	lagged := s.cluster.GetNodeCondition(s.hostname, api.NodeConditionLagged)
+
+	if master == nil {
+		return fmt.Errorf("master status not set for all conditions")
+	}
+
+	isMaster := master.Status == core.ConditionTrue
+	isLagged := lagged != nil && lagged.Status == core.ConditionTrue
+	isReplicating := replicating != nil && replicating.Status == core.ConditionTrue
 
 	// set role label
 	role := labelReplica
@@ -82,9 +92,13 @@ func (s *podSyncer) SyncFn(in runtime.Object) error {
 	}
 
 	// set healty label
-	healty := labelHealty
-	if isLagged || !isMaster && !isReplicating {
-		healty = labelNotHealty
+	healty := labelNotHealty
+	if isMaster || !isMaster && isReplicating && !isLagged {
+		healty = labelHealty
+	}
+
+	if len(out.ObjectMeta.Labels) == 0 {
+		out.ObjectMeta.Labels = map[string]string{}
 	}
 
 	out.ObjectMeta.Labels["role"] = role
@@ -93,10 +107,6 @@ func (s *podSyncer) SyncFn(in runtime.Object) error {
 	return nil
 }
 
-func condToBool(cond *api.NodeCondition) bool {
-	return cond != nil && cond.Status == core.ConditionTrue
-}
-
 func getPodNameForHost(host string) string {
-	return strings.SplitN(host, ".", 1)[0]
+	return strings.SplitN(host, ".", 2)[0]
 }
