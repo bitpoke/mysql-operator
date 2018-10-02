@@ -93,3 +93,13 @@ dependencies:
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v1.10.2
 	curl -sL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_$(GOOS)_$(GOARCH).tar.gz | \
 				tar -zx -C $(BINDIR) --strip-components=2
+
+# E2E tests
+###########
+
+KUBECONFIG ?= ~/.kube/config
+K8S_CONTEXT ?= minikube
+
+e2e-local: docker-build
+	go test ./test/e2e -v $(G_ARGS) -timeout 20m --pod-wait-timeout 60 \
+		--kubernetes-config $(KUBECONFIG) --kubernetes-context $(K8S_CONTEXT)
