@@ -1,0 +1,11 @@
+language: go
+go:
+ - 1.x
+ - tip
+
+env:
+  - GO111MODULE=on
+
+script:
+ - go build ./...
+ - go test -v ./...
