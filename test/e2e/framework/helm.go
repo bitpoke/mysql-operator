@@ -32,7 +32,7 @@ func HelmInstallChart(release, ns string) {
 		"--name", release, "--values", TestContext.ChartValues, "--wait",
 		"--kube-context", TestContext.KubeContext,
 		"--set", fmt.Sprintf("image=%s", TestContext.OperatorImage),
-		"--set", fmt.Sprintf("sidecarImage=%s", TestContext.HelperImage),
+		"--set", fmt.Sprintf("sidecarImage=%s", TestContext.SidecarImage),
 	}
 
 	cmd := exec.Command("helm", args...)

@@ -44,7 +44,7 @@ const (
 const (
 	containerInitName      = "init-mysql"
 	containerCloneName     = "clone-mysql"
-	containerSidecarName   = "mysql-operator-sidecar"
+	containerSidecarName   = "sidecar"
 	containerMysqlName     = "mysql"
 	containerExporterName  = "metrics-exporter"
 	containerHeartBeatName = "pt-heartbeat"

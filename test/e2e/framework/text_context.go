@@ -37,7 +37,7 @@ type TestContextType struct {
 	ChartValues string
 
 	OperatorImage string
-	HelperImage   string
+	SidecarImage  string
 
 	TimeoutSeconds    int
 	DumpLogsOnFailure bool
@@ -65,7 +65,7 @@ func RegisterCommonFlags() {
 	flag.StringVar(&TestContext.ChartValues, "operator-chart-values-path", "../../test/e2e-values.yaml", "Path to a values file for mysql-operator chart.")
 
 	flag.StringVar(&TestContext.OperatorImage, "operator-image", "quay.io/presslabs/mysql-operator:build", "Image for mysql operator.")
-	flag.StringVar(&TestContext.HelperImage, "helper-image", "quay.io/presslabs/mysql-helper:build", "Image for mysql helper.")
+	flag.StringVar(&TestContext.SidecarImage, "sidecar-image", "quay.io/presslabs/mysql-operator-sidecar:build", "Image for mysql helper.")
 
 	flag.IntVar(&TestContext.TimeoutSeconds, "pod-wait-timeout", 100, "Timeout to wait for a pod to be ready.")
 	flag.BoolVar(&TestContext.DumpLogsOnFailure, "dump-logs-on-failure", true, "Dump pods logs when a test fails.")
