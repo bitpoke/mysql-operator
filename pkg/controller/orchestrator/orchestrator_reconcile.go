@@ -110,6 +110,8 @@ func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 
 // nolint: gocyclo
 func (ou *orcUpdater) updateStatusFromOrc(insts InstancesSet) {
+	log.V(1).Info("updating nodes status", "insts", insts)
+
 	// we assume that cluster is in ReadOnly
 	isReadOnly := true
 
@@ -194,28 +196,36 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) InstancesSet {
 	log.V(1).Info("nodes (un)registrations", "readyNodes", ou.cluster.Status.ReadyNodes)
 	log.V(2).Info("instances", "instances", instances)
 
-	for i := 0; i < ou.cluster.Status.ReadyNodes; i++ {
+	for i := 0; i < int(ou.cluster.Spec.Replicas); i++ {
 		host := ou.cluster.GetPodHostname(i)
 		if inst := instances.GetInstance(host); inst == nil {
-			// host is not present into orchestrator
-			// register new host into orchestrator
-			shouldDiscover = append(shouldDiscover, host)
+			// if index node is bigger than total ready nodes than should not be
+			// added in discover list because maybe pod is not created yet
+			if i < ou.cluster.Status.ReadyNodes {
+				// host is not present into orchestrator
+				// register new host into orchestrator
+				shouldDiscover = append(shouldDiscover, host)
+			}
 		} else {
 			// this instance is present in both k8s and orchestrator
 			instancesFiltered = append(instancesFiltered, *inst)
 		}
 	}
 
-	// remove all instances from orchestrator that does not exists in k8s
-	for _, inst := range instances {
-		if i := instancesFiltered.GetInstance(inst.Key.Hostname); i == nil {
-			shouldForget = append(shouldForget, inst.Key.Hostname)
+	// the only state in which a node can be removed from orchestrator
+	if int(ou.cluster.Spec.Replicas) == ou.cluster.Status.ReadyNodes {
+		// remove all instances from orchestrator that does not exists in k8s
+		for _, inst := range instances {
+			if i := instancesFiltered.GetInstance(inst.Key.Hostname); i == nil {
+				shouldForget = append(shouldForget, inst.Key.Hostname)
+			}
 		}
 	}
 	if ou.cluster.DeletionTimestamp == nil {
 		ou.discoverNodesInOrc(shouldDiscover)
 		ou.forgetNodesFromOrc(shouldForget)
 	} else {
+		log.V(1).Info("cluster is deleted - forget all nodes")
 		// cluster is deleted, remove all hosts from orchestrator
 		var hosts []string
 		for _, i := range instances {
@@ -380,7 +390,6 @@ func (ou *orcUpdater) endNodeMaintenance(inst orc.Instance, isInMaintenance bool
 
 	log.Info("set node out of maintenance", "node", inst.Key.Hostname)
 	return ou.orcClient.EndMaintenance(inst.Key)
-
 }
 
 // set a host read only just if needed
@@ -460,7 +469,10 @@ func (is InstancesSet) getMasterForNode(node *orc.Instance) *orc.Instance {
 	if len(node.MasterKey.Hostname) != 0 && !node.IsCoMaster {
 		// get the master hostname from MasterKey if MasterKey is set
 		master := is.GetInstance(node.MasterKey.Hostname)
-		return is.getMasterForNode(master)
+		if master != nil {
+			return is.getMasterForNode(master)
+		}
+		return nil
 	}
 
 	if node.IsCoMaster {

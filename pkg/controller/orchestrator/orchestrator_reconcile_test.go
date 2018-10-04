@@ -395,6 +395,34 @@ var _ = Describe("Orchestrator reconciler", func() {
 			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
 			Expect(insts).To(HaveLen(1))
 		})
+
+		When("status.readyNodes != spec.replicas", func() {
+			It("should not remove nodes from orchestrator", func() {
+				orcClient.AddInstance(orc.Instance{
+					ClusterName: cluster.GetClusterAlias(),
+					Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+					ReadOnly:    false,
+				})
+				orcClient.AddInstance(orc.Instance{
+					ClusterName: cluster.GetClusterAlias(),
+					Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
+					MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+					ReadOnly:    true,
+				})
+
+				cluster.Spec.Replicas = 2
+				cluster.Status.ReadyNodes = 1
+
+				// call register and unregister nodes in orc
+				insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+				updater.updateNodesInOrc(insts)
+
+				// check for instances in orc
+				insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+				Expect(insts).To(HaveLen(2))
+			})
+		})
+
 	})
 })
 
