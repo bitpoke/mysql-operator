@@ -18,8 +18,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
+	customLog "github.com/presslabs/mysql-operator/pkg/util/log"
 	"github.com/spf13/pflag"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -35,17 +37,18 @@ import (
 var log = logf.Log.WithName("mysql-operator")
 
 func main() {
-	logf.SetLogger(logf.ZapLogger(true))
-
 	fs := pflag.NewFlagSet(os.Args[0], pflag.ExitOnError)
 	fs.AddGoFlagSet(flag.CommandLine)
 
 	opt := options.GetOptions()
 	opt.AddFlags(fs)
 	if err := fs.Parse(os.Args); err != nil {
-		log.Error(err, "failed to parse command line args, see help.")
+		fmt.Fprintf(os.Stderr, "failed to parse command line args, see help, err: %s", err)
 		os.Exit(1)
 	}
+
+	// set logging
+	logf.SetLogger(customLog.ZapLogger())
 
 	if err := opt.Validate(); err != nil {
 		log.Error(err, "failed to validate command line args, see help.")
