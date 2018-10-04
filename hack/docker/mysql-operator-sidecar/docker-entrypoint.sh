@@ -36,7 +36,7 @@ ${GCS_SERVICE_ACCOUNT_JSON_KEY}
 EOF
 
 SIDECAR_BIN=mysql-operator-sidecar
-VERBOSE="-v 1"
+VERBOSE="-v 1 --debug"
 
 # exec command
 case "$1" in

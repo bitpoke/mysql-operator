@@ -42,6 +42,8 @@ func ZapLogger() logr.Logger {
 		maxLevel = 100
 	}
 
+	//cfg.DisableStacktrace = true
+
 	zapLog, err := cfg.Build(zap.AddCallerSkip(1))
 	if err != nil {
 		log.Fatalf("logger building error: %v ", err) // who watches the watchmen?
