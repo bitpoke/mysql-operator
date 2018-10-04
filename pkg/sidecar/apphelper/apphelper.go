@@ -45,13 +45,13 @@ func RunRunCommand(stopCh <-chan struct{}) error {
 	}
 
 	// deactivate super read only
-	log.V(2).Info("temporary disable SUPER_READ_ONLY")
+	log.V(1).Info("temporary disable SUPER_READ_ONLY")
 	if err := util.RunQuery("SET GLOBAL READ_ONLY = 1; SET GLOBAL SUPER_READ_ONLY = 0;"); err != nil {
 		return fmt.Errorf("failed to configure master node, err: %s", err)
 	}
 
 	// update orchestrator user and password if orchestrator is configured
-	log.V(2).Info("configure orchestrator credentials")
+	log.V(1).Info("configure orchestrator credentials")
 	if len(util.GetOrcUser()) > 0 {
 		if err := configureOrchestratorUser(); err != nil {
 			return err
@@ -59,36 +59,36 @@ func RunRunCommand(stopCh <-chan struct{}) error {
 	}
 
 	// update replication user and password
-	log.V(2).Info("configure replication credentials")
+	log.V(1).Info("configure replication credentials")
 	if err := configureReplicationUser(); err != nil {
 		return err
 	}
 
 	// update metrics exporter user and password
-	log.V(2).Info("configure metrics exporter credentials")
+	log.V(1).Info("configure metrics exporter credentials")
 	if err := configureExporterUser(); err != nil {
 		return err
 	}
 
 	// if it's slave set replication source (master host)
-	log.V(2).Info("configure topology")
+	log.V(1).Info("configure topology")
 	if err := configTopology(); err != nil {
 		return err
 	}
 
 	// mark setup as complete by writing a row in config table
-	log.V(2).Info("flag setup as complet")
+	log.V(1).Info("flag setup as complet")
 	if err := markConfigurationDone(); err != nil {
 		return err
 	}
 
 	// if it's master node then make it writtable else make it read only
-	log.V(2).Info("configure read only flag")
+	log.V(1).Info("configure read only flag")
 	if err := configReadOnly(); err != nil {
 		return err
 	}
 
-	log.V(2).Info("start http server")
+	log.V(1).Info("start http server")
 	srv := newServer(stopCh)
 	return srv.ListenAndServe()
 }
@@ -138,7 +138,7 @@ func configureExporterUser() error {
 }
 
 func waitForMysqlReady() error {
-	log.V(2).Info("wait for mysql to be ready")
+	log.V(1).Info("wait for mysql to be ready")
 
 	for i := 0; i < timeOut; i++ {
 		time.Sleep(1 * time.Second)
@@ -147,11 +147,11 @@ func waitForMysqlReady() error {
 		}
 	}
 	if err := util.RunQuery("SELECT 1"); err != nil {
-		log.V(2).Info("mysql is not ready", "error", err)
+		log.V(1).Info("mysql is not ready", "error", err)
 		return err
 	}
 
-	log.V(2).Info("mysql is ready")
+	log.V(1).Info("mysql is ready")
 	return nil
 
 }

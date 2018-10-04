@@ -75,7 +75,7 @@ func NewOrcErrorMsg(msg string, path string) error {
 
 func (o *orchestrator) makeGetRequest(path string, out interface{}) error {
 	uri := fmt.Sprintf("%s/%s", o.connectURI, path)
-	log.V(2).Info("new orc request", "uri", uri)
+	log.V(2).Info("orchestrator request info", "uri", uri, "outobj", out)
 
 	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {

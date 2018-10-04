@@ -28,13 +28,13 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/sidecar/appconf"
 	"github.com/presslabs/mysql-operator/pkg/sidecar/apphelper"
 	"github.com/presslabs/mysql-operator/pkg/sidecar/apptakebackup"
+	customLog "github.com/presslabs/mysql-operator/pkg/util/log"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var log = logf.Log.WithName("sidecar")
 
 func main() {
-	logf.SetLogger(logf.ZapLogger(true))
 	stopCh := signals.SetupSignalHandler()
 
 	cmd := &cobra.Command{
@@ -42,11 +42,21 @@ func main() {
 		Short: fmt.Sprintf("Helper for mysql operator."),
 		Long:  `mysql-operator-sidecar: helper for config pods`,
 		Run: func(cmd *cobra.Command, args []string) {
-			log.Error(nil, "you run mysql-operator-sidecar, see help section")
+			log.Info("you run mysql-operator-sidecar, see help section")
 			os.Exit(1)
 
 		},
 	}
+
+	// add flags and parse them
+	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
+	if err := cmd.ParseFlags(os.Args[1:]); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to parse global flags, see helps, err: %s", err)
+		os.Exit(1)
+	}
+
+	// setup logging
+	logf.SetLogger(customLog.ZapLogger())
 
 	confCmd := &cobra.Command{
 		Use:   "init-configs",
@@ -106,12 +116,6 @@ func main() {
 		},
 	}
 	cmd.AddCommand(takeBackupCmd)
-
-	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
-	if err := flag.CommandLine.Parse([]string{}); err != nil {
-		log.Error(err, "failed to parse args")
-		os.Exit(1)
-	}
 
 	if err := cmd.Execute(); err != nil {
 		log.Error(err, "failed to execute command", "cmd", cmd)
