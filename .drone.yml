@@ -19,30 +19,6 @@ pipeline:
       - make test
       - make update-docker
 
-  start-kubernetes:
-    image: quay.io/presslabs/kluster-toolbox
-    group: build
-    secrets:
-      - GOOGLE_CREDENTIALS
-    environment:
-      - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
-      - KUBECONFIG=/go/.kube/config
-      - HELM_HOME=/go/.helm/
-    commands:
-      - setup-credentials-helper.sh
-      - gcloud container clusters create $CLUSTER_NAME
-          --zone europe-west3-b --project testing-reactor
-          --preemptible --cluster-version 1.10
-      # initialize cluster
-      - kubectl create serviceaccount -n kube-system tiller
-      - kubectl create clusterrolebinding tiller --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-      - helm init --service-account tiller --wait
-      - helm repo add presslabs https://presslabs.github.io/charts
-      - helm dependency update hack/charts/mysql-operator
-    when:
-      #branch: master
-      event: push
-
   publish-operator:
     group: publish
     image: plugins/docker
@@ -121,8 +97,9 @@ pipeline:
       #branch: master
       event: push
 
-
+#
 # end to end testing
+#
 
   publish-e2e-image:
     group: publish
@@ -136,6 +113,30 @@ pipeline:
     secrets:
       - source: QUAY_TOKEN
         target: DOCKER_PASSWORD
+    when:
+      #branch: master
+      event: push
+
+  start-kubernetes:
+    image: quay.io/presslabs/kluster-toolbox
+    group: publish
+    secrets:
+      - GOOGLE_CREDENTIALS
+    environment:
+      - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
+      - KUBECONFIG=/go/.kube/config
+      - HELM_HOME=/go/.helm/
+    commands:
+      - setup-credentials-helper.sh
+      - gcloud container clusters create $CLUSTER_NAME
+          --zone europe-west3-b --project testing-reactor
+          --preemptible --cluster-version 1.10
+      # initialize cluster
+      - kubectl create serviceaccount -n kube-system tiller
+      - kubectl create clusterrolebinding tiller --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+      - helm init --service-account tiller --wait
+      - helm repo add presslabs https://presslabs.github.io/charts
+      - helm dependency update hack/charts/mysql-operator
     when:
       #branch: master
       event: push

@@ -224,13 +224,11 @@ var _ = Describe("Mysql cluster tests", func() {
 		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(podName, &meta.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete pod %s", podName)
 
-		// check failover done, this is a reggression test
-		// TODO: decrease this timeout to 20
-		failoverTimeout := 40 * time.Second
-		By(fmt.Sprintf("Check failover done; timeout=%s", failoverTimeout))
+		// check failover to not be started
+		failoverTimeout := 80 * time.Second
+		By(fmt.Sprintf("ensure that failover is not started; timeout=%s", failoverTimeout))
 		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionFalse, failoverTimeout)
 		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionReadOnly, core.ConditionTrue, failoverTimeout)
-
 	})
 
 })
