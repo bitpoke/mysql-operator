@@ -258,10 +258,9 @@ func RunQuery(q string, args ...interface{}) error {
 		return err
 	}
 
-	fmtedQuery := fmt.Sprintf(q, args...)
-	log.V(4).Info("running query", "query", fmtedQuery, "args", args)
-	if _, err := db.Exec(fmtedQuery); err != nil {
-		log.Error(err, "could not query mysql", "query", fmtedQuery)
+	log.V(4).Info("running query", "query", q, "args", args)
+	if _, err := db.Exec(q, args); err != nil {
+		log.Error(err, "could not query mysql", "query", q)
 		return err
 	}
 

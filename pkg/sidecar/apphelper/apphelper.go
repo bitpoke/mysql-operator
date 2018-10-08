@@ -96,12 +96,12 @@ func RunRunCommand(stopCh <-chan struct{}) error {
 func configureOrchestratorUser() error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
-	  GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO '%[1]s'@'%%' IDENTIFIED BY '%[2]s';
-	  GRANT SELECT ON %[3]s.* TO '%[1]s'@'%%';
-	  GRANT SELECT ON mysql.slave_master_info TO '%[1]s'@'%%';
+	  GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO '?'@'%%' IDENTIFIED BY '?';
+	  GRANT SELECT ON ?.* TO '?'@'%%';
+	  GRANT SELECT ON mysql.slave_master_info TO '?'@'%%';
 	`
 
-	if err := util.RunQuery(query, util.GetOrcUser(), util.GetOrcPass(), util.ToolsDbName); err != nil {
+	if err := util.RunQuery(query, util.GetOrcUser(), util.GetOrcPass(), util.ToolsDbName, util.GetOrcUser(), util.GetOrcUser()); err != nil {
 		return fmt.Errorf("failed to configure orchestrator (user/pass/access), err: %s", err)
 	}
 
@@ -111,7 +111,7 @@ func configureOrchestratorUser() error {
 func configureReplicationUser() error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
-	  GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO '%s'@'%%' IDENTIFIED BY '%s';
+	  GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO '?'@'%%' IDENTIFIED BY '?';
 	`
 	if err := util.RunQuery(query, util.GetReplUser(), util.GetReplPass()); err != nil {
 		return fmt.Errorf("failed to configure replication user: %s", err)
@@ -123,7 +123,7 @@ func configureReplicationUser() error {
 func configureExporterUser() error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
-	  GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO '%s'@'127.0.0.1' IDENTIFIED BY '%s' WITH MAX_USER_CONNECTIONS 3;
+	  GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO '?'@'127.0.0.1' IDENTIFIED BY '?' WITH MAX_USER_CONNECTIONS 3;
 	`
 	if err := util.RunQuery(query, util.GetExporterUser(), util.GetExporterPass()); err != nil {
 		return fmt.Errorf("failed to metrics exporter user: %s", err)
@@ -170,10 +170,10 @@ func configTopology() error {
 		query := `
 		  STOP SLAVE;
 		  CHANGE MASTER TO MASTER_AUTO_POSITION=1,
-		    MASTER_HOST='%s',
-		    MASTER_USER='%s',
-		    MASTER_PASSWORD='%s',
-		    MASTER_CONNECT_RETRY=%d;
+		    MASTER_HOST='?',
+		    MASTER_USER='?',
+		    MASTER_PASSWORD='?',
+		    MASTER_CONNECT_RETRY=?;
 		`
 		if err := util.RunQuery(query,
 			util.GetMasterHost(), util.GetReplUser(), util.GetReplPass(), connRetry,
@@ -205,17 +205,18 @@ func markConfigurationDone() error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
 	  BEGIN;
-	  CREATE DATABASE IF NOT EXISTS %[1]s;
-	      CREATE TABLE IF NOT EXISTS %[1]s.%[2]s  (
+	  CREATE DATABASE IF NOT EXISTS ?;
+	      CREATE TABLE IF NOT EXISTS ?.?  (
 		name varchar(255) NOT NULL,
 		value varchar(255) NOT NULL,
 		inserted_at datetime NOT NULL
 	      ) ENGINE=csv;
 
-	  INSERT INTO %[1]s.%[2]s VALUES ("init_completed", "%s", now());
+	  INSERT INTO ?.? VALUES ("init_completed", "?", now());
 	  COMMIT;
 	`
-	if err := util.RunQuery(query, util.ToolsDbName, util.ToolsInitTableName, util.GetHostname()); err != nil {
+	if err := util.RunQuery(query, util.ToolsDbName, util.ToolsDbName, util.ToolsInitTableName,
+		util.ToolsDbName, util.ToolsInitTableName, util.GetHostname()); err != nil {
 		return fmt.Errorf("failed to mark configuration done, err: %s", err)
 	}
 
