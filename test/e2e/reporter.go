@@ -99,22 +99,6 @@ func (r *podLogReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
 	if summary.NumberOfFailedSpecs == 0 {
 		return
 	}
-
-	// get the kubernetes client
-	//  kubeCfg, err := framework.LoadConfig()
-	//  if err != nil {
-	//  	fmt.Println("Failed to get kubeconfig!")
-	//  	return
-	//  }
-
-	//  client, err := clientset.NewForConfig(kubeCfg)
-	//  if err != nil {
-	//  	fmt.Println("Failed to create k8s client!")
-	//  	return
-	//  }
-
-	//framework.LogPodsWithLabels(client, r.namespace, map[string]string{}, framework.Logf)
-
 }
 
 func LogPodsWithLabels(c clientset.Interface, ns string, match map[string]string, since time.Duration, out io.Writer) {
