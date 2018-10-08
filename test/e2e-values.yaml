@@ -1,6 +1,5 @@
 extraArgs:
   - -v=1
-  - --debug
 
 orchestrator:
   topologyPassword: password1

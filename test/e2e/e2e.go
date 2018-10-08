@@ -95,19 +95,31 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	framework.Logf("Running AfterSuite actions on all node")
 	framework.RunCleanupActions()
 
-	ginkgo.By("Stop port-forwarding orchestrator")
-	orcTunnel.Close()
+	// stop port-forwarding just if was started
+	if orcTunnel != nil {
+		ginkgo.By("Stop port-forwarding orchestrator")
+		orcTunnel.Close()
+	}
 
-	ginkgo.By("Remove operator release")
-	framework.HelmPurgeRelease(releaseName)
-
-	ginkgo.By("Delete operator namespace")
-
+	// get the kubernetes client
 	kubeCfg, err := framework.LoadConfig()
 	gomega.Expect(err).To(gomega.Succeed())
 
 	client, err := clientset.NewForConfig(kubeCfg)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	fmt.Printf("%#v\n", ginkgo.CurrentGinkgoTestDescription())
+	if ginkgo.CurrentGinkgoTestDescription().Failed && framework.TestContext.DumpLogsOnFailure {
+		ginkgo.By("Get controller logs")
+		logFunc := framework.Logf
+		// TODO: log in file if ReportDir is set
+		framework.LogPodsWithLabels(client, operatorNamespace, map[string]string{}, logFunc)
+	}
+
+	ginkgo.By("Remove operator release")
+	framework.HelmPurgeRelease(releaseName)
+
+	ginkgo.By("Delete operator namespace")
 
 	if err := framework.DeleteNS(client, operatorNamespace, framework.DefaultNamespaceDeletionTimeout); err != nil {
 		framework.Failf(fmt.Sprintf("Can't delete namespace: %s", err))
@@ -141,6 +153,10 @@ func RunE2ETests(t *testing.T) {
 		} else {
 			rps = append(rps, reporters.NewJUnitReporter(path.Join(framework.TestContext.ReportDir, fmt.Sprintf("junit_%v%02d.xml", "mysql_o_", config.GinkgoConfig.ParallelNode))))
 		}
+	}
+
+	if framework.TestContext.DumpLogsOnFailure {
+		rps = append(rps, NewLogsPodReporter("mysql-operator", operatorNamespace))
 	}
 
 	glog.Infof("Starting e2e run on Ginkgo node %d", config.GinkgoConfig.ParallelNode)
