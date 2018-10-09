@@ -18,46 +18,55 @@ package mysqlbackup
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"reflect"
 
-	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/presslabs/controller-util/syncer"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	backupwrap "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlbackup"
+	backupSyncer "github.com/presslabs/mysql-operator/pkg/controller/mysqlbackup/internal/syncer"
+	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
+const (
+	controllerName = "mysqlbackup-controller"
+)
+
+var log = logf.Log.WithName(controllerName)
 
 // Add creates a new MysqlBackup Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-// USER ACTION REQUIRED: update cmd/manager/main.go to call this mysql.Add(mgr) to install this Controller
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
 }
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileMysqlBackup{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileMysqlBackup{
+		Client:   mgr.GetClient(),
+		scheme:   mgr.GetScheme(),
+		recorder: mgr.GetRecorder(controllerName),
+		opt:      options.GetOptions(),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("mysqlbackup-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -68,9 +77,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create
-	// Uncomment watch a Deployment created by MysqlBackup - change this for objects you create
-	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
+	err = c.Watch(&source.Kind{Type: &batchv1.Job{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &mysqlv1alpha1.MysqlBackup{},
 	})
@@ -86,20 +93,21 @@ var _ reconcile.Reconciler = &ReconcileMysqlBackup{}
 // ReconcileMysqlBackup reconciles a MysqlBackup object
 type ReconcileMysqlBackup struct {
 	client.Client
-	scheme *runtime.Scheme
+	scheme   *runtime.Scheme
+	recorder record.EventRecorder
+	opt      *options.Options
 }
 
 // Reconcile reads that state of the cluster for a MysqlBackup object and makes changes based on the state read
 // and what is in the MysqlBackup.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  The scaffolding writes
-// a Deployment as an example
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlbackups,verbs=get;list;watch;create;update;patch;delete
+// nolint: gocyclo
 func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlBackup instance
-	instance := &mysqlv1alpha1.MysqlBackup{}
-	err := r.Get(context.TODO(), request.NamespacedName, instance)
+	backup := &mysqlv1alpha1.MysqlBackup{}
+	err := r.Get(context.TODO(), request.NamespacedName, backup)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
@@ -110,58 +118,47 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	// TODO(user): Change this to be the object type created by your controller
-	// Define the desired Deployment object
-	deploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name + "-deployment",
-			Namespace: instance.Namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"deployment": instance.Name + "-deployment"},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"deployment": instance.Name + "-deployment"}},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "nginx",
-							Image: "nginx",
-						},
-					},
-				},
-			},
-		},
+	log.V(1).Info("reconcile backup", "backup", backup)
+
+	// migrate old backups to the new version
+	// TODO: remove this in version v0.3.0
+	if backup.Spec.BackupURL == "" && backup.Spec.BackupURI == "" && backup.Status.Completed && len(backup.Status.BackupURI) > 0 {
+		backup.Spec.BackupURL = backup.Status.BackupURI
+		return reconcile.Result{}, r.Update(context.TODO(), backup)
 	}
 
-	if err = controllerutil.SetControllerReference(instance, deploy, r.scheme); err != nil {
+	savedBackup := backup.DeepCopy()
+	if len(backup.Spec.ClusterName) == 0 {
+		return reconcile.Result{}, fmt.Errorf("cluster name is not specified")
+	}
+
+	if backup.Status.Completed {
+		// silence skip it
+		log.V(1).Info("backup already completed", "name", backup.Name)
+		return reconcile.Result{}, nil
+	}
+
+	clusterKey := types.NamespacedName{Name: backup.Spec.ClusterName, Namespace: backup.Namespace}
+	cluster := &mysqlv1alpha1.MysqlCluster{}
+	if err = r.Get(context.TODO(), clusterKey, cluster); err != nil {
+		return reconcile.Result{}, fmt.Errorf("cluster not found: %s", err)
+	}
+
+	wBackup := backupwrap.New(backup)
+	wBackup.SetDefaults(cluster)
+
+	jobSyncer := backupSyncer.NewJobSyncer(backup, cluster, r.opt)
+	err = syncer.Sync(context.TODO(), jobSyncer, r.Client, r.scheme, r.recorder)
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// TODO(user): Change this for the object type created by your controller
-	// Check if the Deployment already exists
-	found := &appsv1.Deployment{}
-	err = r.Get(context.TODO(), types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		log.Printf("Creating Deployment %s/%s\n", deploy.Namespace, deploy.Name)
-		err = r.Create(context.TODO(), deploy)
-		if err != nil {
+	// update spec
+	if !reflect.DeepEqual(savedBackup, backup) {
+		if err = r.Update(context.TODO(), backup); err != nil {
 			return reconcile.Result{}, err
 		}
-	} else if err != nil {
-		return reconcile.Result{}, err
 	}
 
-	// TODO(user): Change this for the object type created by your controller
-	// Update the found object and write the result back if there are any changes
-	if !reflect.DeepEqual(deploy.Spec, found.Spec) {
-		found.Spec = deploy.Spec
-		log.Printf("Updating Deployment %s/%s\n", deploy.Namespace, deploy.Name)
-		err = r.Update(context.TODO(), found)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-	}
 	return reconcile.Result{}, nil
 }

@@ -24,7 +24,9 @@ spec:
           properties:
             backupSecretName:
               type: string
-            backupURI:
+            backupURL:
+              type: string
+            backupUri:
               type: string
             clusterName:
               type: string
@@ -33,7 +35,7 @@ spec:
           type: object
         status:
           properties:
-            backupURI:
+            backupUri:
               type: string
             completed:
               type: boolean
