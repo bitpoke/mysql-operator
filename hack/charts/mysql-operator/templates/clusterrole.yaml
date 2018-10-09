@@ -1,13 +1,13 @@
-{{- if .Values.rbac.create -}}
-apiVersion: rbac.authorization.k8s.io/v1beta1
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ template "mysql-operator.fullname" . }}
   labels:
-    app: {{ template "mysql-operator.name" . }}
-    chart: {{ template "mysql-operator.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    app: '{{ template "mysql-operator.name" . }}'
+    chart: '{{ template "mysql-operator.chart" . }}'
+    heritage: '{{ .Release.Service }}'
+    release: '{{ .Release.Name }}'
+  name: '{{ template "mysql-operator.fullname" . }}'
 rules:
 - apiGroups:
   - apps
@@ -87,4 +87,4 @@ rules:
   - update
   - patch
   - delete
-{{- end -}}
+{{- end }}

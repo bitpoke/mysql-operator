@@ -1,0 +1,7 @@
+metadata:
+  name: '{{ template "mysql-operator.fullname" . }}'
+  labels:
+    app: '{{ template "mysql-operator.name" . }}'
+    chart: '{{ template "mysql-operator.chart" . }}'
+    release: '{{ .Release.Name }}'
+    heritage: '{{ .Release.Service }}'

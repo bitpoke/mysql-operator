@@ -1,71 +1,18 @@
-#/bin/sh
+#/bin/bash
 
-CHART_PATH=hack/charts/mysql-operator
-CHART_TEMPLATE_DIR=${CHART_PATH}/templates
+tag=${1:-$(git describe --tags)}
+APP_VERSION=$(echo ${tag} | sed 's/^v//')
+CHART_PATH=charts/mysql-operator
 
-#
-# rbac content
-#
-RBAC=${CHART_TEMPLATE_DIR}/clusterrole.yaml
-cat <<EOF > ${RBAC}
-{{- if .Values.rbac.create -}}
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRole
-metadata:
-  name: {{ template "mysql-operator.fullname" . }}
-  labels:
-    app: {{ template "mysql-operator.name" . }}
-    chart: {{ template "mysql-operator.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
-rules:
-EOF
-
-sed -n -e '
-		/rules:/,$ {
-			/rules:/n
-			p
-		}
-	' config/rbac/rbac_role.yaml >> ${RBAC}
-
-echo "{{- end -}}" >> ${RBAC}
-
-#
-# crds
-#
-CRDS=${CHART_TEMPLATE_DIR}/crds.yaml
-echo "Updating CRDS file: ${CRDS}"
-
-echo "{{- if .Values.installCRDs }}" > ${CRDS}
-cat config/crds/*.yaml >> ${CRDS}
-sed -i '
-/apiVersion: apiextensions.k8s.io\/.*/ i\
----
-# search for name and add annotations after it
-/^metadata:/ a\
-  annotations:\
-    "helm.sh/hook": "crd-install"
-' $CRDS
-echo "{{- end -}}" >> ${CRDS}
-
-#
-# Update chart version
-#
-
-
-# Usually $TAG value should be what git describe --tags returns
-TAG=${1:-$(git describe --tags)}
-
-version=$(echo ${TAG} | sed 's/^v//')
-echo "Updating chart to version: ${version}"
+echo "Updating chart to version to: ${APP_VERSION}"
 sed -i "
-    s/version: .*/version: ${version}/
-    s/appVersion: .*/appVersion: ${version}/
+    s/version: .*/version: ${APP_VERSION}/
+    s/appVersion: .*/appVersion: ${APP_VERSION}/
 " ${CHART_PATH}/Chart.yaml
 
-echo "Updating chart images to tag: ${TAG}"
+echo "Updating chart images tag to: ${tag}"
 sed -i "
-    s/image: \(.*\):.*/image: \1:${TAG}/
-    s/helperImage: \(.*\):.*/helperImage: \1:${TAG}/
+    s/image: \(.*\):.*/image: \1:${tag}/
+    s/sidecarImage: \(.*\):.*/sidecarImage: \1:${tag}/
 " ${CHART_PATH}/values.yaml
 
