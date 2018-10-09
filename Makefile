@@ -47,6 +47,7 @@ deploy: manifests
 # Generate manifests e.g. CRD, RBAC etc.
 manifests:
 	go run vendor/sigs.k8s.io/controller-tools/cmd/controller-gen/main.go all
+	cd hack && ./generate_chart_manifests.sh
 
 # Run go fmt against code
 fmt:
@@ -81,11 +82,13 @@ lint:
 	$(BINDIR)/golangci-lint run ./pkg/... ./cmd/...
 
 chart: generate manifests
-	hack/generate_chart.sh $(TAG)
+	cd hack && ./generate_chart.sh $(TAG)
 
 dependencies:
 	test -d $(BINDIR) || mkdir $(BINDIR)
 	GOBIN=$(BINDIR) go install ./vendor/github.com/onsi/ginkgo/ginkgo
+	curl -sL https://github.com/mikefarah/yq/releases/download/2.1.1/yq_$(GOOS)_$(GOARCH) -o $(BINDIR)/yq
+	chmod +x $(BINDIR)/yq
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v1.10.2
 	curl -sL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_$(GOOS)_$(GOARCH).tar.gz | \
 				tar -zx -C $(BINDIR) --strip-components=2

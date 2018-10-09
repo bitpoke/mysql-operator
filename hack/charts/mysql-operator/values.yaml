@@ -3,9 +3,9 @@
 # Declare variables to be passed into your templates.
 
 replicaCount: 1
-image: quay.io/presslabs/mysql-operator:v0.2.0
+image: quay.io/presslabs/mysql-operator:latest
 imagePullPolicy: IfNotPresent
-sidecarImage: quay.io/presslabs/mysql-operator-sidecar:v0.2.0
+sidecarImage: quay.io/presslabs/mysql-operator-sidecar:latest
 
 installCRDs: true
 
