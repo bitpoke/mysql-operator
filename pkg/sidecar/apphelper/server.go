@@ -83,7 +83,7 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 	// nolint: gosec
 	xtrabackup := exec.Command("xtrabackup", "--backup", "--slave-info", "--stream=xbstream",
 		"--host=127.0.0.1", fmt.Sprintf("--user=%s", util.GetReplUser()),
-		fmt.Sprintf("--password=%s", util.GetReplPass())) // nolint: gosec
+		fmt.Sprintf("--password=%s", util.GetReplPass()))
 
 	xtrabackup.Stderr = os.Stderr
 

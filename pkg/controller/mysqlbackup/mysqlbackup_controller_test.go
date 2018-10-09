@@ -18,65 +18,286 @@ limitations under the License.
 package mysqlbackup
 
 import (
-	"testing"
+	"fmt"
+	"math/rand"
 	"time"
 
-	"github.com/onsi/gomega"
-	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
+
 	"golang.org/x/net/context"
-	appsv1 "k8s.io/api/apps/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	batch "k8s.io/api/batch/v1"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	backupwrap "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlbackup"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 )
 
-var c client.Client
+const timeout = time.Second * 2
 
-var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: "foo", Namespace: "default"}}
-var depKey = types.NamespacedName{Name: "foo-deployment", Namespace: "default"}
+var _ = Describe("MysqlBackup controller", func() {
+	var (
+		// channel for incoming reconcile requests
+		requests chan reconcile.Request
+		// stop channel for controller manager
+		stop chan struct{}
+		// controller k8s client
+		c client.Client
+	)
 
-const timeout = time.Second * 5
+	BeforeEach(func() {
+		var recFn reconcile.Reconciler
 
-func TestReconcile(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
-	instance := &mysqlv1alpha1.MysqlBackup{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"}}
+		mgr, err := manager.New(cfg, manager.Options{})
+		Expect(err).NotTo(HaveOccurred())
+		c = mgr.GetClient()
 
-	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
-	// channel when it is finished.
-	mgr, err := manager.New(cfg, manager.Options{})
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-	c = mgr.GetClient()
+		recFn, requests = SetupTestReconcile(newReconciler(mgr))
+		Expect(add(mgr, recFn)).To(Succeed())
 
-	recFn, requests := SetupTestReconcile(newReconciler(mgr))
-	g.Expect(add(mgr, recFn)).NotTo(gomega.HaveOccurred())
-	defer close(StartTestManager(mgr, g))
+		stop = StartTestManager(mgr)
+	})
 
-	// Create the MysqlBackup object and expect the Reconcile and Deployment to be created
-	err = c.Create(context.TODO(), instance)
-	// The instance object may not be a valid object because it might be missing some required fields.
-	// Please modify the instance object by adding required fields and then remove the following if statement.
-	if apierrors.IsInvalid(err) {
-		t.Logf("failed to create object, got an invalid object error: %v", err)
-		return
+	AfterEach(func() {
+		close(stop)
+	})
+
+	// instantiate a cluster and a backup
+	var (
+		expectedRequest reconcile.Request
+		cluster         *api.MysqlCluster
+		backup          *api.MysqlBackup
+		wBackup         *backupwrap.Wrapper
+		backupKey       types.NamespacedName
+		jobKey          types.NamespacedName
+	)
+
+	BeforeEach(func() {
+		clusterName := fmt.Sprintf("cluster-%d", rand.Int31())
+		name := fmt.Sprintf("backup-%d", rand.Int31())
+		ns := "default"
+
+		backupKey = types.NamespacedName{Name: name, Namespace: ns}
+		expectedRequest = reconcile.Request{
+			NamespacedName: backupKey,
+		}
+
+		cluster = &api.MysqlCluster{
+			ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns},
+			Spec: api.MysqlClusterSpec{
+				Replicas:   2,
+				SecretName: "a-secret",
+			},
+		}
+
+		backup = &api.MysqlBackup{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
+			Spec: api.MysqlBackupSpec{
+				ClusterName:      clusterName,
+				BackupURL:        "gs://bucket/",
+				BackupSecretName: "secert",
+			},
+		}
+
+		wBackup = backupwrap.New(backup)
+		jobKey = types.NamespacedName{
+			Name:      wBackup.GetNameForJob(),
+			Namespace: backup.Namespace,
+		}
+	})
+
+	When("a new mysql backup is created", func() {
+
+		BeforeEach(func() {
+			// create a cluster and a backup
+			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+			Expect(c.Create(context.TODO(), backup)).To(Succeed())
+
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			// some extra reconcile requests may appear
+			testutil.DrainChan(requests)
+			// We need to make sure that the controller does not create infinite
+			// loops
+			Consistently(requests, timeout).ShouldNot(Receive(Equal(expectedRequest)))
+		})
+
+		AfterEach(func() {
+			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
+			Expect(c.Delete(context.TODO(), backup)).To(Succeed())
+		})
+
+		It("should create the job", func() {
+			job := &batch.Job{}
+			Expect(c.Get(context.TODO(), jobKey, job)).To(Succeed())
+			Expect(job.Spec.Template.Spec.Containers[0].Name).To(Equal("backup"))
+		})
+
+		It("should populate the defaults", func() {
+			Expect(c.Get(context.TODO(), backupKey, backup)).To(Succeed())
+			Expect(backup.Spec.BackupURL).To(ContainSubstring(backupwrap.BackupSuffix))
+		})
+
+		It("should update backup status as complete", func() {
+			// get job
+			job := &batch.Job{}
+			Expect(c.Get(context.TODO(), jobKey, job)).To(Succeed())
+
+			// update job as completed
+			job.Status.Conditions = []batch.JobCondition{
+				batch.JobCondition{
+					Type:   batch.JobComplete,
+					Status: core.ConditionTrue,
+				},
+			}
+			Expect(c.Status().Update(context.TODO(), job)).To(Succeed())
+
+			// expect reqoncile request
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			Eventually(refreshFn(c, backupKey)).Should(testutil.BackupHaveCondition(api.BackupComplete, core.ConditionTrue))
+			Eventually(refreshFn(c, backupKey)).Should(beCompleted())
+		})
+
+		It("should update backup status as failed", func() {
+			// get job
+			job := &batch.Job{}
+			Expect(c.Get(context.TODO(), jobKey, job)).To(Succeed())
+
+			// update job as completed and failed
+			job.Status.Conditions = []batch.JobCondition{
+				batch.JobCondition{
+					Type:   batch.JobComplete,
+					Status: core.ConditionTrue,
+				},
+				batch.JobCondition{
+					Type:   batch.JobFailed,
+					Status: core.ConditionTrue,
+				},
+			}
+			Expect(c.Status().Update(context.TODO(), job)).To(Succeed())
+
+			// expect reqoncile request
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			Eventually(refreshFn(c, backupKey)).Should(testutil.BackupHaveCondition(api.BackupComplete, core.ConditionTrue))
+			Eventually(refreshFn(c, backupKey)).Should(testutil.BackupHaveCondition(api.BackupFailed, core.ConditionTrue))
+			Eventually(refreshFn(c, backupKey)).Should(beCompleted())
+		})
+
+	})
+
+	When("a backup is complete", func() {
+		BeforeEach(func() {
+			// mark backup as completed
+			backup.Status.Completed = true
+			// create a cluster and a backup
+			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+			Expect(c.Create(context.TODO(), backup)).To(Succeed())
+
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+		})
+
+		AfterEach(func() {
+			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
+			Expect(c.Delete(context.TODO(), backup)).To(Succeed())
+		})
+
+		It("should skip creating job", func() {
+			job := &batch.Job{}
+			Expect(c.Get(context.TODO(), jobKey, job)).ToNot(Succeed())
+		})
+
+		It("should not receive more reconcile requests", func() {
+			Consistently(requests, timeout).ShouldNot(Receive(Equal(expectedRequest)))
+		})
+	})
+
+	When("cluster name is not specified", func() {
+		BeforeEach(func() {
+			// mark backup as completed
+			backup.Spec.ClusterName = ""
+			// create a cluster and a backup
+			Expect(c.Create(context.TODO(), backup)).To(Succeed())
+			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+
+			testutil.DrainChan(requests)
+		})
+
+		AfterEach(func() {
+			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
+			Expect(c.Delete(context.TODO(), backup)).To(Succeed())
+		})
+
+		It("should skip creating job", func() {
+			job := &batch.Job{}
+			Expect(c.Get(context.TODO(), jobKey, job)).ToNot(Succeed())
+		})
+
+		It("should allow updating cluster name", func() {
+			// update cluster
+			backup.Spec.ClusterName = cluster.Name
+			Expect(c.Update(context.TODO(), backup)).To(Succeed())
+
+			// wait for reconcile request
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			// check for job to be created
+			// NOTE: maybe check in an eventually for job to be created.
+			job := &batch.Job{}
+			Expect(c.Get(context.TODO(), jobKey, job)).To(Succeed())
+		})
+	})
+
+	When("backup does not exists", func() {
+		BeforeEach(func() {
+			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
+		})
+
+		It("should use backupURI as backupURL", func() {
+			backup.Spec.BackupURL = ""
+			backup.Spec.BackupURI = "gs://bucket/"
+			Expect(c.Create(context.TODO(), backup)).To(Succeed())
+			defer c.Delete(context.TODO(), backup)
+
+			// wait for a reconcile request
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			Eventually(refreshFn(c, backupKey)).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Spec": MatchFields(IgnoreExtras, Fields{
+					"BackupURL": ContainSubstring(backup.Spec.BackupURI),
+				}),
+			})))
+		})
+	})
+})
+
+func refreshFn(c client.Client, backupKey types.NamespacedName) func() *api.MysqlBackup {
+	return func() *api.MysqlBackup {
+		backup := &api.MysqlBackup{}
+		c.Get(context.TODO(), backupKey, backup)
+		return backup
 	}
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-	defer c.Delete(context.TODO(), instance)
-	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
+}
 
-	deploy := &appsv1.Deployment{}
-	g.Eventually(func() error { return c.Get(context.TODO(), depKey, deploy) }, timeout).
-		Should(gomega.Succeed())
-
-	// Delete the Deployment and expect Reconcile to be called for Deployment deletion
-	g.Expect(c.Delete(context.TODO(), deploy)).NotTo(gomega.HaveOccurred())
-	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
-	g.Eventually(func() error { return c.Get(context.TODO(), depKey, deploy) }, timeout).
-		Should(gomega.Succeed())
-
-	// Manually delete Deployment since GC isn't enabled in the test control plane
-	g.Expect(c.Delete(context.TODO(), deploy)).To(gomega.Succeed())
-
+func beCompleted() gomegatypes.GomegaMatcher {
+	return PointTo(MatchFields(IgnoreExtras, Fields{
+		"Status": MatchFields(IgnoreExtras, Fields{
+			"Completed": Equal(true),
+		}),
+	}))
 }

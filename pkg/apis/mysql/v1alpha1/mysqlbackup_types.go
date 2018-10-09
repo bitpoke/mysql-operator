@@ -28,10 +28,18 @@ import (
 type MysqlBackupSpec struct {
 	// ClustterName represents the cluster for which to take backup
 	ClusterName string `json:"clusterName"`
-	// BackupURI a fully specified bucket URI where to put backup.
-	// Default is used the one specified in cluster.
-	// optional
-	BackupURI string `json:"backupURI,omitempty"`
+
+	// Specify an URI where to put the backup. This is deprecated and will be
+	// removed in future releases. Use BackupURL instead.
+	// +optional
+	BackupURI string `json:"backupUri,omitempty"`
+
+	// BackupURL represents the URL to the backup location, this can be
+	// partially specifyied. Default is used the one specified in the cluster.
+	// Is the same as backupURI.
+	// +optional
+	BackupURL string `json:"backupURL,omitempty"`
+
 	// BackupSecretName the name of secrets that contains the credentials to
 	// access the bucket. Default is used the secret specified in cluster.
 	// optinal
@@ -68,8 +76,9 @@ type MysqlBackupStatus struct {
 	// Complete marks the backup in final state
 	Completed bool `json:"completed,omitempty"`
 
-	// BackupURI represent the fully uri to the backup location
-	BackupURI string `json:"backupURI,omitempty"`
+	// BackupURI represent the fully uri to the backup location This field is
+	// deprecated and will be removed in future releases.
+	BackupURI string `json:"backupUri,omitempty"`
 
 	// Conditions represents the backup resource conditions list.
 	Conditions []BackupCondition `json:"conditions,omitempty"`

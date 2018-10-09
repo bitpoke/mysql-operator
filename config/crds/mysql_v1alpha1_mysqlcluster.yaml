@@ -31,7 +31,9 @@ spec:
               type: integer
             backupSecretName:
               type: string
-            backupURI:
+            backupURL:
+              type: string
+            backupUri:
               type: string
             initBucketSecretName:
               type: string

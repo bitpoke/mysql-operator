@@ -24,7 +24,7 @@ build: $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
 test: generate fmt vet manifests
 	KUBEBUILDER_ASSETS=$(BINDIR) ginkgo \
 			--randomizeAllSpecs --randomizeSuites --failOnPending \
-			--cover --coverprofile cover.out --trace --race -v  $(TEST_ARGS)\
+			--cover --coverprofile cover.out --trace --race --progress  $(TEST_ARGS)\
 			./pkg/... ./cmd/...
 
 # Build binaries
