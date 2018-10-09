@@ -61,8 +61,22 @@ type MysqlClusterSpec struct {
 	// leave it empty to deactivate the backup process
 	// Defaults to ""
 	// +optional
-	BackupSchedule   string `json:"backupSchedule,omitempty"`
-	BackupURI        string `json:"backupURI,omitempty"`
+	BackupSchedule string `json:"backupSchedule,omitempty"`
+
+	// Represents the location where to put backups.
+	// DEPRECATED: use BackupURL instead. This field will be dropped in next
+	// versions.
+	// +optional
+	BackupURI string `json:"backupUri,omitempty"`
+
+	// Represents an URL to the location where to put backups. This field is the
+	// same as backupUri.
+	// +optional
+	BackupURL string `json:"backupURL,omitempty"`
+
+	// Represents the name of the secret that contains credentials to connect to
+	// the storage provider to store backups.
+	// +optional
 	BackupSecretName string `json:"backupSecretName,omitempty"`
 
 	// If set keeps last BackupScheduleJobsHistoryLimit Backups

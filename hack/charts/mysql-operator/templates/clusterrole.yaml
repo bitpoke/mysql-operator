@@ -10,9 +10,9 @@ metadata:
   name: '{{ template "mysql-operator.fullname" . }}'
 rules:
 - apiGroups:
-  - apps
+  - batch
   resources:
-  - deployments
+  - jobs
   verbs:
   - get
   - list
