@@ -25,6 +25,7 @@ coverage.xml
 *.cover
 .hypothesis/
 cover.out
+e2e-reports/
 
 # Translations
 *.mo

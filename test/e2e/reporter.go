@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/ginkgo/types"
@@ -34,35 +35,48 @@ import (
 )
 
 type podLogReporter struct {
-	podName   string
 	namespace string
+
+	logPath string
+	logFile *os.File
+
+	out io.Writer
 }
 
-func NewLogsPodReporter(podName, ns string) reporters.Reporter {
+// NewLogsPodReporter writes the logs for all pods in the specified namespace.
+// if path is specified then the logs are written to that path, else logs are
+// written to GinkgoWriter
+func NewLogsPodReporter(ns, path string) reporters.Reporter {
 	return &podLogReporter{
-		podName:   podName,
 		namespace: ns,
+		logPath:   path,
+		out:       ginkgo.GinkgoWriter,
 	}
 }
 
 // called when suite starts
-func (r *podLogReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
-	fmt.Println("######### SpecSuiteWillBegin")
+func (r *podLogReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, s *types.SuiteSummary) {
+	if r.logPath != "" {
+		var err error
+		r.logFile, err = os.OpenFile(r.logPath, os.O_RDWR|os.O_CREATE, 0644)
+		if err != nil {
+			fmt.Printf("Failed to open file: %s with error: %s\n", r.logPath, err)
+			return
+		}
+
+		r.out = r.logFile
+	}
 }
 
 // called before BeforeSuite before starting tests
-func (r *podLogReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {
-	fmt.Println("######### BeforeSuiteDidRun")
-}
+func (r *podLogReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {}
 
 // called before every test
-func (r *podLogReporter) SpecWillRun(specSummary *types.SpecSummary) {
-	fmt.Println("######### SpecWillRun")
-}
+func (r *podLogReporter) SpecWillRun(specSummary *types.SpecSummary) {}
 
 // called after every test
 func (r *podLogReporter) SpecDidComplete(specSummary *types.SpecSummary) {
-	fmt.Println("######### SpecDidComplete")
+	// don't output logs if test didn't failed
 	if specSummary.State <= types.SpecStatePassed {
 		return
 	}
@@ -80,24 +94,21 @@ func (r *podLogReporter) SpecDidComplete(specSummary *types.SpecSummary) {
 		return
 	}
 
-	LogPodsWithLabels(client, r.namespace, map[string]string{}, specSummary.RunTime, os.Stdout)
+	fmt.Fprintf(r.out, "## Start test: %v\n", specSummary.ComponentTexts)
+
+	LogPodsWithLabels(client, r.namespace, map[string]string{}, specSummary.RunTime, r.out)
+
+	fmt.Fprintf(r.out, "## END test\n")
 
 }
 
 // called before AfterSuite runs
-func (r *podLogReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {
-	fmt.Println("######### AfterSuiteDidRun")
-	// skip printing logs if test is in pending, skipping or passed
-	if setupSummary.State <= types.SpecStatePassed {
-		return
-	}
-}
+func (r *podLogReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {}
 
 // caleed at the end
 func (r *podLogReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
-	fmt.Println("######### SpecSuiteDidEnd")
-	if summary.NumberOfFailedSpecs == 0 {
-		return
+	if r.logFile != nil {
+		r.logFile.Close()
 	}
 }
 

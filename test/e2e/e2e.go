@@ -108,14 +108,6 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	client, err := clientset.NewForConfig(kubeCfg)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	fmt.Printf("%#v\n", ginkgo.CurrentGinkgoTestDescription())
-	if ginkgo.CurrentGinkgoTestDescription().Failed && framework.TestContext.DumpLogsOnFailure {
-		ginkgo.By("Get controller logs")
-		logFunc := framework.Logf
-		// TODO: log in file if ReportDir is set
-		framework.LogPodsWithLabels(client, operatorNamespace, map[string]string{}, logFunc)
-	}
-
 	ginkgo.By("Remove operator release")
 	framework.HelmPurgeRelease(releaseName)
 
@@ -143,21 +135,31 @@ func RunE2ETests(t *testing.T) {
 		config.GinkgoConfig.SkipString = `\[Flaky\]|\[Feature:.+\]`
 	}
 
-	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
-	var rps []ginkgo.Reporter
-	if framework.TestContext.ReportDir != "" {
-		// TODO: we should probably only be trying to create this directory once
-		// rather than once-per-Ginkgo-node.
-		if err := os.MkdirAll(framework.TestContext.ReportDir, 0755); err != nil {
-			glog.Errorf("Failed creating report directory: %v", err)
-		} else {
+	rps := func() (rps []ginkgo.Reporter) {
+		// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
+		if framework.TestContext.ReportDir != "" {
+			// TODO: we should probably only be trying to create this directory once
+			// rather than once-per-Ginkgo-node.
+			if err := os.MkdirAll(framework.TestContext.ReportDir, 0755); err != nil {
+				glog.Errorf("Failed creating report directory: %v", err)
+				return
+			}
+			// add junit report
 			rps = append(rps, reporters.NewJUnitReporter(path.Join(framework.TestContext.ReportDir, fmt.Sprintf("junit_%v%02d.xml", "mysql_o_", config.GinkgoConfig.ParallelNode))))
-		}
-	}
 
-	if framework.TestContext.DumpLogsOnFailure {
-		rps = append(rps, NewLogsPodReporter("mysql-operator", operatorNamespace))
-	}
+			// add logs dumper
+			if framework.TestContext.DumpLogsOnFailure {
+				rps = append(rps, NewLogsPodReporter(operatorNamespace, path.Join(framework.TestContext.ReportDir,
+					fmt.Sprintf("pods_logs_%d_%d.txt", config.GinkgoConfig.RandomSeed, config.GinkgoConfig.ParallelNode))))
+			}
+		} else {
+			// if reportDir is not specified then print logs to stdout
+			if framework.TestContext.DumpLogsOnFailure {
+				rps = append(rps, NewLogsPodReporter(operatorNamespace, ""))
+			}
+		}
+		return
+	}()
 
 	glog.Infof("Starting e2e run on Ginkgo node %d", config.GinkgoConfig.ParallelNode)
 
