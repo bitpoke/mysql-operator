@@ -215,7 +215,7 @@ func GetOrcUser() string {
 	return getEnvValue("MYSQL_ORC_TOPOLOGY_USER")
 }
 
-// GetOrcPass returns the orchestrator topology passowrd from env variable
+// GetOrcPass returns the orchestrator topology password from env variable
 // MYSQL_ORC_TOPOLOGY_PASSWORD
 func GetOrcPass() string {
 	return getEnvValue("MYSQL_ORC_TOPOLOGY_PASSWORD")
@@ -232,14 +232,14 @@ func GetMySQLConnectionString() (string, error) {
 	client := cfg.Section("client")
 	host := client.Key("host").String()
 	user := client.Key("user").String()
-	passowrd := client.Key("password").String()
+	password := client.Key("password").String()
 	port, err := client.Key("port").Int()
 
 	if err != nil {
 		return "", fmt.Errorf("Invalid port in %s: %s", cnfPath, err)
 	}
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/?timeout=5s&multiStatements=true",
-		user, passowrd, host, port,
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/?timeout=5s&multiStatements=true&interpolateParams=true",
+		user, password, host, port,
 	)
 	return dsn, nil
 }
@@ -259,7 +259,7 @@ func RunQuery(q string, args ...interface{}) error {
 	}
 
 	log.V(4).Info("running query", "query", q, "args", args)
-	if _, err := db.Exec(q, args); err != nil {
+	if _, err := db.Exec(q, args...); err != nil {
 		log.Error(err, "could not query mysql", "query", q)
 		return err
 	}
@@ -299,7 +299,7 @@ func CopyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return out.Close()
+	return nil
 }
 
 // MaxClients limit an http endpoint to allow just n max concurrent connections
