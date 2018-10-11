@@ -48,7 +48,7 @@ import (
 const (
 	initRetryWaitTime = 30 * time.Second
 	workerPeriodTime  = 1 * time.Second
-
+	cleanupRetryTime  = 30 * time.Second
 	// ControllerName is the name of this controller
 	ControllerName = "mysqlclusterController"
 
@@ -72,7 +72,9 @@ type Controller struct {
 	clusterLister     mylisters.MysqlClusterLister
 	podLister         corelisters.PodLister
 
-	queue       workqueue.RateLimitingInterface
+	queue        workqueue.RateLimitingInterface
+	cleanupQueue workqueue.DelayingInterface
+
 	workerWg    sync.WaitGroup
 	syncedFuncs []cache.InformerSynced
 
@@ -122,6 +124,9 @@ func New(ctx *controllerpkg.Context) *Controller {
 	ctrl.podLister = podInformer.Lister()
 	ctrl.syncedFuncs = append(ctrl.syncedFuncs, podInformer.Informer().HasSynced)
 
+	// Cleanup
+	ctrl.cleanupQueue = workqueue.NewNamedDelayingQueue("mysqlcluster-cleanup")
+
 	return ctrl
 
 }
@@ -164,10 +169,15 @@ func (c *Controller) Start(workers int, stopCh <-chan struct{}) error {
 		go wait.Until(func() { c.workerReconcile(stopCh) }, workerPeriodTime, stopCh)
 	}
 
+	// Just one worker for cleanup
+	c.workerWg.Add(1)
+	go wait.Until(func() { c.workerCleanup(stopCh) }, workerPeriodTime, stopCh)
+
 	<-stopCh
 	glog.V(2).Info("Shutting down controller.")
 	c.queue.ShutDown()
 	c.reconcileQueue.ShutDown()
+	c.cleanupQueue.ShutDown()
 	c.cron.Stop()
 	glog.V(2).Info("Wait for workers to exit...")
 	c.workerWg.Wait()
@@ -205,6 +215,7 @@ func (c *Controller) workerController(stopCh <-chan struct{}) {
 			if err != nil && k8errors.IsNotFound(err) {
 				// If the cluster has disappeared, do not re-queue
 				glog.Infof("Removing issuer %q from processing queue", key)
+				c.cleanupQueue.AddAfter(obj, cleanupRetryTime)
 				c.queue.Forget(obj)
 				return nil
 			}
@@ -283,6 +294,59 @@ func (c *Controller) workerReconcile(stopCh <-chan struct{}) {
 				ControllerName, key, err.Error(),
 			)
 			continue
+		}
+	}
+}
+
+func (c *Controller) workerCleanup(stopCh <-chan struct{}) {
+	defer c.workerWg.Done()
+	ctx, cancel := context.WithCancel(context.Background())
+	ctx = util.ContextWithStopCh(ctx, stopCh)
+	defer cancel()
+
+	glog.V(2).Info("Starting cleanup worker.")
+
+	for {
+		obj, shutdown := c.cleanupQueue.Get()
+		if shutdown {
+			break
+		}
+
+		var key string
+		err := func(obj interface{}) error {
+			defer c.cleanupQueue.Done(obj)
+
+			var ok bool
+			if key, ok = obj.(string); !ok {
+				return nil
+			}
+
+			// process items from queue
+			namespace, name, err := cache.SplitMetaNamespaceKey(key)
+			if err != nil {
+				return fmt.Errorf("invalid resource key: %s", key)
+			}
+
+			if err := c.Cleanup(ctx, name, namespace); err != nil {
+				return err
+			}
+
+			return nil
+		}(obj)
+
+		if err != nil {
+			switch err.(type) {
+			case *CleanupRetryError:
+				glog.Infof("%s controller: Re-queuing item %q due to error processing: %s",
+					ControllerName, key, err.Error(),
+				)
+				c.cleanupQueue.AddAfter(obj, cleanupRetryTime)
+				continue
+			default:
+				glog.Errorf("%s controller: Giving up %q due to error: %s",
+					ControllerName, key, err.Error(),
+				)
+			}
 		}
 	}
 }
