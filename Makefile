@@ -72,11 +72,12 @@ update-docker: $(patsubst %, hack/docker/%, $(CMDS))
 # Build the docker image
 docker-build: update-docker
 	docker build -t ${IMG} hack/docker/mysql-operator/
-	docker build  -t ${SIDECAR_IMG} hack/docker/mysql-operator-sidecar/
+	docker build -t ${SIDECAR_IMG} hack/docker/mysql-operator-sidecar/
 
 # Push the docker image
-docker-push:
+docker-push: docker-build
 	docker push ${IMG}
+	docker push ${SIDECAR_IMG}
 
 lint:
 	$(BINDIR)/golangci-lint run ./pkg/... ./cmd/...

@@ -56,7 +56,7 @@ const (
 
 var log = logf.Log.WithName(controllerName)
 
-// reconcileTimePeriod represents the time in which a cluster shoud be reconciled
+// reconcileTimePeriod represents the time in which a cluster should be reconciled
 var reconcileTimePeriod = time.Second * 5
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
@@ -81,7 +81,7 @@ func newReconciler(mgr manager.Manager, orcClient orc.Interface) reconcile.Recon
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 // nolint: gocyclo
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
-	// stores a mapping between cluster and it's creation event,
+	// stores a mapping between cluster and its creation event,
 	// so that we know what clusters to sync with orchestrator
 	clusters := &sync.Map{}
 
@@ -132,7 +132,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// create a runnable function that dispatch events to events channel
+	// create a runnable function that dispatches events to events channel
 	// this runnableFunc is passed to the manager that starts it.
 	var f manager.RunnableFunc = func(stop <-chan struct{}) error {
 		for {
@@ -140,7 +140,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			case <-stop:
 				return nil
 			case <-time.After(reconcileTimePeriod):
-				// write all clusters to envents chan to be processed
+				// write all clusters to events chan to be processed
 				clusters.Range(func(key, value interface{}) bool {
 					events <- value.(event.GenericEvent)
 					return true

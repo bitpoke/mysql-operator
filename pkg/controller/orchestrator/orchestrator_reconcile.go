@@ -86,7 +86,7 @@ func (ou *orcUpdater) Sync() error {
 	// update cluster status accordingly with orchestrator
 	ou.updateStatusFromOrc(instances)
 
-	// get reecoveries for this cluster
+	// get recoveries for this cluster
 	if recoveries, err = ou.orcClient.AuditRecovery(ou.cluster.GetClusterAlias()); err != nil {
 		log.Error(err, "can't get recoveries from orchestrator", "alias", ou.cluster.GetClusterAlias())
 	}
