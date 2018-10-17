@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -37,57 +36,37 @@ const (
 	eventWarning = "Warning"
 )
 
-// Given an Interface, returns a controllerutil.MutateFn which also sets the
-// owner reference if the subject has one
-func syncFn(syncer Interface, scheme *runtime.Scheme) controllerutil.MutateFn {
-	owner := syncer.GetOwner()
-	return func(existing runtime.Object) error {
-		err := syncer.SyncFn(existing)
-		if err != nil {
-			return err
-		}
-		if owner != nil {
-			existingMeta, ok := existing.(metav1.Object)
-			if !ok {
-				return fmt.Errorf("%T is not a metav1.Object", existing)
-			}
-			ownerMeta, ok := owner.(metav1.Object)
-			if !ok {
-				return fmt.Errorf("%T is not a metav1.Object", owner)
-			}
-			err := controllerutil.SetControllerReference(ownerMeta, existingMeta, scheme)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
+func getKey(obj runtime.Object) (types.NamespacedName, error) {
+	key := types.NamespacedName{}
+	objMeta, ok := obj.(metav1.Object)
+	if !ok {
+		return key, fmt.Errorf("%T is not a metav1.Object", obj)
 	}
+
+	key.Name = objMeta.GetName()
+	key.Namespace = objMeta.GetNamespace()
+	return key, nil
+}
+
+func basicEventReason(objKindName string, err error) string {
+	if err != nil {
+		return fmt.Sprintf("%sSyncFailed", strcase.ToCamel(objKindName))
+	}
+	return fmt.Sprintf("%sSyncSuccessfull", strcase.ToCamel(objKindName))
 }
 
 // Sync mutates the subject of the syncer interface using controller-runtime
-// CreateOrUpdate method. It takes care of setting owner references and
-// recording kubernetes events where appropriate
-func Sync(ctx context.Context, syncer Interface, c client.Client, scheme *runtime.Scheme, recorder record.EventRecorder) error {
-	obj := syncer.GetObject()
-	objMeta, ok := obj.(metav1.Object)
-	if !ok {
-		return fmt.Errorf("%T is not a metav1.Object", obj)
-	}
-	key := types.NamespacedName{Name: objMeta.GetName(), Namespace: objMeta.GetNamespace()}
-	op, err := controllerutil.CreateOrUpdate(ctx, c, obj, syncFn(syncer, scheme))
-
+// CreateOrUpdate method, when obj is not nil. It takes care of setting owner
+// references and recording kubernetes events where appropriate
+func Sync(ctx context.Context, syncer Interface, recorder record.EventRecorder) error {
+	result, err := syncer.Sync(ctx)
 	owner := syncer.GetOwner()
-	if recorder != nil && owner != nil {
-		reason := string(syncer.GetEventReasonForError(err))
-		if err != nil {
-			recorder.Eventf(owner, eventWarning, reason, "%T %s failed syncing: %s", obj, key, err)
-		}
-		if op != controllerutil.OperationResultNone {
-			recorder.Eventf(owner, eventNormal, reason, "%T %s %s successfully", obj, key, op)
+
+	if recorder != nil && owner != nil && result.EventType != "" && result.EventReason != "" && result.EventMessage != "" {
+		if err != nil || result.Operation != controllerutil.OperationResultNone {
+			recorder.Eventf(owner, result.EventType, result.EventReason, result.EventMessage)
 		}
 	}
-
-	log.Info(string(op), "key", key, "kind", obj.GetObjectKind().GroupVersionKind().Kind)
 
 	return err
 }
@@ -98,41 +77,4 @@ type WithoutOwner struct{}
 // GetOwner implementation of syncer interface for the case the subject has no owner
 func (*WithoutOwner) GetOwner() runtime.Object {
 	return nil
-}
-
-// BasicEventReason is the basic use case for GetEventReasonForError. It just
-// returns "ObjectSyncFailed" or "ObjectSyncSuccessfull"
-func BasicEventReason(objKindName string, err error) EventReason {
-	if err != nil {
-		return EventReason(fmt.Sprintf("%sSyncFailed", objKindName))
-	}
-	return EventReason(fmt.Sprintf("%sSyncSuccessfull", objKindName))
-}
-
-type syncer struct {
-	name   string
-	owner  runtime.Object
-	obj    runtime.Object
-	syncFn controllerutil.MutateFn
-}
-
-func (s *syncer) GetObject() runtime.Object { return s.obj }
-func (s *syncer) GetOwner() runtime.Object  { return s.owner }
-func (s *syncer) GetEventReasonForError(err error) EventReason {
-	return BasicEventReason(strcase.ToCamel(s.name), err)
-}
-func (s *syncer) SyncFn(existing runtime.Object) error {
-	return s.syncFn(existing)
-}
-
-// New creates a new syncer for a given object with an owner
-// The name is used for logging and event emitting purposes and should be an
-// valid go identifier in upper camel case. (eg. MysqlStatefulSet)
-func New(name string, owner, obj runtime.Object, syncFn controllerutil.MutateFn) Interface {
-	return &syncer{
-		name:   name,
-		owner:  owner,
-		obj:    obj,
-		syncFn: syncFn,
-	}
 }

@@ -318,6 +318,9 @@ input#search {
 	max-width: 100%;
 	min-width: 5.625rem;
 }
+input#search:-webkit-search-decoration {
+	-webkit-appearance: none;
+}
 input#search:-moz-ui-invalid {
 	box-shadow: unset;
 }
@@ -624,7 +627,6 @@ div.play .buttons a {
 }
 
 /* drop-down playground */
-#playgroundButton,
 div#playground {
 	/* start hidden; revealed by javascript */
 	display: none;
