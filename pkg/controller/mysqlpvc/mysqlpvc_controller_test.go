@@ -162,8 +162,8 @@ func removeAllCreatedResource(c client.Client, pvc *corev1.PersistentVolumeClaim
 	objs := []runtime.Object{
 		&corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "pvc",
-				Namespace: "default",
+				Name:      pvc.Name,
+				Namespace: pvc.Namespace,
 			},
 		},
 	}
