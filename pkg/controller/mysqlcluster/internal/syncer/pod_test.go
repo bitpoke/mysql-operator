@@ -25,11 +25,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/presslabs/controller-util/syncer"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	sScheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -40,12 +40,12 @@ var _ = Describe("Pod syncer", func() {
 	var (
 		cluster  *api.MysqlCluster
 		wCluster *clusterwrap.MysqlCluster
-		rec      *record.FakeRecorder
+		scheme   *runtime.Scheme
 	)
 
 	BeforeEach(func() {
+		scheme = sScheme.Scheme
 		name := fmt.Sprintf("cluster-%d", rand.Int31())
-		rec = record.NewFakeRecorder(100)
 		cluster = &api.MysqlCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -71,10 +71,10 @@ var _ = Describe("Pod syncer", func() {
 		Expect(c.Status().Update(context.TODO(), cluster)).To(Succeed())
 
 		// run the syncers
-		syncer0 := NewPodSyncer(cluster, wCluster.GetPodHostname(0))
-		Expect(syncer.Sync(context.TODO(), syncer0, c, nil, rec)).To(Succeed())
-		syncer1 := NewPodSyncer(cluster, wCluster.GetPodHostname(1))
-		Expect(syncer.Sync(context.TODO(), syncer1, c, nil, rec)).To(Succeed())
+		_, err := NewPodSyncer(c, scheme, cluster, wCluster.GetPodHostname(0)).Sync(context.TODO())
+		Expect(err).To(Succeed())
+		_, err = NewPodSyncer(c, scheme, cluster, wCluster.GetPodHostname(1)).Sync(context.TODO())
+		Expect(err).To(Succeed())
 
 	})
 
@@ -103,8 +103,8 @@ var _ = Describe("Pod syncer", func() {
 	})
 
 	It("should fail if pod does not exist", func() {
-		syncer2 := NewPodSyncer(cluster, wCluster.GetPodHostname(2))
-		Expect(syncer.Sync(context.TODO(), syncer2, c, nil, rec)).ToNot(Succeed())
+		_, err := NewPodSyncer(c, scheme, cluster, wCluster.GetPodHostname(2)).Sync(context.TODO())
+		Expect(err).ToNot(Succeed())
 	})
 
 	It("should mark pods as healty", func() {
@@ -114,8 +114,8 @@ var _ = Describe("Pod syncer", func() {
 		Expect(c.Status().Update(context.TODO(), cluster)).To(Succeed())
 
 		// call the syncer
-		syncer1 := NewPodSyncer(cluster, wCluster.GetPodHostname(1))
-		Expect(syncer.Sync(context.TODO(), syncer1, c, nil, rec)).To(Succeed())
+		_, err := NewPodSyncer(c, scheme, cluster, wCluster.GetPodHostname(1)).Sync(context.TODO())
+		Expect(err).To(Succeed())
 
 		pod1 := &core.Pod{}
 		Expect(c.Get(context.TODO(), getPodKey(cluster, 1), pod1)).To(Succeed())

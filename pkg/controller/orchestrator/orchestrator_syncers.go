@@ -19,6 +19,7 @@ package orchestrator
 import (
 	"github.com/presslabs/controller-util/syncer"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
@@ -26,10 +27,10 @@ import (
 )
 
 // newFinalizerSyncer returns a syncer for mysql cluster that sets the OrchestratorFinalizer
-func newFinalizerSyncer(cluster *api.MysqlCluster, orcClient orc.Interface) syncer.Interface {
+func newFinalizerSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster, orcClient orc.Interface) syncer.Interface {
 
 	// create the orchestrator finalizer
-	return syncer.New("OrchestratorFinalizerSyncer", nil, cluster, func(in runtime.Object) error {
+	return syncer.NewObjectSyncer("OrchestratorFinalizerSyncer", nil, cluster, c, scheme, func(in runtime.Object) error {
 		cluster := in.(*api.MysqlCluster)
 
 		// always add finalizer, this action is idempotent

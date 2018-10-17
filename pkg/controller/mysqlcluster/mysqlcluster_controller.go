@@ -161,15 +161,13 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		}
 	}()
 
-	configMapSyncer := mysqlcluster.NewConfigMapSyncer(cluster)
-	err = syncer.Sync(context.TODO(), configMapSyncer, r.Client, r.scheme, r.recorder)
-	if err != nil {
+	configMapSyncer := mysqlcluster.NewConfigMapSyncer(r.Client, r.scheme, cluster)
+	if err := syncer.Sync(context.TODO(), configMapSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	secretSyncer := mysqlcluster.NewSecretSyncer(cluster)
-	err = syncer.Sync(context.TODO(), secretSyncer, r.Client, r.scheme, r.recorder)
-	if err != nil {
+	secretSyncer := mysqlcluster.NewSecretSyncer(r.Client, r.scheme, cluster, r.opt)
+	if err := syncer.Sync(context.TODO(), secretSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -178,23 +176,22 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 
 	// run the syncers for services, pdb and statefulset
 	syncers := []syncer.Interface{
-		mysqlcluster.NewHeadlessSVCSyncer(cluster),
-		mysqlcluster.NewMasterSVCSyncer(cluster),
-		mysqlcluster.NewHealthySVCSyncer(cluster),
+		mysqlcluster.NewHeadlessSVCSyncer(r.Client, r.scheme, cluster),
+		mysqlcluster.NewMasterSVCSyncer(r.Client, r.scheme, cluster),
+		mysqlcluster.NewHealthySVCSyncer(r.Client, r.scheme, cluster),
 
-		mysqlcluster.NewStatefulSetSyncer(cluster, configMapResourceVersion, secretResourceVersion, r.opt),
+		mysqlcluster.NewStatefulSetSyncer(r.Client, r.scheme, cluster, configMapResourceVersion, secretResourceVersion, r.opt),
 	}
 
 	if len(cluster.Spec.MinAvailable) != 0 {
-		syncers = append(syncers, mysqlcluster.NewPDBSyncer(cluster))
+		syncers = append(syncers, mysqlcluster.NewPDBSyncer(r.Client, r.scheme, cluster))
 	}
 
 	syncers = append(syncers, r.getPodSyncers(cluster)...)
 
 	// add pods syncers for every node status
 	for _, sync := range syncers {
-		err = syncer.Sync(context.TODO(), sync, r.Client, r.scheme, r.recorder)
-		if err != nil {
+		if err := syncer.Sync(context.TODO(), sync, r.recorder); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -220,14 +217,14 @@ func (r *ReconcileMysqlCluster) getPodSyncers(cluster *mysqlv1alpha1.MysqlCluste
 	// add replica syncers, those should be the first in this list.
 	for _, ns := range cluster.Status.Nodes {
 		if !getCondAsBool(&ns, mysqlv1alpha1.NodeConditionMaster) {
-			syncers = append(syncers, mysqlcluster.NewPodSyncer(cluster, ns.Name))
+			syncers = append(syncers, mysqlcluster.NewPodSyncer(r.Client, r.scheme, cluster, ns.Name))
 		}
 	}
 
 	// add master syncers, this should be the last, and should be only one
 	for _, ns := range cluster.Status.Nodes {
 		if getCondAsBool(&ns, mysqlv1alpha1.NodeConditionMaster) {
-			syncers = append(syncers, mysqlcluster.NewPodSyncer(cluster, ns.Name))
+			syncers = append(syncers, mysqlcluster.NewPodSyncer(r.Client, r.scheme, cluster, ns.Name))
 		}
 	}
 

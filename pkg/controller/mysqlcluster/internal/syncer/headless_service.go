@@ -20,19 +20,14 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
-type headlessSVCSyncer struct {
-	cluster     *api.MysqlCluster
-	headlessSVC *core.Service
-}
-
 // NewHeadlessSVCSyncer returns a service syncer
-func NewHeadlessSVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
-
+func NewHeadlessSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster) syncer.Interface {
 	obj := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(api.HeadlessSVC),
@@ -40,37 +35,24 @@ func NewHeadlessSVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
 		},
 	}
 
-	return &headlessSVCSyncer{
-		cluster:     cluster,
-		headlessSVC: obj,
-	}
+	return syncer.NewObjectSyncer("HeadlessSVC", cluster, obj, c, scheme, func(in runtime.Object) error {
+		out := in.(*core.Service)
 
-}
+		out.Spec.ClusterIP = "None"
+		out.Spec.Selector = cluster.GetLabels()
+		if len(out.Spec.Ports) != 2 {
+			out.Spec.Ports = make([]core.ServicePort, 2)
+		}
+		out.Spec.Ports[0].Name = MysqlPortName
+		out.Spec.Ports[0].Port = MysqlPort
+		out.Spec.Ports[0].TargetPort = TargetPort
+		out.Spec.Ports[0].Protocol = core.ProtocolTCP
 
-func (s *headlessSVCSyncer) GetObject() runtime.Object { return s.headlessSVC }
-func (s *headlessSVCSyncer) GetOwner() runtime.Object  { return s.cluster }
-func (s *headlessSVCSyncer) GetEventReasonForError(err error) syncer.EventReason {
-	return syncer.BasicEventReason("HeadlessSVC", err)
-}
+		out.Spec.Ports[1].Name = ExporterPortName
+		out.Spec.Ports[1].Port = ExporterPort
+		out.Spec.Ports[1].TargetPort = ExporterTargetPort
+		out.Spec.Ports[1].Protocol = core.ProtocolTCP
 
-func (s *headlessSVCSyncer) SyncFn(in runtime.Object) error {
-	out := in.(*core.Service)
-
-	out.Spec.ClusterIP = "None"
-	out.Spec.Selector = s.cluster.GetLabels()
-	if len(out.Spec.Ports) != 2 {
-		out.Spec.Ports = make([]core.ServicePort, 2)
-	}
-	out.Spec.Ports[0].Name = MysqlPortName
-	out.Spec.Ports[0].Port = MysqlPort
-	out.Spec.Ports[0].TargetPort = TargetPort
-	out.Spec.Ports[0].Protocol = core.ProtocolTCP
-
-	out.Spec.Ports[1].Name = ExporterPortName
-	out.Spec.Ports[1].Port = ExporterPort
-	out.Spec.Ports[1].TargetPort = ExporterTargetPort
-	out.Spec.Ports[1].Protocol = core.ProtocolTCP
-
-	return nil
-
+		return nil
+	})
 }

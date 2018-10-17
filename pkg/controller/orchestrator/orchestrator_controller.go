@@ -197,9 +197,8 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}()
 
 	// this syncer mutuates the cluster and updates it. Should be the first syncer
-	finalizerSyncer := newFinalizerSyncer(cluster, r.orcClient)
-	err = syncer.Sync(context.TODO(), finalizerSyncer, r.Client, r.scheme, r.recorder)
-	if err != nil {
+	finalizerSyncer := newFinalizerSyncer(r.Client, r.scheme, cluster, r.orcClient)
+	if err := syncer.Sync(context.TODO(), finalizerSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
 

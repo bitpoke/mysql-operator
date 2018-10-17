@@ -26,6 +26,7 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"github.com/presslabs/controller-util/syncer"
@@ -35,13 +36,11 @@ import (
 var log = logf.Log.WithName("config-map-syncer")
 
 type configMapSyncer struct {
-	cluster   *api.MysqlCluster
-	configMap *core.ConfigMap
+	cluster *api.MysqlCluster
 }
 
 // NewConfigMapSyncer returns config map syncer
-func NewConfigMapSyncer(cluster *api.MysqlCluster) syncer.Interface {
-
+func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster) syncer.Interface {
 	obj := &core.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(api.ConfigMap),
@@ -49,17 +48,13 @@ func NewConfigMapSyncer(cluster *api.MysqlCluster) syncer.Interface {
 		},
 	}
 
-	return &configMapSyncer{
-		cluster:   cluster,
-		configMap: obj,
+	sync := &configMapSyncer{
+		cluster: cluster,
 	}
 
-}
-
-func (s *configMapSyncer) GetObject() runtime.Object { return s.configMap }
-func (s *configMapSyncer) GetOwner() runtime.Object  { return s.cluster }
-func (s *configMapSyncer) GetEventReasonForError(err error) syncer.EventReason {
-	return syncer.BasicEventReason("ConfigMap", err)
+	return syncer.NewObjectSyncer("ConfigMap", cluster, obj, c, scheme, func(in runtime.Object) error {
+		return sync.SyncFn(in)
+	})
 }
 
 func (s *configMapSyncer) SyncFn(in runtime.Object) error {
