@@ -56,6 +56,7 @@ type Options struct {
 	OrchestratorTopologyUser     string
 
 	JobCompleteSuccessGraceTime time.Duration
+	CleanupGracePeriod          time.Duration
 
 	HTTPServeAddr string
 }
@@ -94,8 +95,9 @@ const (
 )
 
 var (
-	defaultHelperImage  = "quay.io/presslabs/mysql-helper:" + util.AppVersion
-	defaultJobGraceTime = 24 * time.Hour
+	defaultHelperImage        = "quay.io/presslabs/mysql-helper:" + util.AppVersion
+	defaultJobGraceTime       = 24 * time.Hour
+	defaultCleanupGracePeriod = 10 * time.Minute
 )
 
 // AddFlags registers all mysql-operator needed flags
@@ -119,8 +121,9 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.OrchestratorTopologyUser, "orchestrator-topology-user", defaultOrchestratorTopologyPassword,
 		"The orchestrator topology user. Can also be set as ORC_TOPOLOGY_USER environment variable.")
 	fs.DurationVar(&o.JobCompleteSuccessGraceTime, "job-grace-time", defaultJobGraceTime,
-		"The time in hours how jobs after completion are keept.")
-
+		"The time in hours how jobs after completion are kept.")
+	fs.DurationVar(&o.CleanupGracePeriod, "cleanup-grace-period", defaultCleanupGracePeriod,
+		"The time in minutes for which persistent volume claims are kept.")
 	fs.StringVar(&o.HTTPServeAddr, "http-serve-addr", defaultHTTPServerAddr,
 		"The address for http server.")
 }
@@ -136,9 +139,9 @@ func GetOptions() *Options {
 			HelperImage:          defaultHelperImage,
 			MetricsExporterImage: defaultExporterImage,
 
-			ImagePullPolicy:             defaultImagePullPolicy,
-			JobCompleteSuccessGraceTime: defaultJobGraceTime,
-
+			ImagePullPolicy:              defaultImagePullPolicy,
+			JobCompleteSuccessGraceTime:  defaultJobGraceTime,
+			CleanupGracePeriod:           defaultCleanupGracePeriod,
 			OrchestratorTopologyUser:     "",
 			OrchestratorTopologyPassword: "",
 
