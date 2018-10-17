@@ -276,11 +276,6 @@ func (h *handlerServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if mode&NoHTML != 0 {
-		h.p.ServeText(w, applyTemplate(h.p.PackageText, "packageText", info))
-		return
-	}
-
 	var tabtitle, title, subtitle string
 	switch {
 	case info.PAst != nil:
@@ -320,6 +315,7 @@ func (h *handlerServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Emit JSON array for type information.
 	pi := h.c.Analysis.PackageInfo(relpath)
+	hasTreeView := len(pi.CallGraph) != 0
 	info.CallGraphIndex = pi.CallGraphIndex
 	info.CallGraph = htmltemplate.JS(marshalJSON(pi.CallGraph))
 	info.AnalysisData = htmltemplate.JS(marshalJSON(pi.Types))
@@ -341,6 +337,7 @@ func (h *handlerServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Subtitle: subtitle,
 		Body:     body,
 		GoogleCN: info.GoogleCN,
+		TreeView: hasTreeView,
 	})
 }
 

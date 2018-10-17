@@ -20,52 +20,37 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
-type masterSVCSyncer struct {
-	cluster   *api.MysqlCluster
-	masterSVC *core.Service
-}
-
 // NewMasterSVCSyncer returns a service syncer for master service
-func NewMasterSVCSyncer(cluster *api.MysqlCluster) syncer.Interface {
-
+func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster) syncer.Interface {
 	obj := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(api.MasterService),
 			Namespace: cluster.Namespace,
 		},
 	}
-	return &masterSVCSyncer{
-		cluster:   cluster,
-		masterSVC: obj,
-	}
-}
 
-func (s *masterSVCSyncer) GetObject() runtime.Object { return s.masterSVC }
-func (s *masterSVCSyncer) GetOwner() runtime.Object  { return s.cluster }
-func (s *masterSVCSyncer) GetEventReasonForError(err error) syncer.EventReason {
-	return syncer.BasicEventReason("MasterSVC", err)
-}
+	return syncer.NewObjectSyncer("MasterSVC", cluster, obj, c, scheme, func(in runtime.Object) error {
+		out := in.(*core.Service)
 
-func (s *masterSVCSyncer) SyncFn(in runtime.Object) error {
-	out := in.(*core.Service)
+		out.Spec.Type = "ClusterIP"
+		out.Spec.Selector = cluster.GetLabels()
+		out.Spec.Selector["role"] = "master"
 
-	out.Spec.Type = "ClusterIP"
-	out.Spec.Selector = s.cluster.GetLabels()
-	out.Spec.Selector["role"] = "master"
+		if len(out.Spec.Ports) != 1 {
+			out.Spec.Ports = make([]core.ServicePort, 1)
+		}
+		out.Spec.Ports[0].Name = MysqlPortName
+		out.Spec.Ports[0].Port = MysqlPort
+		out.Spec.Ports[0].TargetPort = TargetPort
+		out.Spec.Ports[0].Protocol = core.ProtocolTCP
 
-	if len(out.Spec.Ports) != 1 {
-		out.Spec.Ports = make([]core.ServicePort, 1)
-	}
-	out.Spec.Ports[0].Name = MysqlPortName
-	out.Spec.Ports[0].Port = MysqlPort
-	out.Spec.Ports[0].TargetPort = TargetPort
-	out.Spec.Ports[0].Protocol = core.ProtocolTCP
-
-	return nil
+		return nil
+	})
 
 }

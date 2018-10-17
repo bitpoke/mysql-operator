@@ -6,12 +6,14 @@ pipeline:
   dependencies:
     image: golang:1.11
     commands:
-      - test -d /go/bin || mkdir /go/bin
-      - curl -sfL https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-      - dep ensure
       - make dependencies
 
   lint:
     image: golang:1.11
     commands:
       - make lint
+
+  test:
+    image: golang:1.11
+    commands:
+      - make test

@@ -23,6 +23,7 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -32,7 +33,6 @@ import (
 type podSyncer struct {
 	cluster  *clusterwrap.MysqlCluster
 	hostname string
-	pod      *core.Pod
 }
 
 const (
@@ -43,7 +43,7 @@ const (
 )
 
 // NewPodSyncer returns the syncer for pod
-func NewPodSyncer(cluster *api.MysqlCluster, host string) syncer.Interface {
+func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster, host string) syncer.Interface {
 	obj := &core.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      getPodNameForHost(host),
@@ -51,17 +51,14 @@ func NewPodSyncer(cluster *api.MysqlCluster, host string) syncer.Interface {
 		},
 	}
 
-	return &podSyncer{
+	sync := &podSyncer{
 		cluster:  clusterwrap.NewMysqlClusterWrapper(cluster),
-		pod:      obj,
 		hostname: host,
 	}
-}
 
-func (s *podSyncer) GetObject() runtime.Object { return s.pod }
-func (s *podSyncer) GetOwner() runtime.Object  { return nil }
-func (s *podSyncer) GetEventReasonForError(err error) syncer.EventReason {
-	return syncer.BasicEventReason("Pod", err)
+	return syncer.NewObjectSyncer("Pod", nil, obj, c, scheme, func(in runtime.Object) error {
+		return sync.SyncFn(in)
+	})
 }
 
 // nolint: gocyclo

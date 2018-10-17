@@ -17,30 +17,35 @@ limitations under the License.
 package syncer
 
 import (
+	"context"
+
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// EventReason is a kubernetes event reason
-// 'reason' is the reason this event is generated. 'reason' should be short and unique; it
-// should be in UpperCamelCase format (starting with a capital letter). "reason" will be used
-// to automate handling of events, so imagine people writing switch statements to handle them.
-type EventReason string
-
-func (e *EventReason) String() string {
-	return string(*e)
+// SyncResult is a result of an Sync call
+type SyncResult struct {
+	Operation    controllerutil.OperationResult
+	EventType    string
+	EventReason  string
+	EventMessage string
 }
 
-// Interface represents syncer. A syncer knows how to mutate a given object
-// (known as subject), in the context of controller-runtime's CreateOrUpdate and
-// also has all the data for setting the controller reference and emitting
-// kubernetes events
+// SetEventData sets event data on an SyncResult
+func (r *SyncResult) SetEventData(eventType, reason, message string) {
+	r.EventType = eventType
+	r.EventReason = reason
+	r.EventMessage = message
+}
+
+// Interface represents a syncer. A syncer persists an object
+// (known as subject), into a store (kubernetes apiserver or generic stores)
+// and records kubernetes events
 type Interface interface {
-	// GetObject returns the kubernetes object for which sync applies
-	GetObject() runtime.Object
+	// GetObject returns the object for which sync applies
+	GetObject() interface{}
 	// GetOwner returns the object owner or nil if object does not have one
 	GetOwner() runtime.Object
-	// Sync is a function which mutates the existing object toward the desired state
-	SyncFn(existing runtime.Object) error
-	// GetEventReasonForError returns a kubernetes event reason for a given error
-	GetEventReasonForError(error) EventReason
+	// Sync persists data into the external store
+	Sync(context.Context) (SyncResult, error)
 }

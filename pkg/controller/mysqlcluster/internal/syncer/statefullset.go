@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -32,10 +33,22 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
+// volumes names
 const (
 	confVolumeName    = "conf"
 	confMapVolumeName = "config-map"
 	dataVolumeName    = "data"
+)
+
+// containers names
+const (
+	containerInitName      = "init-mysql"
+	containerCloneName     = "clone-mysql"
+	containerSidecarName   = "mysql-operator-sidecar"
+	containerMysqlName     = "mysql"
+	containerExporterName  = "metrics-exporter"
+	containerHeartBeatName = "pt-heartbeat"
+	containerKillerName    = "pt-kill"
 )
 
 type sfsSyncer struct {
@@ -43,12 +56,10 @@ type sfsSyncer struct {
 	configMapRevision string
 	secretRevision    string
 	opt               *options.Options
-	statefulset       *apps.StatefulSet
 }
 
 // NewStatefulSetSyncer returns a syncer for stateful set
-func NewStatefulSetSyncer(cluster *api.MysqlCluster, cmRev, secRev string, opt *options.Options) syncer.Interface {
-
+func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster, cmRev, secRev string, opt *options.Options) syncer.Interface {
 	obj := &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(api.StatefulSet),
@@ -56,19 +67,16 @@ func NewStatefulSetSyncer(cluster *api.MysqlCluster, cmRev, secRev string, opt *
 		},
 	}
 
-	return &sfsSyncer{
+	sync := &sfsSyncer{
 		cluster:           clusterwrap.NewMysqlClusterWrapper(cluster),
 		configMapRevision: cmRev,
 		secretRevision:    secRev,
 		opt:               opt,
-		statefulset:       obj,
 	}
-}
 
-func (s *sfsSyncer) GetObject() runtime.Object { return s.statefulset }
-func (s *sfsSyncer) GetOwner() runtime.Object  { return s.cluster.MysqlCluster }
-func (s *sfsSyncer) GetEventReasonForError(err error) syncer.EventReason {
-	return syncer.BasicEventReason("StatefulSet", err)
+	return syncer.NewObjectSyncer("StatefulSet", cluster, obj, c, scheme, func(in runtime.Object) error {
+		return sync.SyncFn(in)
+	})
 }
 
 func (s *sfsSyncer) SyncFn(in runtime.Object) error {
@@ -118,16 +126,6 @@ func (s *sfsSyncer) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec
 
 	return in
 }
-
-const (
-	containerInitName      = "init-mysql"
-	containerCloneName     = "clone-mysql"
-	containerSidecarName   = "mysql-operator-sidecar"
-	containerMysqlName     = "mysql"
-	containerExporterName  = "metrics-exporter"
-	containerHeartBeatName = "pt-heartbeat"
-	containerKillerName    = "pt-kill"
-)
 
 func (s *sfsSyncer) ensureContainer(in core.Container, name, image string, args []string) core.Container {
 	in.Name = name

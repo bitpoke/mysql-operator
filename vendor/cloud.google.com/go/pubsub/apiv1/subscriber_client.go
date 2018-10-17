@@ -20,7 +20,6 @@ import (
 	"math"
 	"time"
 
-	"cloud.google.com/go/iam"
 	"cloud.google.com/go/internal/version"
 	"github.com/golang/protobuf/proto"
 	gax "github.com/googleapis/gax-go"
@@ -74,10 +73,21 @@ func defaultSubscriberCallOptions() *SubscriberCallOptions {
 				})
 			}),
 		},
+		{"messaging", "idempotent"}: {
+			gax.WithRetry(func() gax.Retryer {
+				return gax.OnCodes([]codes.Code{
+					codes.DeadlineExceeded,
+					codes.Unavailable,
+				}, gax.Backoff{
+					Initial:    100 * time.Millisecond,
+					Max:        60000 * time.Millisecond,
+					Multiplier: 1.3,
+				})
+			}),
+		},
 		{"messaging", "pull"}: {
 			gax.WithRetry(func() gax.Retryer {
 				return gax.OnCodes([]codes.Code{
-					codes.Canceled,
 					codes.DeadlineExceeded,
 					codes.Internal,
 					codes.ResourceExhausted,
@@ -92,7 +102,6 @@ func defaultSubscriberCallOptions() *SubscriberCallOptions {
 		{"streaming_messaging", "pull"}: {
 			gax.WithRetry(func() gax.Retryer {
 				return gax.OnCodes([]codes.Code{
-					codes.Canceled,
 					codes.DeadlineExceeded,
 					codes.Internal,
 					codes.ResourceExhausted,
@@ -112,7 +121,7 @@ func defaultSubscriberCallOptions() *SubscriberCallOptions {
 		ListSubscriptions:  retry[[2]string{"default", "idempotent"}],
 		DeleteSubscription: retry[[2]string{"default", "idempotent"}],
 		ModifyAckDeadline:  retry[[2]string{"default", "non_idempotent"}],
-		Acknowledge:        retry[[2]string{"messaging", "non_idempotent"}],
+		Acknowledge:        retry[[2]string{"messaging", "idempotent"}],
 		Pull:               retry[[2]string{"messaging", "pull"}],
 		StreamingPull:      retry[[2]string{"streaming_messaging", "pull"}],
 		ModifyPushConfig:   retry[[2]string{"default", "non_idempotent"}],
@@ -179,14 +188,6 @@ func (c *SubscriberClient) SetGoogleClientInfo(keyval ...string) {
 	kv := append([]string{"gl-go", version.Go()}, keyval...)
 	kv = append(kv, "gapic", version.Repo, "gax", gax.Version, "grpc", grpc.Version)
 	c.xGoogMetadata = metadata.Pairs("x-goog-api-client", gax.XGoogHeader(kv...))
-}
-
-func (c *SubscriberClient) SubscriptionIAM(subscription *pubsubpb.Subscription) *iam.Handle {
-	return iam.InternalNewHandle(c.Connection(), subscription.Name)
-}
-
-func (c *SubscriberClient) TopicIAM(topic *pubsubpb.Topic) *iam.Handle {
-	return iam.InternalNewHandle(c.Connection(), topic.Name)
 }
 
 // CreateSubscription creates a subscription to a given topic. See the

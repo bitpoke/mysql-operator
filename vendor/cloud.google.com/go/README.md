@@ -51,6 +51,7 @@ Changes have been moved to [CHANGES](https://github.com/GoogleCloudPlatform/goog
 
 Google API                                   | Status       | Package
 ---------------------------------------------|--------------|-----------------------------------------------------------
+[Asset][cloud-asset]                         | alpha        | [`godoc.org/cloud.google.com/go/asset/v1beta`][cloud-asset-ref]
 [BigQuery][cloud-bigquery]                   | stable       | [`godoc.org/cloud.google.com/go/bigquery`][cloud-bigquery-ref]
 [Bigtable][cloud-bigtable]                   | stable       | [`godoc.org/cloud.google.com/go/bigtable`][cloud-bigtable-ref]
 [Container][cloud-container]                 | stable       | [`godoc.org/cloud.google.com/go/container/apiv1`][cloud-container-ref]
@@ -69,7 +70,7 @@ Google API                                   | Status       | Package
 [Monitoring][cloud-monitoring]               | alpha        | [`godoc.org/cloud.google.com/go/monitoring/apiv3`][cloud-monitoring-ref]
 [OS Login][cloud-oslogin]                    | alpha        | [`cloud.google.com/compute/docs/oslogin/rest`][cloud-oslogin-ref]
 [Pub/Sub][cloud-pubsub]                      | stable       | [`godoc.org/cloud.google.com/go/pubsub`][cloud-pubsub-ref]
-[Memorystore][cloud-memorystore]             | alpha        | [`godoc.org/cloud.google.com/go/redis/apiv1beta1`][cloud-memorystore-ref]
+[Memorystore][cloud-memorystore]             | stable       | [`godoc.org/cloud.google.com/go/redis/apiv1beta1`][cloud-memorystore-ref]
 [Spanner][cloud-spanner]                     | stable       | [`godoc.org/cloud.google.com/go/spanner`][cloud-spanner-ref]
 [Speech][cloud-speech]                       | stable       | [`godoc.org/cloud.google.com/go/speech/apiv1`][cloud-speech-ref]
 [Storage][cloud-storage]                     | stable       | [`godoc.org/cloud.google.com/go/storage`][cloud-storage-ref]
@@ -78,7 +79,6 @@ Google API                                   | Status       | Package
 [Translation][cloud-translation]             | stable       | [`godoc.org/cloud.google.com/go/translate`][cloud-translation-ref]
 [Video Intelligence][cloud-video]            | alpha        | [`godoc.org/cloud.google.com/go/videointelligence/apiv1beta1`][cloud-video-ref]
 [Vision][cloud-vision]                       | stable       | [`godoc.org/cloud.google.com/go/vision/apiv1`][cloud-vision-ref]
-
 
 > **Alpha status**: the API is still being actively developed. As a
 > result, it might change in backward-incompatible ways and is not recommended
@@ -497,3 +497,7 @@ for more information.
 [cloud-containeranalysis]: https://cloud.google.com/container-registry/docs/container-analysis
 [cloud-containeranalysis-docs]: https://cloud.google.com/container-analysis/api/reference/rest/
 [cloud-containeranalysis-ref]: https://godoc.org/cloud.google.com/go/devtools/containeranalysis/apiv1beta1
+
+[cloud-asset]: https://cloud.google.com/security-command-center/docs/how-to-asset-inventory
+[cloud-asset-docs]: https://cloud.google.com/security-command-center/docs/how-to-asset-inventory
+[cloud-asset-ref]: https://godoc.org/cloud.google.com/go/asset/apiv1
