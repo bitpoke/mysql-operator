@@ -70,7 +70,7 @@ func (ou *orcUpdater) Sync() error {
 	}
 
 	if len(instances) == 0 {
-		log.V(2).Info("no instances in orchestrator", "clusterAlias", ou.cluster.GetClusterAlias())
+		log.V(1).Info("no instances in orchestrator", "clusterAlias", ou.cluster.GetClusterAlias())
 	}
 
 	// register nodes in orchestrator if needed, or remove nodes from status
@@ -162,10 +162,10 @@ func (ou *orcUpdater) updateStatusFromOrc(insts InstancesSet) {
 
 	// set master node Master condition on True
 	master := insts.DetermineMaster()
-	if master == nil {
-		log.Error(fmt.Errorf("error detemining master"), "error acquiring master name", "instances", insts)
-	} else {
+	if master != nil {
 		ou.updateNodeCondition(master.Key.Hostname, api.NodeConditionMaster, core.ConditionTrue)
+	} else {
+		log.Info("error acquiring master name", "instances", insts)
 	}
 
 	// set cluster ReadOnly condition
@@ -272,7 +272,7 @@ func (ou *orcUpdater) getRecoveriesToAck(recoveries []orc.TopologyRecovery) []or
 			}
 			if time.Since(recoveryStartTime).Seconds() < recoveryGraceTime {
 				// skip this recovery
-				log.V(2).Info("tries to recover to sson", "recovery", recovery)
+				log.V(1).Info("tries to recover to soon", "recovery", recovery)
 				continue
 			}
 
@@ -353,7 +353,7 @@ func (ou *orcUpdater) removeNodeConditionNotInOrc(insts InstancesSet) {
 // set a host writable just if needed
 func (ou *orcUpdater) setWritableNode(inst orc.Instance) error {
 	if inst.ReadOnly {
-		log.V(2).Info("set node writable", "node", inst.Key.Hostname)
+		log.Info("set node writable", "node", inst.Key.Hostname)
 		return ou.orcClient.SetHostWritable(inst.Key)
 	}
 	return nil
@@ -361,14 +361,14 @@ func (ou *orcUpdater) setWritableNode(inst orc.Instance) error {
 
 func (ou *orcUpdater) beginNodeMaintenance(inst orc.Instance) error {
 
-	log.V(2).Info("set node in maintenance", "node", inst.Key.Hostname)
+	log.Info("set node in maintenance", "node", inst.Key.Hostname)
 	return ou.orcClient.BeginMaintenance(inst.Key, "mysqlcontroller", "clusterReadOnly")
 
 }
 
 func (ou *orcUpdater) endNodeMaintenance(inst orc.Instance) error {
 
-	log.V(2).Info("set node out of maintenance", "node", inst.Key.Hostname)
+	log.Info("set node out of maintenance", "node", inst.Key.Hostname)
 	return ou.orcClient.EndMaintenance(inst.Key)
 
 }
@@ -376,7 +376,7 @@ func (ou *orcUpdater) endNodeMaintenance(inst orc.Instance) error {
 // set a host read only just if needed
 func (ou *orcUpdater) setReadOnlyNode(inst orc.Instance) error {
 	if !inst.ReadOnly {
-		log.V(2).Info("set node read only", "node", inst.Key.Hostname)
+		log.Info("set node read only", "node", inst.Key.Hostname)
 		return ou.orcClient.SetHostReadOnly(inst.Key)
 	}
 	return nil

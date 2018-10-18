@@ -56,7 +56,7 @@ func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlClu
 		hostname: host,
 	}
 
-	return syncer.NewObjectSyncer("PDB", cluster, obj, c, scheme, func(in runtime.Object) error {
+	return syncer.NewObjectSyncer("Pod", nil, obj, c, scheme, func(in runtime.Object) error {
 		return sync.SyncFn(in)
 	})
 }
