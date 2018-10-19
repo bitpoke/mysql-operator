@@ -18,7 +18,13 @@ spec:
   # backupSecretName:
   # backupScheduleJobsHistoryLimit:
 
-
+  ## For recurrent backups on Azure blob set backupSchedule with a cronjob expression
+  # backupSchedule:
+  # backupUri: azure://container_name/
+  # backupSecretName:
+  # backupScheduleJobsHistoryLimit:
+  
+  
   ## Configs that will be added to my.cnf for cluster
   # mysqlConf:
   #   innodb-buffer-size: 128M
