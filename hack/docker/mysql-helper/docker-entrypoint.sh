@@ -27,6 +27,12 @@ storage_class = ${GCS_STORAGE_CLASS:-"MULTI_REGIONAL"}
 type = http
 url = ${HTTP_URL}
 
+[azure]
+type = azure blob storage
+account = ${RCLONE_AZUREBLOB_ACCOUNT)
+key = $(RCLONE_AZUREBLOB_KEY)
+endpoint = $(RCLONE_AZUREBLOB_ENDPOINT)
+
 EOF
 
 echo "Create google-credentials.json file."
