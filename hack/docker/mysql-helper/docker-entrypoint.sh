@@ -29,8 +29,8 @@ url = ${HTTP_URL}
 
 [azure]
 type = azure blob storage
-account = ${RCLONE_AZUREBLOB_ACCOUNT)
-key = $(RCLONE_AZUREBLOB_KEY)
+account = ${AZUREBLOB_ACCOUNT}
+key = ${AZUREBLOB_KEY}
 
 EOF
 
