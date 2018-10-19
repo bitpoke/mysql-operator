@@ -31,7 +31,6 @@ url = ${HTTP_URL}
 type = azure blob storage
 account = ${RCLONE_AZUREBLOB_ACCOUNT)
 key = $(RCLONE_AZUREBLOB_KEY)
-endpoint = $(RCLONE_AZUREBLOB_ENDPOINT)
 
 EOF
 
