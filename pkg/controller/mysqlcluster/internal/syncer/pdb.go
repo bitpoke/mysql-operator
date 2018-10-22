@@ -24,19 +24,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/presslabs/controller-util/syncer"
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 // NewPDBSyncer returns the syncer for pdb
-func NewPDBSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster) syncer.Interface {
+func NewPDBSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
 	obj := &policy.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.GetNameForResource(api.PodDisruptionBudget),
+			Name:      cluster.GetNameForResource(mysqlcluster.PodDisruptionBudget),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("PDB", cluster, obj, c, scheme, func(in runtime.Object) error {
+	return syncer.NewObjectSyncer("PDB", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*policy.PodDisruptionBudget)
 		if out.Spec.MinAvailable != nil {
 			// this mean that pdb is created and should return because spec is imutable

@@ -19,10 +19,9 @@ package mysqlcluster
 import (
 	"bytes"
 	"fmt"
-	"strconv"
+	"sort"
 
 	"github.com/go-ini/ini"
-	"github.com/mitchellh/hashstructure"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,97 +29,75 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"github.com/presslabs/controller-util/syncer"
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 var log = logf.Log.WithName("config-map-syncer")
 
-type configMapSyncer struct {
-	cluster *api.MysqlCluster
-}
-
 // NewConfigMapSyncer returns config map syncer
-func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster) syncer.Interface {
+func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
 	obj := &core.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.GetNameForResource(api.ConfigMap),
+			Name:      cluster.GetNameForResource(mysqlcluster.ConfigMap),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	sync := &configMapSyncer{
-		cluster: cluster,
-	}
+	return syncer.NewObjectSyncer("ConfigMap", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
+		out := in.(*core.ConfigMap)
 
-	return syncer.NewObjectSyncer("ConfigMap", cluster, obj, c, scheme, func(in runtime.Object) error {
-		return sync.SyncFn(in)
+		out.ObjectMeta.Labels = cluster.GetLabels()
+		out.ObjectMeta.Labels["generated"] = "true"
+
+		data, err := buildMysqlConfData(cluster)
+		if err != nil {
+			return fmt.Errorf("failed to create mysql configs: %s", err)
+		}
+
+		out.Data = map[string]string{
+			"my.cnf": data,
+		}
+
+		return nil
 	})
 }
 
-func (s *configMapSyncer) SyncFn(in runtime.Object) error {
-	out := in.(*core.ConfigMap)
-
-	out.ObjectMeta.Labels = s.cluster.GetLabels()
-	out.ObjectMeta.Labels["generated"] = "true"
-
-	data, newHash, err := s.getMysqlConfData()
-	if err != nil {
-		return fmt.Errorf("failed to create mysql configs, err: %s", err)
-	}
-
-	if key, ok := out.ObjectMeta.Annotations["config_hash"]; ok {
-		if key == newHash {
-			log.V(2).Info("skip updating configs", "hash", out.ObjectMeta.Annotations["config_hash"])
-			return nil
-		}
-		log.V(2).Info("config map hashes don't match", "old_hash", key, "new_hash", newHash)
-	}
-
-	out.ObjectMeta.Annotations = map[string]string{
-		"config_hash": newHash,
-	}
-
-	out.Data = map[string]string{
-		"my.cnf": data,
-	}
-
-	return nil
-}
-
-func (s *configMapSyncer) getMysqlConfData() (string, string, error) {
+func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
 	cfg := ini.Empty()
 	sec := cfg.Section("mysqld")
 
-	addKVConfigsToSection(sec, mysqlMasterSlaveConfigs, s.cluster.Spec.MysqlConf)
+	addKVConfigsToSection(sec, mysqlMasterSlaveConfigs, cluster.Spec.MysqlConf)
 	addBConfigsToSection(sec, mysqlMasterSlaveBooleanConfigs)
 
 	// include configs from /etc/mysql/conf.d/*.cnf
 	_, err := sec.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 
 	data, err := writeConfigs(cfg)
 	if err != nil {
-		return "", "", err
-	}
-	hash, err := hashstructure.Hash(cfg.Section("mysqld").KeysHash(), nil)
-	if err != nil {
-		log.Error(err, "can't compute hash for map data.")
-		return "", "", err
+		return "", err
 	}
 
-	newHash := strconv.FormatUint(hash, 10)
-	return data, newHash, nil
+	return data, nil
 
 }
 
 // helper function to add a map[string]string to a ini.Section
 func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
 	for _, extra := range extraMysqld {
-		for k, v := range extra {
-			if _, err := s.NewKey(k, v); err != nil {
-				log.Error(err, "failed to add key to config section", "key", k, "value", v, "section", s)
+		keys := []string{}
+		for key, _ := range extra {
+			keys = append(keys, key)
+		}
+
+		// sort keys
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			if _, err := s.NewKey(k, extra[k]); err != nil {
+				log.Error(err, "failed to add key to config section", "key", k, "value", extra[k], "section", s)
 			}
 		}
 	}
@@ -129,7 +106,15 @@ func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
 // helper function to add a string to a ini.Section
 func addBConfigsToSection(s *ini.Section, boolConfigs ...[]string) {
 	for _, extra := range boolConfigs {
-		for _, k := range extra {
+		keys := []string{}
+		for _, key := range extra {
+			keys = append(keys, key)
+		}
+
+		// sort keys
+		sort.Strings(keys)
+
+		for _, k := range keys {
 			if _, err := s.NewBooleanKey(k); err != nil {
 				log.Error(err, "failed to add boolean key to config section", "key", k)
 			}

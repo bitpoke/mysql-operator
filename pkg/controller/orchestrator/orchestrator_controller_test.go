@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 	fakeOrc "github.com/presslabs/mysql-operator/pkg/orchestrator/fake"
 )
@@ -88,7 +88,7 @@ var _ = Describe("Orchestrator controller", func() {
 	Describe("after creating a new mysql cluster", func() {
 		var (
 			expectedRequest reconcile.Request
-			cluster         *api.MysqlCluster
+			cluster         *mysqlcluster.MysqlCluster
 			secret          *corev1.Secret
 			clusterKey      types.NamespacedName
 		)
@@ -110,7 +110,7 @@ var _ = Describe("Orchestrator controller", func() {
 				},
 			}
 
-			cluster = &api.MysqlCluster{
+			theCluster := &api.MysqlCluster{
 				ObjectMeta: metav1.ObjectMeta{Name: clusterKey.Name, Namespace: clusterKey.Namespace},
 				Spec: api.MysqlClusterSpec{
 					Replicas:   1,
@@ -118,12 +118,14 @@ var _ = Describe("Orchestrator controller", func() {
 				},
 			}
 
+			cluster = mysqlcluster.New(theCluster)
+
 			Expect(c.Create(context.TODO(), secret)).To(Succeed())
-			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 			// update ready nodes
 			cluster.Status.ReadyNodes = 1
-			Expect(c.Status().Update(context.TODO(), cluster)).To(Succeed())
+			Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 			// expect to not receive any event when a cluster is created, but
 			// just after reconcile time passed then receive a reconcile event
@@ -137,7 +139,7 @@ var _ = Describe("Orchestrator controller", func() {
 			// the test controller plane
 			removeAllCreatedResource(c, cluster)
 			c.Delete(context.TODO(), secret)
-			c.Delete(context.TODO(), cluster)
+			c.Delete(context.TODO(), cluster.Unwrap())
 		})
 
 		It("should trigger reconciliation after noReconcileTime", func() {
@@ -163,15 +165,14 @@ var _ = Describe("Orchestrator controller", func() {
 
 		It("should unregister cluster when deleting it from kubernetes", func() {
 			// delete the cluster
-			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
+			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 			// wait few seconds for a request, in total, noReconcileTime + reconcileTimeout,
 			// to catch a reconcile event. This is the request
 			// that unregister cluster from orchestrator
 			Eventually(requests, noReconcileTime+reconcileTimeout).Should(Receive(Equal(expectedRequest)))
 
-			wCluster := wrapcluster.NewMysqlClusterWrapper(cluster)
-			_, err := orcClient.Cluster(wCluster.GetClusterAlias())
+			_, err := orcClient.Cluster(cluster.GetClusterAlias())
 			Expect(err).ToNot(Succeed())
 
 			// this is the requests that removes the finalizer and then the
@@ -184,49 +185,48 @@ var _ = Describe("Orchestrator controller", func() {
 
 		It("should be registered in orchestrator", func() {
 			// check the cluster is in orchestrator
-			wCluster := wrapcluster.NewMysqlClusterWrapper(cluster)
-			insts, err := orcClient.Cluster(wCluster.GetClusterAlias())
+			insts, err := orcClient.Cluster(cluster.GetClusterAlias())
 			Expect(err).To(Succeed())
-			Expect(insts).To(haveInstance(wCluster.GetPodHostname(0)))
+			Expect(insts).To(haveInstance(cluster.GetPodHostname(0)))
 		})
 	})
 })
 
-func removeAllCreatedResource(c client.Client, cluster *api.MysqlCluster) {
+func removeAllCreatedResource(c client.Client, cluster *mysqlcluster.MysqlCluster) {
 	objs := []runtime.Object{
 		&appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.StatefulSet),
+				Name:      cluster.GetNameForResource(mysqlcluster.StatefulSet),
 				Namespace: cluster.Namespace,
 			},
 		},
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.HeadlessSVC),
+				Name:      cluster.GetNameForResource(mysqlcluster.HeadlessSVC),
 				Namespace: cluster.Namespace,
 			},
 		},
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.MasterService),
+				Name:      cluster.GetNameForResource(mysqlcluster.MasterService),
 				Namespace: cluster.Namespace,
 			},
 		},
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.HealthyNodesService),
+				Name:      cluster.GetNameForResource(mysqlcluster.HealthyNodesService),
 				Namespace: cluster.Namespace,
 			},
 		},
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.ConfigMap),
+				Name:      cluster.GetNameForResource(mysqlcluster.ConfigMap),
 				Namespace: cluster.Namespace,
 			},
 		},
 		&policyv1beta1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.PodDisruptionBudget),
+				Name:      cluster.GetNameForResource(mysqlcluster.PodDisruptionBudget),
 				Namespace: cluster.Namespace,
 			},
 		},

@@ -17,11 +17,18 @@ limitations under the License.
 package testutil
 
 import (
+	"io"
 	"time"
 
 	g "github.com/onsi/gomega"
 	gs "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+
+	// loggging
+	"github.com/go-logr/logr"
+	"github.com/go-logr/zapr"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	core "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -56,4 +63,19 @@ func BackupHaveCondition(condType api.BackupConditionType, status core.Condition
 			})),
 		}),
 	}))
+}
+
+// NewTestLogger returns a logger good for tests
+func NewTestLogger(w io.Writer, options ...zap.Option) logr.Logger {
+	encoderCfg := zapcore.EncoderConfig{
+		MessageKey:     "msg",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.StringDurationEncoder,
+	}
+	sink := zapcore.AddSync(w)
+	core := zapcore.NewCore(zapcore.NewConsoleEncoder(encoderCfg), sink, zap.DebugLevel)
+	return zapr.NewLogger(zap.New(core).WithOptions(options...))
 }

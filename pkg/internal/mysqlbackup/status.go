@@ -28,7 +28,7 @@ import (
 
 // UpdateStatusCondition sets the condition to a status.
 // for example Ready condition to True, or False
-func (c *Wrapper) UpdateStatusCondition(condType api.BackupConditionType,
+func (c *MysqlBackup) UpdateStatusCondition(condType api.BackupConditionType,
 	status core.ConditionStatus, reason, msg string) {
 	newCondition := api.BackupCondition{
 		Type:    condType,
@@ -67,7 +67,7 @@ func (c *Wrapper) UpdateStatusCondition(condType api.BackupConditionType,
 	}
 }
 
-func (c *Wrapper) condExists(ty api.BackupConditionType) (int, bool) {
+func (c *MysqlBackup) condExists(ty api.BackupConditionType) (int, bool) {
 	for i, cond := range c.Status.Conditions {
 		if cond.Type == ty {
 			return i, true

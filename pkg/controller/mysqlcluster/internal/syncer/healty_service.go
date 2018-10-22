@@ -23,19 +23,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/presslabs/controller-util/syncer"
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 // NewHealthySVCSyncer returns a service syncer
-func NewHealthySVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster) syncer.Interface {
+func NewHealthySVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
 	obj := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.GetNameForResource(api.HealthyNodesService),
+			Name:      cluster.GetNameForResource(mysqlcluster.HealthyNodesService),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("HealthySVC", cluster, obj, c, scheme, func(in runtime.Object) error {
+	return syncer.NewObjectSyncer("HealthySVC", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*core.Service)
 
 		out.Spec.Type = "ClusterIP"

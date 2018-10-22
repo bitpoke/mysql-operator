@@ -32,14 +32,14 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 	fakeOrc "github.com/presslabs/mysql-operator/pkg/orchestrator/fake"
 )
 
 var _ = Describe("Orchestrator reconciler", func() {
 	var (
-		cluster   *wrapcluster.MysqlCluster
+		cluster   *mysqlcluster.MysqlCluster
 		orcClient *fakeOrc.OrcFakeClient
 		rec       *record.FakeRecorder
 		orcSyncer Syncer
@@ -63,8 +63,9 @@ var _ = Describe("Orchestrator reconciler", func() {
 				SecretName: clusterKey.Name,
 			},
 		}
-		orcSyncer = NewOrcUpdater(theCluster, rec, orcClient)
-		cluster = wrapcluster.NewMysqlClusterWrapper(theCluster)
+
+		cluster = mysqlcluster.New(theCluster)
+		orcSyncer = NewOrcUpdater(cluster, rec, orcClient)
 	})
 
 	When("cluster does not exists in orchestrator", func() {
@@ -295,7 +296,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 
 		BeforeEach(func() {
 			updater = &orcUpdater{
-				cluster:   wrapcluster.NewMysqlClusterWrapper(cluster.MysqlCluster),
+				cluster:   cluster,
 				recorder:  rec,
 				orcClient: orcClient,
 			}

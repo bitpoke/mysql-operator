@@ -24,6 +24,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 const (
@@ -34,25 +35,29 @@ const (
 
 var log = logf.Log.WithName("mysqlbackup")
 
-// Wrapper is a type wrapper over MysqlBackup that contains the Business logic
-type Wrapper struct {
+// MysqlBackup is a type wrapper over MysqlBackup that contains the Business logic
+type MysqlBackup struct {
 	*api.MysqlBackup
 }
 
 // New returns a wraper object over MysqlBackup
-func New(backup *api.MysqlBackup) *Wrapper {
-	return &Wrapper{
+func New(backup *api.MysqlBackup) *MysqlBackup {
+	return &MysqlBackup{
 		MysqlBackup: backup,
 	}
 }
 
+func (b *MysqlBackup) Unwrap() *api.MysqlBackup {
+	return b.MysqlBackup
+}
+
 // GetNameForJob returns the name of the job
-func (w *Wrapper) GetNameForJob() string {
+func (w *MysqlBackup) GetNameForJob() string {
 	return fmt.Sprintf("%s-bjob", w.Name)
 }
 
 // GetBackupURL returns a backup URL
-func (w *Wrapper) GetBackupURL(cluster *api.MysqlCluster) string {
+func (w *MysqlBackup) GetBackupURL(cluster *mysqlcluster.MysqlCluster) string {
 	if strings.HasSuffix(w.Spec.BackupURL, BackupSuffix) {
 		return w.Spec.BackupURL
 	}
@@ -71,7 +76,7 @@ func (w *Wrapper) GetBackupURL(cluster *api.MysqlCluster) string {
 	return w.composeBackupURL(cluster.Spec.BackupURL)
 }
 
-func (w *Wrapper) composeBackupURL(base string) string {
+func (w *MysqlBackup) composeBackupURL(base string) string {
 	if strings.HasSuffix(base, "/") {
 		base = base[:len(base)-1]
 	}

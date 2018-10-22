@@ -37,8 +37,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	backupwrap "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlbackup"
 	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlbackup"
 )
 
 const timeout = time.Second * 2
@@ -74,8 +74,7 @@ var _ = Describe("MysqlBackup controller", func() {
 	var (
 		expectedRequest reconcile.Request
 		cluster         *api.MysqlCluster
-		backup          *api.MysqlBackup
-		wBackup         *backupwrap.Wrapper
+		backup          *mysqlbackup.MysqlBackup
 		backupKey       types.NamespacedName
 		jobKey          types.NamespacedName
 	)
@@ -98,7 +97,7 @@ var _ = Describe("MysqlBackup controller", func() {
 			},
 		}
 
-		backup = &api.MysqlBackup{
+		b := &api.MysqlBackup{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
 			Spec: api.MysqlBackupSpec{
 				ClusterName:      clusterName,
@@ -107,9 +106,9 @@ var _ = Describe("MysqlBackup controller", func() {
 			},
 		}
 
-		wBackup = backupwrap.New(backup)
+		backup = mysqlbackup.New(b)
 		jobKey = types.NamespacedName{
-			Name:      wBackup.GetNameForJob(),
+			Name:      backup.GetNameForJob(),
 			Namespace: backup.Namespace,
 		}
 	})
@@ -119,7 +118,7 @@ var _ = Describe("MysqlBackup controller", func() {
 		BeforeEach(func() {
 			// create a cluster and a backup
 			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
-			Expect(c.Create(context.TODO(), backup)).To(Succeed())
+			Expect(c.Create(context.TODO(), backup.Unwrap())).To(Succeed())
 
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
@@ -133,7 +132,7 @@ var _ = Describe("MysqlBackup controller", func() {
 
 		AfterEach(func() {
 			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
-			Expect(c.Delete(context.TODO(), backup)).To(Succeed())
+			Expect(c.Delete(context.TODO(), backup.Unwrap())).To(Succeed())
 		})
 
 		It("should create the job", func() {
@@ -143,8 +142,8 @@ var _ = Describe("MysqlBackup controller", func() {
 		})
 
 		It("should populate the defaults", func() {
-			Expect(c.Get(context.TODO(), backupKey, backup)).To(Succeed())
-			Expect(backup.Spec.BackupURL).To(ContainSubstring(backupwrap.BackupSuffix))
+			Expect(c.Get(context.TODO(), backupKey, backup.Unwrap())).To(Succeed())
+			Expect(backup.Spec.BackupURL).To(ContainSubstring(mysqlbackup.BackupSuffix))
 		})
 
 		It("should update backup status as complete", func() {
@@ -203,14 +202,14 @@ var _ = Describe("MysqlBackup controller", func() {
 			backup.Status.Completed = true
 			// create a cluster and a backup
 			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
-			Expect(c.Create(context.TODO(), backup)).To(Succeed())
+			Expect(c.Create(context.TODO(), backup.Unwrap())).To(Succeed())
 
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 		})
 
 		AfterEach(func() {
 			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
-			Expect(c.Delete(context.TODO(), backup)).To(Succeed())
+			Expect(c.Delete(context.TODO(), backup.Unwrap())).To(Succeed())
 		})
 
 		It("should skip creating job", func() {
@@ -228,7 +227,7 @@ var _ = Describe("MysqlBackup controller", func() {
 			// mark backup as completed
 			backup.Spec.ClusterName = ""
 			// create a cluster and a backup
-			Expect(c.Create(context.TODO(), backup)).To(Succeed())
+			Expect(c.Create(context.TODO(), backup.Unwrap())).To(Succeed())
 			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
 
 			testutil.DrainChan(requests)
@@ -236,7 +235,7 @@ var _ = Describe("MysqlBackup controller", func() {
 
 		AfterEach(func() {
 			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
-			Expect(c.Delete(context.TODO(), backup)).To(Succeed())
+			Expect(c.Delete(context.TODO(), backup.Unwrap())).To(Succeed())
 		})
 
 		It("should skip creating job", func() {
@@ -247,7 +246,7 @@ var _ = Describe("MysqlBackup controller", func() {
 		It("should allow updating cluster name", func() {
 			// update cluster
 			backup.Spec.ClusterName = cluster.Name
-			Expect(c.Update(context.TODO(), backup)).To(Succeed())
+			Expect(c.Update(context.TODO(), backup.Unwrap())).To(Succeed())
 
 			// wait for reconcile request
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
@@ -271,8 +270,8 @@ var _ = Describe("MysqlBackup controller", func() {
 		It("should use backupURI as backupURL", func() {
 			backup.Spec.BackupURL = ""
 			backup.Spec.BackupURI = "gs://bucket/"
-			Expect(c.Create(context.TODO(), backup)).To(Succeed())
-			defer c.Delete(context.TODO(), backup)
+			Expect(c.Create(context.TODO(), backup.Unwrap())).To(Succeed())
+			defer c.Delete(context.TODO(), backup.Unwrap())
 
 			// wait for a reconcile request
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))

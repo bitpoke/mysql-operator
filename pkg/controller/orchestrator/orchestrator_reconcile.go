@@ -25,7 +25,7 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 )
 
@@ -38,7 +38,7 @@ const (
 )
 
 type orcUpdater struct {
-	cluster   *wrapcluster.MysqlCluster
+	cluster   *mysqlcluster.MysqlCluster
 	recorder  record.EventRecorder
 	orcClient orc.Interface
 }
@@ -49,9 +49,9 @@ type Syncer interface {
 }
 
 // NewOrcUpdater returns a syncer that updates cluster status from orchestrator.
-func NewOrcUpdater(cluster *api.MysqlCluster, r record.EventRecorder, orcClient orc.Interface) Syncer {
+func NewOrcUpdater(cluster *mysqlcluster.MysqlCluster, r record.EventRecorder, orcClient orc.Interface) Syncer {
 	return &orcUpdater{
-		cluster:   wrapcluster.NewMysqlClusterWrapper(cluster),
+		cluster:   cluster,
 		recorder:  r,
 		orcClient: orcClient,
 	}
@@ -284,7 +284,7 @@ func (ou *orcUpdater) getRecoveriesToAck(recoveries []orc.TopologyRecovery) []or
 
 func (ou *orcUpdater) acknowledgeRecoveries(toAck []orc.TopologyRecovery) error {
 	comment := fmt.Sprintf("Statefulset '%s' is healty for more then %d seconds",
-		ou.cluster.GetNameForResource(api.StatefulSet), recoveryGraceTime,
+		ou.cluster.GetNameForResource(mysqlcluster.StatefulSet), recoveryGraceTime,
 	)
 
 	// acknowledge recoveries
@@ -318,7 +318,7 @@ func (ou *orcUpdater) updateStatusForRecoveries(recoveries []orc.TopologyRecover
 }
 
 // nolint: unparam
-func condIndexCluster(cluster *wrapcluster.MysqlCluster, condType api.ClusterConditionType) (int, bool) {
+func condIndexCluster(cluster *mysqlcluster.MysqlCluster, condType api.ClusterConditionType) (int, bool) {
 	for i, cond := range cluster.Status.Conditions {
 		if cond.Type == condType {
 			return i, true

@@ -27,11 +27,11 @@ import (
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	clusterwrap "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 type podSyncer struct {
-	cluster  *clusterwrap.MysqlCluster
+	cluster  *mysqlcluster.MysqlCluster
 	hostname string
 }
 
@@ -43,7 +43,7 @@ const (
 )
 
 // NewPodSyncer returns the syncer for pod
-func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster, host string) syncer.Interface {
+func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, host string) syncer.Interface {
 	obj := &core.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      getPodNameForHost(host),
@@ -52,7 +52,7 @@ func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlClu
 	}
 
 	sync := &podSyncer{
-		cluster:  clusterwrap.NewMysqlClusterWrapper(cluster),
+		cluster:  cluster,
 		hostname: host,
 	}
 

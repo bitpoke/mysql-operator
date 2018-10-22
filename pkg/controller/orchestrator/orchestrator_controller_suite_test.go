@@ -29,8 +29,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"github.com/presslabs/mysql-operator/pkg/apis"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 )
 
 var cfg *rest.Config
@@ -45,6 +47,8 @@ var _ = BeforeSuite(func() {
 
 	// set reconcile time to 1 second to speed up the tests.
 	reconcileTimePeriod = time.Second
+
+	logf.SetLogger(testutil.NewTestLogger(GinkgoWriter))
 
 	var err error
 

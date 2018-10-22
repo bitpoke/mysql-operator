@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 	"github.com/presslabs/mysql-operator/pkg/util/stop"
@@ -187,24 +188,27 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	log.Info("reconciling cluster", "cluster", cluster)
+	wCluster := mysqlcluster.New(cluster)
+	// save old status
 	status := *cluster.Status.DeepCopy()
-	defer func() {
-		if !reflect.DeepEqual(status, cluster.Status) {
-			if sErr := r.Status().Update(context.TODO(), cluster); sErr != nil {
-				log.Error(sErr, "failed to update cluster status", "cluster", cluster)
-			}
-		}
-	}()
 
 	// this syncer mutuates the cluster and updates it. Should be the first syncer
-	finalizerSyncer := newFinalizerSyncer(r.Client, r.scheme, cluster, r.orcClient)
+	finalizerSyncer := newFinalizerSyncer(r.Client, r.scheme, wCluster, r.orcClient)
 	if err := syncer.Sync(context.TODO(), finalizerSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	ou := NewOrcUpdater(cluster, r.recorder, r.orcClient)
+	ou := NewOrcUpdater(wCluster, r.recorder, r.orcClient)
 	if err := ou.Sync(); err != nil {
 		return reconcile.Result{}, err
+	}
+
+	// update cluster
+	if !reflect.DeepEqual(status, wCluster.Unwrap().Status) {
+		if sErr := r.Status().Update(context.TODO(), wCluster.Unwrap()); sErr != nil {
+			log.Error(sErr, "failed to update cluster status", "cluster", wCluster.Unwrap())
+			return reconcile.Result{}, sErr
+		}
 	}
 
 	return reconcile.Result{}, nil
