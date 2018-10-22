@@ -17,11 +17,14 @@ limitations under the License.
 package orchestrator
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/presslabs/controller-util/syncer"
 	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -43,13 +46,8 @@ type orcUpdater struct {
 	orcClient orc.Interface
 }
 
-// Syncer interface defines Sync method
-type Syncer interface {
-	Sync() error
-}
-
 // NewOrcUpdater returns a syncer that updates cluster status from orchestrator.
-func NewOrcUpdater(cluster *mysqlcluster.MysqlCluster, r record.EventRecorder, orcClient orc.Interface) Syncer {
+func NewOrcUpdater(cluster *mysqlcluster.MysqlCluster, r record.EventRecorder, orcClient orc.Interface) syncer.Interface {
 	return &orcUpdater{
 		cluster:   cluster,
 		recorder:  r,
@@ -57,7 +55,9 @@ func NewOrcUpdater(cluster *mysqlcluster.MysqlCluster, r record.EventRecorder, o
 	}
 }
 
-func (ou *orcUpdater) Sync() error {
+func (ou *orcUpdater) GetObject() interface{}   { return nil }
+func (ou *orcUpdater) GetOwner() runtime.Object { return ou.cluster }
+func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 	// get instances from orchestrator
 	var (
 		instances  InstancesSet
@@ -66,11 +66,7 @@ func (ou *orcUpdater) Sync() error {
 	)
 
 	if instances, err = ou.orcClient.Cluster(ou.cluster.GetClusterAlias()); err != nil {
-		log.Error(err, "can't get instances from orchestrator", "alias", ou.cluster.GetClusterAlias())
-	}
-
-	if len(instances) == 0 {
-		log.V(1).Info("no instances in orchestrator", "clusterAlias", ou.cluster.GetClusterAlias())
+		log.V(-1).Info("can't get instances from orchestrator", "alias", ou.cluster.GetClusterAlias(), "error", err)
 	}
 
 	// register nodes in orchestrator if needed, or remove nodes from status
@@ -88,7 +84,7 @@ func (ou *orcUpdater) Sync() error {
 
 	// get recoveries for this cluster
 	if recoveries, err = ou.orcClient.AuditRecovery(ou.cluster.GetClusterAlias()); err != nil {
-		log.Error(err, "can't get recoveries from orchestrator", "alias", ou.cluster.GetClusterAlias())
+		log.V(-1).Info("can't get recoveries from orchestrator", "alias", ou.cluster.GetClusterAlias(), "error", err)
 	}
 
 	// update cluster status
@@ -102,7 +98,7 @@ func (ou *orcUpdater) Sync() error {
 		log.Error(err, "failed to acknowledge recoveries", "alias", ou.cluster.GetClusterAlias(), "ack_recoveries", toAck)
 	}
 
-	return nil
+	return syncer.SyncResult{}, nil
 }
 
 // nolint: gocyclo

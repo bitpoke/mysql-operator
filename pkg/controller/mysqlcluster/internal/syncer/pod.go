@@ -56,9 +56,7 @@ func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster
 		hostname: host,
 	}
 
-	return syncer.NewObjectSyncer("Pod", nil, obj, c, scheme, func(in runtime.Object) error {
-		return sync.SyncFn(in)
-	})
+	return syncer.NewObjectSyncer("Pod", nil, obj, c, scheme, sync.SyncFn)
 }
 
 // nolint: gocyclo

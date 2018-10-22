@@ -100,6 +100,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				return
 			}
 
+			log.V(1).Info("register cluster in clusters list", "meta", evt.Meta)
 			clusters.Store(getKey(evt.Meta), event.GenericEvent{ // nolint: megacheck
 				Meta:   evt.Meta,
 				Object: evt.Object,
@@ -111,6 +112,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				return
 			}
 
+			log.V(1).Info("remove cluster from clusters list", "meta", evt.Meta)
 			clusters.Delete(getKey(evt.Meta))
 		},
 	})
@@ -181,6 +183,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
+			log.Info("cluster is deleted", "key", request.NamespacedName.String())
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -192,23 +195,29 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	// save old status
 	status := *cluster.Status.DeepCopy()
 
-	// this syncer mutuates the cluster and updates it. Should be the first syncer
-	finalizerSyncer := newFinalizerSyncer(r.Client, r.scheme, wCluster, r.orcClient)
-	if err := syncer.Sync(context.TODO(), finalizerSyncer, r.recorder); err != nil {
-		return reconcile.Result{}, err
+	syncers := []syncer.Interface{
+		// this syncer mutuates the cluster and updates it. Should be the first syncer
+		newFinalizerSyncer(r.Client, r.scheme, wCluster, r.orcClient),
+		NewOrcUpdater(wCluster, r.recorder, r.orcClient),
 	}
 
-	ou := NewOrcUpdater(wCluster, r.recorder, r.orcClient)
-	if err := ou.Sync(); err != nil {
-		return reconcile.Result{}, err
+	// run the syncers
+	for _, s := range syncers {
+		if err := syncer.Sync(context.TODO(), s, r.recorder); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// update cluster
-	if !reflect.DeepEqual(status, wCluster.Unwrap().Status) {
+	// TODO: make orcUpdater to update cluster
+	if !reflect.DeepEqual(status, wCluster.Unwrap().Status) && wCluster.DeletionTimestamp == nil {
+		log.V(1).Info("update cluster", "cluster", wCluster.Unwrap())
+
 		if sErr := r.Status().Update(context.TODO(), wCluster.Unwrap()); sErr != nil {
-			log.Error(sErr, "failed to update cluster status", "cluster", wCluster.Unwrap())
+			log.Error(sErr, "failed to update cluster status")
 			return reconcile.Result{}, sErr
 		}
+
 	}
 
 	return reconcile.Result{}, nil

@@ -27,9 +27,8 @@ import (
 
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	sScheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -39,11 +38,9 @@ import (
 var _ = Describe("Pod syncer", func() {
 	var (
 		cluster *mysqlcluster.MysqlCluster
-		scheme  *runtime.Scheme
 	)
 
 	BeforeEach(func() {
-		scheme = sScheme.Scheme
 		name := fmt.Sprintf("cluster-%d", rand.Int31())
 		theCluster := &api.MysqlCluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -70,9 +67,9 @@ var _ = Describe("Pod syncer", func() {
 		Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 		// run the syncers
-		_, err := NewPodSyncer(c, scheme, cluster, cluster.GetPodHostname(0)).Sync(context.TODO())
+		_, err := NewPodSyncer(c, scheme.Scheme, cluster, cluster.GetPodHostname(0)).Sync(context.TODO())
 		Expect(err).To(Succeed())
-		_, err = NewPodSyncer(c, scheme, cluster, cluster.GetPodHostname(1)).Sync(context.TODO())
+		_, err = NewPodSyncer(c, scheme.Scheme, cluster, cluster.GetPodHostname(1)).Sync(context.TODO())
 		Expect(err).To(Succeed())
 
 	})
@@ -102,7 +99,7 @@ var _ = Describe("Pod syncer", func() {
 	})
 
 	It("should fail if pod does not exist", func() {
-		_, err := NewPodSyncer(c, scheme, cluster, cluster.GetPodHostname(2)).Sync(context.TODO())
+		_, err := NewPodSyncer(c, scheme.Scheme, cluster, cluster.GetPodHostname(2)).Sync(context.TODO())
 		Expect(err).ToNot(Succeed())
 	})
 
@@ -113,7 +110,7 @@ var _ = Describe("Pod syncer", func() {
 		Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 		// call the syncer
-		_, err := NewPodSyncer(c, scheme, cluster, cluster.GetPodHostname(1)).Sync(context.TODO())
+		_, err := NewPodSyncer(c, scheme.Scheme, cluster, cluster.GetPodHostname(1)).Sync(context.TODO())
 		Expect(err).To(Succeed())
 
 		pod1 := &core.Pod{}

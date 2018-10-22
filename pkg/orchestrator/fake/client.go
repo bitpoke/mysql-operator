@@ -19,6 +19,7 @@ package fake
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	// nolint: golint
 	. "github.com/presslabs/mysql-operator/pkg/orchestrator"
@@ -32,6 +33,8 @@ type OrcFakeClient struct {
 	AckRec     []int64
 
 	Discovered []InstanceKey
+
+	lock *sync.Mutex
 }
 
 var nextID int64
@@ -48,7 +51,9 @@ const (
 
 // New fake orchestrator client
 func New() *OrcFakeClient {
-	return &OrcFakeClient{}
+	return &OrcFakeClient{
+		lock: &sync.Mutex{},
+	}
 }
 
 // Reset removes all instances and ack from a client
@@ -61,6 +66,9 @@ func (o *OrcFakeClient) Reset() {
 
 // AddInstance add a instance to orchestrator client
 func (o *OrcFakeClient) AddInstance(instance Instance) *Instance {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
 	cluster := instance.ClusterName
 
 	instance.Key.Port = 3306
@@ -82,6 +90,9 @@ func (o *OrcFakeClient) AddInstance(instance Instance) *Instance {
 
 // RemoveInstance deletes a instance from orchestrator
 func (o *OrcFakeClient) RemoveInstance(cluster, host string) {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
 	instances, ok := o.Clusters[cluster]
 	if !ok {
 		return
@@ -108,6 +119,9 @@ func (o *OrcFakeClient) RemoveInstance(cluster, host string) {
 
 // AddRecoveries add a recovery for a cluster
 func (o *OrcFakeClient) AddRecoveries(cluster string, ack bool) int64 {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
 	id := getNextID()
 	tr := TopologyRecovery{
 		Id:                     id,
@@ -127,6 +141,9 @@ func (o *OrcFakeClient) AddRecoveries(cluster string, ack bool) int64 {
 
 // CheckAck verify is an ack is present
 func (o *OrcFakeClient) CheckAck(id int64) bool {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
 	for _, a := range o.AckRec {
 		if a == id {
 			return true
@@ -189,6 +206,9 @@ func (o *OrcFakeClient) Forget(host string, port int) error {
 
 // Master returns the master of a cluster
 func (o *OrcFakeClient) Master(clusterHint string) (*Instance, error) {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
 	insts, ok := o.Clusters[clusterHint]
 	if !ok {
 		return nil, fmt.Errorf("not found")
@@ -203,6 +223,9 @@ func (o *OrcFakeClient) Master(clusterHint string) (*Instance, error) {
 
 // Cluster returns the list of instances from a cluster
 func (o *OrcFakeClient) Cluster(cluster string) ([]Instance, error) {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
 	instsPointers, ok := o.Clusters[cluster]
 	if !ok {
 		return nil, fmt.Errorf("not found")
@@ -218,6 +241,9 @@ func (o *OrcFakeClient) Cluster(cluster string) ([]Instance, error) {
 
 // AuditRecovery returns recoveries for a cluster
 func (o *OrcFakeClient) AuditRecovery(cluster string) ([]TopologyRecovery, error) {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
 	recoveries, ok := o.Recoveries[cluster]
 	if !ok {
 		return nil, fmt.Errorf("not found")
@@ -228,12 +254,17 @@ func (o *OrcFakeClient) AuditRecovery(cluster string) ([]TopologyRecovery, error
 
 // AckRecovery ack a recovery
 func (o *OrcFakeClient) AckRecovery(id int64, comment string) error {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
 	o.AckRec = append(o.AckRec, id)
 	return nil
 }
 
 // SetHostWritable make a host writable
 func (o *OrcFakeClient) SetHostWritable(key InstanceKey) error {
+	o.lock.Lock()
+	defer o.lock.Unlock()
 
 	for _, instances := range o.Clusters {
 		for _, instance := range instances {
@@ -248,6 +279,8 @@ func (o *OrcFakeClient) SetHostWritable(key InstanceKey) error {
 
 // SetHostReadOnly make a host read only
 func (o *OrcFakeClient) SetHostReadOnly(key InstanceKey) error {
+	o.lock.Lock()
+	defer o.lock.Unlock()
 
 	for _, instances := range o.Clusters {
 		for _, instance := range instances {

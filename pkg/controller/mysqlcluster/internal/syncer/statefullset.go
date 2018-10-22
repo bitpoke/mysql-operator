@@ -98,6 +98,7 @@ func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 	}
 
 	out.Spec.ServiceName = s.cluster.GetNameForResource(mysqlcluster.HeadlessSVC)
+
 	out.Spec.Template = s.ensureTemplate(out.Spec.Template)
 	out.Spec.VolumeClaimTemplates = s.ensureVolumeClaimTemplates(out.Spec.VolumeClaimTemplates)
 

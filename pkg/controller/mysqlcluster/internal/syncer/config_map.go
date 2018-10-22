@@ -88,7 +88,7 @@ func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
 func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
 	for _, extra := range extraMysqld {
 		keys := []string{}
-		for key, _ := range extra {
+		for key := range extra {
 			keys = append(keys, key)
 		}
 
@@ -107,9 +107,7 @@ func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
 func addBConfigsToSection(s *ini.Section, boolConfigs ...[]string) {
 	for _, extra := range boolConfigs {
 		keys := []string{}
-		for _, key := range extra {
-			keys = append(keys, key)
-		}
+		keys = append(keys, extra...)
 
 		// sort keys
 		sort.Strings(keys)

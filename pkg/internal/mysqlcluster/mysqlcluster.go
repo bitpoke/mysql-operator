@@ -37,6 +37,7 @@ func New(mc *api.MysqlCluster) *MysqlCluster {
 	}
 }
 
+// Unwrap returns the api mysqlcluster object
 func (c *MysqlCluster) Unwrap() *api.MysqlCluster {
 	return c.MysqlCluster
 }
