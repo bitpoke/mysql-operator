@@ -24,46 +24,40 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	backupwrap "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlbackup"
-	clusterwrap "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlbackup"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
 var log = logf.Log.WithName("mysqlbackup.syncer.job")
 
 type jobSyncer struct {
-	backup  *backupwrap.Wrapper
-	cluster *api.MysqlCluster
+	backup  *mysqlbackup.MysqlBackup
+	cluster *mysqlcluster.MysqlCluster
 
-	job *batch.Job
 	opt *options.Options
 }
 
 // NewJobSyncer returns a syncer for backup jobs
-func NewJobSyncer(backup *api.MysqlBackup, cluster *api.MysqlCluster, opt *options.Options) syncer.Interface {
-	wBackup := backupwrap.New(backup)
+func NewJobSyncer(c client.Client, s *runtime.Scheme, backup *mysqlbackup.MysqlBackup, cluster *mysqlcluster.MysqlCluster, opt *options.Options) syncer.Interface {
 	obj := &batch.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      wBackup.GetNameForJob(),
+			Name:      backup.GetNameForJob(),
 			Namespace: backup.Namespace,
 		},
 	}
 
-	return &jobSyncer{
-		backup:  wBackup,
+	sync := &jobSyncer{
+		backup:  backup,
 		cluster: cluster,
-		job:     obj,
 		opt:     opt,
 	}
-}
 
-func (s *jobSyncer) GetObject() runtime.Object { return s.job }
-func (s *jobSyncer) GetOwner() runtime.Object  { return s.backup.MysqlBackup }
-func (s *jobSyncer) GetEventReasonForError(err error) syncer.EventReason {
-	return syncer.BasicEventReason("Job", err)
+	return syncer.NewObjectSyncer("Job", backup.Unwrap(), obj, c, s, sync.SyncFn)
 }
 
 func (s *jobSyncer) SyncFn(in runtime.Object) error {
@@ -99,11 +93,10 @@ func (s *jobSyncer) getBackupSecretName() string {
 // getBackupCandidate returns the hostname of the first not-lagged and
 // replicating slave node, else returns the master node.
 func (s *jobSyncer) getBackupCandidate() string {
-	wCluster := clusterwrap.NewMysqlClusterWrapper(s.cluster)
 	for _, node := range s.cluster.Status.Nodes {
-		master := wCluster.GetNodeCondition(node.Name, api.NodeConditionMaster)
-		replicating := wCluster.GetNodeCondition(node.Name, api.NodeConditionReplicating)
-		lagged := wCluster.GetNodeCondition(node.Name, api.NodeConditionLagged)
+		master := s.cluster.GetNodeCondition(node.Name, api.NodeConditionMaster)
+		replicating := s.cluster.GetNodeCondition(node.Name, api.NodeConditionReplicating)
+		lagged := s.cluster.GetNodeCondition(node.Name, api.NodeConditionLagged)
 
 		isMaster := master.Status == core.ConditionTrue
 		isReplicating := replicating != nil && replicating.Status == core.ConditionTrue
@@ -118,9 +111,9 @@ func (s *jobSyncer) getBackupCandidate() string {
 			return node.Name
 		}
 	}
-	log.Info("no healthy slave node found so returns the master node", "default_node", wCluster.GetPodHostname(0),
+	log.Info("no healthy slave node found so returns the master node", "default_node", s.cluster.GetPodHostname(0),
 		"cluster", s.cluster)
-	return wCluster.GetPodHostname(0)
+	return s.cluster.GetPodHostname(0)
 }
 
 func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {

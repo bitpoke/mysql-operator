@@ -36,8 +36,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	backupwrap "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlbackup"
 	backupSyncer "github.com/presslabs/mysql-operator/pkg/controller/mysqlbackup/internal/syncer"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlbackup"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
@@ -144,11 +145,12 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, fmt.Errorf("cluster not found: %s", err)
 	}
 
-	wBackup := backupwrap.New(backup)
-	wBackup.SetDefaults(cluster)
+	wCluster := mysqlcluster.New(cluster)
+	wBackup := mysqlbackup.New(backup)
+	wBackup.SetDefaults(wCluster)
 
-	jobSyncer := backupSyncer.NewJobSyncer(backup, cluster, r.opt)
-	err = syncer.Sync(context.TODO(), jobSyncer, r.Client, r.scheme, r.recorder)
+	jobSyncer := backupSyncer.NewJobSyncer(r.Client, r.scheme, wBackup, wCluster, r.opt)
+	err = syncer.Sync(context.TODO(), jobSyncer, r.recorder)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

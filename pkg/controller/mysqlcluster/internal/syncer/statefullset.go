@@ -29,7 +29,7 @@ import (
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	clusterwrap "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
@@ -52,29 +52,29 @@ const (
 )
 
 type sfsSyncer struct {
-	cluster           *clusterwrap.MysqlCluster
+	cluster           *mysqlcluster.MysqlCluster
 	configMapRevision string
 	secretRevision    string
 	opt               *options.Options
 }
 
 // NewStatefulSetSyncer returns a syncer for stateful set
-func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster, cmRev, secRev string, opt *options.Options) syncer.Interface {
+func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, cmRev, secRev string, opt *options.Options) syncer.Interface {
 	obj := &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.GetNameForResource(api.StatefulSet),
+			Name:      cluster.GetNameForResource(mysqlcluster.StatefulSet),
 			Namespace: cluster.Namespace,
 		},
 	}
 
 	sync := &sfsSyncer{
-		cluster:           clusterwrap.NewMysqlClusterWrapper(cluster),
+		cluster:           cluster,
 		configMapRevision: cmRev,
 		secretRevision:    secRev,
 		opt:               opt,
 	}
 
-	return syncer.NewObjectSyncer("StatefulSet", cluster, obj, c, scheme, func(in runtime.Object) error {
+	return syncer.NewObjectSyncer("StatefulSet", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
 		return sync.SyncFn(in)
 	})
 }
@@ -97,7 +97,8 @@ func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 		MatchLabels: s.getLabels(map[string]string{}),
 	}
 
-	out.Spec.ServiceName = s.cluster.GetNameForResource(api.HeadlessSVC)
+	out.Spec.ServiceName = s.cluster.GetNameForResource(mysqlcluster.HeadlessSVC)
+
 	out.Spec.Template = s.ensureTemplate(out.Spec.Template)
 	out.Spec.VolumeClaimTemplates = s.ensureVolumeClaimTemplates(out.Spec.VolumeClaimTemplates)
 
@@ -172,7 +173,7 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 	})
 	env = append(env, core.EnvVar{
 		Name:  "MY_SERVICE_NAME",
-		Value: s.cluster.GetNameForResource(api.HeadlessSVC),
+		Value: s.cluster.GetNameForResource(mysqlcluster.HeadlessSVC),
 	})
 	env = append(env, core.EnvVar{
 		Name:  "MY_CLUSTER_NAME",
@@ -455,7 +456,7 @@ func (s *sfsSyncer) ensureVolumes(in []core.Volume) []core.Volume {
 	in[1] = ensureVolume(in[1], confMapVolumeName, core.VolumeSource{
 		ConfigMap: &core.ConfigMapVolumeSource{
 			LocalObjectReference: core.LocalObjectReference{
-				Name: s.cluster.GetNameForResource(api.ConfigMap),
+				Name: s.cluster.GetNameForResource(mysqlcluster.ConfigMap),
 			},
 			DefaultMode: &fileMode,
 		},

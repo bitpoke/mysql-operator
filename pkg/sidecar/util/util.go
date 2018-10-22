@@ -31,7 +31,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
@@ -134,7 +134,7 @@ func GetServerID() int {
 
 // GetHostFor returns the host for given server id
 func GetHostFor(id int) string {
-	base := api.GetNameForResource(api.StatefulSet, GetClusterName())
+	base := mysqlcluster.GetNameForResource(mysqlcluster.StatefulSet, GetClusterName())
 	govSVC := GetServiceName()
 	namespace := GetNamespace()
 	return fmt.Sprintf("%s-%d.%s.%s", base, id-100, govSVC, namespace)

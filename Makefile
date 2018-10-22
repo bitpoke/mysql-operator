@@ -4,7 +4,7 @@ IMG ?= quay.io/presslabs/mysql-operator:build
 SIDECAR_IMG ?= quay.io/presslabs/mysql-operator-sidecar:build
 
 BINDIR := $(PWD)/bin
-KUBEBUILDER_VERSION ?= 1.0.4
+KUBEBUILDER_VERSION ?= 1.0.5
 
 GOOS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 GOARCH ?= amd64

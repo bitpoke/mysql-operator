@@ -23,19 +23,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/presslabs/controller-util/syncer"
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 // NewHeadlessSVCSyncer returns a service syncer
-func NewHeadlessSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster) syncer.Interface {
+func NewHeadlessSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
 	obj := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.GetNameForResource(api.HeadlessSVC),
+			Name:      cluster.GetNameForResource(mysqlcluster.HeadlessSVC),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("HeadlessSVC", cluster, obj, c, scheme, func(in runtime.Object) error {
+	return syncer.NewObjectSyncer("HeadlessSVC", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*core.Service)
 
 		out.Spec.ClusterIP = "None"

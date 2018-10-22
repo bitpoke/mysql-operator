@@ -14,18 +14,42 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package mysqlcluster
 
 import (
 	"fmt"
+
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
+// MysqlCluster is the wrapper for api.MysqlCluster type
+type MysqlCluster struct {
+	*api.MysqlCluster
+}
+
+// New returns a wrapper for mysqlcluster
+func New(mc *api.MysqlCluster) *MysqlCluster {
+	return &MysqlCluster{
+		MysqlCluster: mc,
+	}
+}
+
+// Unwrap returns the api mysqlcluster object
+func (c *MysqlCluster) Unwrap() *api.MysqlCluster {
+	return c.MysqlCluster
+}
+
 // GetLabels returns cluster labels
-func (c *MysqlCluster) GetLabels() map[string]string {
-	return map[string]string{
+func (c *MysqlCluster) GetLabels() labels.Set {
+	labels := labels.Set{
 		"app":           "mysql-operator",
 		"mysql_cluster": c.Name,
 	}
+
+	return labels
 }
 
 // ResourceName is the type for aliasing resources that will be created.
@@ -63,4 +87,30 @@ func GetNameForResource(name ResourceName, clusterName string) string {
 	default:
 		return fmt.Sprintf("%s-mysql", clusterName)
 	}
+}
+
+// GetPodHostname returns for an index the pod hostname of a cluster
+func (c *MysqlCluster) GetPodHostname(p int) string {
+	return fmt.Sprintf("%s-%d.%s.%s", c.GetNameForResource(StatefulSet), p,
+		c.GetNameForResource(HeadlessSVC),
+		c.Namespace)
+}
+
+// GetClusterAlias returns the cluster alias that as it is in orchestrator
+func (c *MysqlCluster) GetClusterAlias() string {
+	return fmt.Sprintf("%s.%s", c.Name, c.Namespace)
+}
+
+// GetMasterHost returns name of current master host in a cluster
+func (c *MysqlCluster) GetMasterHost() string {
+	masterHost := c.GetPodHostname(0)
+
+	for _, ns := range c.Status.Nodes {
+		if cond := c.GetNodeCondition(ns.Name, api.NodeConditionMaster); cond != nil &&
+			cond.Status == core.ConditionTrue {
+			masterHost = ns.Name
+		}
+	}
+
+	return masterHost
 }

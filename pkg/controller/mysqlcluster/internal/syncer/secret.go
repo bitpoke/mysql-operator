@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
@@ -36,7 +36,7 @@ const (
 
 // NewSecretSyncer returns secret syncer
 // nolint: gocyclo
-func NewSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster, opt *options.Options) syncer.Interface {
+func NewSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, opt *options.Options) syncer.Interface {
 	obj := &core.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.Spec.SecretName,
@@ -44,7 +44,7 @@ func NewSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.Mysql
 		},
 	}
 
-	return syncer.NewObjectSyncer("Secret", cluster, obj, c, scheme, func(in runtime.Object) error {
+	return syncer.NewObjectSyncer("Secret", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*core.Secret)
 
 		if _, ok := out.Data["ROOT_PASSWORD"]; !ok {

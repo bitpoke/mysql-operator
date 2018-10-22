@@ -17,25 +17,25 @@ limitations under the License.
 package mysqlcluster
 
 import (
+	"github.com/presslabs/controller-util/syncer"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/presslabs/controller-util/syncer"
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 // NewMasterSVCSyncer returns a service syncer for master service
-func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster) syncer.Interface {
+func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
 	obj := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.GetNameForResource(api.MasterService),
+			Name:      cluster.GetNameForResource(mysqlcluster.MasterService),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("MasterSVC", cluster, obj, c, scheme, func(in runtime.Object) error {
+	return syncer.NewObjectSyncer("MasterSVC", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*core.Service)
 
 		out.Spec.Type = "ClusterIP"

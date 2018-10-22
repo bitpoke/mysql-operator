@@ -22,33 +22,33 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 )
 
 // newFinalizerSyncer returns a syncer for mysql cluster that sets the OrchestratorFinalizer
-func newFinalizerSyncer(c client.Client, scheme *runtime.Scheme, cluster *api.MysqlCluster, orcClient orc.Interface) syncer.Interface {
+func newFinalizerSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, orcClient orc.Interface) syncer.Interface {
 
 	// create the orchestrator finalizer
-	return syncer.NewObjectSyncer("OrchestratorFinalizerSyncer", nil, cluster, c, scheme, func(in runtime.Object) error {
-		cluster := in.(*api.MysqlCluster)
+	return syncer.NewObjectSyncer("OrchestratorFinalizerSyncer", nil, cluster.Unwrap(), c, scheme, func(in runtime.Object) error {
+		out := in.(*api.MysqlCluster)
 
 		// always add finalizer, this action is idempotent
-		addFinalizer(cluster, OrchestratorFinalizer)
+		addFinalizer(out, OrchestratorFinalizer)
 
 		// if cluster is deleted then check orchestrator status and remove finalizer if no node is in orchestrator
-		if cluster.DeletionTimestamp != nil {
+		if out.DeletionTimestamp != nil {
 			var (
 				instances InstancesSet
 				err       error
 			)
 			// get status from orchestrator
-			if instances, err = orcClient.Cluster(wrapcluster.NewMysqlClusterWrapper(cluster).GetClusterAlias()); err != nil {
-				log.Error(err, "can't get instances from orchestrator", "cluster", cluster)
+			if instances, err = orcClient.Cluster(cluster.GetClusterAlias()); err != nil {
+				log.V(-1).Info("an error occurred while getting cluster from orchestrator", "error", err)
 			}
 
 			if len(instances) == 0 {
-				removeFinalizer(cluster, OrchestratorFinalizer)
+				removeFinalizer(out, OrchestratorFinalizer)
 			}
 		}
 

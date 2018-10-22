@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 type clusterComponents []runtime.Object
@@ -75,7 +76,7 @@ var _ = Describe("MysqlCluster controller", func() {
 	Describe("when creating a new mysql cluster", func() {
 		var (
 			expectedRequest reconcile.Request
-			cluster         *api.MysqlCluster
+			cluster         *mysqlcluster.MysqlCluster
 			secret          *corev1.Secret
 			components      clusterComponents
 		)
@@ -95,13 +96,15 @@ var _ = Describe("MysqlCluster controller", func() {
 				},
 			}
 
-			cluster = &api.MysqlCluster{
+			theCluster := &api.MysqlCluster{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
 				Spec: api.MysqlClusterSpec{
 					Replicas:   2,
 					SecretName: secret.Name,
 				},
 			}
+
+			cluster = mysqlcluster.New(theCluster)
 
 			components = []runtime.Object{
 				&appsv1.StatefulSet{
@@ -143,7 +146,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			}
 
 			Expect(c.Create(context.TODO(), secret)).To(Succeed())
-			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 			// Initial reconciliation
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
@@ -171,7 +174,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			// manually delete all created resources because GC isn't enabled in the test controller plane
 			removeAllCreatedResource(c, components)
 			c.Delete(context.TODO(), secret)
-			c.Delete(context.TODO(), cluster)
+			c.Delete(context.TODO(), cluster.Unwrap())
 		})
 
 		DescribeTable("the reconciler",
@@ -200,7 +203,7 @@ var _ = Describe("MysqlCluster controller", func() {
 		Describe("the reconciler", func() {
 			It("should update secret and configmap revision annotations on statefulset", func() {
 				sfsKey := types.NamespacedName{
-					Name:      cluster.GetNameForResource(api.StatefulSet),
+					Name:      cluster.GetNameForResource(mysqlcluster.StatefulSet),
 					Namespace: cluster.Namespace,
 				}
 				statefulSet := &appsv1.StatefulSet{}
@@ -210,7 +213,7 @@ var _ = Describe("MysqlCluster controller", func() {
 
 				cfgMap := &corev1.ConfigMap{}
 				Expect(c.Get(context.TODO(), types.NamespacedName{
-					Name:      cluster.GetNameForResource(api.ConfigMap),
+					Name:      cluster.GetNameForResource(mysqlcluster.ConfigMap),
 					Namespace: cluster.Namespace,
 				}, cfgMap)).To(Succeed())
 				Expect(c.Get(context.TODO(), types.NamespacedName{
@@ -224,7 +227,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			It("should update cluster ready condition", func() {
 				// get statefulset
 				sfsKey := types.NamespacedName{
-					Name:      cluster.GetNameForResource(api.StatefulSet),
+					Name:      cluster.GetNameForResource(mysqlcluster.StatefulSet),
 					Namespace: cluster.Namespace,
 				}
 				statefulSet := &appsv1.StatefulSet{}
@@ -253,7 +256,7 @@ func removeAllCreatedResource(c client.Client, clusterComps []runtime.Object) {
 }
 
 // getClusterConditions is a helper func that returns a functions that returns cluster status conditions
-func getClusterConditions(c client.Client, cluster *api.MysqlCluster) func() []api.ClusterCondition {
+func getClusterConditions(c client.Client, cluster *mysqlcluster.MysqlCluster) func() []api.ClusterCondition {
 	return func() []api.ClusterCondition {
 		cl := &api.MysqlCluster{}
 		c.Get(context.TODO(), types.NamespacedName{Name: cluster.Name, Namespace: cluster.Namespace}, cl)

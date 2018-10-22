@@ -17,6 +17,7 @@ limitations under the License.
 package orchestrator
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"time"
@@ -26,23 +27,24 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 
+	"github.com/presslabs/controller-util/syncer"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 	fakeOrc "github.com/presslabs/mysql-operator/pkg/orchestrator/fake"
 )
 
 var _ = Describe("Orchestrator reconciler", func() {
 	var (
-		cluster   *wrapcluster.MysqlCluster
+		cluster   *mysqlcluster.MysqlCluster
 		orcClient *fakeOrc.OrcFakeClient
 		rec       *record.FakeRecorder
-		orcSyncer Syncer
+		orcSyncer syncer.Interface
 	)
 
 	BeforeEach(func() {
@@ -63,14 +65,16 @@ var _ = Describe("Orchestrator reconciler", func() {
 				SecretName: clusterKey.Name,
 			},
 		}
-		orcSyncer = NewOrcUpdater(theCluster, rec, orcClient)
-		cluster = wrapcluster.NewMysqlClusterWrapper(theCluster)
+
+		cluster = mysqlcluster.New(theCluster)
+		orcSyncer = NewOrcUpdater(cluster, rec, orcClient)
 	})
 
 	When("cluster does not exists in orchestrator", func() {
 		It("should register into orchestrator", func() {
 			cluster.Status.ReadyNodes = 1
-			Expect(orcSyncer.Sync()).To(Succeed())
+			_, err := orcSyncer.Sync(context.TODO())
+			Expect(err).To(Succeed())
 			Expect(orcClient.CheckDiscovered(cluster.GetPodHostname(0))).To(Equal(true))
 		})
 	})
@@ -95,7 +99,8 @@ var _ = Describe("Orchestrator reconciler", func() {
 		})
 
 		It("should update cluster status", func() {
-			Expect(orcSyncer.Sync()).To(Succeed())
+			_, err := orcSyncer.Sync(context.TODO())
+			Expect(err).To(Succeed())
 			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionReadOnly, core.ConditionFalse))
 			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionFalse))
 			Expect(cluster.Status.Nodes).To(HaveLen(1))
@@ -104,7 +109,8 @@ var _ = Describe("Orchestrator reconciler", func() {
 		It("should mark cluster having pending recoveries", func() {
 			// AddRecoveries signature: cluster, acked
 			orcClient.AddRecoveries(cluster.GetClusterAlias(), false)
-			Expect(orcSyncer.Sync()).To(Succeed())
+			_, err := orcSyncer.Sync(context.TODO())
+			Expect(err).To(Succeed())
 			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
 		})
 
@@ -114,7 +120,8 @@ var _ = Describe("Orchestrator reconciler", func() {
 
 			// mark cluster as ready
 			cluster.UpdateStatusCondition(api.ClusterConditionReady, core.ConditionTrue, "", "")
-			Expect(orcSyncer.Sync()).To(Succeed())
+			_, err := orcSyncer.Sync(context.TODO())
+			Expect(err).To(Succeed())
 
 			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
 			Expect(orcClient.CheckAck(id)).To(Equal(false))
@@ -132,7 +139,8 @@ var _ = Describe("Orchestrator reconciler", func() {
 				},
 			}
 
-			Expect(orcSyncer.Sync()).To(Succeed())
+			_, err := orcSyncer.Sync(context.TODO())
+			Expect(err).To(Succeed())
 			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
 			Expect(orcClient.CheckAck(id)).To(Equal(true))
 
@@ -142,19 +150,22 @@ var _ = Describe("Orchestrator reconciler", func() {
 		})
 
 		It("should mark master in cluster nodes status", func() {
-			Expect(orcSyncer.Sync()).To(Succeed())
+			_, err := orcSyncer.Sync(context.TODO())
+			Expect(err).To(Succeed())
 			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
 		})
 
 		It("should remove master status when node is unregistered from orchestrator", func() {
 			// sync once to update cluster status
-			Expect(orcSyncer.Sync()).To(Succeed())
+			_, err := orcSyncer.Sync(context.TODO())
+			Expect(err).To(Succeed())
 
 			// remove node from orchestrator
 			orcClient.RemoveInstance(cluster.GetClusterAlias(), cluster.GetPodHostname(0))
 
 			// sync again
-			Expect(orcSyncer.Sync()).To(Succeed())
+			_, err = orcSyncer.Sync(context.TODO())
+			Expect(err).To(Succeed())
 
 			// check for node status
 			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionUnknown))
@@ -177,14 +188,16 @@ var _ = Describe("Orchestrator reconciler", func() {
 			})
 
 			// sync
-			Expect(orcSyncer.Sync()).To(Succeed())
+			_, err := orcSyncer.Sync(context.TODO())
+			Expect(err).To(Succeed())
 
 			// scale down the cluster
 			cluster.Spec.Replicas = 1
 			cluster.Status.ReadyNodes = 1
 
 			// sync
-			Expect(orcSyncer.Sync()).To(Succeed())
+			_, err = orcSyncer.Sync(context.TODO())
+			Expect(err).To(Succeed())
 
 			// check for conditions on node 1 to be unknown
 			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(1))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionUnknown))
@@ -295,7 +308,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 
 		BeforeEach(func() {
 			updater = &orcUpdater{
-				cluster:   wrapcluster.NewMysqlClusterWrapper(cluster.MysqlCluster),
+				cluster:   cluster,
 				recorder:  rec,
 				orcClient: orcClient,
 			}

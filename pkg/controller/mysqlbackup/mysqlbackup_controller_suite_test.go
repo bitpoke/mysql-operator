@@ -18,7 +18,6 @@ limitations under the License.
 package mysqlbackup
 
 import (
-	"io"
 	"path/filepath"
 	"testing"
 
@@ -29,14 +28,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	// logging
-	"github.com/go-logr/zapr"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"github.com/presslabs/mysql-operator/pkg/apis"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 )
 
 var cfg *rest.Config
@@ -47,25 +42,10 @@ func TestMysqlBackupController(t *testing.T) {
 	RunSpecsWithDefaultAndCustomReporters(t, "MysqlBackup Controller Suite", []Reporter{envtest.NewlineReporter{}})
 }
 
-func NewTestLogger(w io.Writer, options ...zap.Option) *zap.Logger {
-	encoderCfg := zapcore.EncoderConfig{
-		MessageKey:     "msg",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.StringDurationEncoder,
-	}
-	sink := zapcore.AddSync(w)
-	core := zapcore.NewCore(zapcore.NewConsoleEncoder(encoderCfg), sink, zap.DebugLevel)
-	return zap.New(core).WithOptions(options...)
-}
-
 var _ = BeforeSuite(func() {
 	var err error
 
-	zapLog := NewTestLogger(GinkgoWriter)
-	logf.SetLogger(zapr.NewLogger(zapLog))
+	logf.SetLogger(testutil.NewTestLogger(GinkgoWriter))
 
 	t = &envtest.Environment{
 		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "config", "crds")},

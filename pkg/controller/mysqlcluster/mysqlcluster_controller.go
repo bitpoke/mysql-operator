@@ -36,9 +36,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+
 	cleaner "github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/cleaner"
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
+	clustersyncer "github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
@@ -146,27 +147,28 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 	log.Info("syncing cluster", "cluster", request.NamespacedName.String())
+	wCluster := mysqlcluster.New(cluster)
 
 	// Set defaults on cluster
 	r.scheme.Default(cluster)
-	wrapcluster.NewMysqlClusterWrapper(cluster).SetDefaults(r.opt)
+	wCluster.SetDefaults(r.opt)
 
-	status := *cluster.Status.DeepCopy()
+	status := *wCluster.Status.DeepCopy()
 	defer func() {
 		if !reflect.DeepEqual(status, cluster.Status) {
-			sErr := r.Status().Update(context.TODO(), cluster)
+			sErr := r.Status().Update(context.TODO(), wCluster.Unwrap())
 			if sErr != nil {
 				log.Error(sErr, "failed to update cluster status", "cluster", cluster)
 			}
 		}
 	}()
 
-	configMapSyncer := mysqlcluster.NewConfigMapSyncer(r.Client, r.scheme, cluster)
+	configMapSyncer := clustersyncer.NewConfigMapSyncer(r.Client, r.scheme, wCluster)
 	if err := syncer.Sync(context.TODO(), configMapSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	secretSyncer := mysqlcluster.NewSecretSyncer(r.Client, r.scheme, cluster, r.opt)
+	secretSyncer := clustersyncer.NewSecretSyncer(r.Client, r.scheme, wCluster, r.opt)
 	if err := syncer.Sync(context.TODO(), secretSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -176,18 +178,18 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 
 	// run the syncers for services, pdb and statefulset
 	syncers := []syncer.Interface{
-		mysqlcluster.NewHeadlessSVCSyncer(r.Client, r.scheme, cluster),
-		mysqlcluster.NewMasterSVCSyncer(r.Client, r.scheme, cluster),
-		mysqlcluster.NewHealthySVCSyncer(r.Client, r.scheme, cluster),
+		clustersyncer.NewHeadlessSVCSyncer(r.Client, r.scheme, wCluster),
+		clustersyncer.NewMasterSVCSyncer(r.Client, r.scheme, wCluster),
+		clustersyncer.NewHealthySVCSyncer(r.Client, r.scheme, wCluster),
 
-		mysqlcluster.NewStatefulSetSyncer(r.Client, r.scheme, cluster, configMapResourceVersion, secretResourceVersion, r.opt),
+		clustersyncer.NewStatefulSetSyncer(r.Client, r.scheme, wCluster, configMapResourceVersion, secretResourceVersion, r.opt),
 	}
 
 	if len(cluster.Spec.MinAvailable) != 0 {
-		syncers = append(syncers, mysqlcluster.NewPDBSyncer(r.Client, r.scheme, cluster))
+		syncers = append(syncers, clustersyncer.NewPDBSyncer(r.Client, r.scheme, wCluster))
 	}
 
-	syncers = append(syncers, r.getPodSyncers(cluster)...)
+	syncers = append(syncers, r.getPodSyncers(wCluster)...)
 
 	// add pods syncers for every node status
 	for _, sync := range syncers {
@@ -211,20 +213,20 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 // pod syncer. We need to have replicas first to avoid having two pods with
 // master label in the same time. This can happen for a small period of time
 // when master changes.
-func (r *ReconcileMysqlCluster) getPodSyncers(cluster *mysqlv1alpha1.MysqlCluster) []syncer.Interface {
+func (r *ReconcileMysqlCluster) getPodSyncers(cluster *mysqlcluster.MysqlCluster) []syncer.Interface {
 	syncers := []syncer.Interface{}
 
 	// add replica syncers, those should be the first in this list.
 	for _, ns := range cluster.Status.Nodes {
 		if !getCondAsBool(&ns, mysqlv1alpha1.NodeConditionMaster) {
-			syncers = append(syncers, mysqlcluster.NewPodSyncer(r.Client, r.scheme, cluster, ns.Name))
+			syncers = append(syncers, clustersyncer.NewPodSyncer(r.Client, r.scheme, cluster, ns.Name))
 		}
 	}
 
 	// add master syncers, this should be the last, and should be only one
 	for _, ns := range cluster.Status.Nodes {
 		if getCondAsBool(&ns, mysqlv1alpha1.NodeConditionMaster) {
-			syncers = append(syncers, mysqlcluster.NewPodSyncer(r.Client, r.scheme, cluster, ns.Name))
+			syncers = append(syncers, clustersyncer.NewPodSyncer(r.Client, r.scheme, cluster, ns.Name))
 		}
 	}
 
@@ -233,6 +235,6 @@ func (r *ReconcileMysqlCluster) getPodSyncers(cluster *mysqlv1alpha1.MysqlCluste
 }
 
 func getCondAsBool(status *mysqlv1alpha1.NodeStatus, cond mysqlv1alpha1.NodeConditionType) bool {
-	index, exists := wrapcluster.GetNodeConditionIndex(status, cond)
+	index, exists := mysqlcluster.GetNodeConditionIndex(status, cond)
 	return exists && status.Conditions[index].Status == corev1.ConditionTrue
 }

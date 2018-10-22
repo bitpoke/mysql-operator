@@ -27,18 +27,15 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 
 	"golang.org/x/net/context"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 	fakeOrc "github.com/presslabs/mysql-operator/pkg/orchestrator/fake"
 )
@@ -63,9 +60,9 @@ var _ = Describe("Orchestrator controller", func() {
 		// noReconcileTime + reconcileTimeout > reconcileTimePeriod so that in this time period only one reconcile happens.
 		// noReconcileTime represents time required to pass without a reconcile happening (used with Consistently tests)
 		// it is set to 90% of the reconcileTimePeriod
-		noReconcileTime = reconcileTimePeriod * 9 / 10
+		noReconcileTime = reconcileTimePeriod * 95 / 100
 		// reconcileTimeout represents time to wait AFTER noReconcileTimeout has passed for a reconciliation to happen
-		reconcileTimeout = 3 * (reconcileTimePeriod - noReconcileTime)
+		reconcileTimeout = 10 * (reconcileTimePeriod - noReconcileTime)
 
 		var recFn reconcile.Reconciler
 
@@ -88,7 +85,7 @@ var _ = Describe("Orchestrator controller", func() {
 	Describe("after creating a new mysql cluster", func() {
 		var (
 			expectedRequest reconcile.Request
-			cluster         *api.MysqlCluster
+			cluster         *mysqlcluster.MysqlCluster
 			secret          *corev1.Secret
 			clusterKey      types.NamespacedName
 		)
@@ -110,7 +107,7 @@ var _ = Describe("Orchestrator controller", func() {
 				},
 			}
 
-			cluster = &api.MysqlCluster{
+			theCluster := &api.MysqlCluster{
 				ObjectMeta: metav1.ObjectMeta{Name: clusterKey.Name, Namespace: clusterKey.Namespace},
 				Spec: api.MysqlClusterSpec{
 					Replicas:   1,
@@ -118,16 +115,21 @@ var _ = Describe("Orchestrator controller", func() {
 				},
 			}
 
+			cluster = mysqlcluster.New(theCluster)
+
+			By("creating a new cluster")
 			Expect(c.Create(context.TODO(), secret)).To(Succeed())
-			Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 			// update ready nodes
 			cluster.Status.ReadyNodes = 1
-			Expect(c.Status().Update(context.TODO(), cluster)).To(Succeed())
+			Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 			// expect to not receive any event when a cluster is created, but
 			// just after reconcile time passed then receive a reconcile event
 			Consistently(requests, noReconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
+
+			By("waiting a reconcile event")
 			Eventually(requests, reconcileTimeout).Should(Receive(Equal(expectedRequest)))
 
 		})
@@ -135,9 +137,13 @@ var _ = Describe("Orchestrator controller", func() {
 		AfterEach(func() {
 			// manually delete all created resources because GC isn't enabled in
 			// the test controller plane
-			removeAllCreatedResource(c, cluster)
-			c.Delete(context.TODO(), secret)
-			c.Delete(context.TODO(), cluster)
+			Expect(c.Delete(context.TODO(), secret)).To(Succeed())
+
+			// remove finalizers and delete the cluster
+			c.Get(context.TODO(), clusterKey, cluster.Unwrap())
+			cluster.Finalizers = nil
+			c.Update(context.TODO(), cluster.Unwrap())
+			c.Delete(context.TODO(), cluster.Unwrap())
 		})
 
 		It("should trigger reconciliation after noReconcileTime", func() {
@@ -163,79 +169,51 @@ var _ = Describe("Orchestrator controller", func() {
 
 		It("should unregister cluster when deleting it from kubernetes", func() {
 			// delete the cluster
-			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
+			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 			// wait few seconds for a request, in total, noReconcileTime + reconcileTimeout,
 			// to catch a reconcile event. This is the request
 			// that unregister cluster from orchestrator
+			By("unregister nodes from orchestrator")
 			Eventually(requests, noReconcileTime+reconcileTimeout).Should(Receive(Equal(expectedRequest)))
 
-			wCluster := wrapcluster.NewMysqlClusterWrapper(cluster)
-			_, err := orcClient.Cluster(wCluster.GetClusterAlias())
+			_, err := orcClient.Cluster(cluster.GetClusterAlias())
 			Expect(err).ToNot(Succeed())
 
 			// this is the requests that removes the finalizer and then the
 			// cluster is deleted
+			By("reconcile that removes the finalizer")
 			Eventually(requests, noReconcileTime+reconcileTimeout).Should(Receive(Equal(expectedRequest)))
 
 			// wait few seconds without request
+			By("wait few seconds without reconcile requests")
 			Consistently(requests, 3*noReconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
 		})
 
 		It("should be registered in orchestrator", func() {
 			// check the cluster is in orchestrator
-			wCluster := wrapcluster.NewMysqlClusterWrapper(cluster)
-			insts, err := orcClient.Cluster(wCluster.GetClusterAlias())
+			insts, err := orcClient.Cluster(cluster.GetClusterAlias())
 			Expect(err).To(Succeed())
-			Expect(insts).To(haveInstance(wCluster.GetPodHostname(0)))
+			Expect(insts).To(haveInstance(cluster.GetPodHostname(0)))
+		})
+
+		It("should update the status after a sync", func() {
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+			})
+
+			// wait reconciliation request
+			Eventually(requests, noReconcileTime+reconcileTimeout).Should(Receive(Equal(expectedRequest)))
+
+			// get latest cluster values
+			Expect(c.Get(context.TODO(), clusterKey, cluster.Unwrap())).To(Succeed())
+
+			// check for status to be updated
+			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, corev1.ConditionTrue))
 		})
 	})
 })
-
-func removeAllCreatedResource(c client.Client, cluster *api.MysqlCluster) {
-	objs := []runtime.Object{
-		&appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.StatefulSet),
-				Namespace: cluster.Namespace,
-			},
-		},
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.HeadlessSVC),
-				Namespace: cluster.Namespace,
-			},
-		},
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.MasterService),
-				Namespace: cluster.Namespace,
-			},
-		},
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.HealthyNodesService),
-				Namespace: cluster.Namespace,
-			},
-		},
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.ConfigMap),
-				Namespace: cluster.Namespace,
-			},
-		},
-		&policyv1beta1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.PodDisruptionBudget),
-				Namespace: cluster.Namespace,
-			},
-		},
-	}
-
-	for _, obj := range objs {
-		c.Delete(context.TODO(), obj)
-	}
-}
 
 // haveInstance returns a GomegaMatcher that checks if specified host is in
 // provided instances list

@@ -27,26 +27,22 @@ import (
 
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	sScheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	clusterwrap "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 var _ = Describe("Pod syncer", func() {
 	var (
-		cluster  *api.MysqlCluster
-		wCluster *clusterwrap.MysqlCluster
-		scheme   *runtime.Scheme
+		cluster *mysqlcluster.MysqlCluster
 	)
 
 	BeforeEach(func() {
-		scheme = sScheme.Scheme
 		name := fmt.Sprintf("cluster-%d", rand.Int31())
-		cluster = &api.MysqlCluster{
+		theCluster := &api.MysqlCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: "default",
@@ -59,28 +55,28 @@ var _ = Describe("Pod syncer", func() {
 				SecretName: "the-secret",
 			},
 		}
-		wCluster = clusterwrap.NewMysqlClusterWrapper(cluster)
-		Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+		cluster = mysqlcluster.New(theCluster)
+		Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 		// create pods and update cluster nodes conditions
-		wCluster.UpdateNodeConditionStatus(wCluster.GetPodHostname(0), api.NodeConditionMaster, core.ConditionTrue)
+		cluster.UpdateNodeConditionStatus(cluster.GetPodHostname(0), api.NodeConditionMaster, core.ConditionTrue)
 		Expect(c.Create(context.TODO(), getPod(cluster, 0))).To(Succeed())
-		wCluster.UpdateNodeConditionStatus(wCluster.GetPodHostname(1), api.NodeConditionMaster, core.ConditionFalse)
+		cluster.UpdateNodeConditionStatus(cluster.GetPodHostname(1), api.NodeConditionMaster, core.ConditionFalse)
 		Expect(c.Create(context.TODO(), getPod(cluster, 1))).To(Succeed())
 
-		Expect(c.Status().Update(context.TODO(), cluster)).To(Succeed())
+		Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 		// run the syncers
-		_, err := NewPodSyncer(c, scheme, cluster, wCluster.GetPodHostname(0)).Sync(context.TODO())
+		_, err := NewPodSyncer(c, scheme.Scheme, cluster, cluster.GetPodHostname(0)).Sync(context.TODO())
 		Expect(err).To(Succeed())
-		_, err = NewPodSyncer(c, scheme, cluster, wCluster.GetPodHostname(1)).Sync(context.TODO())
+		_, err = NewPodSyncer(c, scheme.Scheme, cluster, cluster.GetPodHostname(1)).Sync(context.TODO())
 		Expect(err).To(Succeed())
 
 	})
 
 	AfterEach(func() {
 		// remove created cluster
-		c.Delete(context.TODO(), cluster)
+		c.Delete(context.TODO(), cluster.Unwrap())
 		// remove all created pods
 		podList := &core.PodList{}
 		c.List(context.TODO(), &client.ListOptions{}, podList)
@@ -103,18 +99,18 @@ var _ = Describe("Pod syncer", func() {
 	})
 
 	It("should fail if pod does not exist", func() {
-		_, err := NewPodSyncer(c, scheme, cluster, wCluster.GetPodHostname(2)).Sync(context.TODO())
+		_, err := NewPodSyncer(c, scheme.Scheme, cluster, cluster.GetPodHostname(2)).Sync(context.TODO())
 		Expect(err).ToNot(Succeed())
 	})
 
 	It("should mark pods as healty", func() {
-		wCluster.UpdateNodeConditionStatus(wCluster.GetPodHostname(1), api.NodeConditionLagged, core.ConditionFalse)
-		wCluster.UpdateNodeConditionStatus(wCluster.GetPodHostname(1), api.NodeConditionReplicating, core.ConditionTrue)
+		cluster.UpdateNodeConditionStatus(cluster.GetPodHostname(1), api.NodeConditionLagged, core.ConditionFalse)
+		cluster.UpdateNodeConditionStatus(cluster.GetPodHostname(1), api.NodeConditionReplicating, core.ConditionTrue)
 		// update cluster
-		Expect(c.Status().Update(context.TODO(), cluster)).To(Succeed())
+		Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 		// call the syncer
-		_, err := NewPodSyncer(c, scheme, cluster, wCluster.GetPodHostname(1)).Sync(context.TODO())
+		_, err := NewPodSyncer(c, scheme.Scheme, cluster, cluster.GetPodHostname(1)).Sync(context.TODO())
 		Expect(err).To(Succeed())
 
 		pod1 := &core.Pod{}
@@ -124,18 +120,18 @@ var _ = Describe("Pod syncer", func() {
 	})
 })
 
-func getPodName(cluster *api.MysqlCluster, id int) string {
-	return fmt.Sprintf("%s-%d", cluster.GetNameForResource(api.StatefulSet), id)
+func getPodName(cluster *mysqlcluster.MysqlCluster, id int) string {
+	return fmt.Sprintf("%s-%d", cluster.GetNameForResource(mysqlcluster.StatefulSet), id)
 }
 
-func getPodKey(cluster *api.MysqlCluster, id int) types.NamespacedName {
+func getPodKey(cluster *mysqlcluster.MysqlCluster, id int) types.NamespacedName {
 	return types.NamespacedName{
 		Name:      getPodName(cluster, id),
 		Namespace: cluster.Namespace,
 	}
 }
 
-func getPod(cluster *api.MysqlCluster, id int) *core.Pod {
+func getPod(cluster *mysqlcluster.MysqlCluster, id int) *core.Pod {
 	return &core.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      getPodName(cluster, id),
