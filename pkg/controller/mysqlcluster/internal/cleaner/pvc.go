@@ -146,7 +146,7 @@ func getLabelString(labels map[string]string) string {
 	return fmt.Sprintf("app=%s,mysql_cluster=%s", labels["app"], labels["mysql_cluster"])
 }
 
-func byOrdinal(allClaims *core.PersistentVolumeClaimList, sts *apps.StatefulSet) map[int]*core.PersistentVolumeClaim {
+func byOrdinal(allClaims *core.PersistentVolumeClaimList) map[int]*core.PersistentVolumeClaim {
 	claims := map[int]*core.PersistentVolumeClaim{}
 
 	for _, pvc := range allClaims.Items {
