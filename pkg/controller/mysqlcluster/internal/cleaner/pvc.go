@@ -139,7 +139,7 @@ func (p *PvcCleaner) getClaims(ctx context.Context, c client.Client) (map[int]*c
 		return nil, err
 	}
 
-	return byOrdinal(pvcs, sts), nil
+	return byOrdinal(pvcs), nil
 }
 
 func getLabelString(labels map[string]string) string {
