@@ -37,6 +37,7 @@ import (
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+	cleaner "github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/cleaner"
 	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
@@ -198,6 +199,13 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		}
 	}
 
+	// Perform any cleanup
+	pvcCleaner := cleaner.NewPvcCleaner(cluster, r.opt)
+	err = pvcCleaner.Run(context.TODO(), r.Client, r.scheme, r.recorder)
+
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 	return reconcile.Result{}, nil
 }
 
