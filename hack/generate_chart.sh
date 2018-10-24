@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 tag=${1:-$(git describe --tags)}
 APP_VERSION=$(echo ${tag} | sed 's/^v//')

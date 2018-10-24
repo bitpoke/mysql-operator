@@ -11,10 +11,10 @@ For more open-source projects, check [Presslabs Code](https://www.presslabs.org/
 
 The main goals of this operator are:
 
-1. Easily deploy mysql clusters in kubernetes (cluster-per-service model)
-2. Friendly to devops (monitoring, availability, scalability and backup stories solved)
-3. Out-of-the-box backups (scheduled and on demand) and point-in-time recovery
-4. Support for cloning in cluster and across clusters
+ 1. Easily deploy mysql clusters in kubernetes (cluster-per-service model)
+ 2. Friendly to devops (monitoring, availability, scalability and backup stories solved)
+ 3. Out-of-the-box backups (scheduled and on demand) and point-in-time recovery
+ 4. Support for cloning in cluster and across clusters
 
 The operator is to be considered alpha and not suited for critical production workloads. We (Presslabs) sucessfully use it at the moment for some non-critical production workloads.
 
@@ -26,14 +26,13 @@ The current developers of the project can be reached via [email](mailto:ping@pre
 ## Controller deploy
 
 To deploy this controller, use the provided helm chart, by running:
-```
+```shell
 helm repo add presslabs https://presslabs.github.io/charts
 helm install presslabs/mysql-operator --name mysql-operator
 ```
 
 For more information about chart values see chart [README](hack/charts/mysql-operator/README.md).
 This chart will deploy the controller along with an [orchestrator](https://github.com/github/orchestrator) cluster.
-
 
 ## Deploying a cluster
 __tl;dr__
@@ -62,15 +61,15 @@ spec:
 
 For a more in depth configuration, check [examples](examples/).
 
-### To list the deployed clusters use:
-```
+### To list the deployed clusters use
+```shell
 $ kubectl get mysql
 NAME         AGE
 my-cluster   1m
 ```
 
-### To check cluster state use:
-```
+### To check cluster state use
+```shell
 $ kubectl describe mysql my-cluster
 ...
 Status:
@@ -92,7 +91,7 @@ Backups are stored on object storage services like S3 or google cloud storage. I
 
 You need to specify the `backupBucketUri` for the cluster to an uri like `s3://BUCKET_NAME`, and a secret with the following structure:
 
-```
+```yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -110,7 +109,7 @@ data:
 ### Setup backup to gcloud
 You need to specify the `backupBucketUri` for the cluster to an uri like `gs://BUCKET_NAME`, and a secret with the following structure:
 
-```
+```yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -134,15 +133,15 @@ spec:
 ```
 
 ### Listing all backups
-```
+```shell
 $ kubectl get mysqlbackup
 NAME                                  AGE
 my-cluster-backup                     1m
 my-cluster-auto-backup-20180402-1604  1d
 ```
 
-### Checking the backup state:
-```
+### Checking the backup state
+```shell
 $ kubectl describe backup my-cluster-backup
 ...
 Status:
@@ -160,7 +159,7 @@ Status:
 To connect to orchestrator dashboard you have to port forward orchestrator port
 3000 to your local machine by using:
 
-```
+```shell
 kubectl port-forward mysql-operator-orchestrator-0 3000
 ```
 
