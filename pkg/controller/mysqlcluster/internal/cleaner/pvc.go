@@ -23,19 +23,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/presslabs/mysql-operator/pkg/options"
-
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/options"
+	apps "k8s.io/api/apps/v1"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-
-	apps "k8s.io/api/apps/v1"
-	core "k8s.io/api/core/v1"
 )
 
 const (
@@ -92,7 +91,7 @@ func (p *PvcCleaner) Run(ctx context.Context, c client.Client, scheme *runtime.S
 		return nil
 	}
 
-	replicas := sts.Spec.Replicas
+	replicas := *sts.Spec.Replicas
 
 	// Find any pvcs with higher ordinal than replicas and delete them
 	claims, err := p.getClaims(ctx, c)
@@ -104,35 +103,39 @@ func (p *PvcCleaner) Run(ctx context.Context, c client.Client, scheme *runtime.S
 	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
 
 	for _, k := range keys {
-		if int32(k) >= *replicas {
+		if int32(k) >= replicas {
 			log.Info("cleaning up", "pvc", claims[k])
 			if err := deleteClaim(ctx, c, recorder, sts, claims[k]); err != nil {
 				log.Error(err, "deleting claim")
+				return err
 			}
 		}
 	}
 	return nil
 }
 
-func deleteClaim(ctx context.Context, c client.Client, recorder record.EventRecorder, sts *apps.StatefulSet, pvc *core.PersistentVolumeClaim) error {
+func deleteClaim(ctx context.Context, c client.Client, recorder record.EventRecorder,
+	sts *apps.StatefulSet, pvc *core.PersistentVolumeClaim) error {
 	err := c.Delete(ctx, pvc)
 	if err != nil {
-		recorder.Event(sts, core.EventTypeWarning, deleteFail, fmt.Sprintf(messagePvcNotDeleted, pvc.Name, sts.Name))
+		recorder.Event(sts, core.EventTypeWarning, deleteFail,
+			fmt.Sprintf(messagePvcNotDeleted, pvc.Name, sts.Name))
 		return err
 	}
 
-	recorder.Event(sts, core.EventTypeNormal, deleteSuccess, fmt.Sprintf(messagePvcDeleted, pvc.Name, sts.Name))
+	recorder.Event(sts, core.EventTypeNormal, deleteSuccess,
+		fmt.Sprintf(messagePvcDeleted, pvc.Name, sts.Name))
 	return nil
 }
+
 func (p *PvcCleaner) getClaims(ctx context.Context, c client.Client) (map[int]*core.PersistentVolumeClaim, error) {
 	sts := p.sts
 	stsMeta := sts.ObjectMeta
 	pvcs := &core.PersistentVolumeClaimList{}
 	lo := &client.ListOptions{
-		Namespace: stsMeta.GetNamespace(),
-		Raw: &metav1.ListOptions{
-			LabelSelector: getLabelString(p.cluster.GetLabels()),
-		}}
+		Namespace:     stsMeta.GetNamespace(),
+		LabelSelector: labels.SelectorFromSet(p.cluster.GetLabels()),
+	}
 	err := c.List(ctx, lo, pvcs)
 
 	if err != nil {
@@ -142,25 +145,21 @@ func (p *PvcCleaner) getClaims(ctx context.Context, c client.Client) (map[int]*c
 	return byOrdinal(pvcs), nil
 }
 
-func getLabelString(labels map[string]string) string {
-	return fmt.Sprintf("app=%s,mysql_cluster=%s", labels["app"], labels["mysql_cluster"])
-}
-
 func byOrdinal(allClaims *core.PersistentVolumeClaimList) map[int]*core.PersistentVolumeClaim {
 	claims := map[int]*core.PersistentVolumeClaim{}
 
-	for _, pvc := range allClaims.Items {
-		if pvc.DeletionTimestamp != nil {
-			log.V(2).Info("being deleted, skipping", "pvc", pvc.Name)
+	for i := 0; i < len(allClaims.Items); i++ {
+		if allClaims.Items[i].DeletionTimestamp != nil {
+			log.V(2).Info("being deleted, skipping", "pvc", allClaims.Items[i].Name)
 			continue
 		}
 
-		_, ordinal, err := extract(pvc.Name)
+		_, ordinal, err := extract(allClaims.Items[i].Name)
 		if err != nil {
 			continue
 		}
 
-		claims[ordinal] = &pvc
+		claims[ordinal] = &allClaims.Items[i]
 
 	}
 	return claims
