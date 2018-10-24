@@ -24,24 +24,29 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/golang/glog"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
+
+var log = logf.Log.WithName("orchestrator.client")
 
 type orcError struct {
 	HTTPStatus int
+	Path       string
 	Message    string
 	Details    interface{}
 }
 
 func (e orcError) Error() string {
-	return fmt.Sprintf("[orc]: status: %d msg: %s, details: %v",
-		e.HTTPStatus, e.Message, e.Details)
+	return fmt.Sprintf("[orc]: status: %d path: %s msg: %s, details: %v",
+		e.HTTPStatus, e.Path, e.Message, e.Details)
 }
 
 // NewOrcError returns a specific orchestrator error with extra details
-func NewOrcError(resp *http.Response) error {
+func NewOrcError(resp *http.Response, path string, details interface{}) error {
 	rsp := orcError{
 		HTTPStatus: resp.StatusCode,
+		Path:       path,
+		Details:    details,
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -51,8 +56,8 @@ func NewOrcError(resp *http.Response) error {
 	}
 
 	if err = json.Unmarshal(body, &rsp); err != nil {
-		glog.V(3).Infof("Unmarshal data is: %s", string(body))
-		rsp.Message = fmt.Sprintf("at error, json unmarshal error: %s", err)
+		log.V(1).Info("error when unmarhal error data", "body_b64enc", body)
+		rsp.Message = fmt.Sprintf("can't get more details, in error: error: %s, body: %s", err, body)
 		return rsp
 	}
 
@@ -60,28 +65,38 @@ func NewOrcError(resp *http.Response) error {
 }
 
 // NewOrcErrorMsg returns an orchestrator error with extra msg
-func NewOrcErrorMsg(msg string) error {
+func NewOrcErrorMsg(msg string, path string) error {
 	return orcError{
 		HTTPStatus: 0,
 		Message:    msg,
+		Path:       path,
 	}
 }
 
 func (o *orchestrator) makeGetRequest(path string, out interface{}) error {
 	uri := fmt.Sprintf("%s/%s", o.connectURI, path)
-	glog.V(2).Infof("Orc request on: %s", uri)
+	log.V(2).Info("new orc request", "uri", uri)
 
-	resp, err := http.Get(uri)
+	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
-		return NewOrcErrorMsg(err.Error())
+		return NewOrcErrorMsg(fmt.Sprintf("can't create request: %s", err.Error()), path)
 	}
 
-	if err := unmarshalJSON(resp.Body, out); err != nil {
-		return NewOrcError(resp)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept-Encoding", "identity")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return NewOrcErrorMsg(err.Error(), path)
 	}
 
 	if resp.StatusCode >= 500 {
-		return NewOrcError(resp)
+		return NewOrcError(resp, path, nil)
+	}
+
+	if err := unmarshalJSON(resp.Body, out); err != nil {
+		return NewOrcError(resp, path, err)
 	}
 
 	return nil
@@ -116,7 +131,7 @@ func unmarshalJSON(in io.Reader, obj interface{}) error {
 	}
 
 	if err = json.Unmarshal(body, obj); err != nil {
-		glog.V(4).Infof("Unmarshal data is: %s", string(body))
+		log.V(1).Info("error unmarshal data", "body_b64enc", body)
 		return err
 	}
 

@@ -60,13 +60,20 @@ func (ou *orcUpdater) GetOwner() runtime.Object { return ou.cluster }
 func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 	// get instances from orchestrator
 	var (
-		instances  InstancesSet
-		err        error
-		recoveries []orc.TopologyRecovery
+		instances    InstancesSet
+		err          error
+		recoveries   []orc.TopologyRecovery
+		maintenances []orc.Maintenance
 	)
 
 	if instances, err = ou.orcClient.Cluster(ou.cluster.GetClusterAlias()); err != nil {
-		log.V(-1).Info("can't get instances from orchestrator", "alias", ou.cluster.GetClusterAlias(), "error", err)
+		log.V(-1).Info("can't get instances from orchestrator", "alias", ou.cluster.GetClusterAlias(), "error", err.Error())
+	}
+
+	if len(instances) != 0 {
+		if maintenances, err = ou.orcClient.Maintenance(); err != nil {
+			log.V(-1).Info("can't get mainanaces from orchestrator", "alias", ou.cluster.GetClusterAlias(), "error", err.Error())
+		}
 	}
 
 	// register nodes in orchestrator if needed, or remove nodes from status
@@ -76,7 +83,7 @@ func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 	ou.removeNodeConditionNotInOrc(instances)
 
 	// set readonly in orchestrator if needed
-	if err = ou.markReadOnlyNodesInOrc(instances); err != nil {
+	if err = ou.markReadOnlyNodesInOrc(instances, maintenances); err != nil {
 		log.Error(err, "error setting Master readOnly/writable", "instances", instances)
 	}
 	// update cluster status accordingly with orchestrator
@@ -84,7 +91,7 @@ func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 
 	// get recoveries for this cluster
 	if recoveries, err = ou.orcClient.AuditRecovery(ou.cluster.GetClusterAlias()); err != nil {
-		log.V(-1).Info("can't get recoveries from orchestrator", "alias", ou.cluster.GetClusterAlias(), "error", err)
+		log.V(-1).Info("can't get recoveries from orchestrator", "alias", ou.cluster.GetClusterAlias(), "error", err.Error())
 	}
 
 	// update cluster status
@@ -111,6 +118,8 @@ func (ou *orcUpdater) updateStatusFromOrc(insts InstancesSet) {
 	if ou.cluster.Spec.MaxSlaveLatency != nil {
 		maxSlaveLatency = *ou.cluster.Spec.MaxSlaveLatency
 	}
+
+	master := insts.DetermineMaster()
 
 	// update conditions for every node
 	for _, node := range insts {
@@ -142,8 +151,12 @@ func (ou *orcUpdater) updateStatusFromOrc(insts InstancesSet) {
 			ou.updateNodeCondition(host, api.NodeConditionReplicating, core.ConditionFalse)
 		}
 
-		// set masters on false
-		ou.updateNodeCondition(host, api.NodeConditionMaster, core.ConditionFalse)
+		// set masters condition on node
+		if master != nil && host == master.Key.Hostname {
+			ou.updateNodeCondition(host, api.NodeConditionMaster, core.ConditionTrue)
+		} else {
+			ou.updateNodeCondition(host, api.NodeConditionMaster, core.ConditionFalse)
+		}
 
 		// set node read only
 		if node.ReadOnly {
@@ -154,14 +167,6 @@ func (ou *orcUpdater) updateStatusFromOrc(insts InstancesSet) {
 
 		// check if cluster is read only
 		isReadOnly = isReadOnly && node.ReadOnly
-	}
-
-	// set master node Master condition on True
-	master := insts.DetermineMaster()
-	if master != nil {
-		ou.updateNodeCondition(master.Key.Hostname, api.NodeConditionMaster, core.ConditionTrue)
-	} else {
-		log.Info("error acquiring master name", "instances", insts)
 	}
 
 	// set cluster ReadOnly condition
@@ -186,7 +191,8 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) InstancesSet {
 		instancesFiltered InstancesSet
 	)
 
-	log.Info("nodes (un)registrations", "instances", instances, "readyNodes", ou.cluster.Status.ReadyNodes)
+	log.V(1).Info("nodes (un)registrations", "readyNodes", ou.cluster.Status.ReadyNodes)
+	log.V(2).Info("instances", "instances", instances)
 
 	for i := 0; i < ou.cluster.Status.ReadyNodes; i++ {
 		host := ou.cluster.GetPodHostname(i)
@@ -355,14 +361,22 @@ func (ou *orcUpdater) setWritableNode(inst orc.Instance) error {
 	return nil
 }
 
-func (ou *orcUpdater) beginNodeMaintenance(inst orc.Instance) error {
+func (ou *orcUpdater) beginNodeMaintenance(inst orc.Instance, isInMaintenance bool) error {
+
+	if isInMaintenance {
+		return nil
+	}
 
 	log.Info("set node in maintenance", "node", inst.Key.Hostname)
 	return ou.orcClient.BeginMaintenance(inst.Key, "mysqlcontroller", "clusterReadOnly")
 
 }
 
-func (ou *orcUpdater) endNodeMaintenance(inst orc.Instance) error {
+func (ou *orcUpdater) endNodeMaintenance(inst orc.Instance, isInMaintenance bool) error {
+
+	if !isInMaintenance {
+		return nil
+	}
 
 	log.Info("set node out of maintenance", "node", inst.Key.Hostname)
 	return ou.orcClient.EndMaintenance(inst.Key)
@@ -379,14 +393,16 @@ func (ou *orcUpdater) setReadOnlyNode(inst orc.Instance) error {
 }
 
 // nolint: gocyclo
-func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet) error {
+func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet, maintenances []orc.Maintenance) error {
 	var err error
 	master := insts.DetermineMaster()
 	if master == nil {
 		// master is not found
 		// set cluster read only
 		for _, inst := range insts {
-			if err = ou.beginNodeMaintenance(inst); err != nil {
+			isInMaintenance := isInstInMaintenance(inst.Key, maintenances)
+
+			if err = ou.beginNodeMaintenance(inst, isInMaintenance); err != nil {
 				log.Error(err, "failed to begin maintenance", "instance", inst)
 			}
 			if err = ou.setReadOnlyNode(inst); err != nil {
@@ -398,15 +414,17 @@ func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet) error {
 
 	// master is determinated
 	for _, inst := range insts {
+		isInMaintenance := isInstInMaintenance(inst.Key, maintenances)
+
 		if ou.cluster.Spec.ReadOnly {
-			if err = ou.beginNodeMaintenance(inst); err != nil {
+			if err = ou.beginNodeMaintenance(inst, isInMaintenance); err != nil {
 				log.Error(err, "failed to begin maintenance", "instance", inst)
 			}
 			if err = ou.setReadOnlyNode(inst); err != nil {
 				log.Error(err, "failed to set read only", "instance", inst)
 			}
 		} else {
-			if err = ou.endNodeMaintenance(inst); err != nil {
+			if err = ou.endNodeMaintenance(inst, isInMaintenance); err != nil {
 				log.Error(err, "failed to end maintenance", "instance", inst)
 			}
 			if inst.Key.Hostname == master.Key.Hostname {
@@ -488,4 +506,14 @@ func makeRecoveryMessage(acks []orc.TopologyRecovery) string {
 	}
 
 	return strings.Join(texts, " ")
+}
+
+func isInstInMaintenance(instKey orc.InstanceKey, maintenances []orc.Maintenance) bool {
+	for _, m := range maintenances {
+		if m.Key == instKey {
+			return true
+		}
+	}
+
+	return false
 }

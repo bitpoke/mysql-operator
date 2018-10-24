@@ -37,6 +37,7 @@ type Interface interface {
 
 	BeginMaintenance(key InstanceKey, owner, reason string) error
 	EndMaintenance(key InstanceKey) error
+	Maintenance() ([]Maintenance, error)
 }
 
 type orchestrator struct {
@@ -140,4 +141,13 @@ func (o *orchestrator) EndMaintenance(key InstanceKey) error {
 		return err
 	}
 	return nil
+}
+
+func (o *orchestrator) Maintenance() ([]Maintenance, error) {
+	var maintenances []Maintenance
+	if err := o.makeGetRequest("maintenance", &maintenances); err != nil {
+		return nil, err
+	}
+
+	return maintenances, nil
 }

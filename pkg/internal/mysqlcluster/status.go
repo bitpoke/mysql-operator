@@ -99,7 +99,7 @@ func updateNodeCondition(ns *api.NodeStatus, cType api.NodeConditionType,
 	t := time.Now()
 
 	if len(ns.Conditions) == 0 {
-		log.V(4).Info(fmt.Sprintf("Setting lastTransitionTime for node "+
+		log.V(3).Info(fmt.Sprintf("Setting lastTransitionTime for node "+
 			"%q condition %q to %v", ns.Name, cType, t))
 		newCondition.LastTransitionTime = metav1.NewTime(t)
 		ns.Conditions = []api.NodeCondition{newCondition}
@@ -108,7 +108,7 @@ func updateNodeCondition(ns *api.NodeStatus, cType api.NodeConditionType,
 		if i, exist := GetNodeConditionIndex(ns, cType); exist {
 			cond := ns.Conditions[i]
 			if cond.Status != newCondition.Status {
-				log.V(4).Info(fmt.Sprintf("Found status change for node "+
+				log.V(3).Info(fmt.Sprintf("Found status change for node "+
 					"%q condition %q: %q -> %q; setting lastTransitionTime to %v",
 					ns.Name, cType, cond.Status, cStatus, t))
 				newCondition.LastTransitionTime = metav1.NewTime(t)
@@ -116,11 +116,11 @@ func updateNodeCondition(ns *api.NodeStatus, cType api.NodeConditionType,
 			} else {
 				newCondition.LastTransitionTime = cond.LastTransitionTime
 			}
-			log.V(4).Info(fmt.Sprintf("Setting lastTransitionTime for node "+
+			log.V(3).Info(fmt.Sprintf("Setting lastTransitionTime for node "+
 				"%q condition %q to %q", ns.Name, cType, cStatus))
 			ns.Conditions[i] = newCondition
 		} else {
-			log.V(4).Info(fmt.Sprintf("Setting new condition for node %q, condition %q to %q",
+			log.V(3).Info(fmt.Sprintf("Setting new condition for node %q, condition %q to %q",
 				ns.Name, cType, cStatus))
 			newCondition.LastTransitionTime = metav1.NewTime(t)
 			ns.Conditions = append(ns.Conditions, newCondition)
