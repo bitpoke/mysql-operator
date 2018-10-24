@@ -11,10 +11,10 @@ For more open-source projects, check [Presslabs Code](https://www.presslabs.org/
 
 The main goals of this operator are:
 
-1. Easily deploy mysql clusters in kubernetes (cluster-per-service model)
-2. Friendly to devops (monitoring, availability, scalability and backup stories solved)
-3. Out-of-the-box backups (scheduled and on demand) and point-in-time recovery
-4. Support for cloning in cluster and across clusters
+ 1. Easily deploy mysql clusters in kubernetes (cluster-per-service model)
+ 2. Friendly to devops (monitoring, availability, scalability and backup stories solved)
+ 3. Out-of-the-box backups (scheduled and on demand) and point-in-time recovery
+ 4. Support for cloning in cluster and across clusters
 
 The operator is to be considered alpha and not suited for critical production workloads. We (Presslabs) sucessfully use it at the moment for some non-critical production workloads.
 
@@ -32,14 +32,13 @@ Install helm. New to helm? Check https://github.com/helm/helm#install
 Install kubectl. For more details, see: https://kubernetes.io/docs/tasks/tools/install-kubectl/ 
 
 To deploy this controller, use the provided helm chart, by running:
-```
+```shell
 helm repo add presslabs https://presslabs.github.io/charts
 helm install presslabs/mysql-operator --name mysql-operator
 ```
 
 For more information about chart values see chart [README](hack/charts/mysql-operator/README.md).
 This chart will deploy the controller along with an [orchestrator](https://github.com/github/orchestrator) cluster.
-
 
 ## Deploying a cluster
 __tl;dr__
@@ -94,15 +93,15 @@ kubectl apply -f example-cluster.yaml
 
 For a more in depth configuration, check [examples](examples/).
 
-### To list the deployed clusters use:
-```
+### To list the deployed clusters use
+```shell
 $ kubectl get mysql
 NAME         AGE
 my-cluster   1m
 ```
 
-### To check cluster state use:
-```
+### To check cluster state use
+```shell
 $ kubectl describe mysql my-cluster
 ...
 Status:
@@ -127,10 +126,7 @@ The contents of the secret are used to generate an rclone.conf in [hack/docker/m
 
 You need to specify the `backupBucketUri` for the cluster to an uri like `s3://BUCKET_NAME`, and a secret.
 
-Create a file named `example-backup-secret.yaml` and copy into it the following YAML code:
-
-
-``` yaml
+```yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -152,15 +148,6 @@ data:
 ```
 
 Then run this command: 
-
-```shell
-kubectl apply -f example-backup-secret.yaml
-```
-
-### Setup backup to gcloud
-You need to specify the `backupBucketUri` for the cluster to an uri like `gs://BUCKET_NAME`, and a secret.
-
-Create a file named `example-backup-secret.yaml` and copy into it the following YAML code:
 
 ```yaml
 apiVersion: v1
@@ -223,15 +210,15 @@ kubectl apply -f example-cluster.yaml
 ```
 
 ### Listing all backups
-```
+```shell
 $ kubectl get mysqlbackup
 NAME                                  AGE
 my-cluster-backup                     1m
 my-cluster-auto-backup-20180402-1604  1d
 ```
 
-### Checking the backup state:
-```
+### Checking the backup state
+```shell
 $ kubectl describe backup my-cluster-backup
 ...
 Status:

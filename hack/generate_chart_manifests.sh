@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 CHART_PATH=charts/mysql-operator
 CONFIG_PATH=../config
