@@ -69,6 +69,14 @@
   version = "v1.4.0"
 
 [[projects]]
+  digest = "1:7f89e0c888fb99c61055c646f5678aae645b0b0a1443d9b2dcd9964d850827ce"
+  name = "github.com/go-test/deep"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "6592d9cc0a499ad2d5f574fde80a2b5c5cc3b4f5"
+  version = "v1.0.1"
+
+[[projects]]
   digest = "1:0b247452c0825d47d12f64feae265bb9e1b1f59f2b313886b0276f682b54fcbe"
   name = "github.com/gobuffalo/envy"
   packages = ["."]
@@ -246,14 +254,6 @@
   revision = "81af80346b1a01caae0cbc27fd3c1ba5b11e189f"
 
 [[projects]]
-  digest = "1:61332bb44d05257bbf0356d8400a8b30fe0b9fdc3b72b8b55661da8f0a4f39ae"
-  name = "github.com/mitchellh/hashstructure"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "a38c50148365edc8df43c1580c48fb2b3a1e9cd7"
-  version = "v1.0.0"
-
-[[projects]]
   digest = "1:33422d238f147d247752996a26574ac48dcf472976eda7f5134015f06bf16563"
   name = "github.com/modern-go/concurrent"
   packages = ["."]
@@ -357,7 +357,10 @@
 [[projects]]
   digest = "1:1cb7d871789d7b2b6d03a21815634ed4ee217fe11a7d5c8d031888b9c4100625"
   name = "github.com/presslabs/controller-util"
-  packages = ["syncer"]
+  packages = [
+    "rand",
+    "syncer",
+  ]
   pruneopts = "T"
   revision = "b8d6c36bea7e95080cb7e4e89f43541bf101e232"
   version = "v0.1.5"
@@ -871,18 +874,22 @@
   input-imports = [
     "github.com/emicklei/go-restful",
     "github.com/go-ini/ini",
+    "github.com/go-logr/logr",
+    "github.com/go-logr/zapr",
     "github.com/go-sql-driver/mysql",
-    "github.com/golang/glog",
-    "github.com/mitchellh/hashstructure",
+    "github.com/go-test/deep",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/extensions/table",
     "github.com/onsi/gomega",
     "github.com/onsi/gomega/gstruct",
     "github.com/onsi/gomega/types",
+    "github.com/presslabs/controller-util/rand",
     "github.com/presslabs/controller-util/syncer",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "github.com/wgliang/cron",
+    "go.uber.org/zap",
+    "go.uber.org/zap/zapcore",
     "golang.org/x/net/context",
     "k8s.io/api/apps/v1",
     "k8s.io/api/batch/v1",
@@ -892,6 +899,7 @@
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/labels",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/types",

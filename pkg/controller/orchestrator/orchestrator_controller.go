@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/presslabs/controller-util/syncer"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -211,7 +212,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	// update cluster
 	// TODO: make orcUpdater to update cluster
 	if !reflect.DeepEqual(status, wCluster.Unwrap().Status) && wCluster.DeletionTimestamp == nil {
-		log.V(1).Info("update cluster", "cluster", wCluster.Unwrap())
+		log.V(1).Info("update cluster", "diff", deep.Equal(status, wCluster.Unwrap().Status))
 
 		if sErr := r.Status().Update(context.TODO(), wCluster.Unwrap()); sErr != nil {
 			log.Error(sErr, "failed to update cluster status")

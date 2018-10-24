@@ -18,6 +18,7 @@ package orchestrator
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"math/rand"
 	"time"
@@ -87,7 +88,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 				ClusterName: cluster.GetClusterAlias(),
 				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
 				ReadOnly:    false,
-				SlaveLagSeconds: orc.NullInt64{
+				SlaveLagSeconds: sql.NullInt64{
 					Valid: false,
 					Int64: 0,
 				},
@@ -332,7 +333,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 			cluster.Spec.ReadOnly = true
 
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-			Expect(updater.markReadOnlyNodesInOrc(insts)).To(Succeed())
+			Expect(updater.markReadOnlyNodesInOrc(insts, []orc.Maintenance{})).To(Succeed())
 
 			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
 			for _, instance := range insts {
@@ -360,7 +361,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 			cluster.Spec.ReadOnly = false
 
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-			Expect(updater.markReadOnlyNodesInOrc(insts)).To(Succeed())
+			Expect(updater.markReadOnlyNodesInOrc(insts, []orc.Maintenance{})).To(Succeed())
 
 			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
 			master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))

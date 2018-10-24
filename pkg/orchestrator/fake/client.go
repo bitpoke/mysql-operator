@@ -17,6 +17,7 @@ limitations under the License.
 package fake
 
 import (
+	"database/sql"
 	"fmt"
 	"strings"
 	"sync"
@@ -185,7 +186,7 @@ func (o *OrcFakeClient) Discover(host string, port int) error {
 		ClusterName: cluster,
 		Key:         InstanceKey{Hostname: host},
 		ReadOnly:    false,
-		SlaveLagSeconds: NullInt64{
+		SlaveLagSeconds: sql.NullInt64{
 			Valid: false,
 			Int64: 0,
 		},
@@ -301,4 +302,9 @@ func (o *OrcFakeClient) BeginMaintenance(key InstanceKey, owner, reason string) 
 // EndMaintenance set a host in maintenance
 func (o *OrcFakeClient) EndMaintenance(key InstanceKey) error {
 	return nil
+}
+
+// Maintenance put a node into maintenance
+func (o *OrcFakeClient) Maintenance() ([]Maintenance, error) {
+	return nil, nil
 }

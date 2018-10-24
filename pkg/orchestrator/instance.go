@@ -22,6 +22,7 @@ limitations under the License.
 package orchestrator
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -48,11 +49,8 @@ type BinlogCoordinates struct {
 	Type    BinlogType
 }
 
-// NullInt64 null or int
-type NullInt64 struct {
-	Int64 int64
-	Valid bool // Valid is true if Int64 is not NULL
-}
+// InstanceKeyMap is a convenience struct for listing InstanceKey-s
+type InstanceKeyMap map[InstanceKey]bool
 
 // Instance represents the main structure that an node is represented in
 // orchestrator
@@ -88,12 +86,13 @@ type Instance struct {
 	RelaylogCoordinates    BinlogCoordinates
 	LastSQLError           string
 	LastIOError            string
-	SecondsBehindMaster    NullInt64
+	SecondsBehindMaster    sql.NullInt64
 	SQLDelay               uint
 	ExecutedGtidSet        string
 	GtidPurged             string
 
-	SlaveLagSeconds                 NullInt64
+	SlaveLagSeconds sql.NullInt64
+	//SlaveHosts                      InstanceKeyMap
 	ClusterName                     string
 	SuggestedClusterAlias           string
 	DataCenter                      string
@@ -110,8 +109,22 @@ type Instance struct {
 	IsLastCheckValid     bool
 	IsUpToDate           bool
 	IsRecentlyChecked    bool
-	SecondsSinceLastSeen NullInt64
+	SecondsSinceLastSeen sql.NullInt64
 	CountMySQLSnapshots  int
+
+	// Careful. IsCandidate and PromotionRule are used together
+	// and probably need to be merged. IsCandidate's value may
+	// be picked up from daabase_candidate_instance's value when
+	// reading an instance from the db.
+	IsCandidate          bool
+	PromotionRule        CandidatePromotionRule
+	IsDowntimed          bool
+	DowntimeReason       string
+	DowntimeOwner        string
+	DowntimeEndTimestamp string
+	ElapsedDowntime      time.Duration
+	UnresolvedHostname   string
+	AllowTLS             bool
 
 	LastDiscoveryLatency time.Duration
 }
@@ -137,4 +150,29 @@ type TopologyRecovery struct {
 	AcknowledgedComment    string
 	LastDetectionId        int64
 	RelatedRecoveryId      int64
+}
+
+// CandidatePromotionRule describe the promotion preference/rule for an instance.
+// It maps to promotion_rule column in candidate_database_instance
+type CandidatePromotionRule string
+
+// nolint: golint
+const (
+	MustPromoteRule      CandidatePromotionRule = "must"
+	PreferPromoteRule    CandidatePromotionRule = "prefer"
+	NeutralPromoteRule   CandidatePromotionRule = "neutral"
+	PreferNotPromoteRule CandidatePromotionRule = "prefer_not"
+	MustNotPromoteRule   CandidatePromotionRule = "must_not"
+)
+
+// Maintenance indicates a maintenance entry (also in the database)
+// nolint: golint
+type Maintenance struct {
+	MaintenanceId  uint
+	Key            InstanceKey
+	BeginTimestamp string
+	SecondsElapsed uint
+	IsActive       bool
+	Owner          string
+	Reason         string
 }

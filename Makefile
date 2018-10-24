@@ -28,7 +28,7 @@ test: generate fmt vet manifests
 			./pkg/... ./cmd/...
 
 # Build binaries
-bin/%: $(GOFILES) Makefile
+bin/%: $(GOFILES) Makefile $(shell find pkg/ -name '*.go' -type f)
 	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) \
 		go build $(GOFLAGS) -v -o $@ cmd/$(shell echo "$*" | cut -d'_' -f1)/main.go
 
