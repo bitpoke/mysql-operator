@@ -26,9 +26,7 @@ import (
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
-	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -51,47 +49,34 @@ var log = logf.Log.WithName(controllerName)
 type PvcCleaner struct {
 	cluster *wrapcluster.MysqlCluster
 	opt     *options.Options
-	sts     *apps.StatefulSet
 }
 
 // NewPvcCleaner returns a new PVC cleaner object
 func NewPvcCleaner(cluster *api.MysqlCluster, opt *options.Options) *PvcCleaner {
-	obj := &apps.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.GetNameForResource(api.StatefulSet),
-			Namespace: cluster.Namespace,
-		},
-	}
+
 	return &PvcCleaner{
 		cluster: wrapcluster.NewMysqlClusterWrapper(cluster),
 		opt:     opt,
-		sts:     obj,
 	}
 }
 
 // Run performs cleanup of orphaned pvcs in a Mysql cluster
 func (p *PvcCleaner) Run(ctx context.Context, c client.Client, scheme *runtime.Scheme, recorder record.EventRecorder) error {
-	sts := p.sts
-	stsMeta := sts.ObjectMeta
+	meta := p.cluster.ObjectMeta
+	key := types.NamespacedName{Name: meta.GetName(), Namespace: meta.GetNamespace()}
 
-	key := types.NamespacedName{Name: stsMeta.GetName(), Namespace: stsMeta.GetNamespace()}
-
-	err := c.Get(ctx, key, sts)
+	cluster := api.MysqlCluster{}
+	err := c.Get(ctx, key, &cluster)
 	if err != nil {
 		return err
 	}
 
-	if sts.DeletionTimestamp != nil {
-		log.V(4).Info("being deleted, no action", "Statefulset", key)
+	if cluster.DeletionTimestamp != nil {
+		log.V(4).Info("being deleted, no action", "MysqlCluster", key)
 		return nil
 	}
 
-	if len(sts.Spec.VolumeClaimTemplates) == 0 {
-		log.V(4).Info("ignored, no volume claims", "Statefulset", key)
-		return nil
-	}
-
-	replicas := *sts.Spec.Replicas
+	replicas := cluster.Spec.Replicas
 
 	// Find any pvcs with higher ordinal than replicas and delete them
 	claims, err := p.getClaims(ctx, c)
@@ -105,7 +90,7 @@ func (p *PvcCleaner) Run(ctx context.Context, c client.Client, scheme *runtime.S
 	for _, k := range keys {
 		if int32(k) >= replicas {
 			log.Info("cleaning up", "pvc", claims[k])
-			if err := deleteClaim(ctx, c, recorder, sts, claims[k]); err != nil {
+			if err := deleteClaim(ctx, c, recorder, &cluster, claims[k]); err != nil {
 				log.Error(err, "deleting claim")
 				return err
 			}
@@ -115,25 +100,24 @@ func (p *PvcCleaner) Run(ctx context.Context, c client.Client, scheme *runtime.S
 }
 
 func deleteClaim(ctx context.Context, c client.Client, recorder record.EventRecorder,
-	sts *apps.StatefulSet, pvc *core.PersistentVolumeClaim) error {
+	cluster *api.MysqlCluster, pvc *core.PersistentVolumeClaim) error {
 	err := c.Delete(ctx, pvc)
 	if err != nil {
-		recorder.Event(sts, core.EventTypeWarning, deleteFail,
-			fmt.Sprintf(messagePvcNotDeleted, pvc.Name, sts.Name))
+		recorder.Event(cluster, core.EventTypeWarning, deleteFail,
+			fmt.Sprintf(messagePvcNotDeleted, pvc.Name, cluster.Name))
 		return err
 	}
 
-	recorder.Event(sts, core.EventTypeNormal, deleteSuccess,
-		fmt.Sprintf(messagePvcDeleted, pvc.Name, sts.Name))
+	recorder.Event(cluster, core.EventTypeNormal, deleteSuccess,
+		fmt.Sprintf(messagePvcDeleted, pvc.Name, cluster.Name))
 	return nil
 }
 
 func (p *PvcCleaner) getClaims(ctx context.Context, c client.Client) (map[int]*core.PersistentVolumeClaim, error) {
-	sts := p.sts
-	stsMeta := sts.ObjectMeta
+	meta := p.cluster.ObjectMeta
 	pvcs := &core.PersistentVolumeClaimList{}
 	lo := &client.ListOptions{
-		Namespace:     stsMeta.GetNamespace(),
+		Namespace:     meta.GetNamespace(),
 		LabelSelector: labels.SelectorFromSet(p.cluster.GetLabels()),
 	}
 	err := c.List(ctx, lo, pvcs)
