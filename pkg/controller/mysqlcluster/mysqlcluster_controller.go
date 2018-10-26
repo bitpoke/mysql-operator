@@ -164,12 +164,12 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}()
 
 	configMapSyncer := clustersyncer.NewConfigMapSyncer(r.Client, r.scheme, wCluster)
-	if err := syncer.Sync(context.TODO(), configMapSyncer, r.recorder); err != nil {
+	if err = syncer.Sync(context.TODO(), configMapSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	secretSyncer := clustersyncer.NewSecretSyncer(r.Client, r.scheme, wCluster, r.opt)
-	if err := syncer.Sync(context.TODO(), secretSyncer, r.recorder); err != nil {
+	if err = syncer.Sync(context.TODO(), secretSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -193,13 +193,13 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 
 	// add pods syncers for every node status
 	for _, sync := range syncers {
-		if err := syncer.Sync(context.TODO(), sync, r.recorder); err != nil {
+		if err = syncer.Sync(context.TODO(), sync, r.recorder); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
 	// Perform any cleanup
-	pvcCleaner := cleaner.NewPvcCleaner(cluster, r.opt)
+	pvcCleaner := cleaner.NewPvcCleaner(wCluster, r.opt)
 	err = pvcCleaner.Run(context.TODO(), r.Client, r.scheme, r.recorder)
 
 	if err != nil {

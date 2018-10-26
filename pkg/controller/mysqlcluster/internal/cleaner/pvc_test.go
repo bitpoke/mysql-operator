@@ -24,8 +24,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/options"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -33,11 +31,15 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
 var _ = Describe("Pvc cleaner", func() {
 	var (
-		cluster     *api.MysqlCluster
+		cluster     *mysqlcluster.MysqlCluster
 		rec         *record.FakeRecorder
 		secret      *corev1.Secret
 		statefulset *appsv1.StatefulSet
@@ -58,7 +60,7 @@ var _ = Describe("Pvc cleaner", func() {
 		}
 		Expect(c.Create(context.TODO(), secret)).To(Succeed())
 
-		cluster = &api.MysqlCluster{
+		theCluster := &api.MysqlCluster{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
 			Spec: api.MysqlClusterSpec{
 				Replicas:   3,
@@ -66,7 +68,9 @@ var _ = Describe("Pvc cleaner", func() {
 			},
 		}
 
-		Expect(c.Create(context.TODO(), cluster)).To(Succeed())
+		cluster = mysqlcluster.New(theCluster)
+
+		Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 		pvcSpec := corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{
@@ -101,7 +105,7 @@ var _ = Describe("Pvc cleaner", func() {
 		var replicas int32 = 3
 		statefulset = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(api.StatefulSet),
+				Name:      cluster.GetNameForResource(mysqlcluster.StatefulSet),
 				Namespace: cluster.Namespace,
 			},
 			Spec: appsv1.StatefulSetSpec{
@@ -136,7 +140,7 @@ var _ = Describe("Pvc cleaner", func() {
 	})
 	AfterEach(func() {
 		// remove created cluster
-		c.Delete(context.TODO(), cluster)
+		c.Delete(context.TODO(), cluster.Unwrap())
 		c.Delete(context.TODO(), secret)
 		c.Delete(context.TODO(), statefulset)
 		for _, pvc := range pvcs {
