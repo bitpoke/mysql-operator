@@ -23,9 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	wrapcluster "github.com/presslabs/mysql-operator/pkg/controller/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/options"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,29 +30,32 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
 const (
-	controllerName       = "controller.mysqlcluster"
 	deleteSuccess        = "SucessfulDelete"
 	deleteFail           = "FailedDelete"
 	messagePvcDeleted    = "delete Claim %s in StatefulSet %s successful"
 	messagePvcNotDeleted = "delete Claim %s in StatefulSet %s failed"
 )
 
-var log = logf.Log.WithName(controllerName)
+var log = logf.Log.WithName("mysqlcluster.pvccleaner")
 
 // PvcCleaner represents an object to clean Pvcs of a MysqlCluster
 type PvcCleaner struct {
-	cluster *wrapcluster.MysqlCluster
+	cluster *mysqlcluster.MysqlCluster
 	opt     *options.Options
 }
 
 // NewPvcCleaner returns a new PVC cleaner object
-func NewPvcCleaner(cluster *api.MysqlCluster, opt *options.Options) *PvcCleaner {
+func NewPvcCleaner(cluster *mysqlcluster.MysqlCluster, opt *options.Options) *PvcCleaner {
 
 	return &PvcCleaner{
-		cluster: wrapcluster.NewMysqlClusterWrapper(cluster),
+		cluster: cluster,
 		opt:     opt,
 	}
 }
