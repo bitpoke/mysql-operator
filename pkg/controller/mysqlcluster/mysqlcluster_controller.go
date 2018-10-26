@@ -135,8 +135,8 @@ type ReconcileMysqlCluster struct {
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlCluster instance
-	cluster := &mysqlv1alpha1.MysqlCluster{}
-	err := r.Get(context.TODO(), request.NamespacedName, cluster)
+	cluster := mysqlcluster.New(&mysqlv1alpha1.MysqlCluster{})
+	err := r.Get(context.TODO(), request.NamespacedName, cluster.Unwrap())
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
@@ -147,28 +147,27 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 	log.Info("syncing cluster", "cluster", request.NamespacedName.String())
-	wCluster := mysqlcluster.New(cluster)
 
 	// Set defaults on cluster
-	r.scheme.Default(cluster)
-	wCluster.SetDefaults(r.opt)
+	r.scheme.Default(cluster.Unwrap())
+	cluster.SetDefaults(r.opt)
 
-	status := *wCluster.Status.DeepCopy()
+	status := *cluster.Status.DeepCopy()
 	defer func() {
 		if !reflect.DeepEqual(status, cluster.Status) {
-			sErr := r.Status().Update(context.TODO(), wCluster.Unwrap())
+			sErr := r.Status().Update(context.TODO(), cluster.Unwrap())
 			if sErr != nil {
 				log.Error(sErr, "failed to update cluster status", "cluster", cluster)
 			}
 		}
 	}()
 
-	configMapSyncer := clustersyncer.NewConfigMapSyncer(r.Client, r.scheme, wCluster)
+	configMapSyncer := clustersyncer.NewConfigMapSyncer(r.Client, r.scheme, cluster)
 	if err = syncer.Sync(context.TODO(), configMapSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	secretSyncer := clustersyncer.NewSecretSyncer(r.Client, r.scheme, wCluster, r.opt)
+	secretSyncer := clustersyncer.NewSecretSyncer(r.Client, r.scheme, cluster, r.opt)
 	if err = syncer.Sync(context.TODO(), secretSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -178,18 +177,18 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 
 	// run the syncers for services, pdb and statefulset
 	syncers := []syncer.Interface{
-		clustersyncer.NewHeadlessSVCSyncer(r.Client, r.scheme, wCluster),
-		clustersyncer.NewMasterSVCSyncer(r.Client, r.scheme, wCluster),
-		clustersyncer.NewHealthySVCSyncer(r.Client, r.scheme, wCluster),
+		clustersyncer.NewHeadlessSVCSyncer(r.Client, r.scheme, cluster),
+		clustersyncer.NewMasterSVCSyncer(r.Client, r.scheme, cluster),
+		clustersyncer.NewHealthySVCSyncer(r.Client, r.scheme, cluster),
 
-		clustersyncer.NewStatefulSetSyncer(r.Client, r.scheme, wCluster, configMapResourceVersion, secretResourceVersion, r.opt),
+		clustersyncer.NewStatefulSetSyncer(r.Client, r.scheme, cluster, configMapResourceVersion, secretResourceVersion, r.opt),
 	}
 
 	if len(cluster.Spec.MinAvailable) != 0 {
-		syncers = append(syncers, clustersyncer.NewPDBSyncer(r.Client, r.scheme, wCluster))
+		syncers = append(syncers, clustersyncer.NewPDBSyncer(r.Client, r.scheme, cluster))
 	}
 
-	syncers = append(syncers, r.getPodSyncers(wCluster)...)
+	syncers = append(syncers, r.getPodSyncers(cluster)...)
 
 	// add pods syncers for every node status
 	for _, sync := range syncers {
@@ -199,7 +198,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// Perform any cleanup
-	pvcCleaner := cleaner.NewPvcCleaner(wCluster, r.opt)
+	pvcCleaner := cleaner.NewPvcCleaner(cluster, r.opt)
 	err = pvcCleaner.Run(context.TODO(), r.Client, r.scheme, r.recorder)
 
 	if err != nil {

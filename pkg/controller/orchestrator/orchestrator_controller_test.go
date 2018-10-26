@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 	fakeOrc "github.com/presslabs/mysql-operator/pkg/orchestrator/fake"
@@ -73,7 +74,12 @@ var _ = Describe("Orchestrator controller", func() {
 		recFn, requests = SetupTestReconcile(newReconciler(mgr, orcClient))
 		Expect(add(mgr, recFn)).To(Succeed())
 
+		// this returns a chan that waits until manager is started.
+		// to fix flaky tests.
+		started := testutil.IsManagerStarted(mgr)
+
 		stop = StartTestManager(mgr)
+		<-started
 
 	})
 
@@ -107,15 +113,13 @@ var _ = Describe("Orchestrator controller", func() {
 				},
 			}
 
-			theCluster := &api.MysqlCluster{
+			cluster = mysqlcluster.New(&api.MysqlCluster{
 				ObjectMeta: metav1.ObjectMeta{Name: clusterKey.Name, Namespace: clusterKey.Namespace},
 				Spec: api.MysqlClusterSpec{
 					Replicas:   1,
 					SecretName: secret.Name,
 				},
-			}
-
-			cluster = mysqlcluster.New(theCluster)
+			})
 
 			By("creating a new cluster")
 			Expect(c.Create(context.TODO(), secret)).To(Succeed())
@@ -124,6 +128,10 @@ var _ = Describe("Orchestrator controller", func() {
 			// update ready nodes
 			cluster.Status.ReadyNodes = 1
 			Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
+
+			By("wait for a first reconcile event")
+			// this is a sincronization event
+			Eventually(requests, 4*time.Second).Should(Receive(Equal(expectedRequest)))
 
 			// expect to not receive any event when a cluster is created, but
 			// just after reconcile time passed then receive a reconcile event
