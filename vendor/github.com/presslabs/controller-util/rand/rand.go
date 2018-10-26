@@ -39,7 +39,7 @@ func NewStringGenerator(characters string) func(int) (string, error) {
 			if len(result) >= length {
 				return result, nil
 			}
-			num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+			num, err := rand.Int(rand.Reader, big.NewInt(int64(len(characters))))
 			if err != nil {
 				return "", err
 			}

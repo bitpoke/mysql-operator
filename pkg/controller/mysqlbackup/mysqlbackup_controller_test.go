@@ -97,16 +97,15 @@ var _ = Describe("MysqlBackup controller", func() {
 			},
 		}
 
-		b := &api.MysqlBackup{
+		backup = mysqlbackup.New(&api.MysqlBackup{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
 			Spec: api.MysqlBackupSpec{
 				ClusterName:      clusterName,
 				BackupURL:        "gs://bucket/",
 				BackupSecretName: "secert",
 			},
-		}
+		})
 
-		backup = mysqlbackup.New(b)
 		jobKey = types.NamespacedName{
 			Name:      backup.GetNameForJob(),
 			Namespace: backup.Namespace,

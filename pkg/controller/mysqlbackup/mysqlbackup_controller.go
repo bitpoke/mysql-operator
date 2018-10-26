@@ -107,8 +107,8 @@ type ReconcileMysqlBackup struct {
 // nolint: gocyclo
 func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlBackup instance
-	backup := &mysqlv1alpha1.MysqlBackup{}
-	err := r.Get(context.TODO(), request.NamespacedName, backup)
+	backup := mysqlbackup.New(&mysqlv1alpha1.MysqlBackup{})
+	err := r.Get(context.TODO(), request.NamespacedName, backup.Unwrap())
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
@@ -128,7 +128,7 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, r.Update(context.TODO(), backup)
 	}
 
-	savedBackup := backup.DeepCopy()
+	savedBackup := backup.Unwrap().DeepCopy()
 	if len(backup.Spec.ClusterName) == 0 {
 		return reconcile.Result{}, fmt.Errorf("cluster name is not specified")
 	}
@@ -140,24 +140,22 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
 	clusterKey := types.NamespacedName{Name: backup.Spec.ClusterName, Namespace: backup.Namespace}
-	cluster := &mysqlv1alpha1.MysqlCluster{}
-	if err = r.Get(context.TODO(), clusterKey, cluster); err != nil {
+	cluster := mysqlcluster.New(&mysqlv1alpha1.MysqlCluster{})
+	if err = r.Get(context.TODO(), clusterKey, cluster.Unwrap()); err != nil {
 		return reconcile.Result{}, fmt.Errorf("cluster not found: %s", err)
 	}
 
-	wCluster := mysqlcluster.New(cluster)
-	wBackup := mysqlbackup.New(backup)
-	wBackup.SetDefaults(wCluster)
+	backup.SetDefaults(cluster)
 
-	jobSyncer := backupSyncer.NewJobSyncer(r.Client, r.scheme, wBackup, wCluster, r.opt)
+	jobSyncer := backupSyncer.NewJobSyncer(r.Client, r.scheme, backup, cluster, r.opt)
 	err = syncer.Sync(context.TODO(), jobSyncer, r.recorder)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// update spec
-	if !reflect.DeepEqual(savedBackup, backup) {
-		if err = r.Update(context.TODO(), backup); err != nil {
+	if !reflect.DeepEqual(savedBackup, backup.Unwrap()) {
+		if err = r.Update(context.TODO(), backup.Unwrap()); err != nil {
 			return reconcile.Result{}, err
 		}
 	}

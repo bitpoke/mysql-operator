@@ -22,6 +22,10 @@ required = [
   name="sigs.k8s.io/controller-runtime"
   version = "v0.1.3"
 
+[[override]]
+  name="github.com/presslabs/controller-util"
+  version = "v0.1.6"
+
 # use wgliang version of cron because provides cron removal
 [[override]]
   name="github.com/wgliang/cron"

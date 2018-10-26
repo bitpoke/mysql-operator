@@ -178,8 +178,8 @@ type ReconcileMysqlCluster struct {
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlCluster instance
-	cluster := &mysqlv1alpha1.MysqlCluster{}
-	err := r.Get(context.TODO(), request.NamespacedName, cluster)
+	cluster := mysqlcluster.New(&mysqlv1alpha1.MysqlCluster{})
+	err := r.Get(context.TODO(), request.NamespacedName, cluster.Unwrap())
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
@@ -192,14 +192,14 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	log.Info("reconciling cluster", "cluster", cluster)
-	wCluster := mysqlcluster.New(cluster)
+
 	// save old status
 	status := *cluster.Status.DeepCopy()
 
 	syncers := []syncer.Interface{
 		// this syncer mutuates the cluster and updates it. Should be the first syncer
-		newFinalizerSyncer(r.Client, r.scheme, wCluster, r.orcClient),
-		NewOrcUpdater(wCluster, r.recorder, r.orcClient),
+		newFinalizerSyncer(r.Client, r.scheme, cluster, r.orcClient),
+		NewOrcUpdater(cluster, r.recorder, r.orcClient),
 	}
 
 	// run the syncers
@@ -211,10 +211,10 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 
 	// update cluster
 	// TODO: make orcUpdater to update cluster
-	if !reflect.DeepEqual(status, wCluster.Unwrap().Status) && wCluster.DeletionTimestamp == nil {
-		log.V(1).Info("update cluster", "diff", deep.Equal(status, wCluster.Unwrap().Status))
+	if !reflect.DeepEqual(status, cluster.Unwrap().Status) && cluster.DeletionTimestamp == nil {
+		log.V(1).Info("update cluster", "diff", deep.Equal(status, cluster.Unwrap().Status))
 
-		if sErr := r.Status().Update(context.TODO(), wCluster.Unwrap()); sErr != nil {
+		if sErr := r.Status().Update(context.TODO(), cluster.Unwrap()); sErr != nil {
 			log.Error(sErr, "failed to update cluster status")
 			return reconcile.Result{}, sErr
 		}

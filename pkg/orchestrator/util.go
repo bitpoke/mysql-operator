@@ -56,7 +56,7 @@ func NewOrcError(resp *http.Response, path string, details interface{}) error {
 	}
 
 	if err = json.Unmarshal(body, &rsp); err != nil {
-		log.V(1).Info("error when unmarhal error data", "body_b64enc", body)
+		log.V(1).Info("error when unmarhal error data", "body", string(body))
 		rsp.Message = fmt.Sprintf("can't get more details, in error: error: %s, body: %s", err, body)
 		return rsp
 	}
@@ -81,9 +81,6 @@ func (o *orchestrator) makeGetRequest(path string, out interface{}) error {
 	if err != nil {
 		return NewOrcErrorMsg(fmt.Sprintf("can't create request: %s", err.Error()), path)
 	}
-
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Accept-Encoding", "identity")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -131,7 +128,7 @@ func unmarshalJSON(in io.Reader, obj interface{}) error {
 	}
 
 	if err = json.Unmarshal(body, obj); err != nil {
-		log.V(1).Info("error unmarshal data", "body_b64enc", body)
+		log.V(1).Info("error unmarshal data", "body", string(body))
 		return err
 	}
 

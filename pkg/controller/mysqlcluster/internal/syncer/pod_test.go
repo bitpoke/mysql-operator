@@ -42,7 +42,7 @@ var _ = Describe("Pod syncer", func() {
 
 	BeforeEach(func() {
 		name := fmt.Sprintf("cluster-%d", rand.Int31())
-		theCluster := &api.MysqlCluster{
+		cluster = mysqlcluster.New(&api.MysqlCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: "default",
@@ -54,8 +54,8 @@ var _ = Describe("Pod syncer", func() {
 				Replicas:   2,
 				SecretName: "the-secret",
 			},
-		}
-		cluster = mysqlcluster.New(theCluster)
+		})
+
 		Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 		// create pods and update cluster nodes conditions

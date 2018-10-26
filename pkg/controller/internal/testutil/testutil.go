@@ -31,6 +31,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	core "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -78,4 +79,20 @@ func NewTestLogger(w io.Writer, options ...zap.Option) logr.Logger {
 	sink := zapcore.AddSync(w)
 	core := zapcore.NewCore(zapcore.NewConsoleEncoder(encoderCfg), sink, zap.DebugLevel)
 	return zapr.NewLogger(zap.New(core).WithOptions(options...))
+}
+
+// IsManagerStarted returns a chnnel that receive a signal when controller is
+// started
+func IsManagerStarted(mgr manager.Manager) chan struct{} {
+	start := make(chan struct{})
+
+	test := func(stop <-chan struct{}) error {
+		start <- struct{}{}
+
+		return nil
+	}
+
+	g.Expect(mgr.Add(manager.RunnableFunc(test))).To(g.Succeed())
+
+	return start
 }

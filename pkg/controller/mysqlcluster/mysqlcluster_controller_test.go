@@ -96,15 +96,13 @@ var _ = Describe("MysqlCluster controller", func() {
 				},
 			}
 
-			theCluster := &api.MysqlCluster{
+			cluster = mysqlcluster.New(&api.MysqlCluster{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
 				Spec: api.MysqlClusterSpec{
 					Replicas:   2,
 					SecretName: secret.Name,
 				},
-			}
-
-			cluster = mysqlcluster.New(theCluster)
+			})
 
 			components = []runtime.Object{
 				&appsv1.StatefulSet{
