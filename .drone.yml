@@ -79,23 +79,24 @@ pipeline:
     when:
       event: tag
 
-  publish-helm-chart:
-    group: publish
-    image: quay.io/presslabs/kluster-toolbox
-    pull: true
-    environment:
-      - GH_USER=presslabs-bot
-    commands:
-      - cd hack/charts
-      - (cd mysql-operator && helm dep build)
-      - helm package mysql-operator
-      - CHART="$(basename *.tgz)" ; MESSAGE="Publish $(basename $CHART .tgz)"
-      - /usr/local/bin/gh put --skip-existing -m "$MESSAGE" "$CHART" "presslabs/charts/docs/"
-    secrets:
-      - GH_PASSWORD
-    when:
-      #branch: master
-      event: push
+  # TODO: run make chart TAG=${DRONE_TAG} before publishing chart
+  # publish-helm-chart:
+  #   group: publish
+  #   image: quay.io/presslabs/kluster-toolbox
+  #   pull: true
+  #   environment:
+  #     - GH_USER=presslabs-bot
+  #   commands:
+  #     - cd hack/charts
+  #     - (cd mysql-operator && helm dep build)
+  #     - helm package mysql-operator
+  #     - CHART="$(basename *.tgz)" ; MESSAGE="Publish $(basename $CHART .tgz)"
+  #     - /usr/local/bin/gh put --skip-existing -m "$MESSAGE" "$CHART" "presslabs/charts/docs/"
+  #   secrets:
+  #     - GH_PASSWORD
+  #   when:
+  #     #branch: master
+  #     event: push
 
 #
 # end to end testing
@@ -130,7 +131,7 @@ pipeline:
       - setup-credentials-helper.sh
       - gcloud container clusters create $CLUSTER_NAME
           --zone europe-west3-b --project testing-reactor
-          --preemptible  --enable-kubernetes-alpha
+          --preemptible  --cluster-version 1.11.2-gke.9
       # initialize cluster
       - kubectl create serviceaccount -n kube-system tiller
       - kubectl create clusterrolebinding tiller --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
