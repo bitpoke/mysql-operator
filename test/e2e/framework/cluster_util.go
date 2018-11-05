@@ -122,7 +122,24 @@ func (f *Framework) GetPodForNode(cluster *api.MysqlCluster, i int) *core.Pod {
 
 // GetPodHostname returns for an index the pod hostname of a cluster
 func (f *Framework) GetPodHostname(cluster *api.MysqlCluster, p int) string {
-	return fmt.Sprintf("%s-%d.%s.%s", cluster.GetNameForResource(api.StatefulSet), p,
-		cluster.GetNameForResource(api.HeadlessSVC),
+	return fmt.Sprintf("%s-%d.%s.%s", GetNameForResource("sts", cluster), p,
+		GetNameForResource("svc-headless", cluster),
 		cluster.Namespace)
+}
+
+// GetNameForResource returns the name of the cluster resource, see the function
+// definition for what name means.
+func GetNameForResource(name string, cluster *api.MysqlCluster) string {
+	switch name {
+	case "sts":
+		return fmt.Sprintf("%s-mysql", cluster.Name)
+	case "svc-master":
+		return fmt.Sprintf("%s-mysql-master", cluster.Name)
+	case "svc-read":
+		return fmt.Sprintf("%s-mysql", cluster.Name)
+	case "svc-headless":
+		return fmt.Sprintf("%s-mysql-nodes", cluster.Name)
+	default:
+		return fmt.Sprintf("%s-mysql", cluster.Name)
+	}
 }

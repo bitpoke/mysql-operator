@@ -104,7 +104,7 @@ var _ = Describe("Mysql cluster tests", func() {
 		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionFalse, f.Timeout)
 
 		// remove master pod
-		podName := cluster.GetNameForResource(api.StatefulSet) + "-0"
+		podName := framework.GetNameForResource("sts", cluster) + "-0"
 		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(podName, &meta.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete pod %s", podName)
 
@@ -220,7 +220,7 @@ var _ = Describe("Mysql cluster tests", func() {
 		testClusterEndpoints(f, cluster, []int{0}, []int{0, 1})
 
 		// remove master pod
-		podName := cluster.GetNameForResource(api.StatefulSet) + "-0"
+		podName := framework.GetNameForResource("sts", cluster) + "-0"
 		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(podName, &meta.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete pod %s", podName)
 
@@ -348,7 +348,7 @@ func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster, mas
 	timeout := 30 * time.Second
 
 	// master service
-	master_ep := cluster.GetNameForResource(api.MasterService)
+	master_ep := framework.GetNameForResource("svc-master", cluster)
 	if len(masterIPs) > 0 {
 		Eventually(getAddrForSVC(master_ep, true), timeout).Should(ConsistOf(masterIPs), "Master ready endpoints are not correctly set.")
 	} else {
@@ -356,7 +356,7 @@ func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster, mas
 	}
 
 	// healty nodes service
-	hnodes_ep := cluster.GetNameForResource(api.HealthyNodesService)
+	hnodes_ep := framework.GetNameForResource("svc-read", cluster)
 	if len(healtyIPs) > 0 {
 		Eventually(getAddrForSVC(hnodes_ep, true), timeout).Should(ConsistOf(healtyIPs), "Healty nodes ready endpoints are not correctly set.")
 	} else {

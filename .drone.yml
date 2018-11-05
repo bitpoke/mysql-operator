@@ -95,7 +95,7 @@ pipeline:
   #   secrets:
   #     - GH_PASSWORD
   #   when:
-  #     #branch: master
+  #     branch: master
   #     event: push
 
 #
