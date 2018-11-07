@@ -84,7 +84,7 @@ func NewSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlclus
 		out.Data["ORC_TOPOLOGY_PASSWORD"] = []byte(opt.OrchestratorTopologyPassword)
 
 		if len(out.Data["BACKUP_USER"]) == 0 {
-			random, err := rand.ASCIIString(rStrLen)
+			random, err := rand.AlphaNumericString(rStrLen)
 			if err != nil {
 				return err
 			}

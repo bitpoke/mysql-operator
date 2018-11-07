@@ -6,8 +6,8 @@ keywords:
   - percona
   - orchestrator
   - presslabs
-version: master
+version: latest
 home: https://github.com/presslabs/mysql-operator
 sources:
   - https://github.com/presslabs/mysql-operator.git
-appVersion: master
+appVersion: latest

@@ -95,9 +95,8 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer func() {
-		if err := stdout.Close(); err != nil {
-			log.Error(err, "failed to close stdout pipe of extrabackup")
-		}
+		// don't care
+		_ = stdout.Close()
 	}()
 
 	if err := xtrabackup.Start(); err != nil {

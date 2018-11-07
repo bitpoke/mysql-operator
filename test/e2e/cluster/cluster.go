@@ -217,7 +217,7 @@ var _ = Describe("Mysql cluster tests", func() {
 		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionReadOnly, core.ConditionTrue, 20*time.Second)
 		// node 1 should not be in healty service
 		By("test cluster endpoints after delayed slave")
-		testClusterEndpoints(f, cluster, []int{0}, []int{0, 1})
+		testClusterEndpoints(f, cluster, []int{0}, []int{0})
 
 		// remove master pod
 		podName := framework.GetNameForResource("sts", cluster) + "-0"
@@ -309,7 +309,7 @@ func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster, mas
 		types.NamespacedName{Name: cluster.Name, Namespace: cluster.Namespace},
 		cluster)).To(Succeed())
 
-	// preper the expected list of ips that should be set in endpoints
+	// prepare the expected list of ips that should be set in endpoints
 	var masterIPs []string
 	var healtyIPs []string
 
