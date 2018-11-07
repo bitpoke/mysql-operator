@@ -39,7 +39,7 @@ func main() {
 
 	cmd := &cobra.Command{
 		Use:   "mysql-operator-sidecar",
-		Short: fmt.Sprintf("Helper for mysql operator."),
+		Short: "Helper for mysql operator.",
 		Long:  `mysql-operator-sidecar: helper for config pods`,
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Info("you run mysql-operator-sidecar, see help section")

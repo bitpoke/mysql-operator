@@ -202,7 +202,7 @@ func GetMasterHost() string {
 	client := orc.NewFromURI(orcURI)
 	inst, err := client.Master(fqClusterName)
 	if err != nil {
-		log.Error(err, "failed to connect to orchestrator for master", "master", GetHostFor(100))
+		log.V(-1).Info("failed to obtain master from orchestrator, go for default master", "master", GetHostFor(100))
 		return GetHostFor(100)
 	}
 
@@ -260,7 +260,6 @@ func RunQuery(q string, args ...interface{}) error {
 
 	log.V(4).Info("running query", "query", q, "args", args)
 	if _, err := db.Exec(q, args...); err != nil {
-		log.Error(err, "could not query mysql", "query", q)
 		return err
 	}
 

@@ -131,7 +131,7 @@ pipeline:
       - setup-credentials-helper.sh
       - gcloud container clusters create $CLUSTER_NAME
           --zone europe-west3-b --project testing-reactor
-          --preemptible  --cluster-version 1.11.2-gke.9
+          --preemptible  --cluster-version 1.11
       # initialize cluster
       - kubectl create serviceaccount -n kube-system tiller
       - kubectl create clusterrolebinding tiller --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
@@ -154,7 +154,9 @@ pipeline:
             --operator-image quay.io/presslabs/mysql-operator:${DRONE_BRANCH/master/latest}
             --sidecar-image quay.io/presslabs/mysql-operator-sidecar:${DRONE_BRANCH/master/latest}
             --pod-wait-timeout 150
+            --dump-logs-on-failure=false
             -timeout 30m
+            -ginkgo.slowSpecThreshold 300
     when:
       #branch: master
       event: push

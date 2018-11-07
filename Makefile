@@ -102,5 +102,6 @@ K8S_CONTEXT ?= minikube
 
 e2e-local: docker-build
 	go test ./test/e2e -v $(G_ARGS) -timeout 20m --pod-wait-timeout 60 \
+		-ginkgo.slowSpecThreshold 300 \
 		--kubernetes-config $(KUBECONFIG) --kubernetes-context $(K8S_CONTEXT) \
 		--report-dir ../../e2e-reports

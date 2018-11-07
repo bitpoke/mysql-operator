@@ -54,6 +54,7 @@ rules:
   - events
   - jobs
   - pods
+  - persistentvolumeclaims
   verbs:
   - get
   - list

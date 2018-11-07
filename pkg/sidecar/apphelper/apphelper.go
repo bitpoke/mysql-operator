@@ -45,7 +45,7 @@ func RunRunCommand(stopCh <-chan struct{}) error {
 	}
 
 	// deactivate super read only
-	log.V(1).Info("temporary disable SUPER_READ_ONLY")
+	log.Info("temporary disable SUPER_READ_ONLY")
 	if err := util.RunQuery("SET GLOBAL READ_ONLY = 1; SET GLOBAL SUPER_READ_ONLY = 0;"); err != nil {
 		return fmt.Errorf("failed to configure master node, err: %s", err)
 	}

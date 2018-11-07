@@ -7,10 +7,10 @@ import (
 	"time"
 
 	kcore "github.com/appscode/kutil/core/v1"
-	. "github.com/onsi/ginkgo"
 	"k8s.io/api/core/v1"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	// apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +29,8 @@ const (
 	// How often to Poll pods, nodes and claims.
 	Poll = 2 * time.Second
 )
+
+var log = logf.Log.WithName("framework.util")
 
 // CreateTestingNS should be used by every test, note that we append a common prefix to the provided test name.
 // Please see NewFramework instead of using this directly.
@@ -61,12 +63,10 @@ func CreateTestingNS(baseName string, c clientset.Interface, labels map[string]s
 		return nil, err
 	}
 
-	Logf("Namespace: %s creeated!", got.Name)
 	return got, nil
 }
 
 func RestclientConfig(kubeContext string) (*clientcmdapi.Config, error) {
-	Logf(">>> kubeConfig: %s", TestContext.KubeConfig)
 	if TestContext.KubeConfig == "" {
 		return nil, fmt.Errorf("KubeConfig must be specified to load client config")
 	}
@@ -75,7 +75,6 @@ func RestclientConfig(kubeContext string) (*clientcmdapi.Config, error) {
 		return nil, fmt.Errorf("error loading KubeConfig: %v", err.Error())
 	}
 	if kubeContext != "" {
-		Logf(">>> kubeContext: %s", kubeContext)
 		c.CurrentContext = kubeContext
 	}
 	return c, nil
@@ -132,30 +131,14 @@ func DeleteNS(c clientset.Interface, namespace string, timeout time.Duration) er
 	return nil
 }
 
-func log(level string, format string, args ...interface{}) {
-	fmt.Fprintf(GinkgoWriter, nowStamp()+": "+level+": "+format+"\n", args...)
-}
-
 func Logf(format string, args ...interface{}) {
-	log("INFO", format, args...)
+	msg := fmt.Sprintf(format, args...)
+	log.Info(msg)
 }
 
 func Failf(format string, args ...interface{}) {
-	FailfWithOffset(1, format, args...)
-}
-
-// FailfWithOffset calls "Fail" and logs the error at "offset" levels above its caller
-// (for example, for call chain f -> g -> FailfWithOffset(1, ...) error would be logged for "f").
-func FailfWithOffset(offset int, format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
-	log("INFO", msg)
-	ginkgowrapper.Fail(nowStamp()+": "+msg, 1+offset)
-}
-
-func Skipf(format string, args ...interface{}) {
-	msg := fmt.Sprintf(format, args...)
-	log("INFO", msg)
-	ginkgowrapper.Skip(nowStamp() + ": " + msg)
+	ginkgowrapper.Fail(nowStamp()+": "+msg, 2)
 }
 
 func nowStamp() string {
