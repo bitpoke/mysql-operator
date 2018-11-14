@@ -2,6 +2,12 @@ workspace:
   base: /go
   path: src/github.com/presslabs/mysql-operator
 
+clone:
+  git:
+    image: plugins/git
+    depth: 100
+    tags: true
+
 pipeline:
   dependencies:
     image: golang:1.11
@@ -9,81 +15,82 @@ pipeline:
       - make dependencies
 
   lint:
+    group: lint
     image: golang:1.11
     commands:
       - make lint
 
+  lint-chart:
+    group: lint
+    image: quay.io/presslabs/kluster-toolbox
+    pull: true
+    commands:
+      - helm lint hack/charts/mysql-operator
+      - helm dep build hack/charts/mysql-operator
+
   test:
+    group: test
     image: golang:1.11
     commands:
       - make test
-      - make update-docker
 
-  publish-operator:
-    group: publish
-    image: plugins/docker
-    registry: quay.io
-    repo: quay.io/presslabs/mysql-operator
-    username: presslabs+drone
-    dockerfile: hack/docker/mysql-operator/Dockerfile
-    context: hack/docker/mysql-operator
-    tags: ["${DRONE_BRANCH/master/latest}"]
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
-    when:
-      event: push
-
-  publish-operator:
-    group: publish
-    image: plugins/docker
-    registry: quay.io
-    repo: quay.io/presslabs/mysql-operator
-    username: presslabs+drone
-    dockerfile: hack/docker/mysql-operator/Dockerfile
-    context: hack/docker/mysql-operator
-    tags: ["${DRONE_TAG}"]
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
-    when:
-      event: tag
-
-  publish-sidecar:
-    group: publish
-    image: plugins/docker
-    registry: quay.io
-    repo: quay.io/presslabs/mysql-operator-sidecar
-    username: presslabs+drone
-    dockerfile: hack/docker/mysql-operator-sidecar/Dockerfile
-    context: hack/docker/mysql-operator-sidecar
-    tags: ["${DRONE_BRANCH/master/latest}"]
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
-    when:
-      event: push
-
-  publish-sidecar:
-    group: publish
-    image: plugins/docker
-    registry: quay.io
-    repo: quay.io/presslabs/mysql-operator-sidecar
-    username: presslabs+drone
-    dockerfile: hack/docker/mysql-operator-sidecar/Dockerfile
-    context: hack/docker/mysql-operator-sidecar
-    tags: ["${DRONE_TAG}"]
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
-    when:
-      event: tag
-
-  make-chart:
+  build-chart:
+    group: build
     image: golang:1.11
     commands:
-      - make chart TAG=${DRONE_TAG}
-      - helm lint ./hack/charts/mysql-operator
+      - make chart
+
+  publish-operator:
+    group: publish
+    image: plugins/docker
+    registry: quay.io
+    repo: quay.io/presslabs/mysql-operator
+    username: presslabs+drone
+    tags: ["${DRONE_BRANCH/master/latest}"]
+    secrets:
+      - source: QUAY_TOKEN
+        target: DOCKER_PASSWORD
+    when:
+      event: push
+
+  publish-operator:
+    group: publish
+    image: plugins/docker
+    registry: quay.io
+    repo: quay.io/presslabs/mysql-operator
+    username: presslabs+drone
+    auto_tag: true
+    secrets:
+      - source: QUAY_TOKEN
+        target: DOCKER_PASSWORD
+    when:
+      event: tag
+
+  publish-sidecar:
+    group: publish
+    image: plugins/docker
+    registry: quay.io
+    repo: quay.io/presslabs/mysql-operator-sidecar
+    username: presslabs+drone
+    dockerfile: Dockerfile.sidecar
+    tags: ["${DRONE_BRANCH/master/latest}"]
+    secrets:
+      - source: QUAY_TOKEN
+        target: DOCKER_PASSWORD
+    when:
+      event: push
+
+  publish-sidecar:
+    group: publish
+    image: plugins/docker
+    registry: quay.io
+    repo: quay.io/presslabs/mysql-operator-sidecar
+    username: presslabs+drone
+    dockerfile: Dockerfile.sidecar
+    auto_tag: true
+    secrets:
+      - source: QUAY_TOKEN
+        target: DOCKER_PASSWORD
     when:
       event: tag
 
@@ -106,22 +113,6 @@ pipeline:
 #
 # end to end testing
 #
-
-  publish-e2e-image:
-    group: publish
-    image: plugins/docker
-    registry: quay.io
-    repo: quay.io/presslabs/mysql-e2e-tests
-    username: presslabs+drone
-    dockerfile: hack/docker/mysql-e2e-tests/Dockerfile
-    context: hack/docker/mysql-e2e-tests
-    tags: ["${DRONE_BRANCH}", "latest"]
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
-    when:
-      branch: master
-      event: push
 
   start-kubernetes:
     image: quay.io/presslabs/kluster-toolbox
@@ -177,7 +168,6 @@ pipeline:
     commands:
       - setup-credentials-helper.sh
       - gcloud container clusters delete $CLUSTER_NAME --quiet --zone europe-west3-b --project testing-reactor
-     
     when:
       status: [ success, failure ]
       branch: master
