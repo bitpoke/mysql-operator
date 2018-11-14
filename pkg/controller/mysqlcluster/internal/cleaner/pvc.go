@@ -76,7 +76,7 @@ func (p *PvcCleaner) Run(ctx context.Context, c client.Client, scheme *runtime.S
 		return nil
 	}
 
-	replicas := cluster.Spec.Replicas
+	replicas := *cluster.Spec.Replicas
 
 	// Find any pvcs with higher ordinal than replicas and delete them
 	claims, err := p.getClaims(ctx, c)

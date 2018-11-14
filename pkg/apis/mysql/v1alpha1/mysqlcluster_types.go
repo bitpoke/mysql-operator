@@ -32,7 +32,7 @@ type MysqlClusterSpec struct {
 	// The number of pods. This updates replicas filed
 	// Defaults to 0
 	// +optional
-	Replicas int32 `json:"replicas,omitempty"`
+	Replicas *int32 `json:"replicas,omitempty"`
 	// The secret name that contains connection information to initialize database, like
 	// USER, PASSWORD, ROOT_PASSWORD and so on
 	// This secret will be updated with DB_CONNECT_URL and some more configs.

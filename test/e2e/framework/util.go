@@ -215,13 +215,14 @@ func LogContainersInPodsWithLabels(c clientset.Interface, ns string, match map[s
 }
 
 func NewCluster(name, ns string) *api.MysqlCluster {
+	one := int32(1)
 	return &api.MysqlCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
 		},
 		Spec: api.MysqlClusterSpec{
-			Replicas:   1,
+			Replicas:   &one,
 			SecretName: name,
 		},
 	}

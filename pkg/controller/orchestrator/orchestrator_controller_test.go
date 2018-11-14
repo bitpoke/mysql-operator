@@ -41,6 +41,11 @@ import (
 	fakeOrc "github.com/presslabs/mysql-operator/pkg/orchestrator/fake"
 )
 
+var (
+	one = int32(1)
+	two = int32(2)
+)
+
 var _ = Describe("Orchestrator controller", func() {
 	var (
 		// channel for incoming reconcile requests
@@ -116,7 +121,7 @@ var _ = Describe("Orchestrator controller", func() {
 			cluster = mysqlcluster.New(&api.MysqlCluster{
 				ObjectMeta: metav1.ObjectMeta{Name: clusterKey.Name, Namespace: clusterKey.Namespace},
 				Spec: api.MysqlClusterSpec{
-					Replicas:   1,
+					Replicas:   &one,
 					SecretName: secret.Name,
 				},
 			})

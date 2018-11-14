@@ -60,10 +60,11 @@ var _ = Describe("Pvc cleaner", func() {
 		}
 		Expect(c.Create(context.TODO(), secret)).To(Succeed())
 
+		three := int32(3)
 		cluster = mysqlcluster.New(&api.MysqlCluster{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
 			Spec: api.MysqlClusterSpec{
-				Replicas:   3,
+				Replicas:   &three,
 				SecretName: secret.Name,
 			},
 		})

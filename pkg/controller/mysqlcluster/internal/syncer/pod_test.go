@@ -35,6 +35,10 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
+var (
+	two = int32(2)
+)
+
 var _ = Describe("Pod syncer", func() {
 	var (
 		cluster *mysqlcluster.MysqlCluster
@@ -51,7 +55,7 @@ var _ = Describe("Pod syncer", func() {
 				ReadyNodes: 2,
 			},
 			Spec: api.MysqlClusterSpec{
-				Replicas:   2,
+				Replicas:   &two,
 				SecretName: "the-secret",
 			},
 		})

@@ -38,11 +38,16 @@ func SetDefaults_MysqlCluster(c *MysqlCluster) {
 	c.setPodSpecDefaults(&(c.Spec.PodSpec))
 	c.setVolumeSpecDefaults(&(c.Spec.VolumeSpec))
 
+	if c.Spec.Replicas == nil {
+		one := int32(1)
+		c.Spec.Replicas = &one
+	}
+
 	if len(c.Spec.MysqlConf) == 0 {
 		c.Spec.MysqlConf = make(MysqlConf)
 	}
 
-	if len(c.Spec.MinAvailable) == 0 && c.Spec.Replicas > 1 {
+	if len(c.Spec.MinAvailable) == 0 && *c.Spec.Replicas > 1 {
 		c.Spec.MinAvailable = defaultMinAvailable
 	}
 

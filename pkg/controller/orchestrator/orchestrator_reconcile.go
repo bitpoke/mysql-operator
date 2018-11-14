@@ -196,7 +196,7 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) InstancesSet {
 	log.V(1).Info("nodes (un)registrations", "readyNodes", ou.cluster.Status.ReadyNodes)
 	log.V(2).Info("instances", "instances", instances)
 
-	for i := 0; i < int(ou.cluster.Spec.Replicas); i++ {
+	for i := 0; i < int(*ou.cluster.Spec.Replicas); i++ {
 		host := ou.cluster.GetPodHostname(i)
 		if inst := instances.GetInstance(host); inst == nil {
 			// if index node is bigger than total ready nodes than should not be
@@ -213,7 +213,7 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) InstancesSet {
 	}
 
 	// the only state in which a node can be removed from orchestrator
-	if int(ou.cluster.Spec.Replicas) == ou.cluster.Status.ReadyNodes {
+	if int(*ou.cluster.Spec.Replicas) == ou.cluster.Status.ReadyNodes {
 		// remove all instances from orchestrator that does not exists in k8s
 		for _, inst := range instances {
 			if i := instancesFiltered.GetInstance(inst.Key.Hostname); i == nil {

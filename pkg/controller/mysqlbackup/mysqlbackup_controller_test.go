@@ -89,10 +89,11 @@ var _ = Describe("MysqlBackup controller", func() {
 			NamespacedName: backupKey,
 		}
 
+		two := int32(2)
 		cluster = &api.MysqlCluster{
 			ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns},
 			Spec: api.MysqlClusterSpec{
-				Replicas:   2,
+				Replicas:   &two,
 				SecretName: "a-secret",
 			},
 		}
