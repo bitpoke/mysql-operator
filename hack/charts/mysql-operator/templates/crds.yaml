@@ -89,6 +89,9 @@ spec:
     plural: mysqlclusters
   scope: Namespaced
   subresources:
+    scale:
+      specReplicasPath: .spec.replicas
+      statusReplicasPath: .status.readyNodes
     status: {}
   validation:
     openAPIV3Schema:

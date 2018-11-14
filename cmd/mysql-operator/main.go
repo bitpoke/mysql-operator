@@ -47,6 +47,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// for glog
+	flag.Lookup("logtostderr").Value.Set("true")
+
 	// set logging
 	logf.SetLogger(customLog.ZapLogger())
 
