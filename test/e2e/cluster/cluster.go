@@ -39,6 +39,11 @@ const (
 	POLLING = 2 * time.Second
 )
 
+var (
+	one = int32(1)
+	two = int32(2)
+)
+
 var _ = Describe("Mysql cluster tests", func() {
 	f := framework.NewFramework("mc-1")
 
@@ -76,7 +81,7 @@ var _ = Describe("Mysql cluster tests", func() {
 
 	It("scale up a cluster", func() {
 		// scale up the cluster
-		cluster.Spec.Replicas = 2
+		cluster.Spec.Replicas = &two
 		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
 
 		// test cluster
@@ -89,7 +94,7 @@ var _ = Describe("Mysql cluster tests", func() {
 	})
 
 	It("failover cluster", func() {
-		cluster.Spec.Replicas = 2
+		cluster.Spec.Replicas = &two
 		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
 
 		// test cluster to be ready
@@ -124,7 +129,7 @@ var _ = Describe("Mysql cluster tests", func() {
 	})
 
 	It("scale down a cluster", func() {
-		cluster.Spec.Replicas = 2
+		cluster.Spec.Replicas = &two
 		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
 
 		// test cluster to be ready
@@ -136,7 +141,7 @@ var _ = Describe("Mysql cluster tests", func() {
 		Expect(f.Client.Get(context.TODO(), clusterKey, cluster)).To(Succeed())
 
 		// scale down the cluster
-		cluster.Spec.Replicas = 1
+		cluster.Spec.Replicas = &one
 		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
 
 		By("test cluster is ready after scale down")
@@ -146,7 +151,7 @@ var _ = Describe("Mysql cluster tests", func() {
 	})
 
 	It("slave io running stopped", func() {
-		cluster.Spec.Replicas = 2
+		cluster.Spec.Replicas = &two
 		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
 
 		// test cluster to be ready
@@ -169,7 +174,7 @@ var _ = Describe("Mysql cluster tests", func() {
 	})
 
 	It("slave latency", func() {
-		cluster.Spec.Replicas = 2
+		cluster.Spec.Replicas = &two
 		one := int64(1)
 		cluster.Spec.MaxSlaveLatency = &one
 
@@ -195,7 +200,7 @@ var _ = Describe("Mysql cluster tests", func() {
 	})
 
 	It("cluster readOnly", func() {
-		cluster.Spec.Replicas = 2
+		cluster.Spec.Replicas = &two
 		cluster.Spec.ReadOnly = true
 		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
 
@@ -234,13 +239,13 @@ var _ = Describe("Mysql cluster tests", func() {
 })
 
 func testClusterReadiness(f *framework.Framework, cluster *api.MysqlCluster) {
-	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
+	timeout := time.Duration(*cluster.Spec.Replicas) * f.Timeout
 
 	// wait for pods to be ready
 	Eventually(func() int {
 		f.Client.Get(context.TODO(), types.NamespacedName{Name: cluster.Name, Namespace: cluster.Namespace}, cluster)
 		return cluster.Status.ReadyNodes
-	}, timeout, POLLING).Should(Equal(int(cluster.Spec.Replicas)), "Not ready replicas of cluster '%s'", cluster.Name)
+	}, timeout, POLLING).Should(Equal(int(*cluster.Spec.Replicas)), "Not ready replicas of cluster '%s'", cluster.Name)
 
 	f.ClusterEventuallyCondition(cluster, api.ClusterConditionReady, core.ConditionTrue, f.Timeout)
 	// TODO: investigate way sometime exists failover ACK even to a newly created cluster.
@@ -276,7 +281,7 @@ func testClusterRegistrationInOrchestrator(f *framework.Framework, cluster *api.
 			"ReadOnly":      Equal(clusterReadOnly),
 		}), // master node
 	}
-	for i := 1; i < int(cluster.Spec.Replicas); i++ {
+	for i := 1; i < int(*cluster.Spec.Replicas); i++ {
 		consistOfNodes = append(consistOfNodes, MatchFields(IgnoreExtras, Fields{
 			"Key": Equal(orc.InstanceKey{
 				Hostname: f.GetPodHostname(cluster, i),
@@ -290,7 +295,7 @@ func testClusterRegistrationInOrchestrator(f *framework.Framework, cluster *api.
 	}
 
 	// check orchestrator nodes to be equal.
-	timeout := time.Duration(cluster.Spec.Replicas) * f.Timeout
+	timeout := time.Duration(*cluster.Spec.Replicas) * f.Timeout
 	Eventually(func() []orc.Instance {
 		insts, err := f.OrcClient.Cluster(framework.OrcClusterName(cluster))
 		if err != nil {

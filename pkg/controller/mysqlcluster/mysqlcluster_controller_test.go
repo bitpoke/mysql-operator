@@ -46,6 +46,10 @@ type clusterComponents []runtime.Object
 
 const timeout = time.Second * 2
 
+var (
+	two = int32(2)
+)
+
 var _ = Describe("MysqlCluster controller", func() {
 	var (
 		// channel for incoming reconcile requests
@@ -99,7 +103,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			cluster = mysqlcluster.New(&api.MysqlCluster{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
 				Spec: api.MysqlClusterSpec{
-					Replicas:   2,
+					Replicas:   &two,
 					SecretName: secret.Name,
 				},
 			})

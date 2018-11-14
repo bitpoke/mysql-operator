@@ -82,7 +82,7 @@ func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*apps.StatefulSet)
 
-	if out.Status.ReadyReplicas == s.cluster.Spec.Replicas {
+	if out.Status.ReadyReplicas == *s.cluster.Spec.Replicas {
 		s.cluster.UpdateStatusCondition(api.ClusterConditionReady,
 			core.ConditionTrue, "statefulset ready", "Cluster is ready.")
 	} else {
@@ -92,7 +92,7 @@ func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 
 	s.cluster.Status.ReadyNodes = int(out.Status.ReadyReplicas)
 
-	out.Spec.Replicas = &s.cluster.Spec.Replicas
+	out.Spec.Replicas = s.cluster.Spec.Replicas
 	out.Spec.Selector = &metav1.LabelSelector{
 		MatchLabels: s.getLabels(map[string]string{}),
 	}

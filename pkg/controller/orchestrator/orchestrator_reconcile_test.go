@@ -62,7 +62,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 				ReadyNodes: 1,
 			},
 			Spec: api.MysqlClusterSpec{
-				Replicas:   1,
+				Replicas:   &one,
 				SecretName: clusterKey.Name,
 			},
 		})
@@ -172,7 +172,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 		})
 
 		It("should mark nodes as unknown when scale down", func() {
-			cluster.Spec.Replicas = 2
+			cluster.Spec.Replicas = &two
 			cluster.Status.ReadyNodes = 2
 
 			orcClient.AddInstance(orc.Instance{
@@ -192,7 +192,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 			Expect(err).To(Succeed())
 
 			// scale down the cluster
-			cluster.Spec.Replicas = 1
+			cluster.Spec.Replicas = &one
 			cluster.Status.ReadyNodes = 1
 
 			// sync
@@ -384,7 +384,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 				ReadOnly:    true,
 			})
 
-			cluster.Spec.Replicas = 1
+			cluster.Spec.Replicas = &one
 			cluster.Status.ReadyNodes = 1
 
 			// call register and unregister nodes in orc
@@ -410,7 +410,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 					ReadOnly:    true,
 				})
 
-				cluster.Spec.Replicas = 2
+				cluster.Spec.Replicas = &two
 				cluster.Status.ReadyNodes = 1
 
 				// call register and unregister nodes in orc

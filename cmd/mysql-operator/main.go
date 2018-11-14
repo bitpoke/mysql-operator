@@ -48,7 +48,9 @@ func main() {
 	}
 
 	// for glog
-	flag.Lookup("logtostderr").Value.Set("true")
+	if err := flag.Lookup("logtostderr").Value.Set("true"); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to set glog to use stderr, err: %s", err)
+	}
 
 	// set logging
 	logf.SetLogger(customLog.ZapLogger())
