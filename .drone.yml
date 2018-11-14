@@ -146,7 +146,7 @@ pipeline:
       - HELM_HOME=/go/.helm/
       - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
     commands:
-      - export PATH=${PATH}:/go/src/github.com/presslabs/mysql-operator/bin
+      - export PATH=$PATH:/go/src/github.com/presslabs/mysql-operator/bin
       - go test ./test/e2e -v --kubernetes-config /go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
             --operator-image quay.io/presslabs/mysql-operator:${DRONE_BRANCH/master/latest}
             --sidecar-image quay.io/presslabs/mysql-operator-sidecar:${DRONE_BRANCH/master/latest}
