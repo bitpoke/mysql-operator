@@ -3,9 +3,9 @@ kind: Config
 build:
   artifacts:
   - image: quay.io/presslabs/mysql-operator
-    context: hack/docker/mysql-operator
   - image: quay.io/presslabs/mysql-operator-sidecar
-    context: hack/docker/mysql-operator-sidecar
+    docker:
+      dockerfile: Dockerfile.sidecar
   local:
     push: false
 deploy:

@@ -1,0 +1,36 @@
+# Build the manager binary
+FROM golang:1.11.2 as builder
+
+# Copy in the go src
+WORKDIR /go/src/github.com/presslabs/mysql-operator
+COPY pkg/    pkg/
+COPY cmd/    cmd/
+COPY vendor/ vendor/
+
+# Build
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator github.com/presslabs/mysql-operator/cmd/mysql-operator
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator-sidecar github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
+
+# Copy the mysql-operator-sidecar into it's own image
+FROM debian:stretch as sidecar
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        apt-transport-https ca-certificates wget \
+        gnupg1 dirmngr \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys 9334A25F8507EFA5
+
+RUN echo 'deb https://repo.percona.com/apt stretch main' > /etc/apt/sources.list.d/percona.list
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        percona-toolkit percona-xtrabackup \
+    && wget https://github.com/maxbube/mydumper/releases/download/v0.9.5/mydumper_0.9.5-2.stretch_amd64.deb \
+    && dpkg -i mydumper_0.9.5-2.stretch_amd64.deb \
+    && rm -rf mydumper_0.9.5-2.stretch_amd64.deb /var/lib/apt/lists/*
+
+COPY ./hack/docker/sidecar-entrypoint.sh /usr/local/bin/sidecar-entrypoint.sh
+COPY --from=builder /go/src/github.com/presslabs/mysql-operator/mysql-operator-sidecar /usr/local/bin/mysql-operator-sidecar
+ENTRYPOINT ["./sidecar-entrypoint.sh"]

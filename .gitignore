@@ -45,6 +45,7 @@ bin/
 hack/docker/mysql-operator-sidecar/mysql-operator-sidecar
 hack/docker/mysql-operator/mysql-operator
 **/charts/*.tgz
+*.bak
 
 # ignore vscode
 .vscode

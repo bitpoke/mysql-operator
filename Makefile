@@ -1,7 +1,9 @@
-
-# Image URL to use all building/pushing image targets
-IMG ?= quay.io/presslabs/mysql-operator:build
-SIDECAR_IMG ?= quay.io/presslabs/mysql-operator-sidecar:build
+APP_VERSION ?= $(shell git describe --abbrev=5 --dirty --tags --always)
+REGISTRY := quay.io/presslabs
+IMAGE_NAME := mysql-operator
+SIDECAR_IMAGE_NAME := mysql-operator-sidecar
+BUILD_TAG := build
+IMAGE_TAGS := $(APP_VERSION)
 
 BINDIR := $(PWD)/bin
 KUBEBUILDER_VERSION ?= 1.0.5
@@ -13,13 +15,7 @@ GOARCH ?= amd64
 PATH := $(BINDIR):$(PATH)
 SHELL := env PATH=$(PATH) /bin/sh
 
-CMDS    := $(shell find ./cmd/ -maxdepth 1 -type d -exec basename {} \; | grep -v cmd)
-GOFILES := $(shell find cmd/ -name 'main.go' -type f )
-
 all: test build
-
-# Build binaries tag
-build: $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
 
 # Run tests
 test: generate fmt vet manifests
@@ -28,14 +24,14 @@ test: generate fmt vet manifests
 			--cover --coverprofile cover.out --trace --race --progress  $(TEST_ARGS)\
 			./pkg/... ./cmd/...
 
-# Build binaries
-bin/%: $(GOFILES) Makefile $(shell find pkg/ -name '*.go' -type f)
-	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) \
-		go build $(GOFLAGS) -v -o $@ cmd/$(shell echo "$*" | cut -d'_' -f1)/main.go
+# Build mysql-operator binary
+build: generate fmt vet
+	go build -o bin/mysql-operator github.com/presslabs/mysql-operator/cmd/mysql-operator
+	go build -o bin/mysql-operator-sidecar github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet
-	go run ./cmd/manager/main.go
+	go run ./cmd/mysql-operator/main.go
 
 # Install CRDs into a cluster
 install: manifests
@@ -62,29 +58,12 @@ vet:
 generate:
 	go generate ./pkg/... ./cmd/...
 
-# update docker context binaries
-$(patsubst %, hack/docker/%, $(CMDS)): $(patsubst %, bin/%_$(GOOS)_$(GOARCH), $(CMDS))
-	$(eval SRC := $(subst hack/docker/,,$@))
-	cp bin/${SRC}_$(GOOS)_$(GOARCH) $@/${SRC}
-
-# update all docker binaries
-update-docker: $(patsubst %, hack/docker/%, $(CMDS))
-
-# Build the docker image
-docker-build: update-docker
-	docker build -t ${IMG} hack/docker/mysql-operator/
-	docker build -t ${SIDECAR_IMG} hack/docker/mysql-operator-sidecar/
-
-# Push the docker image
-docker-push: docker-build
-	docker push ${IMG}
-	docker push ${SIDECAR_IMG}
-
 lint:
 	$(BINDIR)/golangci-lint run ./pkg/... ./cmd/...
 
+.PHONY: chart
 chart: generate manifests
-	cd hack && ./generate_chart.sh $(TAG)
+	cd hack && ./generate_chart.sh $(APP_VERSION)
 
 dependencies:
 	test -d $(BINDIR) || mkdir $(BINDIR)
@@ -94,11 +73,29 @@ dependencies:
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v1.10.2
 	curl -sL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_$(GOOS)_$(GOARCH).tar.gz | \
 				tar -zx -C $(BINDIR) --strip-components=2
-
-  # install helm
-	curl -sL https://kubernetes-helm.storage.googleapis.com/helm-v$(HELM_VERSION)-linux-amd64.tar.gz | \
-		tar -C $(BINDIR) -xz --strip-components 1 linux-amd64/helm
+	curl -sL https://kubernetes-helm.storage.googleapis.com/helm-v$(HELM_VERSION)-$(GOOS)-$(GOARCH).tar.gz | \
+		tar -C $(BINDIR) -xz --strip-components 1 $(GOOS)-$(GOARCH)/helm
 	chmod +x $(BINDIR)/helm
+
+# Build the docker image
+.PHONY: images
+images:
+	docker build . -f Dockerfile -t $(REGISTRY)/$(IMAGE_NAME):$(BUILD_TAG)
+	docker build . -f Dockerfile.sidecar -t $(REGISTRY)/$(SIDECAR_IMAGE_NAME):$(BUILD_TAG)
+	set -e; \
+		for tag in $(IMAGE_TAGS); do \
+			docker tag $(REGISTRY)/$(IMAGE_NAME):$(BUILD_TAG) $(REGISTRY)/$(IMAGE_NAME):$${tag}; \
+			docker tag $(REGISTRY)/$(SIDECAR_IMAGE_NAME):$(BUILD_TAG) $(REGISTRY)/$(SIDECAR_IMAGE_NAME):$${tag}; \
+	done
+
+# Push the docker image
+.PHONY: publish
+publish: images
+	set -e; \
+		for tag in $(IMAGE_TAGS); do \
+		docker push $(REGISTRY)/$(IMAGE_NAME):$${tag}; \
+		docker push $(REGISTRY)/$(SIDECAR_IMAGE_NAME):$${tag}; \
+	done
 
 # E2E tests
 ###########
@@ -106,7 +103,7 @@ dependencies:
 KUBECONFIG ?= ~/.kube/config
 K8S_CONTEXT ?= minikube
 
-e2e-local: docker-build
+e2e-local: images
 	go test ./test/e2e -v $(G_ARGS) -timeout 20m --pod-wait-timeout 60 \
 		-ginkgo.slowSpecThreshold 300 \
 		--kubernetes-config $(KUBECONFIG) --kubernetes-context $(K8S_CONTEXT) \
