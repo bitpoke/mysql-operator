@@ -8,7 +8,9 @@ awk 'FNR==1 && NR!=1 {print "---"}{print}' ${CONFIG_PATH}/crds/*.yaml > ${CHART_
 yq m -d'*' -i ${CHART_PATH}/templates/_crds.yaml chart-metadata.yaml
 yq w -d'*' -i ${CHART_PATH}/templates/_crds.yaml 'metadata.annotations[helm.sh/hook]' crd-install
 yq d -d'*' -i ${CHART_PATH}/templates/_crds.yaml metadata.creationTimestamp
-yq d -d'*' -i ${CHART_PATH}/templates/_crds.yaml status metadata.creationTimestamp
+yq d -d'*' -i ${CHART_PATH}/templates/_crds.yaml status
+yq d -d'*' -i ${CHART_PATH}/templates/_crds.yaml spec.validation
+
 echo '{{- if .Values.installCRDs }}' > ${CHART_PATH}/templates/crds.yaml
 cat ${CHART_PATH}/templates/_crds.yaml >> ${CHART_PATH}/templates/crds.yaml
 echo '{{- end }}' >> ${CHART_PATH}/templates/crds.yaml
