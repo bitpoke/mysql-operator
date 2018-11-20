@@ -36,6 +36,8 @@ spec:
   names:
     kind: MysqlCluster
     plural: mysqlclusters
+    shortNames:
+    - mysql
   scope: Namespaced
   subresources:
     scale:
