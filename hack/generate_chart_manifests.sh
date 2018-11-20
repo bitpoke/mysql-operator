@@ -11,6 +11,10 @@ yq d -d'*' -i ${CHART_PATH}/templates/_crds.yaml metadata.creationTimestamp
 yq d -d'*' -i ${CHART_PATH}/templates/_crds.yaml status
 yq d -d'*' -i ${CHART_PATH}/templates/_crds.yaml spec.validation
 
+# add shortName to CRD until https://github.com/kubernetes-sigs/kubebuilder/issues/404 is solved
+yq w -d1 -i ${CHART_PATH}/templates/_crds.yaml 'spec.names.shortNames[0]' mysql
+
+
 echo '{{- if .Values.installCRDs }}' > ${CHART_PATH}/templates/crds.yaml
 cat ${CHART_PATH}/templates/_crds.yaml >> ${CHART_PATH}/templates/crds.yaml
 echo '{{- end }}' >> ${CHART_PATH}/templates/crds.yaml
