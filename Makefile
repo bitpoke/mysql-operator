@@ -108,3 +108,12 @@ e2e-local: images
 		-ginkgo.slowSpecThreshold 300 \
 		--kubernetes-config $(KUBECONFIG) --kubernetes-context $(K8S_CONTEXT) \
 		--report-dir ../../e2e-reports
+
+E2E_IMG_TAG ?= latest
+e2e-remote:
+	go test ./test/e2e -v $(G_ARGS) -timeout 50m --pod-wait-timeout 200 \
+		-ginkgo.slowSpecThreshold 300 \
+		--kubernetes-config $(KUBECONFIG) --kubernetes-context $(K8S_CONTEXT) \
+		--report-dir ../../e2e-reports \
+		--operator-image quay.io/presslabs/mysql-operator:$(E2E_IMG_TAG) \
+		--sidecar-image  quay.io/presslabs/mysql-operator-sidecar:$(E2E_IMG_TAG)
