@@ -1,18 +1,18 @@
 #!/bin/bash
 
-version="$1"
-if [ -z "$version" ] ; then
+tag="$1"
+if [ -z "$tag" ] ; then
     echo "Usage: $0 <image tag>" >&2
     exit 1
 fi
-chart_version="${version#v}"
+version="${tag#v}"
 
 CHART_PATH=charts/mysql-operator
 
-echo "Updating chart to version to: ${chart_version}"
+echo "Updating chart to version to: ${version}"
 sed -i.bak -E "
-    s#version: .*#version: ${chart_version}#
-    s#appVersion: .*#appVersion: ${version}#
+    s#version: .*#version: ${version}#
+    s#appVersion: .*#appVersion: ${tag}#
 " ${CHART_PATH}/Chart.yaml
 rm ${CHART_PATH}/Chart.yaml.bak
 
