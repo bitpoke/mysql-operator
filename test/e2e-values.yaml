@@ -1,8 +1,6 @@
 extraArgs:
   - -v=1
 
-installCRDs: false
-
 orchestrator:
   topologyPassword: password1
   antiAffinity: soft
