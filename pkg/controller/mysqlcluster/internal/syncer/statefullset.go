@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/appscode/mergo"
+	"github.com/presslabs/controller-util/mergo/transformers"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -99,45 +101,49 @@ func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 
 	out.Spec.ServiceName = s.cluster.GetNameForResource(mysqlcluster.HeadlessSVC)
 
-	out.Spec.Template = s.ensureTemplate(out.Spec.Template)
+	// ensure template
+	out.Spec.Template.ObjectMeta.Labels = s.getLabels(s.cluster.Spec.PodSpec.Labels)
+	out.Spec.Template.ObjectMeta.Annotations = s.cluster.Spec.PodSpec.Annotations
+	if len(out.Spec.Template.ObjectMeta.Annotations) == 0 {
+		out.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+	}
+
+	out.Spec.Template.ObjectMeta.Annotations["config_rev"] = s.configMapRevision
+	out.Spec.Template.ObjectMeta.Annotations["secret_rev"] = s.secretRevision
+	out.Spec.Template.ObjectMeta.Annotations["prometheus.io/scrape"] = "true"
+	out.Spec.Template.ObjectMeta.Annotations["prometheus.io/port"] = fmt.Sprintf("%d", ExporterPort)
+
+	err := mergo.Merge(&out.Spec.Template.Spec, s.ensurePodSpec(), mergo.WithTransformers(transformers.PodSpec))
+	if err != nil {
+		return err
+	}
+
 	out.Spec.VolumeClaimTemplates = s.ensureVolumeClaimTemplates(out.Spec.VolumeClaimTemplates)
 
 	return nil
 }
 
-func (s *sfsSyncer) ensureTemplate(in core.PodTemplateSpec) core.PodTemplateSpec {
-	in.ObjectMeta.Labels = s.getLabels(s.cluster.Spec.PodSpec.Labels)
-	in.ObjectMeta.Annotations = s.cluster.Spec.PodSpec.Annotations
-	if len(in.ObjectMeta.Annotations) == 0 {
-		in.ObjectMeta.Annotations = make(map[string]string)
+func (s *sfsSyncer) ensurePodSpec() core.PodSpec {
+	return core.PodSpec{
+		InitContainers:   s.ensureInitContainersSpec(),
+		Containers:       s.ensureContainersSpec(),
+		Volumes:          s.ensureVolumes(),
+		Affinity:         &s.cluster.Spec.PodSpec.Affinity,
+		NodeSelector:     s.cluster.Spec.PodSpec.NodeSelector,
+		ImagePullSecrets: s.cluster.Spec.PodSpec.ImagePullSecrets,
 	}
-	in.ObjectMeta.Annotations["config_rev"] = s.configMapRevision
-	in.ObjectMeta.Annotations["secret_rev"] = s.secretRevision
-	in.ObjectMeta.Annotations["prometheus.io/scrape"] = "true"
-	in.ObjectMeta.Annotations["prometheus.io/port"] = fmt.Sprintf("%d", ExporterPort)
-
-	in.Spec.InitContainers = s.ensureInitContainersSpec(in.Spec.InitContainers)
-	in.Spec.Containers = s.ensureContainersSpec(in.Spec.Containers)
-
-	in.Spec.Volumes = s.ensureVolumes(in.Spec.Volumes)
-
-	in.Spec.Affinity = &s.cluster.Spec.PodSpec.Affinity
-	in.Spec.NodeSelector = s.cluster.Spec.PodSpec.NodeSelector
-	in.Spec.ImagePullSecrets = s.cluster.Spec.PodSpec.ImagePullSecrets
-
-	return in
 }
 
-func (s *sfsSyncer) ensureContainer(in core.Container, name, image string, args []string) core.Container {
-	in.Name = name
-	in.Image = image
-	in.ImagePullPolicy = s.cluster.Spec.PodSpec.ImagePullPolicy
-	in.Args = args
-	in.EnvFrom = s.getEnvSourcesFor(name)
-	in.Env = s.getEnvFor(name)
-	in.VolumeMounts = s.getVolumeMountsFor(name)
-
-	return in
+func (s *sfsSyncer) ensureContainer(name, image string, args []string) core.Container {
+	return core.Container{
+		Name:            name,
+		Image:           image,
+		ImagePullPolicy: s.cluster.Spec.PodSpec.ImagePullPolicy,
+		Args:            args,
+		EnvFrom:         s.getEnvSourcesFor(name),
+		Env:             s.getEnvFor(name),
+		VolumeMounts:    s.getVolumeMountsFor(name),
+	}
 }
 
 func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
@@ -301,47 +307,34 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 	return env
 }
 
-func (s *sfsSyncer) ensureInitContainersSpec(in []core.Container) []core.Container {
-	if len(in) == 0 {
-		in = make([]core.Container, 2)
+func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
+	return []core.Container{
+		// init container for configs
+		s.ensureContainer(containerInitName,
+			s.opt.HelperImage,
+			[]string{"files-config"},
+		),
+
+		// clone container
+		s.ensureContainer(containerCloneName,
+			s.opt.HelperImage,
+			[]string{"clone"},
+		),
 	}
-
-	// init container for configs
-	in[0] = s.ensureContainer(in[0], containerInitName,
-		s.opt.HelperImage,
-		[]string{"files-config"},
-	)
-
-	// clone container
-	in[1] = s.ensureContainer(in[1], containerCloneName,
-		s.opt.HelperImage,
-		[]string{"clone"},
-	)
-
-	return in
 }
 
-func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
-	noContainers := 4
-	if s.cluster.Spec.QueryLimits != nil {
-		noContainers++
-	}
-
-	if len(in) != noContainers {
-		in = make([]core.Container, noContainers)
-	}
-
+func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 	// MYSQL container
-	mysql := s.ensureContainer(in[0], containerMysqlName,
+	mysql := s.ensureContainer(containerMysqlName,
 		s.opt.MysqlImage+":"+s.opt.MysqlImageTag,
 		[]string{},
 	)
-	mysql.Ports = ensureContainerPorts(mysql.Ports, core.ContainerPort{
+	mysql.Ports = ensurePorts(core.ContainerPort{
 		Name:          MysqlPortName,
 		ContainerPort: MysqlPort,
 	})
 	mysql.Resources = s.cluster.Spec.PodSpec.Resources
-	mysql.LivenessProbe = ensureProbe(mysql.LivenessProbe, 30, 5, 5, core.Handler{
+	mysql.LivenessProbe = ensureProbe(30, 5, 5, core.Handler{
 		Exec: &core.ExecAction{
 			Command: []string{
 				"mysqladmin",
@@ -352,7 +345,7 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 	})
 
 	// we have to know ASAP when server is not ready to remove it from endpoints
-	mysql.ReadinessProbe = ensureProbe(mysql.ReadinessProbe, 5, 5, 2, core.Handler{
+	mysql.ReadinessProbe = ensureProbe(5, 5, 2, core.Handler{
 		Exec: &core.ExecAction{
 			Command: []string{
 				"mysql",
@@ -362,29 +355,27 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 			},
 		},
 	})
-	in[0] = mysql
 
-	helper := s.ensureContainer(in[1], containerSidecarName,
+	helper := s.ensureContainer(containerSidecarName,
 		s.opt.HelperImage,
 		[]string{"config-and-serve"},
 	)
-	helper.Ports = ensureContainerPorts(helper.Ports, core.ContainerPort{
+	helper.Ports = ensurePorts(core.ContainerPort{
 		Name:          HelperXtrabackupPortName,
 		ContainerPort: HelperXtrabackupPort,
 	})
 
 	// HELPER container
-	helper.ReadinessProbe = ensureProbe(helper.ReadinessProbe, 30, 5, 5, core.Handler{
+	helper.ReadinessProbe = ensureProbe(30, 5, 5, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   HelperServerProbePath,
 			Port:   intstr.FromInt(HelperServerPort),
 			Scheme: core.URISchemeHTTP,
 		},
 	})
-	in[1] = helper
 
 	// METRICS container
-	exporter := s.ensureContainer(in[2], containerExporterName,
+	exporter := s.ensureContainer(containerExporterName,
 		s.opt.MetricsExporterImage,
 		[]string{
 			fmt.Sprintf("--web.listen-address=0.0.0.0:%d", ExporterPort),
@@ -393,11 +384,11 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 			fmt.Sprintf("--collect.heartbeat.database=%s", HelperDbName),
 		},
 	)
-	exporter.Ports = ensureContainerPorts(mysql.Ports, core.ContainerPort{
+	exporter.Ports = ensurePorts(core.ContainerPort{
 		Name:          ExporterPortName,
 		ContainerPort: ExporterPort,
 	})
-	exporter.LivenessProbe = ensureProbe(exporter.LivenessProbe, 30, 30, 30, core.Handler{
+	exporter.LivenessProbe = ensureProbe(30, 30, 30, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   ExporterPath,
 			Port:   ExporterTargetPort,
@@ -405,10 +396,8 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 		},
 	})
 
-	in[2] = exporter
-
 	// PT-HEARTBEAT container
-	heartbeat := s.ensureContainer(in[3], containerHeartBeatName,
+	heartbeat := s.ensureContainer(containerHeartBeatName,
 		s.opt.HelperImage,
 		[]string{
 			"pt-heartbeat",
@@ -421,8 +410,14 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 		},
 	)
 
-	in[3] = heartbeat
+	containers := []core.Container{
+		mysql,
+		helper,
+		exporter,
+		heartbeat,
+	}
 
+	// PT-KILL container
 	if s.cluster.Spec.QueryLimits != nil {
 		command := []string{
 			"pt-kill",
@@ -432,43 +427,39 @@ func (s *sfsSyncer) ensureContainersSpec(in []core.Container) []core.Container {
 		}
 		command = append(command, getCliOptionsFromQueryLimits(s.cluster.Spec.QueryLimits)...)
 
-		killer := s.ensureContainer(in[4], containerKillerName,
+		killer := s.ensureContainer(containerKillerName,
 			s.opt.HelperImage,
 			command,
 		)
-		in[4] = killer
+		containers = append(containers, killer)
 	}
 
-	return in
+	return containers
+
 }
 
-func (s *sfsSyncer) ensureVolumes(in []core.Volume) []core.Volume {
-	noVolumes := 3
-	if len(in) != noVolumes {
-		in = make([]core.Volume, noVolumes)
-	}
-
-	in[0] = ensureVolume(in[0], confVolumeName, core.VolumeSource{
-		EmptyDir: &core.EmptyDirVolumeSource{},
-	})
-
+func (s *sfsSyncer) ensureVolumes() []core.Volume {
 	fileMode := int32(0644)
-	in[1] = ensureVolume(in[1], confMapVolumeName, core.VolumeSource{
-		ConfigMap: &core.ConfigMapVolumeSource{
-			LocalObjectReference: core.LocalObjectReference{
-				Name: s.cluster.GetNameForResource(mysqlcluster.ConfigMap),
+	return []core.Volume{
+		ensureVolume(confVolumeName, core.VolumeSource{
+			EmptyDir: &core.EmptyDirVolumeSource{},
+		}),
+
+		ensureVolume(confMapVolumeName, core.VolumeSource{
+			ConfigMap: &core.ConfigMapVolumeSource{
+				LocalObjectReference: core.LocalObjectReference{
+					Name: s.cluster.GetNameForResource(mysqlcluster.ConfigMap),
+				},
+				DefaultMode: &fileMode,
 			},
-			DefaultMode: &fileMode,
-		},
-	})
+		}),
 
-	in[2] = ensureVolume(in[2], dataVolumeName, core.VolumeSource{
-		PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
-			ClaimName: dataVolumeName,
-		},
-	})
-
-	return in
+		ensureVolume(dataVolumeName, core.VolumeSource{
+			PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
+				ClaimName: dataVolumeName,
+			},
+		}),
+	}
 }
 
 // TODO rework the condition here after kubernetes-sigs/controller-runtime#98 gets merged.
@@ -569,11 +560,11 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 	return nil
 }
 
-func ensureVolume(in core.Volume, name string, source core.VolumeSource) core.Volume {
-	in.Name = name
-	in.VolumeSource = source
-
-	return in
+func ensureVolume(name string, source core.VolumeSource) core.Volume {
+	return core.Volume{
+		Name:         name,
+		VolumeSource: source,
+	}
 }
 
 func (s *sfsSyncer) getLabels(extra map[string]string) map[string]string {
@@ -626,29 +617,17 @@ func getCliOptionsFromQueryLimits(ql *api.QueryLimits) []string {
 	return options
 }
 
-func ensureProbe(in *core.Probe, delay, timeout, period int32, handler core.Handler) *core.Probe {
-	if in == nil {
-		in = &core.Probe{}
+func ensureProbe(delay, timeout, period int32, handler core.Handler) *core.Probe {
+	return &core.Probe{
+		InitialDelaySeconds: delay,
+		TimeoutSeconds:      timeout,
+		PeriodSeconds:       period,
+		Handler:             handler,
+		SuccessThreshold:    1,
+		FailureThreshold:    3,
 	}
-	in.InitialDelaySeconds = delay
-	in.TimeoutSeconds = timeout
-	in.PeriodSeconds = period
-	if handler.Exec != nil {
-		in.Handler.Exec = handler.Exec
-	}
-	if handler.HTTPGet != nil {
-		in.Handler.HTTPGet = handler.HTTPGet
-	}
-	if handler.TCPSocket != nil {
-		in.Handler.TCPSocket = handler.TCPSocket
-	}
-
-	return in
 }
 
-func ensureContainerPorts(in []core.ContainerPort, ports ...core.ContainerPort) []core.ContainerPort {
-	if len(in) == 0 {
-		return ports
-	}
-	return in
+func ensurePorts(ports ...core.ContainerPort) []core.ContainerPort {
+	return ports
 }
