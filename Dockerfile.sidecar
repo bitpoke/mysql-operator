@@ -26,10 +26,15 @@ RUN echo 'deb https://repo.percona.com/apt stretch main' > /etc/apt/sources.list
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        percona-toolkit percona-xtrabackup-24 \
+        percona-toolkit percona-xtrabackup-24 unzip \
     && wget https://github.com/maxbube/mydumper/releases/download/v0.9.5/mydumper_0.9.5-2.stretch_amd64.deb \
     && dpkg -i mydumper_0.9.5-2.stretch_amd64.deb \
-    && rm -rf mydumper_0.9.5-2.stretch_amd64.deb /var/lib/apt/lists/*
+    && rm -rf mydumper_0.9.5-2.stretch_amd64.deb /var/lib/apt/lists/* \
+    && wget https://downloads.rclone.org/rclone-current-linux-amd64.zip \
+    && unzip rclone-current-linux-amd64.zip \
+    && mv rclone-*-linux-amd64/rclone /usr/local/bin/ \
+    && rm -rf rclone-*-linux-amd64 rclone-current-linux-amd64.zip \
+    && chmod 755 /usr/local/bin/rclone
 
 COPY ./hack/docker/sidecar-entrypoint.sh /usr/local/bin/sidecar-entrypoint.sh
 COPY --from=builder /go/src/github.com/presslabs/mysql-operator/mysql-operator-sidecar /usr/local/bin/mysql-operator-sidecar
