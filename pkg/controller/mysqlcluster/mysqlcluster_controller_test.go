@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// nolint: errcheck
+// nolint: errcheck, unparam
 package mysqlcluster
 
 import (
@@ -81,6 +81,7 @@ var _ = Describe("MysqlCluster controller", func() {
 		var (
 			expectedRequest reconcile.Request
 			cluster         *mysqlcluster.MysqlCluster
+			clusterKey      types.NamespacedName
 			secret          *corev1.Secret
 			components      clusterComponents
 		)
@@ -107,6 +108,10 @@ var _ = Describe("MysqlCluster controller", func() {
 					SecretName: secret.Name,
 				},
 			})
+			clusterKey = types.NamespacedName{
+				Name:      cluster.Name,
+				Namespace: cluster.Namespace,
+			}
 
 			components = []runtime.Object{
 				&appsv1.StatefulSet{
@@ -147,6 +152,7 @@ var _ = Describe("MysqlCluster controller", func() {
 				},
 			}
 
+			By("create the MySQL cluster")
 			Expect(c.Create(context.TODO(), secret)).To(Succeed())
 			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
 
@@ -169,6 +175,7 @@ var _ = Describe("MysqlCluster controller", func() {
 
 			// We need to make sure that the controller does not create infinite
 			// loops
+			By("wait for no more reconcile requests")
 			Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 		})
 
@@ -247,6 +254,92 @@ var _ = Describe("MysqlCluster controller", func() {
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 				Eventually(getClusterConditions(c, cluster), timeout).Should(haveCondWithStatus(api.ClusterConditionReady, corev1.ConditionTrue))
 			})
+			It("should label pods as healthy and as master accordingly", func() {
+				pod0 := getPod(cluster, 0)
+				Expect(c.Create(context.TODO(), pod0)).To(Succeed())
+				pod1 := getPod(cluster, 1)
+				Expect(c.Create(context.TODO(), pod1)).To(Succeed())
+				pod2 := getPod(cluster, 2)
+				Expect(c.Create(context.TODO(), pod2)).To(Succeed())
+
+				// update cluster conditions
+				By("update cluster status")
+				Expect(c.Get(context.TODO(), clusterKey, cluster.Unwrap())).To(Succeed())
+				cluster.Status.Nodes = []api.NodeStatus{
+					nodeStatusForPod(cluster, pod0, true, false, false),
+					nodeStatusForPod(cluster, pod1, false, false, true),
+					nodeStatusForPod(cluster, pod2, false, false, false),
+				}
+				Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
+
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+				// assert pods labels
+				// master
+				Expect(c.Get(context.TODO(), objToKey(pod0), pod0)).To(Succeed())
+				Expect(pod0).To(haveLabelWithValue("role", "master"))
+				Expect(pod0).To(haveLabelWithValue("healthy", "yes"))
+
+				// replica
+				Expect(c.Get(context.TODO(), objToKey(pod1), pod1)).To(Succeed())
+				Expect(pod1).To(haveLabelWithValue("role", "replica"))
+				Expect(pod1).To(haveLabelWithValue("healthy", "yes"))
+			})
+			It("should label pods as master eaven if pods does not exists", func() {
+				pod0 := getPod(cluster, 0)
+				Expect(c.Create(context.TODO(), pod0)).To(Succeed())
+				pod1 := getPod(cluster, 1)
+				pod2 := getPod(cluster, 2)
+
+				// update cluster conditions
+				By("update cluster status")
+				Expect(c.Get(context.TODO(), clusterKey, cluster.Unwrap())).To(Succeed())
+				cluster.Status.Nodes = []api.NodeStatus{
+					nodeStatusForPod(cluster, pod0, true, false, false),
+					nodeStatusForPod(cluster, pod1, false, false, false),
+					nodeStatusForPod(cluster, pod2, false, false, false),
+				}
+				Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
+
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+				// assert pods labels
+				// master
+				Expect(c.Get(context.TODO(), objToKey(pod0), pod0)).To(Succeed())
+				Expect(pod0).To(haveLabelWithValue("role", "master"))
+				Expect(pod0).To(haveLabelWithValue("healthy", "yes"))
+
+				// check pod is not created
+				Expect(c.Get(context.TODO(), objToKey(pod1), pod1)).ToNot(Succeed())
+			})
+			It("should label as unhealthy if lagged", func() {
+				pod0 := getPod(cluster, 0)
+				Expect(c.Create(context.TODO(), pod0)).To(Succeed())
+				pod1 := getPod(cluster, 1)
+				Expect(c.Create(context.TODO(), pod1)).To(Succeed())
+
+				// update cluster conditions
+				By("update cluster status")
+				Expect(c.Get(context.TODO(), clusterKey, cluster.Unwrap())).To(Succeed())
+				cluster.Status.Nodes = []api.NodeStatus{
+					nodeStatusForPod(cluster, pod0, false, true, false),
+					nodeStatusForPod(cluster, pod1, true, false, true),
+				}
+				Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
+
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+				// assert pods labels
+				// master
+				Expect(c.Get(context.TODO(), objToKey(pod0), pod0)).To(Succeed())
+				Expect(pod0).To(haveLabelWithValue("role", "replica"))
+				Expect(pod0).To(haveLabelWithValue("healthy", "no"))
+
+				// replica
+				Expect(c.Get(context.TODO(), objToKey(pod1), pod1)).To(Succeed())
+				Expect(pod1).To(haveLabelWithValue("role", "master"))
+				Expect(pod1).To(haveLabelWithValue("healthy", "yes"))
+			})
 		})
 	})
 })
@@ -254,6 +347,65 @@ var _ = Describe("MysqlCluster controller", func() {
 func removeAllCreatedResource(c client.Client, clusterComps []runtime.Object) {
 	for _, obj := range clusterComps {
 		c.Delete(context.TODO(), obj)
+	}
+}
+
+func objToKey(o runtime.Object) types.NamespacedName {
+	obj, _ := o.(*corev1.Pod)
+	return types.NamespacedName{
+		Name:      obj.Name,
+		Namespace: obj.Namespace,
+	}
+}
+
+func getPod(cluster *mysqlcluster.MysqlCluster, index int) *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%d", cluster.GetNameForResource(mysqlcluster.StatefulSet), index),
+			Namespace: cluster.Namespace,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				corev1.Container{
+					Name:  "dummy",
+					Image: "dummy",
+				},
+			},
+		},
+	}
+}
+
+func nodeStatusForPod(cluster *mysqlcluster.MysqlCluster, pod *corev1.Pod, master, lagged, replicating bool) api.NodeStatus {
+	name := fmt.Sprintf("%s.%s.%s", pod.Name, cluster.GetNameForResource(mysqlcluster.HeadlessSVC), pod.Namespace)
+
+	boolToStatus := func(c bool) corev1.ConditionStatus {
+		if c {
+			return corev1.ConditionTrue
+		}
+		return corev1.ConditionFalse
+	}
+
+	t := time.Now()
+
+	return api.NodeStatus{
+		Name: name,
+		Conditions: []api.NodeCondition{
+			api.NodeCondition{
+				Type:               api.NodeConditionMaster,
+				Status:             boolToStatus(master),
+				LastTransitionTime: metav1.NewTime(t),
+			},
+			api.NodeCondition{
+				Type:               api.NodeConditionLagged,
+				Status:             boolToStatus(lagged),
+				LastTransitionTime: metav1.NewTime(t),
+			},
+			api.NodeCondition{
+				Type:               api.NodeConditionReplicating,
+				Status:             boolToStatus(replicating),
+				LastTransitionTime: metav1.NewTime(t),
+			},
+		},
 	}
 }
 
@@ -271,5 +423,13 @@ func haveCondWithStatus(condType api.ClusterConditionType, status corev1.Conditi
 	return ContainElement(MatchFields(IgnoreExtras, Fields{
 		"Type":   Equal(condType),
 		"Status": Equal(status),
+	}))
+}
+
+func haveLabelWithValue(label, value string) gomegatypes.GomegaMatcher {
+	return PointTo(MatchFields(IgnoreExtras, Fields{
+		"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+			"Labels": HaveKeyWithValue(label, value),
+		}),
 	}))
 }

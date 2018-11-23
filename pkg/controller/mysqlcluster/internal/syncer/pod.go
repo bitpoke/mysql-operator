@@ -65,7 +65,7 @@ func (s *podSyncer) SyncFn(in runtime.Object) error {
 
 	// raise error if pod is not created
 	if out.CreationTimestamp.IsZero() {
-		return fmt.Errorf("pod is not created")
+		return NewError(PodNotFound, "PodSyncer", "pod is not found")
 	}
 
 	master := s.cluster.GetNodeCondition(s.hostname, api.NodeConditionMaster)
@@ -86,10 +86,10 @@ func (s *podSyncer) SyncFn(in runtime.Object) error {
 		role = labelMaster
 	}
 
-	// set healty label
-	healty := labelNotHealty
+	// set healthy label
+	healthy := labelNotHealty
 	if isMaster || !isMaster && isReplicating && !isLagged {
-		healty = labelHealty
+		healthy = labelHealty
 	}
 
 	if len(out.ObjectMeta.Labels) == 0 {
@@ -97,7 +97,7 @@ func (s *podSyncer) SyncFn(in runtime.Object) error {
 	}
 
 	out.ObjectMeta.Labels["role"] = role
-	out.ObjectMeta.Labels["healty"] = healty
+	out.ObjectMeta.Labels["healthy"] = healthy
 
 	return nil
 }

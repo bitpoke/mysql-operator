@@ -40,7 +40,7 @@ func NewHealthySVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysql
 
 		out.Spec.Type = "ClusterIP"
 		out.Spec.Selector = cluster.GetLabels()
-		out.Spec.Selector["healty"] = "yes"
+		out.Spec.Selector["healthy"] = "yes"
 
 		if len(out.Spec.Ports) != 1 {
 			out.Spec.Ports = make([]core.ServicePort, 1)

@@ -295,7 +295,7 @@ func (ou *orcUpdater) getRecoveriesToAck(recoveries []orc.TopologyRecovery) []or
 }
 
 func (ou *orcUpdater) acknowledgeRecoveries(toAck []orc.TopologyRecovery) error {
-	comment := fmt.Sprintf("Statefulset '%s' is healty for more then %d seconds",
+	comment := fmt.Sprintf("Statefulset '%s' is healthy for more then %d seconds",
 		ou.cluster.GetNameForResource(mysqlcluster.StatefulSet), recoveryGraceTime,
 	)
 

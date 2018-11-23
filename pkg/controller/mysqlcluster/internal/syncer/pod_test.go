@@ -107,7 +107,7 @@ var _ = Describe("Pod syncer", func() {
 		Expect(err).ToNot(Succeed())
 	})
 
-	It("should mark pods as healty", func() {
+	It("should mark pods as healthy", func() {
 		cluster.UpdateNodeConditionStatus(cluster.GetPodHostname(1), api.NodeConditionLagged, core.ConditionFalse)
 		cluster.UpdateNodeConditionStatus(cluster.GetPodHostname(1), api.NodeConditionReplicating, core.ConditionTrue)
 		// update cluster
