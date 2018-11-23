@@ -188,22 +188,31 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		syncers = append(syncers, clustersyncer.NewPDBSyncer(r.Client, r.scheme, cluster))
 	}
 
-	syncers = append(syncers, r.getPodSyncers(cluster)...)
-
-	// add pods syncers for every node status
+	// run the syncers
 	for _, sync := range syncers {
 		if err = syncer.Sync(context.TODO(), sync, r.recorder); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
+	// run the pod syncers
+	log.Info("cluster status", "status", cluster.Status)
+	for _, sync := range r.getPodSyncers(cluster) {
+		if err = syncer.Sync(context.TODO(), sync, r.recorder); err != nil {
+			// if it's pod not found then skip the error
+			if !clustersyncer.IsError(err, clustersyncer.PodNotFound) {
+				return reconcile.Result{}, err
+			}
+		}
+	}
+
 	// Perform any cleanup
 	pvcCleaner := cleaner.NewPvcCleaner(cluster, r.opt)
 	err = pvcCleaner.Run(context.TODO(), r.Client, r.scheme, r.recorder)
-
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
 	return reconcile.Result{}, nil
 }
 

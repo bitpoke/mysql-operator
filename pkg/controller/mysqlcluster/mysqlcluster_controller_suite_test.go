@@ -28,8 +28,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"github.com/presslabs/mysql-operator/pkg/apis"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 )
 
 var cfg *rest.Config
@@ -42,6 +44,8 @@ func TestMysqlClusterController(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	var err error
+
+	logf.SetLogger(testutil.NewTestLogger(GinkgoWriter))
 
 	t = &envtest.Environment{
 		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "config", "crds")},
