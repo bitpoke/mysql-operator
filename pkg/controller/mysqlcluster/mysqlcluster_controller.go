@@ -200,7 +200,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	for _, sync := range r.getPodSyncers(cluster) {
 		if err = syncer.Sync(context.TODO(), sync, r.recorder); err != nil {
 			// if it's pod not found then skip the error
-			if !clustersyncer.IsError(err, clustersyncer.PodNotFound) {
+			if !clustersyncer.IsPodNotFound(err) {
 				return reconcile.Result{}, err
 			}
 		}

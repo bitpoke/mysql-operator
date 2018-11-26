@@ -46,12 +46,21 @@ func NewError(code SyncErrCode, syncer, details string) error {
 	}
 }
 
-// IsError check if a error is of given code
-func IsError(err error, code SyncErrCode) bool {
+// NewPodNotFoundError returns a PodNotFound error
+func NewPodNotFoundError() error {
+	return &SyncError{
+		syncer:  "PodSyncer",
+		code:    PodNotFound,
+		details: "",
+	}
+}
+
+// IsPodNotFound check if it's a PodNotFound error
+func IsPodNotFound(err error) bool {
 	switch t := err.(type) {
 	default:
 		return false
 	case *SyncError:
-		return t.code == code
+		return t.code == PodNotFound
 	}
 }
