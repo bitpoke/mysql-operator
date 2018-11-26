@@ -70,7 +70,11 @@ func main() {
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{})
+	mgr, err := manager.New(cfg, manager.Options{
+		LeaderElection:          true,
+		LeaderElectionNamespace: opt.LeaderElectionNamespace,
+		LeaderElectionID:        opt.LeaderElectionID,
+	})
 	if err != nil {
 		log.Error(err, "unable to create a new manager")
 		os.Exit(1)
