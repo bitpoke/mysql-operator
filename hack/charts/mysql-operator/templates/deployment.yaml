@@ -36,6 +36,7 @@ spec:
                   name: {{ template "mysql-operator.orchestrator.fullname" . }}
                   key: TOPOLOGY_PASSWORD
           args:
+            - --leader-election-namespace={{ .Release.Namespace }}
             - --orchestrator-uri=http://{{ template "mysql-operator.orchestrator.fullname" . }}.{{ .Release.Namespace }}/api
             {{- if .Values.sidecarImage }}
             - --helper-image={{ .Values.sidecarImage }}

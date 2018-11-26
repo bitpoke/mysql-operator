@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
-	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/presslabs/mysql-operator/pkg/util"
 )
@@ -49,7 +49,7 @@ type Options struct {
 	MetricsExporterImage string
 
 	ImagePullSecretName string
-	ImagePullPolicy     v1.PullPolicy
+	ImagePullPolicy     corev1.PullPolicy
 
 	OrchestratorURI              string
 	OrchestratorTopologyPassword string
@@ -58,9 +58,12 @@ type Options struct {
 	JobCompleteSuccessGraceTime time.Duration
 
 	HTTPServeAddr string
+
+	LeaderElectionNamespace string
+	LeaderElectionID        string
 }
 
-type pullpolicy v1.PullPolicy
+type pullpolicy corev1.PullPolicy
 
 func (pp *pullpolicy) String() string {
 	return string(*pp)
@@ -76,7 +79,7 @@ func (pp *pullpolicy) Type() string {
 }
 
 // nolint: unparam
-func newPullPolicyValue(defaultValue v1.PullPolicy, v *v1.PullPolicy) *pullpolicy {
+func newPullPolicyValue(defaultValue corev1.PullPolicy, v *corev1.PullPolicy) *pullpolicy {
 	*v = defaultValue
 	return (*pullpolicy)(v)
 }
@@ -88,12 +91,15 @@ const (
 	defaultMysqlImage    = "percona:5.7-stretch"
 	defaultExporterImage = "prom/mysqld-exporter:latest"
 
-	defaultImagePullPolicy = v1.PullIfNotPresent
+	defaultImagePullPolicy = corev1.PullIfNotPresent
 
 	defaultOrchestratorTopologyUser     = ""
 	defaultOrchestratorTopologyPassword = ""
 
 	defaultHTTPServerAddr = ":80"
+
+	defaultLeaderElectionNamespace = "default"
+	defaultLeaderElectionID        = ""
 )
 
 var (
@@ -126,6 +132,11 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&o.HTTPServeAddr, "http-serve-addr", defaultHTTPServerAddr,
 		"The address for http server.")
+
+	fs.StringVar(&o.LeaderElectionNamespace, "leader-election-namespace", defaultLeaderElectionNamespace,
+		"The leader election namespace.")
+	fs.StringVar(&o.LeaderElectionID, "leader-election-id", defaultLeaderElectionID,
+		"The leader election id.")
 }
 
 var instance *Options
