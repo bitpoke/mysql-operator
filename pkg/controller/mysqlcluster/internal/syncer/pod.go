@@ -65,7 +65,7 @@ func (s *podSyncer) SyncFn(in runtime.Object) error {
 
 	// raise error if pod is not created
 	if out.CreationTimestamp.IsZero() {
-		return NewError(PodNotFound, "PodSyncer", "pod is not found")
+		return NewPodNotFoundError()
 	}
 
 	master := s.cluster.GetNodeCondition(s.hostname, api.NodeConditionMaster)
