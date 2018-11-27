@@ -82,7 +82,10 @@ func newPullPolicyValue(defaultValue v1.PullPolicy, v *v1.PullPolicy) *pullpolic
 }
 
 const (
-	defaultMysqlImage    = "percona:5.7"
+	// because of moving percona docker images to centos they broke the mysql
+	// configuration files.
+	// TODO: fix this issue
+	defaultMysqlImage    = "percona:5.7-stretch"
 	defaultExporterImage = "prom/mysqld-exporter:latest"
 
 	defaultImagePullPolicy = v1.PullIfNotPresent
