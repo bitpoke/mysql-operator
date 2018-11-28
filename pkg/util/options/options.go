@@ -79,7 +79,7 @@ func newPullPolicyValue(defaultValue v1.PullPolicy, v *v1.PullPolicy) *pullpolic
 }
 
 const (
-	defaultMysqlImage    = "percona:5.7"
+	defaultMysqlImage    = "percona:5.7-stretch"
 	defaultExporterImage = "prom/mysqld-exporter:latest"
 
 	defaultImagePullPolicy = v1.PullIfNotPresent

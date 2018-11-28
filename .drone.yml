@@ -7,7 +7,7 @@ pipeline:
     image: golang:1.9
     group: build
     environment:
-      - APP_VERSION=${DRONE_BRANCH/master/latest}
+      - APP_VERSION=${DRONE_BRANCH}
     commands:
       - make full-test
       - make build
@@ -19,7 +19,7 @@ pipeline:
     image: golang:1.9
     group: build
     environment:
-      - APP_VERSION=${DRONE_BRANCH/master/latest}
+      - APP_VERSION=${DRONE_BRANCH}
     commands:
       - make full-test
     when:
@@ -58,7 +58,7 @@ pipeline:
       - helm repo add presslabs https://presslabs.github.io/charts
       - helm dependency update hack/charts/mysql-operator
     when:
-      branch: master
+      branch: 0.1.x
       event: push
 
   publish-operator:
@@ -69,7 +69,7 @@ pipeline:
     username: presslabs+drone
     dockerfile: hack/docker/mysql-operator/Dockerfile
     context: hack/docker/mysql-operator
-    tags: ["${DRONE_BRANCH/master/latest}"]
+    tags: ["${DRONE_BRANCH}"]
     secrets:
       - source: QUAY_TOKEN
         target: DOCKER_PASSWORD
@@ -99,7 +99,7 @@ pipeline:
     username: presslabs+drone
     dockerfile: hack/docker/mysql-helper/Dockerfile
     context: hack/docker/mysql-helper
-    tags: ["${DRONE_BRANCH/master/latest}"]
+    tags: ["${DRONE_BRANCH}"]
     secrets:
       - source: QUAY_TOKEN
         target: DOCKER_PASSWORD
@@ -120,24 +120,6 @@ pipeline:
         target: DOCKER_PASSWORD
     when:
       event: tag
-
-  publish-helm-chart:
-    group: publish
-    image: quay.io/presslabs/kluster-toolbox
-    pull: true
-    environment:
-      - GH_USER=presslabs-bot
-    commands:
-      - cd hack/charts
-      - (cd mysql-operator && helm dep build)
-      - helm package mysql-operator
-      - CHART="$(basename *.tgz)" ; MESSAGE="Publish $(basename $CHART .tgz)"
-      - /usr/local/bin/gh put --skip-existing -m "$MESSAGE" "$CHART" "presslabs/charts/docs/"
-    secrets:
-      - GH_PASSWORD
-    when:
-      branch: master
-      event: push
 
 
 # end to end testing
@@ -150,12 +132,12 @@ pipeline:
     username: presslabs+drone
     dockerfile: hack/docker/mysql-e2e-tests/Dockerfile
     context: hack/docker/mysql-e2e-tests
-    tags: ["${DRONE_BRANCH}", "latest"]
+    tags: ["${DRONE_BRANCH}", "0.1.x"]
     secrets:
       - source: QUAY_TOKEN
         target: DOCKER_PASSWORD
     when:
-      branch: master
+      branch: 0.1.x
       event: push
 
   e2e-tests:
@@ -167,12 +149,12 @@ pipeline:
       - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
     commands:
       - go test ./test/e2e -v --kubernetes-config /go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
-            --operator-image quay.io/presslabs/mysql-operator:${DRONE_BRANCH/master/latest}
-            --helper-image quay.io/presslabs/mysql-helper:${DRONE_BRANCH/master/latest}
+            --operator-image quay.io/presslabs/mysql-operator:${DRONE_BRANCH}
+            --helper-image quay.io/presslabs/mysql-helper:${DRONE_BRANCH}
             --pod-wait-timeout 150
             -timeout 30m
     when:
-      branch: master
+      branch: 0.1.x
       event: push
 
   stop-kubernetes:
@@ -188,6 +170,24 @@ pipeline:
      
     when:
       status: [ success, failure ]
-      branch: master
+      branch: 0.1.x
       event: push
 
+
+  # if e2e passes then publish helm chart
+  publish-helm-chart:
+    image: quay.io/presslabs/kluster-toolbox
+    pull: true
+    environment:
+      - GH_USER=presslabs-bot
+    commands:
+      - cd hack/charts
+      - (cd mysql-operator && helm dep build)
+      - helm package mysql-operator
+      - CHART="$(basename *.tgz)" ; MESSAGE="Publish $(basename $CHART .tgz)"
+      - /usr/local/bin/gh put --skip-existing -m "$MESSAGE" "$CHART" "presslabs/charts/docs/"
+    secrets:
+      - GH_PASSWORD
+    when:
+      branch: 0.1.x
+      event: push
