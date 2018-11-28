@@ -121,8 +121,8 @@ pipeline:
       - GOOGLE_CREDENTIALS
     environment:
       - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
-      - KUBECONFIG=/go/.kube/config
-      - HELM_HOME=/go/.helm/
+      - KUBECONFIG=/root/go/.kube/config
+      - HELM_HOME=/root/go/.helm/
     commands:
       - setup-credentials-helper.sh
       - gcloud container clusters create $CLUSTER_NAME
@@ -142,11 +142,11 @@ pipeline:
     image: quay.io/presslabs/bfc
     environment:
       - APP_VERSION=${DRONE_TAG}
-      - KUBECONFIG=/go/.kube/config
-      - HELM_HOME=/go/.helm/
+      - KUBECONFIG=/root/go/.kube/config
+      - HELM_HOME=/root/go/.helm/
       - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
     commands:
-      - go test ./test/e2e -v --kubernetes-config /go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
+      - go test ./test/e2e -v --kubernetes-config /root/go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
             --operator-image quay.io/presslabs/mysql-operator:${DRONE_BRANCH/master/latest}
             --sidecar-image quay.io/presslabs/mysql-operator-sidecar:${DRONE_BRANCH/master/latest}
             --pod-wait-timeout 150
@@ -163,7 +163,7 @@ pipeline:
       - GOOGLE_CREDENTIALS
     environment:
       - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
-      - KUBECONFIG=/go/.kube/config
+      - KUBECONFIG=/root/go/.kube/config
     commands:
       - setup-credentials-helper.sh
       - gcloud container clusters delete $CLUSTER_NAME --quiet --zone europe-west3-b --project testing-reactor
