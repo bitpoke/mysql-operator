@@ -19,8 +19,7 @@ all: test build
 
 # Run tests
 test: generate fmt vet manifests
-	KUBEBUILDER_ASSETS=$(BINDIR) ginkgo \
-			--randomizeAllSpecs --randomizeSuites --failOnPending \
+	ginkgo --randomizeAllSpecs --randomizeSuites --failOnPending \
 			--cover --coverprofile cover.out --trace --race --progress  $(TEST_ARGS)\
 			./pkg/... ./cmd/...
 
@@ -68,14 +67,7 @@ chart: generate manifests
 dependencies:
 	test -d $(BINDIR) || mkdir $(BINDIR)
 	GOBIN=$(BINDIR) go install ./vendor/github.com/onsi/ginkgo/ginkgo
-	curl -sL https://github.com/mikefarah/yq/releases/download/2.1.1/yq_$(GOOS)_$(GOARCH) -o $(BINDIR)/yq
-	chmod +x $(BINDIR)/yq
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v1.10.2
-	curl -sL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_$(GOOS)_$(GOARCH).tar.gz | \
-				tar -zx -C $(BINDIR) --strip-components=2
-	curl -sL https://kubernetes-helm.storage.googleapis.com/helm-v$(HELM_VERSION)-$(GOOS)-$(GOARCH).tar.gz | \
-		tar -C $(BINDIR) -xz --strip-components 1 $(GOOS)-$(GOARCH)/helm
-	chmod +x $(BINDIR)/helm
 
 # Build the docker image
 .PHONY: images
