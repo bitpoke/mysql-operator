@@ -67,14 +67,14 @@ func pushBackupFromTo(srcHost, destBucket string) error {
 		return fmt.Errorf("rclone start error: %s", err)
 	}
 
-	log.V(2).Info("wait for gzip to finish")
-	if err := gzip.Wait(); err != nil {
-		return fmt.Errorf("gzip wait error: %s", err)
-	}
-
 	log.V(2).Info("wait for rclone to finish")
 	if err := rclone.Wait(); err != nil {
 		return fmt.Errorf("rclone wait error: %s", err)
+	}
+
+	log.V(2).Info("wait for gzip to finish")
+	if err := gzip.Wait(); err != nil {
+		return fmt.Errorf("gzip wait error: %s", err)
 	}
 
 	return nil
