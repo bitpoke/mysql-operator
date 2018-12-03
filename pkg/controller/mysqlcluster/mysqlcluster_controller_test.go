@@ -340,6 +340,24 @@ var _ = Describe("MysqlCluster controller", func() {
 				Expect(pod1).To(haveLabelWithValue("role", "master"))
 				Expect(pod1).To(haveLabelWithValue("healthy", "yes"))
 			})
+			It("should update cluster secret with keys", func() {
+				s := &corev1.Secret{}
+				sKey := types.NamespacedName{
+					Name:      secret.Name,
+					Namespace: secret.Namespace,
+				}
+				Expect(c.Get(context.TODO(), sKey, s)).To(Succeed())
+
+				Expect(s.OwnerReferences).To(HaveLen(0), "should have no owner reference set")
+
+				// check for keys to be set
+				Expect(s.Data).To(HaveKey("REPLICATION_USER"))
+				Expect(s.Data).To(HaveKey("REPLICATION_PASSWORD"))
+				Expect(s.Data).To(HaveKey("METRICS_EXPORTER_USER"))
+				Expect(s.Data).To(HaveKey("METRICS_EXPORTER_PASSWORD"))
+				Expect(s.Data).To(HaveKey("ORC_TOPOLOGY_USER"))
+				Expect(s.Data).To(HaveKey("ORC_TOPOLOGY_PASSWORD"))
+			})
 		})
 	})
 })
