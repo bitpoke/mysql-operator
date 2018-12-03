@@ -44,7 +44,7 @@ func NewSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlclus
 		},
 	}
 
-	return syncer.NewObjectSyncer("Secret", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
+	return syncer.NewObjectSyncer("Secret", nil, obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*core.Secret)
 
 		if _, ok := out.Data["ROOT_PASSWORD"]; !ok {
