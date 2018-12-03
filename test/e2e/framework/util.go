@@ -7,12 +7,10 @@ import (
 	"time"
 
 	kcore "github.com/appscode/kutil/core/v1"
-	"k8s.io/api/core/v1"
-	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	// apierrs "k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
@@ -34,11 +32,11 @@ var log = logf.Log.WithName("framework.util")
 
 // CreateTestingNS should be used by every test, note that we append a common prefix to the provided test name.
 // Please see NewFramework instead of using this directly.
-func CreateTestingNS(baseName string, c clientset.Interface, labels map[string]string) (*v1.Namespace, error) {
+func CreateTestingNS(baseName string, c clientset.Interface, labels map[string]string) (*corev1.Namespace, error) {
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	namespaceObj := &v1.Namespace{
+	namespaceObj := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// use a short name because long names produce long hostnames but
 			// maximum allowed length by mysql is 60.
@@ -47,10 +45,10 @@ func CreateTestingNS(baseName string, c clientset.Interface, labels map[string]s
 			Namespace:    "",
 			Labels:       labels,
 		},
-		Status: v1.NamespaceStatus{},
+		Status: corev1.NamespaceStatus{},
 	}
 	// Be robust about making the namespace creation call.
-	var got *v1.Namespace
+	var got *corev1.Namespace
 	if err := wait.PollImmediate(Poll, 30*time.Second, func() (bool, error) {
 		var err error
 		got, err = c.CoreV1().Namespaces().Create(namespaceObj)
@@ -172,7 +170,7 @@ func getPodLogsInternal(c clientset.Interface, namespace, podName, containerName
 	return string(logs), err
 }
 
-func kubectlLogPod(c clientset.Interface, pod v1.Pod, containerNameSubstr string, logFunc func(ftm string, args ...interface{})) {
+func kubectlLogPod(c clientset.Interface, pod corev1.Pod, containerNameSubstr string, logFunc func(ftm string, args ...interface{})) {
 	for _, container := range pod.Spec.Containers {
 		if strings.Contains(container.Name, containerNameSubstr) {
 			// Contains() matches all strings if substr is empty
@@ -229,8 +227,8 @@ func NewCluster(name, ns string) *api.MysqlCluster {
 
 }
 
-func NewClusterSecret(name, ns, pw string) *core.Secret {
-	return &core.Secret{
+func NewClusterSecret(name, ns, pw string) *corev1.Secret {
+	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,

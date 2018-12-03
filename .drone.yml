@@ -140,6 +140,8 @@ pipeline:
 
   e2e-tests:
     image: quay.io/presslabs/bfc
+    secrets:
+      - GOOGLE_CREDENTIALS
     environment:
       - APP_VERSION=${DRONE_TAG}
       - KUBECONFIG=/root/go/.kube/config

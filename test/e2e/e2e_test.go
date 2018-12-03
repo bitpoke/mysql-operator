@@ -22,6 +22,7 @@ import (
 	"github.com/presslabs/mysql-operator/test/e2e/framework"
 
 	// test sources
+	_ "github.com/presslabs/mysql-operator/test/e2e/backups"
 	_ "github.com/presslabs/mysql-operator/test/e2e/cluster"
 )
 
