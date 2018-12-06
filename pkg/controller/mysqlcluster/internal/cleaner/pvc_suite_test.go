@@ -23,11 +23,14 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 )
 
 var t *envtest.Environment
@@ -41,6 +44,8 @@ func TestSyncers(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	var err error
+
+	logf.SetLogger(testutil.NewTestLogger(GinkgoWriter))
 
 	t = &envtest.Environment{
 		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "..", "..", "config", "crds")},
