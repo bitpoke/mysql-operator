@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	k8score "k8s.io/client-go/kubernetes/typed/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	_ "github.com/go-sql-driver/mysql"
 	. "github.com/onsi/ginkgo"
@@ -227,4 +228,26 @@ func (f *Framework) ReadSQLTest(cluster *api.MysqlCluster, pod int, pw string) s
 	}
 
 	return data
+}
+
+// GetClusterLabels returns labels.Set for the given cluster
+func GetClusterLabels(cluster *api.MysqlCluster) labels.Set {
+	labels := labels.Set{
+		"app":           "mysql-operator",
+		"mysql_cluster": cluster.Name,
+	}
+
+	return labels
+}
+
+func (f *Framework) GetClusterPVCsFn(cluster *api.MysqlCluster) func() []corev1.PersistentVolumeClaim {
+	return func() []corev1.PersistentVolumeClaim {
+		pvcList := &corev1.PersistentVolumeClaimList{}
+		lo := &client.ListOptions{
+			Namespace:     cluster.Namespace,
+			LabelSelector: labels.SelectorFromSet(GetClusterLabels(cluster)),
+		}
+		f.Client.List(context.TODO(), lo, pvcList)
+		return pvcList.Items
+	}
 }

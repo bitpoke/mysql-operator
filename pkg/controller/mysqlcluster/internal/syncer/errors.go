@@ -51,7 +51,7 @@ func NewPodNotFoundError() error {
 	return &SyncError{
 		syncer:  "PodSyncer",
 		code:    PodNotFound,
-		details: "",
+		details: "pod was not found",
 	}
 }
 

@@ -140,6 +140,9 @@ var _ = Describe("Mysql cluster tests", func() {
 
 		Expect(f.Client.Get(context.TODO(), clusterKey, cluster)).To(Succeed())
 
+		// check PVCs
+		Eventually(f.GetClusterPVCsFn(cluster)).Should(HaveLen(2))
+
 		// scale down the cluster
 		cluster.Spec.Replicas = &one
 		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
@@ -147,7 +150,18 @@ var _ = Describe("Mysql cluster tests", func() {
 		By("test cluster is ready after scale down")
 		testClusterReadiness(f, cluster)
 
-		// TODO: check for PVCs
+		By("check pvc get's deleted")
+		Eventually(f.GetClusterPVCsFn(cluster), "5s", POLLING).Should(HaveLen(1))
+
+		// scale down the cluster to zero
+		zero := int32(0)
+		cluster.Spec.Replicas = &zero
+		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
+
+		By("test cluster is ready after scale down")
+		testClusterReadiness(f, cluster)
+
+		Consistently(f.GetClusterPVCsFn(cluster), "30s", POLLING).Should(HaveLen(1))
 	})
 
 	It("slave io running stopped", func() {
@@ -239,12 +253,16 @@ var _ = Describe("Mysql cluster tests", func() {
 })
 
 func testClusterReadiness(f *framework.Framework, cluster *api.MysqlCluster) {
-	timeout := time.Duration(*cluster.Spec.Replicas) * f.Timeout
+	timeout := f.Timeout
+	if *cluster.Spec.Replicas > 0 {
+		timeout = time.Duration(*cluster.Spec.Replicas) * f.Timeout
+	}
 
 	// wait for pods to be ready
 	Eventually(func() int {
-		f.Client.Get(context.TODO(), types.NamespacedName{Name: cluster.Name, Namespace: cluster.Namespace}, cluster)
-		return cluster.Status.ReadyNodes
+		cl := &api.MysqlCluster{}
+		f.Client.Get(context.TODO(), types.NamespacedName{Name: cluster.Name, Namespace: cluster.Namespace}, cl)
+		return cl.Status.ReadyNodes
 	}, timeout, POLLING).Should(Equal(int(*cluster.Spec.Replicas)), "Not ready replicas of cluster '%s'", cluster.Name)
 
 	f.ClusterEventuallyCondition(cluster, api.ClusterConditionReady, core.ConditionTrue, f.Timeout)
