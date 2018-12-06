@@ -210,8 +210,8 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// Perform any cleanup
-	pvcCleaner := cleaner.NewPvcCleaner(cluster, r.opt)
-	err = pvcCleaner.Run(context.TODO(), r.Client, r.scheme, r.recorder)
+	pvcCleaner := cleaner.NewPVCCleaner(cluster, r.opt, r.recorder, r.Client)
+	err = pvcCleaner.Run(context.TODO())
 	if err != nil {
 		return reconcile.Result{}, err
 	}

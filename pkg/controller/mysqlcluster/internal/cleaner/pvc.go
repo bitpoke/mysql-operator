@@ -19,14 +19,11 @@ package mysqlcluster
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -37,136 +34,124 @@ import (
 )
 
 const (
-	deleteSuccess        = "SucessfulDelete"
-	deleteFail           = "FailedDelete"
-	messagePvcDeleted    = "delete Claim %s in StatefulSet %s successful"
-	messagePvcNotDeleted = "delete Claim %s in StatefulSet %s failed"
+	reasonPVCClinupSuccess = "SucessfulPVCClinup"
+	reasonPVCClinupFail    = "FailedPVCClinup"
+	messagePVCDeleted      = "delete Claim %s in StatefulSet %s successful"
+	messagePVCNotDeleted   = "delete Claim %s in StatefulSet %s failed"
 )
 
 var log = logf.Log.WithName("mysqlcluster.pvccleaner")
 
-// PvcCleaner represents an object to clean Pvcs of a MysqlCluster
-type PvcCleaner struct {
-	cluster *mysqlcluster.MysqlCluster
-	opt     *options.Options
+// PVCCleaner represents an object to clean Pvcs of a MysqlCluster
+type PVCCleaner struct {
+	cluster  *mysqlcluster.MysqlCluster
+	opt      *options.Options
+	recorder record.EventRecorder
+	client   client.Client
 }
 
-// NewPvcCleaner returns a new PVC cleaner object
-func NewPvcCleaner(cluster *mysqlcluster.MysqlCluster, opt *options.Options) *PvcCleaner {
+// NewPVCCleaner returns a new PVC cleaner object
+func NewPVCCleaner(cluster *mysqlcluster.MysqlCluster, opt *options.Options, rec record.EventRecorder, c client.Client) *PVCCleaner {
 
-	return &PvcCleaner{
-		cluster: cluster,
-		opt:     opt,
+	return &PVCCleaner{
+		cluster:  cluster,
+		opt:      opt,
+		recorder: rec,
+		client:   c,
 	}
 }
 
 // Run performs cleanup of orphaned pvcs in a Mysql cluster
-func (p *PvcCleaner) Run(ctx context.Context, c client.Client, scheme *runtime.Scheme, recorder record.EventRecorder) error {
-	meta := p.cluster.ObjectMeta
-	key := types.NamespacedName{Name: meta.GetName(), Namespace: meta.GetNamespace()}
-
-	cluster := api.MysqlCluster{}
-	err := c.Get(ctx, key, &cluster)
-	if err != nil {
-		return err
-	}
+func (p *PVCCleaner) Run(ctx context.Context) error {
+	cluster := p.cluster.Unwrap()
 
 	if cluster.DeletionTimestamp != nil {
-		log.V(4).Info("being deleted, no action", "MysqlCluster", key)
+		log.V(4).Info("being deleted, no action", "MysqlCluster", p.cluster)
 		return nil
 	}
 
-	replicas := *cluster.Spec.Replicas
-
 	// Find any pvcs with higher ordinal than replicas and delete them
-	claims, err := p.getClaims(ctx, c)
+	claims, err := p.getClaims(ctx)
 	if err != nil {
 		return err
 	}
 
-	keys := getKeys(claims)
-	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
-
-	for _, k := range keys {
-		if int32(k) >= replicas {
-			log.Info("cleaning up", "pvc", claims[k])
-			if err := deleteClaim(ctx, c, recorder, &cluster, claims[k]); err != nil {
-				log.Error(err, "deleting claim")
+	for _, claim := range claims {
+		ord := getOrdinal(claim.Name)
+		if ord >= *cluster.Spec.Replicas && ord != 0 {
+			log.Info("cleanning up PVC", "pvc", claim)
+			if err := p.deleteClaim(ctx, &claim); err != nil {
 				return err
 			}
 		}
 	}
+
 	return nil
 }
 
-func deleteClaim(ctx context.Context, c client.Client, recorder record.EventRecorder,
-	cluster *api.MysqlCluster, pvc *core.PersistentVolumeClaim) error {
-	err := c.Delete(ctx, pvc)
+func (p *PVCCleaner) deleteClaim(ctx context.Context, pvc *core.PersistentVolumeClaim) error {
+	err := p.client.Delete(ctx, pvc)
 	if err != nil {
-		recorder.Event(cluster, core.EventTypeWarning, deleteFail,
-			fmt.Sprintf(messagePvcNotDeleted, pvc.Name, cluster.Name))
+		p.recorder.Event(p.cluster, core.EventTypeWarning, reasonPVCClinupFail,
+			fmt.Sprintf(messagePVCNotDeleted, pvc.Name, p.cluster.Name))
 		return err
 	}
 
-	recorder.Event(cluster, core.EventTypeNormal, deleteSuccess,
-		fmt.Sprintf(messagePvcDeleted, pvc.Name, cluster.Name))
+	p.recorder.Event(p.cluster, core.EventTypeNormal, reasonPVCClinupSuccess,
+		fmt.Sprintf(messagePVCDeleted, pvc.Name, p.cluster.Name))
 	return nil
 }
 
-func (p *PvcCleaner) getClaims(ctx context.Context, c client.Client) (map[int]*core.PersistentVolumeClaim, error) {
-	meta := p.cluster.ObjectMeta
+func (p *PVCCleaner) getClaims(ctx context.Context) ([]core.PersistentVolumeClaim, error) {
 	pvcs := &core.PersistentVolumeClaimList{}
 	lo := &client.ListOptions{
-		Namespace:     meta.GetNamespace(),
+		Namespace:     p.cluster.Namespace,
 		LabelSelector: labels.SelectorFromSet(p.cluster.GetLabels()),
 	}
-	err := c.List(ctx, lo, pvcs)
 
-	if err != nil {
+	if err := p.client.List(ctx, lo, pvcs); err != nil {
 		return nil, err
 	}
 
-	return byOrdinal(pvcs), nil
-}
-
-func byOrdinal(allClaims *core.PersistentVolumeClaimList) map[int]*core.PersistentVolumeClaim {
-	claims := map[int]*core.PersistentVolumeClaim{}
-
-	for i := 0; i < len(allClaims.Items); i++ {
-		if allClaims.Items[i].DeletionTimestamp != nil {
-			log.V(2).Info("being deleted, skipping", "pvc", allClaims.Items[i].Name)
-			continue
+	// check just claims with cluster as owner reference
+	claims := []core.PersistentVolumeClaim{}
+	for _, claim := range pvcs.Items {
+		if !isOwnedBy(claim, p.cluster.Unwrap()) {
+			continue // skip it's not owned by this cluster
 		}
 
-		_, ordinal, err := extract(allClaims.Items[i].Name)
-		if err != nil {
-			continue
+		if claim.DeletionTimestamp != nil {
+			continue // is being deleted, skip
 		}
 
-		claims[ordinal] = &allClaims.Items[i]
-
+		claims = append(claims, claim)
 	}
-	return claims
+
+	return claims, nil
 }
 
-func extract(pvcName string) (string, int, error) {
-	idx := strings.LastIndexAny(pvcName, "-")
+func isOwnedBy(pvc core.PersistentVolumeClaim, cluster *api.MysqlCluster) bool {
+	for _, ref := range pvc.ObjectMeta.GetOwnerReferences() {
+		if ref.Kind == "MysqlCluster" && ref.Name == cluster.Name {
+			return true
+		}
+	}
+
+	log.Info("pvc not owner by cluster", "pvc", pvc, "cluster", cluster)
+	return false
+}
+
+func getOrdinal(name string) int32 {
+	idx := strings.LastIndexAny(name, "-")
 	if idx == -1 {
-		return "", 0, fmt.Errorf("PVC does not belong to a StatefulSet")
+		log.Error(nil, "failed to extract ordinal for pvc", "pvc", name)
+		return -1 // not a good name for PVC
 	}
 
-	name := pvcName[:idx]
-	ordinal, err := strconv.Atoi(pvcName[idx+1:])
+	ordinal, err := strconv.Atoi(name[idx+1:])
 	if err != nil {
-		return "", 0, fmt.Errorf("PVC does not belong to a StatefulSet")
+		log.Error(err, "failed to extract ordinal for pvc", "pvc", name)
+		return -1 // not a good name for PVC
 	}
-	return name, ordinal, nil
-}
-
-func getKeys(m map[int]*core.PersistentVolumeClaim) []int {
-	keys := make([]int, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
+	return int32(ordinal)
 }

@@ -24,7 +24,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,12 +38,10 @@ import (
 
 var _ = Describe("Pvc cleaner", func() {
 	var (
-		cluster     *mysqlcluster.MysqlCluster
-		rec         *record.FakeRecorder
-		secret      *corev1.Secret
-		statefulset *appsv1.StatefulSet
-		pvcs        []corev1.PersistentVolumeClaim
-		pvcCleaner  *PvcCleaner
+		cluster *mysqlcluster.MysqlCluster
+		rec     *record.FakeRecorder
+		secret  *corev1.Secret
+		pvcSpec corev1.PersistentVolumeClaimSpec
 	)
 
 	BeforeEach(func() {
@@ -52,6 +49,7 @@ var _ = Describe("Pvc cleaner", func() {
 		name := fmt.Sprintf("cluster-%d", rand.Int31())
 		ns := "default"
 
+		By("create cluster secret")
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: "the-secret", Namespace: ns},
 			StringData: map[string]string{
@@ -60,6 +58,7 @@ var _ = Describe("Pvc cleaner", func() {
 		}
 		Expect(c.Create(context.TODO(), secret)).To(Succeed())
 
+		By("create cluster")
 		three := int32(3)
 		cluster = mysqlcluster.New(&api.MysqlCluster{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
@@ -68,10 +67,9 @@ var _ = Describe("Pvc cleaner", func() {
 				SecretName: secret.Name,
 			},
 		})
-
 		Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
 
-		pvcSpec := corev1.PersistentVolumeClaimSpec{
+		pvcSpec = corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{
 				corev1.ReadWriteOnce,
 			},
@@ -84,66 +82,111 @@ var _ = Describe("Pvc cleaner", func() {
 				MatchLabels: cluster.GetLabels(),
 			},
 		}
-
-		for i := 0; i < 5; i++ {
-			pvc := corev1.PersistentVolumeClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("data-%s-mysql-%d", name, i),
-					Namespace: ns,
-					Labels:    cluster.GetLabels(),
-				},
-				Spec: pvcSpec,
-			}
-			pvcs = append(pvcs, pvc)
-		}
-
-		for _, pvc := range pvcs {
-			Expect(c.Create(context.TODO(), &pvc)).To(Succeed())
-		}
-
-		var replicas int32 = 3
-		statefulset = &appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.GetNameForResource(mysqlcluster.StatefulSet),
-				Namespace: cluster.Namespace,
-			},
-			Spec: appsv1.StatefulSetSpec{
-				Replicas: &replicas,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: cluster.GetLabels(),
-				},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: cluster.GetLabels(),
-					},
-				},
-				VolumeClaimTemplates: pvcs,
-			},
-		}
-
-		Expect(c.Create(context.TODO(), statefulset)).To(Succeed())
-
-		pvcCleaner = NewPvcCleaner(cluster, options.GetOptions())
 	})
 
-	It("should remove pvcs when cluster is scaled down", func() {
-		Expect(pvcCleaner.Run(context.TODO(), c, nil, rec)).To(Succeed())
-		pvcs2 := &corev1.PersistentVolumeClaimList{}
-		lo := &client.ListOptions{
-			Namespace:     "default",
-			LabelSelector: labels.SelectorFromSet(cluster.GetLabels()),
-		}
-		Expect(c.List(context.TODO(), lo, pvcs2)).To(Succeed())
-
-		Expect(3).To(Equal(len(pvcs2.Items)))
-	})
 	AfterEach(func() {
 		// remove created cluster
 		c.Delete(context.TODO(), cluster.Unwrap())
 		c.Delete(context.TODO(), secret)
-		c.Delete(context.TODO(), statefulset)
-		for _, pvc := range pvcs {
-			c.Delete(context.TODO(), &pvc)
+	})
+
+	Context("with more PVC than replicas", func() {
+		var (
+			pvcs []corev1.PersistentVolumeClaim
+		)
+		BeforeEach(func() {
+
+			trueVar := true
+			for i := 0; i < 5; i++ {
+				pvc := corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("data-%s-mysql-%d", cluster.Name, i),
+						Namespace: cluster.Namespace,
+						Labels:    cluster.GetLabels(),
+						OwnerReferences: []metav1.OwnerReference{
+							metav1.OwnerReference{
+								APIVersion: api.SchemeGroupVersion.String(),
+								Kind:       "MysqlCluster",
+								Name:       cluster.Name,
+								UID:        cluster.UID,
+								Controller: &trueVar,
+							},
+						},
+					},
+					Spec: pvcSpec,
+				}
+				pvcs = append(pvcs, pvc)
+			}
+
+			By("create PVCs")
+			for _, pvc := range pvcs {
+				Expect(c.Create(context.TODO(), &pvc)).To(Succeed())
+			}
+		})
+
+		AfterEach(func() {
+			for _, pvc := range pvcs {
+				c.Delete(context.TODO(), &pvc)
+			}
+		})
+
+		It("should remove extra PVCs when cluster is scaled down", func() {
+			// run cleaner
+			pvcCleaner := NewPVCCleaner(cluster, options.GetOptions(), rec, c)
+			Expect(pvcCleaner.Run(context.TODO())).To(Succeed())
+
+			pvcs2 := listClaimsForCluster(c, cluster)
+			Expect(pvcs2.Items).To(HaveLen(3))
+
+			// run cleaner again, should nothing changes
+			Expect(pvcCleaner.Run(context.TODO())).To(Succeed())
+
+			pvcs2 = listClaimsForCluster(c, cluster)
+			Expect(pvcs2.Items).To(HaveLen(3))
+		})
+
+		It("should not remove pvc with 0 index", func() {
+			// scale to 0
+			zero := int32(0)
+			cluster.Spec.Replicas = &zero
+			Expect(c.Update(context.TODO(), cluster.Unwrap())).To(Succeed())
+
+			// run cleaner
+			pvcCleaner := NewPVCCleaner(cluster, options.GetOptions(), rec, c)
+			Expect(pvcCleaner.Run(context.TODO())).To(Succeed())
+
+			pvcs2 := listClaimsForCluster(c, cluster)
+			Expect(pvcs2.Items).To(HaveLen(1))
+		})
+	})
+	It("should do nothing when cluster has no claims that belongs to him", func() {
+		pvc := &corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("data-%s-mysql-5", cluster.Name),
+				Namespace: cluster.Namespace,
+				Labels:    cluster.GetLabels(),
+			},
+			Spec: pvcSpec,
 		}
+		Expect(c.Create(context.TODO(), pvc)).To(Succeed())
+
+		// run cleaner
+		pvcCleaner := NewPVCCleaner(cluster, options.GetOptions(), rec, c)
+		Expect(pvcCleaner.Run(context.TODO())).To(Succeed())
+
+		// check that the pvc is not deleted
+		pvcs2 := listClaimsForCluster(c, cluster)
+		Expect(pvcs2.Items).To(HaveLen(1))
 	})
 })
+
+func listClaimsForCluster(c client.Client, cluster *mysqlcluster.MysqlCluster) *corev1.PersistentVolumeClaimList {
+	pvcs := &corev1.PersistentVolumeClaimList{}
+	lo := &client.ListOptions{
+		Namespace:     cluster.Namespace,
+		LabelSelector: labels.SelectorFromSet(cluster.GetLabels()),
+	}
+
+	Expect(c.List(context.TODO(), lo, pvcs)).To(Succeed())
+	return pvcs
+}
