@@ -164,27 +164,4 @@ var _ = Describe("Mysql backups tests", func() {
 		}, localTimeout, POLLING).Should(WithTransform(
 			func(j *batchv1.Job) int32 { return j.Status.Failed }, BeNumerically(">", 2)))
 	})
-
-	It("should take the backup from replica", func() {
-		By("scale up the cluster")
-		// scale cluster up
-		cluster = f.RefreshClusterFn(cluster)()
-		replicas := int32(2)
-		cluster.Spec.Replicas = &replicas
-		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
-		Eventually(f.RefreshClusterFn(cluster), f.Timeout, POLLING).Should(
-			framework.HaveClusterReplicas(int(replicas)))
-		Eventually(f.RefreshClusterFn(cluster), f.Timeout, POLLING).Should(
-			framework.HaveClusterCond(api.ClusterConditionReady, core.ConditionTrue))
-
-		By("create a new backup")
-		backup := framework.NewBackup(cluster, bucketName)
-		Expect(f.Client.Create(context.TODO(), backup)).To(Succeed())
-
-		// checks
-		Eventually(f.RefreshBackupFn(backup), timeout, POLLING).Should(
-			framework.BackupCompleted())
-		Eventually(f.RefreshBackupFn(backup), timeout, POLLING).Should(
-			framework.HaveBackupCond(api.BackupComplete, core.ConditionTrue))
-	})
 })
