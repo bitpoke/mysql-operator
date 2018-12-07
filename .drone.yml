@@ -147,6 +147,7 @@ pipeline:
       - KUBECONFIG=/root/go/.kube/config
       - HELM_HOME=/root/go/.helm/
       - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
+      - BACKUP_BUCKET_NAME=pl-test-mysql-operator
     commands:
       - go test ./test/e2e -v --kubernetes-config /root/go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
             --operator-image quay.io/presslabs/mysql-operator:${DRONE_BRANCH/master/latest}
