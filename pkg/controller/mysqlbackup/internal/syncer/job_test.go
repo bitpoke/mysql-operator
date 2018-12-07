@@ -68,7 +68,7 @@ var _ = Describe("MysqlBackup job syncer", func() {
 		}
 	})
 
-	It("should return the master if nothing is status", func() {
+	It("should return the master if status is empty/unknown", func() {
 		Expect(syncer.getBackupCandidate()).To(Equal(cluster.GetPodHostname(0)))
 	})
 
