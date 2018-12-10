@@ -36,14 +36,13 @@ const (
 // SetDefaults set defaults from options
 // nolint: gocyclo
 func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
-	// set default mysql version
-	if len(cluster.Spec.MysqlVersion) == 0 {
-		cluster.Spec.MysqlVersion = opt.MysqlImageTag
-	}
-
 	// set default image pull policy
 	if len(cluster.Spec.PodSpec.ImagePullPolicy) == 0 {
 		cluster.Spec.PodSpec.ImagePullPolicy = opt.ImagePullPolicy
+	}
+
+	if len(cluster.Spec.MysqlVersion) == 0 {
+		cluster.Spec.MysqlVersion = "5.7"
 	}
 
 	// set pod antiaffinity to nodes stay away from other nodes.

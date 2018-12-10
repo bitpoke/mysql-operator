@@ -151,6 +151,9 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	// Set defaults on cluster
 	r.scheme.Default(cluster.Unwrap())
 	cluster.SetDefaults(r.opt)
+	if err = cluster.Validate(); err != nil {
+		return reconcile.Result{}, err
+	}
 
 	status := *cluster.Status.DeepCopy()
 	defer func() {

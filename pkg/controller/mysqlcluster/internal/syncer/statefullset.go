@@ -326,7 +326,7 @@ func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
 func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 	// MYSQL container
 	mysql := s.ensureContainer(containerMysqlName,
-		s.opt.MysqlImage+":"+s.opt.MysqlImageTag,
+		s.cluster.GetMysqlImage(),
 		[]string{},
 	)
 	mysql.Ports = ensurePorts(core.ContainerPort{
