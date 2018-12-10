@@ -33,6 +33,7 @@ type MysqlClusterSpec struct {
 	// Defaults to 0
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
+
 	// The secret name that contains connection information to initialize database, like
 	// USER, PASSWORD, ROOT_PASSWORD and so on
 	// This secret will be updated with DB_CONNECT_URL and some more configs.
@@ -45,6 +46,11 @@ type MysqlClusterSpec struct {
 	// Defaults to 5.7
 	// +optional
 	MysqlVersion string `json:"mysqlVersion,omitempty"`
+
+	// To specify the image that will be used for mysql server container.
+	// If this is specified then the mysqlVersion is ignored.
+	// +optional
+	Image string `json:"image,omitempty"`
 
 	// A bucket URI that contains a xtrabackup to initialize the mysql database.
 	// +optional

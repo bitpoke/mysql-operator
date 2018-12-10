@@ -56,3 +56,12 @@ const (
 	// ConfDPath is the path to extra mysql configs dir
 	ConfDPath = "/etc/mysql/conf.d"
 )
+
+var (
+	// MysqlImageVersions is a map of supported mysql version and their image
+	MysqlImageVersions = map[string]string{
+		// TODO: modify operator to use percona centos images
+		// percona:5.7-stretch
+		"5.7": "percona@sha256:c8b69b3c753cb04f1cbf8a4a1f295f51675761ee6368a47808a5205e2d45cfeb",
+	}
+)

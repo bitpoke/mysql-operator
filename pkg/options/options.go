@@ -18,7 +18,6 @@ package options
 
 import (
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -39,11 +38,6 @@ func getFromEnvOrDefault(key, def string) string {
 
 // Options is the data structure that contains information about mysql operator configuration
 type Options struct {
-	mysqlImage string
-
-	MysqlImage    string
-	MysqlImageTag string
-
 	HelperImage string
 
 	MetricsExporterImage string
@@ -85,10 +79,6 @@ func newPullPolicyValue(defaultValue corev1.PullPolicy, v *corev1.PullPolicy) *p
 }
 
 const (
-	// because of moving percona docker images to centos they broke the mysql
-	// configuration files.
-	// TODO: fix this issue
-	defaultMysqlImage    = "percona:5.7-stretch"
 	defaultExporterImage = "prom/mysqld-exporter:latest"
 
 	defaultImagePullPolicy = corev1.PullIfNotPresent
@@ -109,10 +99,9 @@ var (
 
 // AddFlags registers all mysql-operator needed flags
 func (o *Options) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.mysqlImage, "mysql-image", defaultMysqlImage,
-		"The mysql image.")
 	fs.StringVar(&o.HelperImage, "helper-image", defaultHelperImage,
 		"The image that instrumentate mysql.")
+
 	fs.StringVar(&o.MetricsExporterImage, "metrics-exporter-image", defaultExporterImage,
 		"The image for mysql metrics exporter.")
 	fs.StringVar(&o.ImagePullSecretName, "image-pull-secret", "",
@@ -146,7 +135,6 @@ var once sync.Once
 func GetOptions() *Options {
 	once.Do(func() {
 		instance = &Options{
-			mysqlImage:           defaultMysqlImage,
 			HelperImage:          defaultHelperImage,
 			MetricsExporterImage: defaultExporterImage,
 
@@ -165,10 +153,7 @@ func GetOptions() *Options {
 
 // Validate validate the command line values
 func (o *Options) Validate() error {
-	// Update mysql image and tag.
-	i := strings.Split(o.mysqlImage, ":")
-	o.MysqlImage = i[0]
-	o.MysqlImageTag = i[1]
+
 	if len(o.OrchestratorTopologyUser) == 0 {
 		o.OrchestratorTopologyUser = getFromEnvOrDefault("ORC_TOPOLOGY_USER", "")
 	}

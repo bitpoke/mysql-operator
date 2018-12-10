@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 // MysqlCluster is the wrapper for api.MysqlCluster type
@@ -113,4 +114,20 @@ func (c *MysqlCluster) GetMasterHost() string {
 	}
 
 	return masterHost
+}
+
+// GetMysqlImage returns the mysql image for current mysql cluster
+func (c *MysqlCluster) GetMysqlImage() string {
+	if len(c.Spec.Image) != 0 {
+		return c.Spec.Image
+	}
+
+	if len(c.Spec.MysqlVersion) != 0 {
+		if img, ok := constants.MysqlImageVersions[c.Spec.MysqlVersion]; ok {
+			return img
+		}
+	}
+
+	// this means the cluster has a wrong MysqlVersion set
+	return ""
 }

@@ -38,6 +38,8 @@ spec:
               type: string
             backupUri:
               type: string
+            image:
+              type: string
             initBucketSecretName:
               type: string
             initBucketURI:
