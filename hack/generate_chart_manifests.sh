@@ -15,7 +15,7 @@ yq d -d'*' -i ${CHART_PATH}/templates/_crds.yaml spec.validation
 yq w -d1 -i ${CHART_PATH}/templates/_crds.yaml 'spec.names.shortNames[0]' mysql
 
 
-echo '{{- if .Values.installCRDs }}' > ${CHART_PATH}/templates/crds.yaml
+echo '{{- if (and .Values.installCRDs (not (.Capabilities.APIVersions.Has "mysql.presslabs.org/v1alpha1"))) }}' > ${CHART_PATH}/templates/crds.yaml
 cat ${CHART_PATH}/templates/_crds.yaml >> ${CHART_PATH}/templates/crds.yaml
 echo '{{- end }}' >> ${CHART_PATH}/templates/crds.yaml
 rm ${CHART_PATH}/templates/_crds.yaml
