@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
@@ -163,20 +164,8 @@ var _ = Describe("MysqlCluster controller", func() {
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 			// some extra reconcile requests may appear
-		drain:
-			for {
-				select {
-				case <-requests:
-					continue
-				case <-time.After(200 * time.Millisecond):
-					break drain
-				}
-			}
+			testutil.DrainChan(requests)
 
-			// We need to make sure that the controller does not create infinite
-			// loops
-			By("wait for no more reconcile requests")
-			Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 		})
 
 		AfterEach(func() {
@@ -184,6 +173,12 @@ var _ = Describe("MysqlCluster controller", func() {
 			removeAllCreatedResource(c, components)
 			c.Delete(context.TODO(), secret)
 			c.Delete(context.TODO(), cluster.Unwrap())
+		})
+
+		It("should have only one reconcile request", func() {
+			// We need to make sure that the controller does not create infinite
+			// loops
+			Consistently(requests, 5*time.Second).ShouldNot(Receive(Equal(expectedRequest)))
 		})
 
 		DescribeTable("the reconciler",
