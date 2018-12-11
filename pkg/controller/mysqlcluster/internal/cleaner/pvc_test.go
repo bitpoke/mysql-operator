@@ -36,7 +36,7 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
-var _ = Describe("Pvc cleaner", func() {
+var _ = Describe("PVC cleaner", func() {
 	var (
 		cluster *mysqlcluster.MysqlCluster
 		rec     *record.FakeRecorder
@@ -131,18 +131,19 @@ var _ = Describe("Pvc cleaner", func() {
 		})
 
 		It("should remove extra PVCs when cluster is scaled down", func() {
+			// assert that here are multiple PVCs than needed
+			Expect(listClaimsForCluster(c, cluster).Items).To(HaveLen(5))
+
 			// run cleaner
 			pvcCleaner := NewPVCCleaner(cluster, options.GetOptions(), rec, c)
 			Expect(pvcCleaner.Run(context.TODO())).To(Succeed())
 
-			pvcs2 := listClaimsForCluster(c, cluster)
-			Expect(pvcs2.Items).To(HaveLen(3))
+			Expect(listClaimsForCluster(c, cluster).Items).To(HaveLen(3))
 
-			// run cleaner again, should nothing changes
+			// run cleaner again, should result in no changes
 			Expect(pvcCleaner.Run(context.TODO())).To(Succeed())
 
-			pvcs2 = listClaimsForCluster(c, cluster)
-			Expect(pvcs2.Items).To(HaveLen(3))
+			Expect(listClaimsForCluster(c, cluster).Items).To(HaveLen(3))
 		})
 
 		It("should not remove pvc with 0 index", func() {

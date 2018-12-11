@@ -138,14 +138,17 @@ var _ = Describe("MysqlBackup controller", func() {
 
 			// some extra reconcile requests may appear
 			testutil.DrainChan(requests)
-			// We need to make sure that the controller does not create infinite
-			// loops
-			Consistently(requests, timeout).ShouldNot(Receive(Equal(expectedRequest)))
 		})
 
 		AfterEach(func() {
 			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
 			Expect(c.Delete(context.TODO(), backup.Unwrap())).To(Succeed())
+		})
+
+		It("should have only one reconcile request", func() {
+			// We need to make sure that the controller does not create infinite
+			// loops
+			Consistently(requests, 5*time.Second).ShouldNot(Receive(Equal(expectedRequest)))
 		})
 
 		It("should create the job", func() {
