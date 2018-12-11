@@ -24,6 +24,7 @@ import (
 	"github.com/presslabs/controller-util/mergo/transformers"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -364,6 +365,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		Name:          HelperXtrabackupPortName,
 		ContainerPort: HelperXtrabackupPort,
 	})
+	helper.Resources = ensureResources(containerSidecarName)
 
 	// HELPER container
 	helper.ReadinessProbe = ensureProbe(30, 5, 5, core.Handler{
@@ -388,6 +390,9 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		Name:          ExporterPortName,
 		ContainerPort: ExporterPort,
 	})
+
+	exporter.Resources = ensureResources(containerExporterName)
+
 	exporter.LivenessProbe = ensureProbe(30, 30, 30, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   ExporterPath,
@@ -409,6 +414,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			"--defaults-file", fmt.Sprintf("%s/client.cnf", ConfVolumeMountPath),
 		},
 	)
+	heartbeat.Resources = ensureResources(containerHeartBeatName)
 
 	containers := []core.Container{
 		mysql,
@@ -431,6 +437,9 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			s.opt.HelperImage,
 			command,
 		)
+
+		killer.Resources = ensureResources(containerKillerName)
+
 		containers = append(containers, killer)
 	}
 
@@ -630,4 +639,25 @@ func ensureProbe(delay, timeout, period int32, handler core.Handler) *core.Probe
 
 func ensurePorts(ports ...core.ContainerPort) []core.ContainerPort {
 	return ports
+}
+
+func ensureResources(name string) core.ResourceRequirements {
+	limits := core.ResourceList{
+		core.ResourceCPU: resource.MustParse("50m"),
+	}
+	requests := core.ResourceList{
+		core.ResourceCPU: resource.MustParse("10m"),
+	}
+
+	switch name {
+	case containerExporterName:
+		limits = core.ResourceList{
+			core.ResourceCPU: resource.MustParse("100m"),
+		}
+	}
+
+	return core.ResourceRequirements{
+		Limits:   limits,
+		Requests: requests,
+	}
 }
