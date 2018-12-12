@@ -39,7 +39,7 @@ func NewHeadlessSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 		out := in.(*core.Service)
 
 		out.Spec.ClusterIP = "None"
-		out.Spec.Selector = cluster.GetLabels()
+		out.Spec.Selector = cluster.GetSelectorLabels()
 		if len(out.Spec.Ports) != 2 {
 			out.Spec.Ports = make([]core.ServicePort, 2)
 		}

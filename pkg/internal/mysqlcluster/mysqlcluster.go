@@ -45,12 +45,47 @@ func (c *MysqlCluster) Unwrap() *api.MysqlCluster {
 
 // GetLabels returns cluster labels
 func (c *MysqlCluster) GetLabels() labels.Set {
+
+	instance := c.Name
+	if inst, ok := c.Annotations["app.kubernetes.io/instance"]; ok {
+		instance = inst
+	}
+
+	version := "5.7"
+	if len(c.Spec.MysqlVersion) != 0 {
+		version = c.Spec.MysqlVersion
+	}
+
+	component := "database"
+	if comp, ok := c.Annotations["app.kubernetes.io/component"]; ok {
+		component = comp
+	}
+
 	labels := labels.Set{
+		// TODO: remove those labels at major release and update selector labels
 		"app":           "mysql-operator",
 		"mysql_cluster": c.Name,
+
+		"app.kubernetes.io/name":       "mysql",
+		"app.kubernetes.io/instance":   instance,
+		"app.kubernetes.io/version":    version,
+		"app.kubernetes.io/component":  component,
+		"app.kubernetes.io/managed-by": "mysql.presslabs.org",
+	}
+
+	if part, ok := c.Annotations["app.kubernetes.io/part-of"]; ok {
+		labels["app.kubernetes.io/part-of"] = part
 	}
 
 	return labels
+}
+
+// GetSelectorLabels returns the labels that will be used as selector
+func (c *MysqlCluster) GetSelectorLabels() labels.Set {
+	return labels.Set{
+		"app":           "mysql-operator",
+		"mysql_cluster": c.Name,
+	}
 }
 
 // ResourceName is the type for aliasing resources that will be created.

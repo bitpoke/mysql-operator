@@ -39,7 +39,7 @@ func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 		out := in.(*core.Service)
 
 		out.Spec.Type = "ClusterIP"
-		out.Spec.Selector = cluster.GetLabels()
+		out.Spec.Selector = cluster.GetSelectorLabels()
 		out.Spec.Selector["role"] = "master"
 
 		if len(out.Spec.Ports) != 1 {
