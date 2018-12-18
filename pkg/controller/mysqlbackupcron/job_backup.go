@@ -77,7 +77,8 @@ func (j job) Run() {
 			var err error
 			cluster := &api.MysqlBackup{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: backupName,
+					Name:      backupName,
+					Namespace: j.Namespace,
 					Labels: map[string]string{
 						"recurrent": "true",
 					},
@@ -89,13 +90,15 @@ func (j job) Run() {
 			if err = j.c.Create(context.TODO(), cluster); err == nil {
 				break
 			}
-			log.V(1).Info("failed to create backup", "backup", backupName, "error", err)
 
 			if tries > 5 {
 				log.Error(err, "fail to create backup, max tries exeded",
 					"cluster", j.Name, "retries", tries, "backup", backupName)
 				return false
 			}
+
+			log.Info("failed to create backup, retring", "backup", backupName,
+				"error", err, "tries", tries)
 
 			time.Sleep(5 * time.Second)
 			tries++
