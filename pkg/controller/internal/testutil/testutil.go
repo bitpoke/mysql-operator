@@ -21,8 +21,6 @@ import (
 	"time"
 
 	g "github.com/onsi/gomega"
-	gs "github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
 
 	// loggging
 	"github.com/go-logr/logr"
@@ -30,11 +28,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	core "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 const (
@@ -51,19 +46,6 @@ func DrainChan(requests <-chan reconcile.Request) {
 			return
 		}
 	}
-}
-
-// BackupHaveCondition is a helper func that returns a matcher to check for an
-// existing condition in condition list list
-func BackupHaveCondition(condType api.BackupConditionType, status core.ConditionStatus) gomegatypes.GomegaMatcher {
-	return gs.PointTo(gs.MatchFields(gs.IgnoreExtras, gs.Fields{
-		"Status": gs.MatchFields(gs.IgnoreExtras, gs.Fields{
-			"Conditions": g.ContainElement(gs.MatchFields(gs.IgnoreExtras, gs.Fields{
-				"Type":   g.Equal(condType),
-				"Status": g.Equal(status),
-			})),
-		}),
-	}))
 }
 
 // NewTestLogger returns a logger good for tests

@@ -30,12 +30,14 @@ import (
 	cronpkg "github.com/wgliang/cron"
 	"golang.org/x/net/context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 )
 
 const timeout = time.Second * 2
@@ -56,8 +58,13 @@ var _ = Describe("MysqlBackupCron controller", func() {
 		var recFn reconcile.Reconciler
 		cron = cronpkg.New()
 
+		// start the cron here instead of using manager to start it because of a
+		// DATA RACE happens when in Start() and Entris() methods.
+		// Expect(mgr.Add(sscron)).To(Succeed())
+		cron.Start()
+
 		mgr, err := manager.New(cfg, manager.Options{})
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(Succeed())
 		c = mgr.GetClient()
 
 		recFn, requests = SetupTestReconcile(newReconciler(mgr, cron))
@@ -95,7 +102,7 @@ var _ = Describe("MysqlBackupCron controller", func() {
 				Replicas:   &two,
 				SecretName: "a-secret",
 
-				BackupSchedule:   "* * * * *",
+				BackupSchedule:   "0 0 0 * *",
 				BackupSecretName: "a-backup-secret",
 				BackupURL:        "gs://bucket/",
 			},
@@ -176,6 +183,40 @@ var _ = Describe("MysqlBackupCron controller", func() {
 					"BackupScheduleJobsHistoryLimit": PointTo(Equal(limit)),
 				}),
 			}))))
+		})
+
+		When("backup is executed once per second", func() {
+			var (
+				timeout = 5 * time.Second
+			)
+
+			BeforeEach(func() {
+				// update cluster scheduler to run every second
+				cluster.Spec.BackupSchedule = "* * * * * *"
+				Expect(c.Update(context.TODO(), cluster)).To(Succeed())
+			})
+
+			AfterEach(func() {
+				// delete all created backups
+				lo := &client.ListOptions{}
+				for _, b := range testutil.ListAllBackupsFn(c, lo)() {
+					c.Delete(context.TODO(), &b)
+				}
+			})
+
+			It("should create the mysqlbackup", func() {
+				lo := &client.ListOptions{
+					LabelSelector: labels.SelectorFromSet(labels.Set{
+						"recurrent": "true",
+					}),
+					Namespace: cluster.Namespace,
+				}
+				Eventually(testutil.ListAllBackupsFn(c, lo), timeout).Should(
+					ContainElement(testutil.BackupForCluster(cluster)))
+
+				// it should have only a backup created
+				Consistently(testutil.ListAllBackupsFn(c, lo), "2s").Should(HaveLen(1))
+			})
 		})
 	})
 })
