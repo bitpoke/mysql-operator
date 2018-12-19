@@ -71,8 +71,11 @@ func pushBackupFromTo(srcHost, destBucket string) error {
 		errChan <- rclone.Run()
 	}()
 
-	if err := <-errChan; err != nil {
-		return err
+	// wait for both commands to finish successful
+	for i := 1; i <= 2; i++ {
+		if err := <-errChan; err != nil {
+			return err
+		}
 	}
 
 	return nil

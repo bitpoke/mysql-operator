@@ -280,7 +280,7 @@ var _ = Describe("MysqlCluster controller", func() {
 				Expect(pod1).To(haveLabelWithValue("role", "replica"))
 				Expect(pod1).To(haveLabelWithValue("healthy", "yes"))
 			})
-			It("should label pods as master eaven if pods does not exists", func() {
+			It("should label pods as master even if other pods does not exists", func() {
 				pod0 := getPod(cluster, 0)
 				Expect(c.Create(context.TODO(), pod0)).To(Succeed())
 				pod1 := getPod(cluster, 1)
@@ -300,6 +300,7 @@ var _ = Describe("MysqlCluster controller", func() {
 
 				// assert pods labels
 				// master
+				// TODO: this may be a flaky test so use Eventually
 				Expect(c.Get(context.TODO(), objToKey(pod0), pod0)).To(Succeed())
 				Expect(pod0).To(haveLabelWithValue("role", "master"))
 				Expect(pod0).To(haveLabelWithValue("healthy", "yes"))
