@@ -137,14 +137,6 @@ var _ = Describe("Orchestrator controller", func() {
 			By("wait for a first reconcile event")
 			// this is a sincronization event
 			Eventually(requests, 4*time.Second).Should(Receive(Equal(expectedRequest)))
-
-			// expect to not receive any event when a cluster is created, but
-			// just after reconcile time passed then receive a reconcile event
-			Consistently(requests, noReconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
-
-			By("waiting a reconcile event")
-			Eventually(requests, reconcileTimeout).Should(Receive(Equal(expectedRequest)))
-
 		})
 
 		AfterEach(func() {
@@ -160,7 +152,11 @@ var _ = Describe("Orchestrator controller", func() {
 		})
 
 		It("should trigger reconciliation after noReconcileTime", func() {
+			// expect to not receive any event when a cluster is created, but
+			// just after reconcile time passed then receive a reconcile event
 			Consistently(requests, noReconcileTime).ShouldNot(Receive(Equal(expectedRequest)))
+
+			// wait for the second request
 			Eventually(requests, reconcileTimeout).Should(Receive(Equal(expectedRequest)))
 		})
 
