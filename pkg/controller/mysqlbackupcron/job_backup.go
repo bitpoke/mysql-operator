@@ -19,6 +19,7 @@ package mysqlbackupcron
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -149,13 +150,23 @@ func (j *job) backupGC() {
 		return
 	}
 
+	// sort backups by creation time before removing extra backups
+	sort.Sort(byTimestamp(backupsList.Items))
+
 	for i, backup := range backupsList.Items {
-		if i > *j.BackupScheduleJobsHistoryLimit {
+		if i >= *j.BackupScheduleJobsHistoryLimit {
 			// delete the backup
 			if err = j.c.Delete(context.TODO(), &backup); err != nil {
 				log.Error(err, "failed to delete a backup", "backup", backup)
 			}
 		}
 	}
+}
 
+type byTimestamp []api.MysqlBackup
+
+func (a byTimestamp) Len() int      { return len(a) }
+func (a byTimestamp) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a byTimestamp) Less(i, j int) bool {
+	return a[j].ObjectMeta.CreationTimestamp.Before(&a[i].ObjectMeta.CreationTimestamp)
 }
