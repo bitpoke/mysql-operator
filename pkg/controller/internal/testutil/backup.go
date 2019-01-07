@@ -35,7 +35,7 @@ import (
 func ListAllBackupsFn(c client.Client, options *client.ListOptions) func() []api.MysqlBackup {
 	return func() []api.MysqlBackup {
 		backups := &api.MysqlBackupList{}
-		c.List(context.TODO(), options, backups)
+		Expect(c.List(context.TODO(), options, backups)).To(Succeed())
 		return backups.Items
 	}
 }
@@ -59,6 +59,15 @@ func BackupForCluster(cluster *api.MysqlCluster) gomegatypes.GomegaMatcher {
 	return MatchFields(IgnoreExtras, Fields{
 		"Spec": MatchFields(IgnoreExtras, Fields{
 			"ClusterName": Equal(cluster.Name),
+		}),
+	})
+}
+
+// BackupWithName is a gomega matcher that matchers a backup with the given name
+func BackupWithName(name string) gomegatypes.GomegaMatcher {
+	return MatchFields(IgnoreExtras, Fields{
+		"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+			"Name": Equal(name),
 		}),
 	})
 }

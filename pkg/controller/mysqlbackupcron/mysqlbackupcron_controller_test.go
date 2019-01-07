@@ -40,8 +40,6 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 )
 
-const timeout = time.Second * 2
-
 var _ = Describe("MysqlBackupCron controller", func() {
 	var (
 		// channel for incoming reconcile requests
