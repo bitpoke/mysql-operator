@@ -101,6 +101,9 @@ type MysqlClusterSpec struct {
 	// +optional
 	VolumeSpec VolumeSpec `json:"volumeSpec,omitempty"`
 
+	// Master service extra specifiaction
+	MasterServiceSpec ServiceSpec `json:"masterServiceSpec,omitempty"`
+
 	// MaxSlaveLatency represents the allowed latency for a slave node in
 	// seconds. If set then the node with a latency grater than this is removed
 	// from service.
@@ -135,6 +138,17 @@ type PodSpec struct {
 // VolumeSpec defines type for configure cluster pvc spec.
 type VolumeSpec struct {
 	core.PersistentVolumeClaimSpec `json:",inline"`
+}
+
+// ServiceSpec define type for configure cluster service spec
+type ServiceSpec struct {
+	// Deafult "ClusterIP"
+	// +optional
+	ServiceType string `json:"serviceType,omitempty"`
+
+	// Customize node port number when "ServiceType" is "NodePort"
+	// +optional
+	NodePort int32 `json:"nodePort"`
 }
 
 // QueryLimits represents the pt-kill parameters, more info can be found

@@ -38,7 +38,9 @@ func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 	return syncer.NewObjectSyncer("MasterSVC", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*core.Service)
 
-		out.Spec.Type = "ClusterIP"
+		// Get master service type from configuration
+		// out.Spec.Type = "ClusterIP"
+		out.Spec.Type = core.ServiceType(cluster.GetMasterServiceType())
 		out.Spec.Selector = cluster.GetLabels()
 		out.Spec.Selector["role"] = "master"
 
@@ -49,6 +51,10 @@ func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 		out.Spec.Ports[0].Port = MysqlPort
 		out.Spec.Ports[0].TargetPort = TargetPort
 		out.Spec.Ports[0].Protocol = core.ProtocolTCP
+
+		if cluster.GetMasterServiceNodePort() > 0 {
+			out.Spec.Ports[0].NodePort = cluster.GetMasterServiceNodePort()
+		}
 
 		return nil
 	})

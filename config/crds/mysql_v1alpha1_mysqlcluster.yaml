@@ -44,6 +44,16 @@ spec:
               type: string
             initBucketURI:
               type: string
+            masterServiceSpec:
+              properties:
+                nodePort:
+                  format: int32
+                  type: integer
+                serviceType:
+                  type: string
+              required:
+              - nodePort
+              type: object
             maxSlaveLatency:
               format: int64
               type: integer

@@ -18,6 +18,7 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"strings"
 
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -130,4 +131,25 @@ func (c *MysqlCluster) GetMysqlImage() string {
 
 	// this means the cluster has a wrong MysqlVersion set
 	return ""
+}
+
+// GetMasterServiceType returns the master service type for current mysql cluster
+func (c *MysqlCluster) GetMasterServiceType() string {
+
+	switch strings.TrimSpace(c.Spec.MasterServiceSpec.ServiceType) {
+	case "NodePort":
+		return "NodePort"
+	default:
+		return "ClusterIP"
+	}
+
+}
+
+func (c *MysqlCluster) GetMasterServiceNodePort() int32 {
+
+	if strings.TrimSpace(c.Spec.MasterServiceSpec.ServiceType) == "NodePort" {
+		return c.Spec.MasterServiceSpec.NodePort
+	}
+
+	return 0
 }
