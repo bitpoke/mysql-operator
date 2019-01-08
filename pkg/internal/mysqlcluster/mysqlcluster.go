@@ -70,9 +70,9 @@ const (
 	HealthyNodesService ResourceName = "healthy-nodes-service"
 	// PodDisruptionBudget is the name of pod disruption budget for the stateful set
 	PodDisruptionBudget ResourceName = "pdb"
-	// NodePort service type name
+	// NodePortType is service type name for NodePort
 	NodePortType string = "NodePort"
-	// ClusterIP service type name
+	// ClusterIPType is service type name for ClusterIP
 	ClusterIPType string = "ClusterIP"
 )
 
