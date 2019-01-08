@@ -149,7 +149,7 @@ func (c *MysqlCluster) GetMasterServiceType() string {
 
 }
 
-// GetMasterServiceType returns the specified node port number when service type is "NodePort"
+// GetMasterServiceNodePort returns the specified node port number when service type is "NodePort"
 func (c *MysqlCluster) GetMasterServiceNodePort() int32 {
 
 	if strings.TrimSpace(c.Spec.MasterServiceSpec.ServiceType) == NodePortType {
