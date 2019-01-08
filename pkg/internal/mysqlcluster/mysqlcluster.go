@@ -70,6 +70,10 @@ const (
 	HealthyNodesService ResourceName = "healthy-nodes-service"
 	// PodDisruptionBudget is the name of pod disruption budget for the stateful set
 	PodDisruptionBudget ResourceName = "pdb"
+	// NodePort service type name
+	NodePortType string = "NodePort"
+	// ClusterIP service type name
+	ClusterIPType string = "ClusterIP"
 )
 
 // GetNameForResource returns the name of a resource from above
@@ -137,17 +141,17 @@ func (c *MysqlCluster) GetMysqlImage() string {
 func (c *MysqlCluster) GetMasterServiceType() string {
 
 	switch strings.TrimSpace(c.Spec.MasterServiceSpec.ServiceType) {
-	case "NodePort":
-		return "NodePort"
+	case NodePortType:
+		return NodePortType
 	default:
-		return "ClusterIP"
+		return ClusterIPType
 	}
 
 }
 
 func (c *MysqlCluster) GetMasterServiceNodePort() int32 {
 
-	if strings.TrimSpace(c.Spec.MasterServiceSpec.ServiceType) == "NodePort" {
+	if strings.TrimSpace(c.Spec.MasterServiceSpec.ServiceType) == NodePortType {
 		return c.Spec.MasterServiceSpec.NodePort
 	}
 

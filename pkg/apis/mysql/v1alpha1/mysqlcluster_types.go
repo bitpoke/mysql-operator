@@ -142,7 +142,7 @@ type VolumeSpec struct {
 
 // ServiceSpec define type for configure cluster service spec
 type ServiceSpec struct {
-	// Deafult "ClusterIP"
+	// Default "ClusterIP"
 	// +optional
 	ServiceType string `json:"serviceType,omitempty"`
 
