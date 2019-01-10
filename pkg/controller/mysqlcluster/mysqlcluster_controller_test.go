@@ -354,6 +354,19 @@ var _ = Describe("MysqlCluster controller", func() {
 				Expect(s.Data).To(HaveKey("ORC_TOPOLOGY_USER"))
 				Expect(s.Data).To(HaveKey("ORC_TOPOLOGY_PASSWORD"))
 			})
+			It("should update master service type with ClusterIP", func() {
+				svcKey := types.NamespacedName{
+					Name:      cluster.GetNameForResource(mysqlcluster.MasterService),
+					Namespace: cluster.Namespace,
+				}
+				svc := &corev1.Service{}
+				Eventually(func() error {
+					return c.Get(context.TODO(), svcKey, svc)
+				}, timeout).Should(Succeed())
+
+				// assertion on svc for defaults values
+				Expect(svc.Spec.Type).Should(Equal(corev1.ServiceType("ClusterIP")))
+			})
 		})
 	})
 })

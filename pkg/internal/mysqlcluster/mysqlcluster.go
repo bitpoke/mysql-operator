@@ -18,6 +18,7 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"strings"
 
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -69,6 +70,10 @@ const (
 	HealthyNodesService ResourceName = "healthy-nodes-service"
 	// PodDisruptionBudget is the name of pod disruption budget for the stateful set
 	PodDisruptionBudget ResourceName = "pdb"
+	// NodePortType is service type name for NodePort
+	NodePortType string = "NodePort"
+	// ClusterIPType is service type name for ClusterIP
+	ClusterIPType string = "ClusterIP"
 )
 
 // GetNameForResource returns the name of a resource from above
@@ -130,4 +135,26 @@ func (c *MysqlCluster) GetMysqlImage() string {
 
 	// this means the cluster has a wrong MysqlVersion set
 	return ""
+}
+
+// GetMasterServiceType returns the master service type for current mysql cluster
+func (c *MysqlCluster) GetMasterServiceType() string {
+
+	switch strings.TrimSpace(c.Spec.MasterServiceSpec.ServiceType) {
+	case NodePortType:
+		return NodePortType
+	default:
+		return ClusterIPType
+	}
+
+}
+
+// GetMasterServiceNodePort returns the specified node port number when service type is "NodePort"
+func (c *MysqlCluster) GetMasterServiceNodePort() int32 {
+
+	if strings.TrimSpace(c.Spec.MasterServiceSpec.ServiceType) == NodePortType {
+		return c.Spec.MasterServiceSpec.NodePort
+	}
+
+	return 0
 }
