@@ -365,7 +365,7 @@ var _ = Describe("MysqlCluster controller", func() {
 				}, timeout).Should(Succeed())
 
 				// assertion on svc for defaults values
-				Expect(svc.Spec).To(HaveKeyWithValue("Type", "ClusterIP"))
+				Expect(svc.Spec.Type).Should(Equal("ClusterIP"))
 			})
 		})
 	})
