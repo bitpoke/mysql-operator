@@ -335,7 +335,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		ContainerPort: MysqlPort,
 	})
 	mysql.Resources = s.cluster.Spec.PodSpec.Resources
-	mysql.LivenessProbe = ensureProbe(30, 5, 5, core.Handler{
+	mysql.LivenessProbe = ensureProbe(60, 5, 5, core.Handler{
 		Exec: &core.ExecAction{
 			Command: []string{
 				"mysqladmin",
