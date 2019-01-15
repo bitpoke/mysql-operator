@@ -166,3 +166,19 @@ func (c *MysqlCluster) GetMysqlImage() string {
 	// this means the cluster has a wrong MysqlVersion set
 	return ""
 }
+
+// UpdateSpec updates the cluster specs that need to be saved
+func (c *MysqlCluster) UpdateSpec() {
+	// TODO: when BackupURI is removed clear this
+	if len(c.Spec.BackupURL) == 0 {
+		c.Spec.BackupURL = c.Spec.BackupURI
+	}
+
+	// TODO: delete this when when inlined PVC is removed from spec.
+	if c.Spec.VolumeSpec.PersistentVolumeClaim == nil {
+		if c.Spec.VolumeSpec.HostPath == nil && c.Spec.VolumeSpec.EmptyDir == nil {
+			// pvc, hostPath and emptyDir not specified then set pvc init from inline
+			c.Spec.VolumeSpec.PersistentVolumeClaim = &c.Spec.VolumeSpec.PersistentVolumeClaimSpec
+		}
+	}
+}

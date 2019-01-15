@@ -441,6 +441,21 @@ func (in *QueryLimits) DeepCopy() *QueryLimits {
 func (in *VolumeSpec) DeepCopyInto(out *VolumeSpec) {
 	*out = *in
 	in.PersistentVolumeClaimSpec.DeepCopyInto(&out.PersistentVolumeClaimSpec)
+	if in.EmptyDir != nil {
+		in, out := &in.EmptyDir, &out.EmptyDir
+		*out = new(v1.EmptyDirVolumeSource)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.HostPath != nil {
+		in, out := &in.HostPath, &out.HostPath
+		*out = new(v1.HostPathVolumeSource)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.PersistentVolumeClaim != nil {
+		in, out := &in.PersistentVolumeClaim, &out.PersistentVolumeClaim
+		*out = new(v1.PersistentVolumeClaimSpec)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

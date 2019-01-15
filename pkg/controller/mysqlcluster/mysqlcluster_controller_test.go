@@ -107,6 +107,9 @@ var _ = Describe("MysqlCluster controller", func() {
 				Spec: api.MysqlClusterSpec{
 					Replicas:   &two,
 					SecretName: secret.Name,
+					VolumeSpec: api.VolumeSpec{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimSpec{},
+					},
 				},
 			})
 			clusterKey = types.NamespacedName{
@@ -355,6 +358,107 @@ var _ = Describe("MysqlCluster controller", func() {
 				Expect(s.Data).To(HaveKey("ORC_TOPOLOGY_PASSWORD"))
 			})
 		})
+	})
+
+	Context("with secret and uninitialized cluster", func() {
+		var (
+			expectedRequest reconcile.Request
+			cluster         *mysqlcluster.MysqlCluster
+			clusterKey      types.NamespacedName
+			secret          *corev1.Secret
+		)
+
+		BeforeEach(func() {
+			name := fmt.Sprintf("cluster-%d", rand.Int31())
+			ns := "default"
+
+			expectedRequest = reconcile.Request{
+				NamespacedName: types.NamespacedName{Name: name, Namespace: ns},
+			}
+
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "the-secret", Namespace: ns},
+				StringData: map[string]string{
+					"ROOT_PASSWORD": "this-is-secret",
+				},
+			}
+
+			cluster = mysqlcluster.New(&api.MysqlCluster{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
+				Spec: api.MysqlClusterSpec{
+					Replicas:   &two,
+					SecretName: secret.Name,
+				},
+			})
+
+			clusterKey = types.NamespacedName{
+				Name:      cluster.Name,
+				Namespace: cluster.Namespace,
+			}
+
+			Expect(c.Create(context.TODO(), secret)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			c.Delete(context.TODO(), secret)
+			c.Delete(context.TODO(), cluster.Unwrap())
+		})
+
+		It("should update cluster new fields from the deprecated ones", func() {
+			backupURL := "gs://bucket/"
+			accessModes := []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteOnce,
+			}
+
+			cluster.Spec.BackupURI = backupURL
+			cluster.Spec.VolumeSpec = api.VolumeSpec{
+				// old PVC field
+				PersistentVolumeClaimSpec: corev1.PersistentVolumeClaimSpec{
+					AccessModes: accessModes,
+				},
+			}
+
+			// crete cluster
+			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			// one extra reconcile event because of spec updates
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			Expect(c.Get(context.TODO(), clusterKey, cluster.Unwrap())).To(Succeed())
+			Expect(cluster.Spec.VolumeSpec.PersistentVolumeClaim.AccessModes).To(
+				Equal(accessModes))
+			Expect(cluster.Spec.BackupURL).To(Equal(backupURL))
+		})
+
+		It("should set emptyDir as data volume", func() {
+			cluster.Spec.VolumeSpec = api.VolumeSpec{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			}
+
+			// crete cluster
+			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			sts := &appsv1.StatefulSet{}
+			stsKey := types.NamespacedName{
+				Name:      cluster.GetNameForResource(mysqlcluster.StatefulSet),
+				Namespace: cluster.Namespace,
+			}
+
+			Expect(c.Get(context.TODO(), stsKey, sts)).To(Succeed())
+
+			Expect(sts.Spec.Template.Spec.Volumes).To(ContainElement(Equal(
+				corev1.Volume{
+					Name: "data",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: cluster.Spec.VolumeSpec.EmptyDir,
+					},
+				},
+			)))
+		})
+
 	})
 })
 

@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -36,7 +36,10 @@ var (
 func SetDefaults_MysqlCluster(c *MysqlCluster) {
 
 	c.setPodSpecDefaults(&(c.Spec.PodSpec))
-	c.setVolumeSpecDefaults(&(c.Spec.VolumeSpec))
+
+	if c.Spec.VolumeSpec.PersistentVolumeClaim != nil {
+		c.setVolumeSpecDefaults(c.Spec.VolumeSpec.PersistentVolumeClaim)
+	}
 
 	if c.Spec.Replicas == nil {
 		one := int32(1)
@@ -56,10 +59,10 @@ func SetDefaults_MysqlCluster(c *MysqlCluster) {
 // SetDefaults for PodSpec
 func (c *MysqlCluster) setPodSpecDefaults(spec *PodSpec) {
 	if len(spec.Resources.Requests) == 0 {
-		spec.Resources = apiv1.ResourceRequirements{
-			Requests: apiv1.ResourceList{
-				apiv1.ResourceCPU:    resourceRequestCPU,
-				apiv1.ResourceMemory: resourceRequestMemory,
+		spec.Resources = corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resourceRequestCPU,
+				corev1.ResourceMemory: resourceRequestMemory,
 			},
 		}
 	}
@@ -67,16 +70,16 @@ func (c *MysqlCluster) setPodSpecDefaults(spec *PodSpec) {
 }
 
 // SetDefaults for VolumeSpec
-func (c *MysqlCluster) setVolumeSpecDefaults(spec *VolumeSpec) {
+func (c *MysqlCluster) setVolumeSpecDefaults(spec *corev1.PersistentVolumeClaimSpec) {
 	if len(spec.AccessModes) == 0 {
-		spec.AccessModes = []apiv1.PersistentVolumeAccessMode{
-			apiv1.ReadWriteOnce,
+		spec.AccessModes = []corev1.PersistentVolumeAccessMode{
+			corev1.ReadWriteOnce,
 		}
 	}
 	if len(spec.Resources.Requests) == 0 {
-		spec.Resources = apiv1.ResourceRequirements{
-			Requests: apiv1.ResourceList{
-				apiv1.ResourceStorage: resourceStorage,
+		spec.Resources = corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceStorage: resourceStorage,
 			},
 		}
 	}
