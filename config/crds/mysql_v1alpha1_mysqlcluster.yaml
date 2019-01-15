@@ -182,6 +182,20 @@ spec:
                     support more data source types and the behavior of the provisioner
                     may change.
                   type: object
+                emptyDir:
+                  description: EmptyDir to use as data volume for mysql. EmptyDir
+                    represents a temporary directory that shares a pod's lifetime.
+                  type: object
+                hostPath:
+                  description: HostPath to use as data volume for mysql. HostPath
+                    represents a pre-existing file or directory on the host machine
+                    that is directly exposed to the container.
+                  type: object
+                persistentVolumeClaim:
+                  description: PersistentVolumeClaim to specify PVC spec for the volume
+                    for mysql data. It has the highest level of precedence, followed
+                    by HostPath and EmptyDir. And represents the PVC specification.
+                  type: object
                 resources:
                   description: 'Resources represents the minimum resources the volume
                     should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'

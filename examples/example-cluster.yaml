@@ -33,10 +33,20 @@ spec:
 
   ## Specify additional volume specification
   # volumeSpec:
-  #   accessModes: [ "ReadWriteOnce" ]
-  #   resources:
-  #     requests:
-  #       storage: 1Gi
+  #   # https://godoc.org/k8s.io/api/core/v1#EmptyDirVolumeSource
+  #   emptyDir: {}
+
+  #   # https://godoc.org/k8s.io/api/core/v1#HostPathVolumeSource
+  #   hostPath:
+  #     path:
+  #     type:
+
+  #   # https://godoc.org/k8s.io/api/core/v1#PersistentVolumeClaimSpec
+  #   persistentVolumeClaim:
+  #     accessModes: [ "ReadWriteOnce" ]
+  #     resources:
+  #       requests:
+  #         storage: 1Gi
 
   ## Specify service objectives
   ## If thoses SLO are not fulfilled by cluster node then that node is

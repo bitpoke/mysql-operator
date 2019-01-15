@@ -148,9 +148,22 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 	log.Info("syncing cluster", "cluster", request.NamespacedName.String())
 
+	// Update cluster spec that need to be saved
+	spec := *cluster.Spec.DeepCopy()
+	cluster.UpdateSpec()
+	if !reflect.DeepEqual(spec, cluster.Spec) {
+		sErr := r.Update(context.TODO(), cluster.Unwrap())
+		if sErr != nil {
+			log.Error(sErr, "failed to update cluster spec", "cluster", cluster)
+			return reconcile.Result{}, sErr
+		}
+		return reconcile.Result{}, nil
+	}
+
 	// Set defaults on cluster
 	r.scheme.Default(cluster.Unwrap())
 	cluster.SetDefaults(r.opt)
+
 	if err = cluster.Validate(); err != nil {
 		return reconcile.Result{}, err
 	}

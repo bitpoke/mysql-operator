@@ -133,9 +133,29 @@ type PodSpec struct {
 	NodeSelector map[string]string         `json:"nodeSelector,omitempty"`
 }
 
-// VolumeSpec defines type for configure cluster pvc spec.
+// VolumeSpec is the desired spec for storing mysql data. Only one of its
+// members may be specified.
 type VolumeSpec struct {
+	// DEPRECATED: use `persistentVolumeCalim` field instead to set PVC
+	// specification
 	core.PersistentVolumeClaimSpec `json:",inline"`
+
+	// EmptyDir to use as data volume for mysql. EmptyDir represents a temporary
+	// directory that shares a pod's lifetime.
+	// +optional
+	EmptyDir *core.EmptyDirVolumeSource `json:"emptyDir,omitempty"`
+
+	// HostPath to use as data volume for mysql. HostPath represents a
+	// pre-existing file or directory on the host machine that is directly
+	// exposed to the container.
+	// +optional
+	HostPath *core.HostPathVolumeSource `json:"hostPath,omitempty"`
+
+	// PersistentVolumeClaim to specify PVC spec for the volume for mysql data.
+	// It has the highest level of precedence, followed by HostPath and
+	// EmptyDir. And represents the PVC specification.
+	// +optional
+	PersistentVolumeClaim *core.PersistentVolumeClaimSpec `json:"persistentVolumeClaim,omitempty"`
 }
 
 // QueryLimits represents the pt-kill parameters, more info can be found

@@ -7,10 +7,10 @@ spec:
   # this field is required
   clusterName: my-cluster
 
-  ## if backupUri is specified then the backup will be put
-  ## at this path, else the backup uri will be filled with
-  ## the cluster preset backupUri and a random name
-  # backupUri: gs://bucket_name/path/to/backup.xtrabackup.gz
+  ## if backupURL is specified then the backup will be put
+  ## at this path, else the backup UR will be filled with
+  ## the cluster preset backupURL and a random name
+  # backupURL: gs://bucket_name/path/to/backup.xtrabackup.gz
 
   ## specify a secret where to find credentials to access the
   ## bucket
