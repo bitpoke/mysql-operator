@@ -73,7 +73,7 @@ func NewSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlclus
 			out.Data["METRICS_EXPORTER_USER"] = []byte("exp_" + random)
 		}
 		if len(out.Data["METRICS_EXPORTER_PASSWORD"]) == 0 {
-			random, err := rand.ASCIIString(rStrLen)
+			random, err := rand.AlphaNumericString(rStrLen)
 			if err != nil {
 				return err
 			}
