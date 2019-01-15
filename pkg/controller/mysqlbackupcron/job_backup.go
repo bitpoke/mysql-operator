@@ -92,7 +92,7 @@ func (j job) Run() {
 			}
 
 			if tries > 5 {
-				log.Error(err, "fail to create backup, max tries exeded",
+				log.Error(err, "fail to create backup, max tries exceeded",
 					"cluster", j.Name, "retries", tries, "backup", backupName)
 				return false
 			}
