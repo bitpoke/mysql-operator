@@ -25,6 +25,7 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
@@ -66,7 +67,7 @@ func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
 	cfg := ini.Empty()
 	sec := cfg.Section("mysqld")
 
-	addKVConfigsToSection(sec, mysqlMasterSlaveConfigs, cluster.Spec.MysqlConf)
+	addKVConfigsToSection(sec, getMysqlMasterSlaveConfigs(), cluster.Spec.MysqlConf)
 	addBConfigsToSection(sec, mysqlMasterSlaveBooleanConfigs)
 
 	// include configs from /etc/mysql/conf.d/*.cnf
@@ -84,8 +85,18 @@ func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
 
 }
 
+func getMysqlMasterSlaveConfigs() map[string]intstr.IntOrString {
+	config := make(map[string]intstr.IntOrString)
+
+	for key, value := range mysqlMasterSlaveConfigs {
+		config[key] = intstr.Parse(value)
+	}
+
+	return config
+}
+
 // helper function to add a map[string]string to a ini.Section
-func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
+func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]intstr.IntOrString) {
 	for _, extra := range extraMysqld {
 		keys := []string{}
 		for key := range extra {
@@ -96,7 +107,8 @@ func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]string) {
 		sort.Strings(keys)
 
 		for _, k := range keys {
-			if _, err := s.NewKey(k, extra[k]); err != nil {
+			value := extra[k]
+			if _, err := s.NewKey(k, value.String()); err != nil {
 				log.Error(err, "failed to add key to config section", "key", k, "value", extra[k], "section", s)
 			}
 		}
