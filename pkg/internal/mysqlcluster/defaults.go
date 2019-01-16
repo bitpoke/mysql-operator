@@ -17,10 +17,10 @@ limitations under the License.
 package mysqlcluster
 
 import (
-	"strconv"
-
+	"fmt"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
@@ -80,7 +80,7 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 				bufferSize = int64(float64(mem.Value()) * 0.75)
 			}
 
-			cluster.Spec.MysqlConf["innodb-buffer-pool-size"] = strconv.FormatInt(bufferSize, 10)
+			cluster.Spec.MysqlConf["innodb-buffer-pool-size"] = humanizeSize(bufferSize)
 		}
 	}
 
@@ -104,7 +104,21 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 				logFileSize = 2 * gb
 			}
 
-			cluster.Spec.MysqlConf["innodb-log-file-size"] = strconv.FormatInt(logFileSize, 10)
+			cluster.Spec.MysqlConf["innodb-log-file-size"] = humanizeSize(logFileSize)
 		}
 	}
+}
+
+func humanizeSize(value int64) intstr.IntOrString {
+	var unit string
+
+	if value < gb {
+		value /= mb
+		unit = "M"
+	} else {
+		value /= gb
+		unit = "G"
+	}
+
+	return intstr.FromString(fmt.Sprintf("%d%s", value, unit))
 }

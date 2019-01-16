@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -118,7 +119,7 @@ type MysqlClusterSpec struct {
 
 // MysqlConf defines type for extra cluster configs. It's a simple map between
 // string and string.
-type MysqlConf map[string]string
+type MysqlConf map[string]intstr.IntOrString
 
 // PodSpec defines type for configure cluster pod spec.
 type PodSpec struct {

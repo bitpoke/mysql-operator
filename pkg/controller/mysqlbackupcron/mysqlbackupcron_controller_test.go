@@ -32,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -155,8 +156,8 @@ var _ = Describe("MysqlBackupCron controller", func() {
 
 		It("should be just one entry for a cluster", func() {
 			// update cluster spec
-			cluster.Spec.MysqlConf = map[string]string{
-				"something": "new",
+			cluster.Spec.MysqlConf = map[string]intstr.IntOrString{
+				"something": intstr.FromString("new"),
 			}
 			Expect(c.Update(context.TODO(), cluster)).To(Succeed())
 
