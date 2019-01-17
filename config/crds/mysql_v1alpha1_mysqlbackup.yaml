@@ -15,20 +15,35 @@ spec:
     openAPIV3Schema:
       properties:
         apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
           type: string
         kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
           type: string
         metadata:
           type: object
         spec:
           properties:
             backupSecretName:
+              description: BackupSecretName the name of secrets that contains the
+                credentials to access the bucket. Default is used the secret specified
+                in cluster. optinal
               type: string
             backupURL:
+              description: BackupURL represents the URL to the backup location, this
+                can be partially specifyied. Default is used the one specified in
+                the cluster. Is the same as backupURI.
               type: string
             backupUri:
+              description: Specify an URI where to put the backup. This is deprecated
+                and will be removed in future releases. Use BackupURL instead.
               type: string
             clusterName:
+              description: ClustterName represents the cluster for which to take backup
               type: string
           required:
           - clusterName
@@ -36,22 +51,32 @@ spec:
         status:
           properties:
             backupUri:
+              description: BackupURI represent the fully uri to the backup location
+                This field is deprecated and will be removed in future releases.
               type: string
             completed:
+              description: Complete marks the backup in final state
               type: boolean
             conditions:
+              description: Conditions represents the backup resource conditions list.
               items:
                 properties:
                   lastTransitionTime:
+                    description: LastTransitionTime
                     format: date-time
                     type: string
                   message:
+                    description: Message
                     type: string
                   reason:
+                    description: Reason
                     type: string
                   status:
+                    description: Status of the condition, one of (\"True\", \"False\",
+                      \"Unknown\")
                     type: string
                   type:
+                    description: type of cluster condition, values in (\"Ready\")
                     type: string
                 required:
                 - type
