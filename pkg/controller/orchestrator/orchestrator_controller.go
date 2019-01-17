@@ -43,7 +43,6 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
-	"github.com/presslabs/mysql-operator/pkg/util/stop"
 )
 
 const (
@@ -125,12 +124,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	events := make(chan event.GenericEvent)
 	chSource := source.Channel{Source: events}
 
-	// inject stop channel into source
-	// this is done due to: https://github.com/kubernetes-sigs/controller-runtime/issues/103
-	if err = chSource.InjectStopChannel(stop.Channel); err != nil {
-		return err
-	}
-
 	// watch for events on channel `events`
 	if err = c.Watch(&chSource, &handler.EnqueueRequestForObject{}); err != nil {
 		return err
@@ -149,7 +142,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 					events <- value.(event.GenericEvent)
 					return true
 				})
-
 			}
 		}
 	}

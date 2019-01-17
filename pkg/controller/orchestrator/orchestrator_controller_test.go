@@ -35,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 	fakeOrc "github.com/presslabs/mysql-operator/pkg/orchestrator/fake"
@@ -79,13 +78,7 @@ var _ = Describe("Orchestrator controller", func() {
 		recFn, requests = SetupTestReconcile(newReconciler(mgr, orcClient))
 		Expect(add(mgr, recFn)).To(Succeed())
 
-		// this returns a chan that waits until manager is started.
-		// to fix flaky tests.
-		started := testutil.IsManagerStarted(mgr)
-
 		stop = StartTestManager(mgr)
-		<-started
-
 	})
 
 	AfterEach(func() {
@@ -119,7 +112,10 @@ var _ = Describe("Orchestrator controller", func() {
 			}
 
 			cluster = mysqlcluster.New(&api.MysqlCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: clusterKey.Name, Namespace: clusterKey.Namespace},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      clusterKey.Name,
+					Namespace: clusterKey.Namespace,
+				},
 				Spec: api.MysqlClusterSpec{
 					Replicas:   &one,
 					SecretName: secret.Name,

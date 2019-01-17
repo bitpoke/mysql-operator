@@ -20,15 +20,12 @@ import (
 	"io"
 	"time"
 
-	g "github.com/onsi/gomega"
-
 	// loggging
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -61,20 +58,4 @@ func NewTestLogger(w io.Writer, options ...zap.Option) logr.Logger {
 	sink := zapcore.AddSync(w)
 	core := zapcore.NewCore(zapcore.NewConsoleEncoder(encoderCfg), sink, zap.DebugLevel)
 	return zapr.NewLogger(zap.New(core).WithOptions(options...))
-}
-
-// IsManagerStarted returns a chnnel that receive a signal when controller is
-// started
-func IsManagerStarted(mgr manager.Manager) chan struct{} {
-	start := make(chan struct{})
-
-	test := func(stop <-chan struct{}) error {
-		start <- struct{}{}
-
-		return nil
-	}
-
-	g.Expect(mgr.Add(manager.RunnableFunc(test))).To(g.Succeed())
-
-	return start
 }

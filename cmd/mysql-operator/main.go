@@ -27,11 +27,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
 	"github.com/presslabs/mysql-operator/pkg/apis"
 	"github.com/presslabs/mysql-operator/pkg/controller"
 	"github.com/presslabs/mysql-operator/pkg/options"
-	"github.com/presslabs/mysql-operator/pkg/util/stop"
 )
 
 var log = logf.Log.WithName("mysql-operator")
@@ -93,7 +93,7 @@ func main() {
 	}
 
 	// Start the Cmd
-	if err := mgr.Start(stop.Channel); err != nil {
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		log.Error(err, "unable to start the manager")
 		os.Exit(1)
 	}
