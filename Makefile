@@ -6,7 +6,7 @@ BUILD_TAG := build
 IMAGE_TAGS := $(APP_VERSION)
 
 BINDIR := $(PWD)/bin
-KUBEBUILDER_VERSION ?= 1.0.5
+KUBEBUILDER_VERSION ?= 1.0.7
 HELM_VERSION ?= 2.11.0
 
 GOOS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
@@ -14,6 +14,11 @@ GOARCH ?= amd64
 
 PATH := $(BINDIR):$(PATH)
 SHELL := env PATH=$(PATH) /bin/sh
+
+# check if kubebuilder is installed in local bin dir and set KUBEBUILDER_ASSETS
+ifeq 'yes' "$(shell test -f $(BINDIR)/kubebuilder && echo -n 'yes')"
+	KUBEBUILDER_ASSETS ?= $(BINDIR)
+endif
 
 all: test build
 
@@ -68,6 +73,16 @@ dependencies:
 	test -d $(BINDIR) || mkdir $(BINDIR)
 	GOBIN=$(BINDIR) go install ./vendor/github.com/onsi/ginkgo/ginkgo
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v1.10.2
+
+dependencies-local: dependencies
+	curl -sL https://github.com/mikefarah/yq/releases/download/2.1.1/yq_$(GOOS)_$(GOARCH) -o $(BINDIR)/yq
+	chmod +x $(BINDIR)/yq
+	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v1.10.2
+	curl -sL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_$(GOOS)_$(GOARCH).tar.gz | \
+				tar -zx -C $(BINDIR) --strip-components=2
+	curl -sL https://kubernetes-helm.storage.googleapis.com/helm-v$(HELM_VERSION)-$(GOOS)-$(GOARCH).tar.gz | \
+		tar -C $(BINDIR) -xz --strip-components 1 $(GOOS)-$(GOARCH)/helm
+	chmod +x $(BINDIR)/helm
 
 # Build the docker image
 .PHONY: images
