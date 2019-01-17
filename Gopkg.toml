@@ -20,7 +20,11 @@ required = [
 
 [[override]]
   name="sigs.k8s.io/controller-runtime"
-  version = "v0.1.3"
+  version = "v0.1.9"
+
+[[override]]
+  name="sigs.k8s.io/controller-tools"
+  version = "v0.1.8"
 
 [[override]]
   name="github.com/presslabs/controller-util"
