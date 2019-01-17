@@ -43,7 +43,7 @@ orchestrator:
     RemoveTextFromHostnameDisplay: ":3306"
     DetectClusterAliasQuery: "SELECT CONCAT(SUBSTRING(@@hostname, 1, LENGTH(@@hostname) - 1 - LENGTH(SUBSTRING_INDEX(@@hostname,'-',-2))),'.',SUBSTRING_INDEX(@@report_host,'.',-1))"
     DetectInstanceAliasQuery: "SELECT @@hostname"
-    SlaveLagQuery: "SELECT TIMESTAMPDIFF(SECOND,ts,NOW()) as drift FROM sys_operator.heartbeat WHERE server_id <> @@server_id ORDER BY drift ASC LIMIT 1"
+    SlaveLagQuery: "SELECT TIMESTAMPDIFF(SECOND,ts,NOW()) as drift FROM sys_operator.heartbeat ORDER BY drift ASC LIMIT 1"
 
     # Automated recovery (this is opt-in, so we need to set these)
     # Prevent recovery flip-flop, by disabling auto-recovery for 5 minutes per
