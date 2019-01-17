@@ -102,7 +102,7 @@ var _ = Describe("PVC cleaner", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("data-%s-mysql-%d", cluster.Name, i),
 						Namespace: cluster.Namespace,
-						Labels:    cluster.GetLabels(),
+						Labels:    cluster.GetSelectorLabels(),
 						OwnerReferences: []metav1.OwnerReference{
 							metav1.OwnerReference{
 								APIVersion: api.SchemeGroupVersion.String(),
@@ -185,7 +185,7 @@ func listClaimsForCluster(c client.Client, cluster *mysqlcluster.MysqlCluster) *
 	pvcs := &corev1.PersistentVolumeClaimList{}
 	lo := &client.ListOptions{
 		Namespace:     cluster.Namespace,
-		LabelSelector: labels.SelectorFromSet(cluster.GetLabels()),
+		LabelSelector: labels.SelectorFromSet(cluster.GetSelectorLabels()),
 	}
 
 	Expect(c.List(context.TODO(), lo, pvcs)).To(Succeed())
