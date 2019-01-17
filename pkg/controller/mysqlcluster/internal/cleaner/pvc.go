@@ -108,7 +108,7 @@ func (p *PVCCleaner) getPVCs(ctx context.Context) ([]core.PersistentVolumeClaim,
 	pvcs := &core.PersistentVolumeClaimList{}
 	lo := &client.ListOptions{
 		Namespace:     p.cluster.Namespace,
-		LabelSelector: labels.SelectorFromSet(p.cluster.GetLabels()),
+		LabelSelector: labels.SelectorFromSet(p.cluster.GetSelectorLabels()),
 	}
 
 	if err := p.client.List(ctx, lo, pvcs); err != nil {
