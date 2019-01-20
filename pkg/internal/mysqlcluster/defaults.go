@@ -95,7 +95,7 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 				logFileSize = 128 * mb
 			} else if mem.Value() <= 8*gb {
 				// RAM <= 8gb
-				logFileSize = 512 * gb
+				logFileSize = 512 * mb
 			} else if mem.Value() <= 16*gb {
 				// RAM <= 16gb
 				logFileSize = 1 * gb
