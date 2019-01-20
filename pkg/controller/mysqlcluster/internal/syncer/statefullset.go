@@ -96,10 +96,7 @@ func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 	s.cluster.Status.ReadyNodes = int(out.Status.ReadyReplicas)
 
 	out.Spec.Replicas = s.cluster.Spec.Replicas
-	out.Spec.Selector = &metav1.LabelSelector{
-		MatchLabels: s.getLabels(map[string]string{}),
-	}
-
+	out.Spec.Selector = metav1.SetAsLabelSelector(s.cluster.GetSelectorLabels())
 	out.Spec.ServiceName = s.cluster.GetNameForResource(mysqlcluster.HeadlessSVC)
 
 	// ensure template
@@ -335,7 +332,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		ContainerPort: MysqlPort,
 	})
 	mysql.Resources = s.cluster.Spec.PodSpec.Resources
-	mysql.LivenessProbe = ensureProbe(30, 5, 5, core.Handler{
+	mysql.LivenessProbe = ensureProbe(60, 5, 5, core.Handler{
 		Exec: &core.ExecAction{
 			Command: []string{
 				"mysqladmin",

@@ -44,7 +44,7 @@ func NewPDBSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster
 		}
 		ma := intstr.FromString(cluster.Spec.MinAvailable)
 		out.Spec.MinAvailable = &ma
-		out.Spec.Selector = metav1.SetAsLabelSelector(cluster.GetLabels())
+		out.Spec.Selector = metav1.SetAsLabelSelector(cluster.GetSelectorLabels())
 		return nil
 	})
 }
