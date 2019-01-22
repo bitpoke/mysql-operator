@@ -35,17 +35,14 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 	log.Info("clonning command", "host", util.GetHostname())
 
 	// skip cloning if data exists.
-	init, err := checkIfWasInit()
-	if err != nil {
-		return fmt.Errorf("failed to read init file: %s", err)
-	} else if init {
+	if !util.ShouldBootstrapNode() {
 		log.Info("data exists and is initialized, skipping cloning.")
 		return nil
-	} else {
-		if checkIfDataExists() {
-			log.Info("data alerady exists! Remove manually PVC to cleanup or to reinitialize.")
-			return nil
-		}
+	}
+
+	if checkIfDataExists() {
+		log.Info("data alerady exists! Remove manually PVC to cleanup or to reinitialize.")
+		return nil
 	}
 
 	if err := deleteLostFound(); err != nil {
@@ -194,20 +191,6 @@ func xtrabackupPreperData() error {
 	xtbkCmd.Stderr = os.Stderr
 
 	return xtbkCmd.Run()
-}
-
-func checkIfWasInit() (bool, error) {
-	_, err := os.Open(fmt.Sprintf("%s/%s/%s.CSV", util.DataDir, util.ToolsDbName,
-		util.ToolsInitTableName))
-
-	if os.IsNotExist(err) {
-		return false, nil
-	} else if err != nil {
-		return false, err
-	}
-	// maybe check csv init data and log it
-
-	return true, nil
 }
 
 // nolint: gosec

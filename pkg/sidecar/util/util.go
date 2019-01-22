@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"bufio"
 	"database/sql"
 	"fmt"
 	"io"
@@ -244,15 +245,19 @@ func GetMySQLConnectionString() (string, error) {
 	return dsn, nil
 }
 
-// RunQuery executes a query
-func RunQuery(q string, args ...interface{}) error {
+func getDbConnection() (*sql.DB, error) {
 	dsn, err := GetMySQLConnectionString()
 	if err != nil {
 		log.Error(err, "could not get mysql connection DSN")
-		return err
+		return nil, err
 	}
 
-	db, err := sql.Open("mysql", dsn)
+	return sql.Open("mysql", dsn)
+}
+
+// RunQuery executes a query
+func RunQuery(q string, args ...interface{}) error {
+	db, err := getDbConnection()
 	if err != nil {
 		log.Error(err, "could not open mysql connection")
 		return err
@@ -337,4 +342,59 @@ func RequestABackup(host, endpoint string) (io.Reader, error) {
 	}
 
 	return resp.Body, nil
+}
+
+// ReadPurgedGTID returns the GTID from xtrabackup_binlog_info file
+func ReadPurgedGTID() (string, error) {
+	file, err := os.Open(fmt.Sprintf("%s/xtrabackup_binlog_info", DataDir))
+	if err != nil {
+		return "", err
+	}
+
+	defer func() {
+		if err1 := file.Close(); err1 != nil {
+			log.Error(err1, "failed to close file")
+		}
+	}()
+
+	return getGTIDFrom(file)
+}
+
+// getGTIDFrom parse the content from xtrabackup_binlog_info file passed as
+// io.Reader and extracts the GTID.
+func getGTIDFrom(reader io.Reader) (string, error) {
+	scanner := bufio.NewScanner(reader)
+	scanner.Split(bufio.ScanWords)
+
+	count := 0
+	gtid := ""
+	for scanner.Scan() {
+		if count == 2 {
+			gtid = scanner.Text()
+		}
+		count++
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", err
+	} else if len(gtid) == 0 {
+		return "", fmt.Errorf("failed to read GTID reached EOF")
+	}
+
+	return gtid, nil
+}
+
+// ShouldBootstrapNode checks if the mysql data is at the first initialization
+func ShouldBootstrapNode() bool {
+	_, err := os.Open(fmt.Sprintf("%s/%s/%s.CSV", DataDir,
+		ToolsDbName, ToolsInitTableName))
+	if os.IsNotExist(err) {
+		return true
+	} else if err != nil {
+		log.Error(err, "first init check failed hard")
+		return true
+	}
+
+	// maybe check csv init data and log it
+	return false
 }
