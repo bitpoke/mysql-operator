@@ -7,7 +7,7 @@ build:
     docker:
       dockerfile: Dockerfile.sidecar
   local:
-    push: false
+    push: true
 deploy:
   helm:
     releases:

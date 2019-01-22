@@ -10,5 +10,5 @@ spec:
   backupUri: gs://bucket_name/path/
   backupSecretName: backup-secret
 
-  initBucketUri: gs://bucket_name/path/to/backup.xbackup.gz
+  initBucketURI: gs://bucket_name/path/to/backup.xbackup.gz
   initBucketSecretName: backup-secret
