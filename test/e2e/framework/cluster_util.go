@@ -24,7 +24,6 @@ import (
 
 	"database/sql"
 
-	kutil_pf "github.com/appscode/kutil/tools/portforward"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -40,6 +39,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	pf "github.com/presslabs/mysql-operator/test/e2e/framework/portforward"
 )
 
 var (
@@ -89,7 +89,7 @@ func (f *Framework) ExecSQLOnNode(cluster *api.MysqlCluster, i int, user, passwo
 	podName := strings.Split(f.GetPodHostname(cluster, i), ".")[0]
 
 	client := k8score.NewForConfigOrDie(kubeCfg).RESTClient()
-	tunnel := kutil_pf.NewTunnel(client, kubeCfg, cluster.Namespace,
+	tunnel := pf.NewTunnel(client, kubeCfg, cluster.Namespace,
 		podName,
 		3306,
 	)

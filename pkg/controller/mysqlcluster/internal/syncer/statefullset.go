@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/appscode/mergo"
+	"github.com/imdario/mergo"
 	"github.com/presslabs/controller-util/mergo/transformers"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"

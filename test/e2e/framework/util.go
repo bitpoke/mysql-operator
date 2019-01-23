@@ -1,12 +1,12 @@
 package framework
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
-	kcore "github.com/appscode/kutil/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
@@ -101,8 +101,24 @@ func podRunningAndReady(c clientset.Interface, podName, namespace string) wait.C
 		if err != nil {
 			return false, err
 		}
-		return kcore.PodRunningAndReady(*pod)
+		return podRunningAndReadyByPhase(*pod)
 	}
+}
+
+func podRunningAndReadyByPhase(pod corev1.Pod) (bool, error) {
+	switch pod.Status.Phase {
+	case corev1.PodFailed, corev1.PodSucceeded:
+		return false, errors.New("pod completed")
+	case corev1.PodRunning:
+		for _, cond := range pod.Status.Conditions {
+			if cond.Type != corev1.PodReady {
+				continue
+			}
+			return cond.Status == corev1.ConditionTrue, nil
+		}
+		return false, errors.New("pod ready condition not found")
+	}
+	return false, nil
 }
 
 // deleteNS deletes the provided namespace, waits for it to be completely deleted, and then checks

@@ -22,7 +22,6 @@ import (
 	"path"
 	"testing"
 
-	kutil_pf "github.com/appscode/kutil/tools/portforward"
 	"github.com/golang/glog"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
@@ -31,10 +30,10 @@ import (
 	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
 	clientset "k8s.io/client-go/kubernetes"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	"github.com/presslabs/mysql-operator/test/e2e/framework"
 	"github.com/presslabs/mysql-operator/test/e2e/framework/ginkgowrapper"
+	pf "github.com/presslabs/mysql-operator/test/e2e/framework/portforward"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
@@ -46,7 +45,7 @@ const (
 	orchestratorPort = 3000
 )
 
-var orcTunnel *kutil_pf.Tunnel
+var orcTunnel *pf.Tunnel
 
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	// ginkgo node 1
@@ -56,20 +55,10 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	kubeCfg, err := framework.LoadConfig()
 	gomega.Expect(err).To(gomega.Succeed())
 
-	// Wait for CRDs to be ready
-	ginkgo.By("Install CRDs")
-	envOpts := envtest.CRDInstallOptions{
-		Paths: []string{"..", "..", "config", "crds"},
-	}
-	// this will test if the chart installs the CRDs
-	_, err = envtest.InstallCRDs(kubeCfg, envOpts)
-	gomega.Expect(err).To(gomega.Succeed())
-
 	// Create a tunnel, port-forward orchestrator port to local port
 	ginkgo.By("Port-forward orchestrator")
-
 	client := core.NewForConfigOrDie(kubeCfg).RESTClient()
-	orcTunnel = kutil_pf.NewTunnel(client, kubeCfg, operatorNamespace,
+	orcTunnel = pf.NewTunnel(client, kubeCfg, operatorNamespace,
 		fmt.Sprintf("%s-orchestrator-0", releaseName),
 		orchestratorPort,
 	)
