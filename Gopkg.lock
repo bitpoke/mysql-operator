@@ -11,34 +11,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:34066292c904e99e338e83ae8a9a21958ec0278b41793e3fab2017d258e5c18f"
-  name = "github.com/appscode/go"
-  packages = ["types"]
-  pruneopts = "T"
-  revision = "0499c350ad263174dc8c1e3006b2d3300ff398e6"
-
-[[projects]]
-  branch = "master"
-  digest = "1:f39816cdcfd52757d36d9282d47adb699f902728a18b9e687b99fcd54e9ed0e3"
-  name = "github.com/appscode/kutil"
-  packages = [
-    ".",
-    "core/v1",
-    "tools/portforward",
-  ]
-  pruneopts = "T"
-  revision = "8098faaaba7e4781cbaecf630c8583be1b58d36c"
-
-[[projects]]
-  digest = "1:3477d9dd8c135faab978bac762eaeafb31f28d6da97ef500d5c271966f74140a"
-  name = "github.com/appscode/mergo"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "9f23e2d6bd2a77f959b2bf6acdbefd708a83a4a4"
-  version = "v0.3.6"
-
-[[projects]]
-  branch = "master"
   digest = "1:ad4589ec239820ee99eb01c1ad47ebc5f8e02c4f5103a9b210adff9696d89f36"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
@@ -55,14 +27,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:fca092b0aeafa1f0f88bc7208b327a794474a1fc3091a8c42ad8c2205a5741a5"
+  digest = "1:0d4540d92fd82f9957e1f718e2b1e5f2d301ed8169e2923bba23558fbbbd08a1"
   name = "github.com/docker/spdystream"
   packages = [
     ".",
     "spdy",
   ]
   pruneopts = "T"
-  revision = "bc6354cbbc295e925e4c611ffe90c1f287ee54db"
+  revision = "6480d4af844c189cf5dd913db24ddd339d3a4f85"
 
 [[projects]]
   digest = "1:0ffd93121f3971aea43f6a26b3eaaa64c8af20fb0ff0731087d8dab7164af5a8"
@@ -995,9 +967,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/appscode/kutil/core/v1",
-    "github.com/appscode/kutil/tools/portforward",
-    "github.com/appscode/mergo",
     "github.com/emicklei/go-restful",
     "github.com/go-ini/ini",
     "github.com/go-logr/logr",
@@ -1005,6 +974,7 @@
     "github.com/go-sql-driver/mysql",
     "github.com/go-test/deep",
     "github.com/golang/glog",
+    "github.com/imdario/mergo",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/config",
     "github.com/onsi/ginkgo/extensions/table",
@@ -1045,7 +1015,9 @@
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api",
+    "k8s.io/client-go/tools/portforward",
     "k8s.io/client-go/tools/record",
+    "k8s.io/client-go/transport/spdy",
     "k8s.io/client-go/util/workqueue",
     "k8s.io/code-generator/cmd/deepcopy-gen",
     "sigs.k8s.io/controller-runtime/pkg/client",
