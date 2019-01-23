@@ -467,7 +467,8 @@ type PersistentVolumeClaimSpec struct {
 	// In the future, we plan to support more data source types and the behavior
 	// of the provisioner may change.
 	// +optional
-	DataSource *TypedLocalObjectReference `json:"dataSource" protobuf:"bytes,7,opt,name=dataSource"`
+	DataSource *TypedLocalObjectReference `json:"dataSource,omitempty" protobuf:"bytes,7,opt,name=dataSource"`
+	// TODO(amecea): When https://github.com/kubernetes/kubernetes/pull/72768 is merge remove this fix
 }
 
 // PersistentVolumeClaimConditionType is a valid value of PersistentVolumeClaimCondition.Type
