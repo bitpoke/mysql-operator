@@ -6,7 +6,7 @@ spec:
   replicas: 2
   secretName: my-secret
   # mysqlVersion: 5.7
-  # initBucketUri: gs://bucket_name/backup.xtrabackup.gz
+  # initBucketURI: gs://bucket_name/backup.xtrabackup.gz
   # initBucketSecretName:
 
   ## PodDisruptionBudget
@@ -14,7 +14,7 @@ spec:
 
   ## For recurrent backups set backupSchedule with a cronjob expression
   # backupSchedule:
-  # backupUri: s3://bucket_name/
+  # backupURL: s3://bucket_name/
   # backupSecretName:
   # backupScheduleJobsHistoryLimit:
 
