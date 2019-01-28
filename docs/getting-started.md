@@ -1,7 +1,7 @@
 ---
 title: Getting started
-linktitle: Getting started with MySQL Operator
-description: How to setup a cluster with MySQL Operator
+linktitle: Getting started with MySQL operator
+description: How to setup a cluster with MySQL operator
 categories: [mysql operator]
 keywords: [mysql operator, cluster, getting-started]
 menu:
@@ -13,21 +13,19 @@ aliases: []
 toc: true
 ---
 
-For deploying and using MySQL operator it needs to have access to a Kubernetes cluster and to have
-installed [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and
-[helm](https://github.com/helm/helm#install).
+Deploying and using the MySQL operator requires for it to have access to a Kubernetes cluster and to have
+installed [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and[helm](https://github.com/helm/helm#install).
 
 ## Controller deploy
 
-To deploy this controller, use the provided helm chart, by running:
+To deploy this controller, use the provided helm chart by running:
 
 ```shell
 helm repo add presslabs https://presslabs.github.io/charts
 helm install presslabs/mysql-operator --name mysql-operator
 ```
 
-For more information about chart values see chart [README](hack/charts/mysql-operator/README.md).
-This chart will deploy the controller along with an [orchestrator](https://github.com/github/orchestrator) cluster.
+For more information about chart values see chart [README](hack/charts/mysql-operator/README.md). This chart will deploy the controller along with an [orchestrator](https://github.com/github/orchestrator) cluster.
 
 ## Deploying a cluster
 __tl;dr__
@@ -37,10 +35,9 @@ kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/mast
 kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/examples/example-cluster.yaml
 ```
 
-#### More details:
+#### More details
 
-Before creating a cluster, you need a secret that contains the ROOT_PASSWORD key. An example for
-this secret can be found at
+Before creating a cluster, you need a secret that contains the ROOT_PASSWORD key. An example for this secret can be found at
 [examples/example-cluster-secret.yaml](https://github.com/presslabs/mysql-operator/blob/master/examples/example-cluster-secret.yaml).
 
 Create a file named `example-cluster-secret.yaml` and copy into it the following YAML code:
@@ -55,12 +52,11 @@ data:
   # root password is required to be specified
   ROOT_PASSWORD: bm90LXNvLXNlY3VyZQ==
 ```
-#### Note. 
+#### Note 
 `ROOT_PASSWORD` must be base64 encoded.
 
 Now, to create a cluster you need just a simple YAML file that defines it. An example can be found
-at
-[examples/example-cluster.yaml](https://github.com/presslabs/mysql-operator/blob/master/examples/example-cluster.yaml).
+at [examples/example-cluster.yaml](https://github.com/presslabs/mysql-operator/blob/master/examples/example-cluster.yaml).
 
 Create a file named `example-cluster.yaml` and copy into it the following YAML code:
 
@@ -81,8 +77,7 @@ kubectl apply -f example-cluster-secret.yaml
 kubectl apply -f example-cluster.yaml
 ```
 
-For a more in depth configuration, check
-[examples](https://github.com/presslabs/mysql-operator/tree/master/examples).
+For more in-depth configuration details, check these [examples](https://github.com/presslabs/mysql-operator/tree/master/examples).
 
 ### To list the deployed clusters use
 ```shell
@@ -108,15 +103,11 @@ Status:
 
 ## Backups
 
-Backups are stored on object storage services like S3 or google cloud storage. In order to be able
-to store backup, the secret defined under `backupBucketSecretName` must the credentials to store
-those backups. The backups are uploaded using [Rclone](https://rclone.org/). The contents of the
-secret are used to generate an rclone.conf in
-[docker-entrypoint.sh](https://github.com/presslabs/mysql-operator/blob/master/hack/docker/sidecar-entrypoint.sh).
+Backups are stored on object storage services like S3 or Google Cloud Storage. In order to be able to store a backup, the secret defined under `backupBucketSecretName` must have the credentials to store those backups. The backups are uploaded using [Rclone](https://rclone.org/). The contents of the secret are used to generate a rclone.conf in [docker-entrypoint.sh](https://github.com/presslabs/mysql-operator/blob/master/hack/docker/sidecar-entrypoint.sh).
 
-### Setup backup to S3
+### Setup a backup on S3
 
-You need to specify the `backupBucketUri` for the cluster to an uri like `s3://BUCKET_NAME`, and a secret.
+You need to specify the `backupBucketUri` for the cluster to an URI like `s3://BUCKET_NAME`, and a secret.
 
 ```yaml
 apiVersion: v1
@@ -181,8 +172,8 @@ kubectl apply -f example-backup.yaml
 ```
 
 You need to specify the `backupBucketUri` for the corresponding cluster to an URI like
-`gs://BUCKET_NAME` and `backupSecretName`. Open the file named `example-cluster.yaml` and copy into
-it the following YAML code:
+`gs://BUCKET_NAME` and `backupSecretName`. Open the file named `example-cluster.yaml` and copy it into
+ the following YAML code:
 
 ```yaml
 apiVersion: mysql.presslabs.org/v1alpha1
@@ -227,5 +218,4 @@ Status:
 
 ## Orchestrator
 
-For more information about Orchestrator and how to access it go to
-[Orchestrator](docs/orchestrator.md) section.
+For more information about orchestrator and how to access it go to the [orchestrator](docs/orchestrator.md) section.

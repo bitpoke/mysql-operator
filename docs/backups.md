@@ -1,7 +1,7 @@
 ---
-title: MySQL Operator Backups
-linktitle: MySQL Operator Backups
-description: MySQL Operator provides effortless backups, while keeping the cluster highly-available.
+title: MySQL operator Backups
+linktitle: MySQL operator Backups
+description: MySQL operator provides effortless backups while keeping the cluster highly-available.
 categories: [mysql operator]
 keywords: [mysql operator]
 menu:
@@ -13,13 +13,13 @@ aliases: []
 toc: true
 ---
 
-Backups are stored on object storage services like S3 or google cloud storage.
+Backups are stored on object storage services like S3 or Google Cloud Storage.
 
-In order to be able to store backup, the secret defined under `backupBucketSecretName` must the credentials to store those backups.
+In order to be able to store a backup, the secret defined under `backupBucketSecretName` must have the credentials to store those backups.
 The backups are uploaded using [Rclone](https://rclone.org/).
-The contents of the secret are used to generate an rclone.conf in [hack/docker/mysql-helper/docker-entrypoint.sh](https://github.com/presslabs/mysql-operator/blob/master/hack/docker/mysql-helper/docker-entrypoint.sh).
+The contents of the secret are used to generate a rclone.conf in [hack/docker/mysql-helper/docker-entrypoint.sh](https://github.com/presslabs/mysql-operator/blob/master/hack/docker/mysql-helper/docker-entrypoint.sh).
 
-### Setup backup to S3
+### Setup a backup on S3
 
 You need to specify the `backupBucketURL` for the cluster to an URL like `s3://BUCKET_NAME`, and a secret.
 
@@ -53,7 +53,7 @@ Then run this command:
 $ kubectl apply -f example-backup-secret.yaml
 ```
 
-### Setup backup to gcloud
+### Setup a backup to Google Cloud
 You need to specify the `backupBucketURL` for the cluster to an URL like `gs://BUCKET_NAME`, and a secret.
 
 Create a file named `example-backup-secret.yaml` and copy into it the following YAML code:
