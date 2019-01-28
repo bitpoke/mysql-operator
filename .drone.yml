@@ -110,6 +110,27 @@ pipeline:
     when:
       event: tag
 
+
+  publish-documentation:
+    image: quay.io/presslabs/kluster-toolbox
+    pull: true
+    environment:
+      - GH_USER=presslabs-bot
+      - GH_EMAIL=ping@presslabs.com
+      - CODE_DIR=/code
+    commands:
+      - setup-github-credentials.sh
+      - git clone https://github.com/presslabs/code.git $CODE_DIR
+      - rm -rf $CODE_DIR/content/mysqloperator/*
+      - cp docs/* $CODE_DIR/content/mysqloperator/
+      - cd $CODE_DIR
+      - git add -A; git commit -m "Update MySQL Operator documentation"; git push origin master
+    secrets:
+      - GH_PASSWORD
+    when:
+      event: push
+      branch: master
+
 #
 # end to end testing
 #
