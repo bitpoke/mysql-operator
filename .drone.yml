@@ -121,8 +121,13 @@ pipeline:
     commands:
       - setup-github-credentials.sh
       - git clone https://github.com/presslabs/code.git $CODE_DIR
+      # remove old docs and copy the new docs
       - rm -rf $CODE_DIR/content/mysqloperator/*
       - cp docs/* $CODE_DIR/content/mysqloperator/
+      # remove README.md because hugo does not ignore it and fails. This files contains github
+      # links.
+      - rm $CODE_DIR/content/mysqloperator/README.md
+      # commit changes
       - cd $CODE_DIR
       - git add -A; git commit -m "Update MySQL Operator documentation"; git push origin master
     secrets:
