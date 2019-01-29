@@ -35,7 +35,8 @@ type OrcFakeClient struct {
 
 	Discovered []InstanceKey
 
-	lock *sync.Mutex
+	lock      *sync.Mutex
+	reachable bool
 }
 
 var nextID int64
@@ -53,7 +54,8 @@ const (
 // New fake orchestrator client
 func New() *OrcFakeClient {
 	return &OrcFakeClient{
-		lock: &sync.Mutex{},
+		lock:      &sync.Mutex{},
+		reachable: true,
 	}
 }
 
@@ -63,6 +65,11 @@ func (o *OrcFakeClient) Reset() {
 	o.Recoveries = *new(map[string][]TopologyRecovery)
 	o.AckRec = []int64{}
 	o.Discovered = []InstanceKey{}
+}
+
+// MakeOrcUnreachable makes every function return an error
+func (o *OrcFakeClient) MakeOrcUnreachable() {
+	o.reachable = false
 }
 
 // AddInstance add a instance to orchestrator client
@@ -176,6 +183,10 @@ func (o *OrcFakeClient) getHostClusterAlias(host string) string {
 
 // Discover register a host into orchestrator
 func (o *OrcFakeClient) Discover(host string, port int) error {
+	if !o.reachable {
+		return NewErrorMsg("can't connect to orc", "/")
+	}
+
 	o.Discovered = append(o.Discovered, InstanceKey{
 		Hostname: host,
 		Port:     port,
@@ -199,6 +210,9 @@ func (o *OrcFakeClient) Discover(host string, port int) error {
 
 // Forget removes a host from orchestrator
 func (o *OrcFakeClient) Forget(host string, port int) error {
+	if !o.reachable {
+		return NewErrorMsg("can't connect to orc", "/")
+	}
 	// determine cluster name
 	cluster := o.getHostClusterAlias(host)
 	o.RemoveInstance(cluster, host)
@@ -210,16 +224,20 @@ func (o *OrcFakeClient) Master(clusterHint string) (*Instance, error) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
+	if !o.reachable {
+		return nil, NewErrorMsg("can't connect to orc", "/")
+	}
+
 	insts, ok := o.Clusters[clusterHint]
 	if !ok {
-		return nil, fmt.Errorf("not found")
+		return nil, NewErrorMsg("Unable to determine cluster name", "/master")
 	}
 	for _, inst := range insts {
 		if !inst.ReadOnly {
 			return inst, nil
 		}
 	}
-	return nil, fmt.Errorf("[faker] master not found")
+	return nil, NewErrorMsg("Unable to determine master", "/master")
 }
 
 // Cluster returns the list of instances from a cluster
@@ -227,9 +245,13 @@ func (o *OrcFakeClient) Cluster(cluster string) ([]Instance, error) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
+	if !o.reachable {
+		return nil, NewErrorMsg("can't connect to orc", "/")
+	}
+
 	instsPointers, ok := o.Clusters[cluster]
 	if !ok {
-		return nil, fmt.Errorf("not found")
+		return nil, NewErrorMsg("Unable to determine cluster name", "/cluster")
 	}
 
 	insts := []Instance{}
@@ -245,9 +267,13 @@ func (o *OrcFakeClient) AuditRecovery(cluster string) ([]TopologyRecovery, error
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
+	if !o.reachable {
+		return nil, NewErrorMsg("can't connect to orc", "/")
+	}
+
 	recoveries, ok := o.Recoveries[cluster]
 	if !ok {
-		return nil, fmt.Errorf("not found")
+		return nil, NewErrorMsg("Unable to determine cluster name", "/audit-recovery")
 	}
 
 	return recoveries, nil
@@ -258,6 +284,10 @@ func (o *OrcFakeClient) AckRecovery(id int64, comment string) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
+	if !o.reachable {
+		return NewErrorMsg("can't connect to orc", "/")
+	}
+
 	o.AckRec = append(o.AckRec, id)
 	return nil
 }
@@ -266,6 +296,10 @@ func (o *OrcFakeClient) AckRecovery(id int64, comment string) error {
 func (o *OrcFakeClient) SetHostWritable(key InstanceKey) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
+
+	if !o.reachable {
+		return NewErrorMsg("can't connect to orc", "/")
+	}
 
 	for _, instances := range o.Clusters {
 		for _, instance := range instances {
@@ -282,6 +316,10 @@ func (o *OrcFakeClient) SetHostWritable(key InstanceKey) error {
 func (o *OrcFakeClient) SetHostReadOnly(key InstanceKey) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
+
+	if !o.reachable {
+		return NewErrorMsg("can't connect to orc", "/")
+	}
 
 	for _, instances := range o.Clusters {
 		for _, instance := range instances {
