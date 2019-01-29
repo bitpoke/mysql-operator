@@ -68,6 +68,10 @@ func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 
 	if instances, err = ou.orcClient.Cluster(ou.cluster.GetClusterAlias()); err != nil {
 		log.V(-1).Info("can't get instances from orchestrator", "alias", ou.cluster.GetClusterAlias(), "error", err.Error())
+		if !orc.IsNotFound(err) {
+			log.Error(err, "orchestrator is not reachable", "cluster_alias", ou.cluster.GetClusterAlias())
+			return syncer.SyncResult{}, err
+		}
 	}
 
 	if len(instances) != 0 {

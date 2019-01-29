@@ -29,71 +29,27 @@ import (
 
 var log = logf.Log.WithName("orchestrator.client")
 
-type orcError struct {
-	HTTPStatus int
-	Path       string
-	Message    string
-	Details    interface{}
-}
-
-func (e orcError) Error() string {
-	return fmt.Sprintf("[orc]: status: %d path: %s msg: %s, details: %v",
-		e.HTTPStatus, e.Path, e.Message, e.Details)
-}
-
-// NewOrcError returns a specific orchestrator error with extra details
-func NewOrcError(resp *http.Response, path string, details interface{}) error {
-	rsp := orcError{
-		HTTPStatus: resp.StatusCode,
-		Path:       path,
-		Details:    details,
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		rsp.Message = "Can't read body"
-		return rsp
-	}
-
-	if err = json.Unmarshal(body, &rsp); err != nil {
-		log.V(1).Info("error when unmarhal error data", "body", string(body))
-		rsp.Message = fmt.Sprintf("can't get more details, in error: error: %s, body: %s", err, body)
-		return rsp
-	}
-
-	return rsp
-}
-
-// NewOrcErrorMsg returns an orchestrator error with extra msg
-func NewOrcErrorMsg(msg string, path string) error {
-	return orcError{
-		HTTPStatus: 0,
-		Message:    msg,
-		Path:       path,
-	}
-}
-
-func (o *orchestrator) makeGetRequest(path string, out interface{}) error {
+func (o *orchestrator) makeGetRequest(path string, out interface{}) *Error {
 	uri := fmt.Sprintf("%s/%s", o.connectURI, path)
 	log.V(2).Info("orchestrator request info", "uri", uri, "outobj", out)
 
 	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
-		return NewOrcErrorMsg(fmt.Sprintf("can't create request: %s", err.Error()), path)
+		return NewErrorMsg(fmt.Sprintf("can't create request: %s", err.Error()), path)
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return NewOrcErrorMsg(err.Error(), path)
+		return NewErrorMsg(err.Error(), path)
 	}
 
 	if resp.StatusCode >= 500 {
-		return NewOrcError(resp, path, nil)
+		return NewError(resp, path, nil)
 	}
 
 	if err := unmarshalJSON(resp.Body, out); err != nil {
-		return NewOrcError(resp, path, err)
+		return NewError(resp, path, err)
 	}
 
 	return nil

@@ -79,6 +79,33 @@ var _ = Describe("Orchestrator reconciler", func() {
 		})
 	})
 
+	When("orchestrator is not available", func() {
+		BeforeEach(func() {
+			// register nodes into orchestrator
+			cluster.Status.ReadyNodes = 1
+			_, err := orcSyncer.Sync(context.TODO())
+			Expect(err).To(Succeed())
+
+			// second reconcile event to update cluster status
+			_, err = orcSyncer.Sync(context.TODO())
+			Expect(err).To(Succeed())
+
+			// check that sync was successful
+			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(
+				haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
+
+			// make orchestrator fake client unreachable
+			orcClient.MakeOrcUnreachable()
+		})
+
+		It("should not reconcile and keep the last known state", func() {
+			_, err := orcSyncer.Sync(context.TODO())
+			Expect(err).ToNot(Succeed())
+
+			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
+		})
+	})
+
 	When("cluster is registered in orchestrator", func() {
 		BeforeEach(func() {
 			// AddRecoveries signature: cluster, acked
