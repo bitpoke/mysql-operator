@@ -4,7 +4,7 @@ MySQL operator documentation
 
 ## Table of content
 
- * [Getting started](getting-started.md) provides an overview over deploying and using the MySQL operator
+ * [Getting started](_index.md) provides an overview over deploying and using the MySQL operator
  * [Deploy a MySQL cluster](deploy-mysql-cluster.md) describes in detail how a cluster can be installed and configured
  * [Configure backups](backups.md) shows how to configure and take backups of a cluster
  * [Recurrent backups](cluster-recurrent-backups.md) describes how to setup recurrent backups for the cluster

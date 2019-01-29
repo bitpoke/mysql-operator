@@ -31,6 +31,12 @@ For more information about chart values see chart
 This chart will deploy the controller along with an
 [orchestrator](https://github.com/github/orchestrator) cluster.
 
+__NOTE__: At every deploy a random password is generated for the orchestrator user. When running
+`helm upgrade` this will change the password on the orchestrator side but not in the clusters and
+this will break the communication between orchestrator and MySQL clusters. To solve this either use
+`helm upgrade --reuse-values` or specify the orchestrator password. We recommend specifying the
+orchestrator password.
+
 ## Deploying a cluster
 __tl;dr__
 
