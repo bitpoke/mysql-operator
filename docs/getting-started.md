@@ -7,14 +7,15 @@ keywords: [mysql operator, cluster, getting-started]
 menu:
   docs:
     parent: "mysqloperator"
-weight: 3
+weight: 1
 draft: false
 aliases: []
 toc: true
 ---
 
-Deploying and using the MySQL operator requires for it to have access to a Kubernetes cluster and to have
-installed [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and[helm](https://github.com/helm/helm#install).
+Deploying and using the MySQL operator requires for it to have access to a Kubernetes cluster and to
+have installed [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and
+[helm](https://github.com/helm/helm#install).
 
 ## Controller deploy
 
@@ -25,7 +26,10 @@ helm repo add presslabs https://presslabs.github.io/charts
 helm install presslabs/mysql-operator --name mysql-operator
 ```
 
-For more information about chart values see chart [README](hack/charts/mysql-operator/README.md). This chart will deploy the controller along with an [orchestrator](https://github.com/github/orchestrator) cluster.
+For more information about chart values see chart
+[README](https://github.com/presslabs/mysql-operator/blob/master/hack/charts/mysql-operator/README.md).
+This chart will deploy the controller along with an
+[orchestrator](https://github.com/github/orchestrator) cluster.
 
 ## Deploying a cluster
 __tl;dr__
@@ -218,4 +222,5 @@ Status:
 
 ## Orchestrator
 
-For more information about orchestrator and how to access it go to the [orchestrator](docs/orchestrator.md) section.
+For more information about orchestrator and how to access it go to the [orchestrator]({{< ref
+"./orchestrator.md" >}}) section.

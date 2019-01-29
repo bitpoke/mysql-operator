@@ -7,7 +7,7 @@ keywords: [mysql operator, cluster, orchestrator]
 menu:
   docs:
     parent: "mysqloperator"
-weight: 3
+weight: 4
 draft: false
 aliases: []
 toc: true

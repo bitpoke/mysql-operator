@@ -1,13 +1,13 @@
 ---
-title: MySQL operator Backups
-linktitle: MySQL operator Backups
+title: MySQL Cluster Backups
+linktitle: Backups of a cluster
 description: MySQL operator provides effortless backups while keeping the cluster highly-available.
 categories: [mysql operator]
 keywords: [mysql operator]
 menu:
   docs:
     parent: "mysqloperator"
-weight: 3
+weight: 2
 draft: false
 aliases: []
 toc: true
