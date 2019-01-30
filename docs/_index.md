@@ -11,6 +11,8 @@ weight: 1
 draft: false
 aliases: []
 toc: true
+related: true
+layout: project
 ---
 
 Deploying and using the MySQL operator requires for it to have access to a Kubernetes cluster and to
