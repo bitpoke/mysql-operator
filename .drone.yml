@@ -127,9 +127,11 @@ pipeline:
       # remove README.md because hugo does not ignore it and fails. This files contains github
       # links.
       - rm $CODE_DIR/content/mysqloperator/README.md
-      # commit changes
+      # commit changes if something to commit
       - cd $CODE_DIR
-      - git add -A; git commit -m "Update MySQL Operator documentation"; git push origin master
+      - git add -A
+      - git diff-index --quiet HEAD || git commit -m "Update MySQL Operator documentation"
+      - git push origin master
     secrets:
       - GH_PASSWORD
     when:
