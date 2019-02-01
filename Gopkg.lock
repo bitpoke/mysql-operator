@@ -382,7 +382,7 @@
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:ecf35056654faefed4b41a5e5cfe250bff49a685ed901b178b318842c8986cd3"
+  digest = "1:a15e750e96f905667a97b0441d9e41c6dc6516ed88d552cf1f0ad50bffbc40f2"
   name = "github.com/presslabs/controller-util"
   packages = [
     "mergo/transformers",
@@ -390,8 +390,8 @@
     "syncer",
   ]
   pruneopts = "T"
-  revision = "b760d84e3d14b1d66e82dfba34d71a00791c1b67"
-  version = "v0.1.6"
+  revision = "091624ede622262db567394d03d640e4d1d1c880"
+  version = "v0.1.8"
 
 [[projects]]
   digest = "1:3b5729e3fc486abc6fc16ce026331c3d196e788c3b973081ecf5d28ae3e1050d"
