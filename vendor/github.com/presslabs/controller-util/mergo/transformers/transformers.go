@@ -38,6 +38,7 @@ func init() {
 		reflect.TypeOf([]corev1.ContainerPort{}):        PodSpec.MergeListByKey("ContainerPort", mergo.WithOverride),
 		reflect.TypeOf([]corev1.EnvVar{}):               PodSpec.MergeListByKey("Name", mergo.WithOverride),
 		reflect.TypeOf(corev1.EnvVar{}):                 PodSpec.OverrideFields("Value", "ValueFrom"),
+		reflect.TypeOf(corev1.VolumeSource{}):           PodSpec.NilOtherFields(),
 		reflect.TypeOf([]corev1.Toleration{}):           PodSpec.MergeListByKey("Key", mergo.WithOverride),
 		reflect.TypeOf([]corev1.Volume{}):               PodSpec.MergeListByKey("Name", mergo.WithOverride),
 		reflect.TypeOf([]corev1.LocalObjectReference{}): PodSpec.MergeListByKey("Name", mergo.WithOverride),
@@ -110,7 +111,7 @@ func (s *TransformerMap) MergeListByKey(key string, opts ...func(*mergo.Config))
 		opt(conf)
 	}
 	return func(dst, src reflect.Value) error {
-		entries := make([]reflect.Value, src.Len())
+		entries := reflect.MakeSlice(src.Type(), src.Len(), src.Len())
 		for i := 0; i < src.Len(); i++ {
 			elem := src.Index(i)
 			err := s.mergeByKey(key, dst, elem, opts...)
@@ -119,18 +120,38 @@ func (s *TransformerMap) MergeListByKey(key string, opts ...func(*mergo.Config))
 			}
 			j, found := indexByKey(key, elem, dst)
 			if found {
-				entries[i] = dst.Index(j)
+				entries.Index(i).Set(dst.Index(j))
 			}
 		}
-
 		if !conf.AppendSlice {
-			for i, elem := range entries {
-				dst.Index(i).Set(elem)
-			}
-			dst.SetLen(len(entries))
-			dst.SetCap(len(entries))
+			dst.SetLen(entries.Len())
+			dst.SetCap(entries.Cap())
+			dst.Set(entries)
 		}
 
+		return nil
+	}
+}
+
+// NilOtherFields nils all fields not defined in src
+func (s *TransformerMap) NilOtherFields(opts ...func(*mergo.Config)) func(_, _ reflect.Value) error {
+	return func(dst, src reflect.Value) error {
+		for i := 0; i < dst.NumField(); i++ {
+			dstField := dst.Type().Field(i)
+			srcValue := src.FieldByName(dstField.Name)
+			dstValue := dst.FieldByName(dstField.Name)
+
+			if srcValue.Kind() == reflect.Ptr && srcValue.IsNil() {
+				dstValue.Set(srcValue)
+			} else {
+				if dstValue.Kind() == reflect.Ptr && dstValue.IsNil() {
+					dstValue.Set(srcValue)
+				} else {
+					opts = append(opts, mergo.WithTransformers(s))
+					return mergo.Merge(dstValue.Interface(), srcValue.Interface(), opts...)
+				}
+			}
+		}
 		return nil
 	}
 }

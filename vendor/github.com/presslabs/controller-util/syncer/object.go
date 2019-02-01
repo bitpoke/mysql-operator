@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-test/deep"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/patch"
 )
 
 // ObjectSyncer is a syncer.Interface for syncing kubernetes.Objects only by
@@ -40,7 +40,8 @@ func (s *ObjectSyncer) Sync(ctx context.Context) (SyncResult, error) {
 
 	result.Operation, err = controllerutil.CreateOrUpdate(ctx, s.Client, s.Obj, s.mutateFn())
 
-	diff, _ := patch.NewJSONPatch(s.previousObject, s.Obj)
+	// check deep diff
+	diff := deep.Equal(s.previousObject, s.Obj)
 
 	if err != nil {
 		result.SetEventData(eventWarning, basicEventReason(s.Name, err),
@@ -73,9 +74,14 @@ func (s *ObjectSyncer) mutateFn() controllerutil.MutateFn {
 			if !ok {
 				return fmt.Errorf("%T is not a metav1.Object", s.Owner)
 			}
-			err := controllerutil.SetControllerReference(ownerMeta, existingMeta, s.Scheme)
-			if err != nil {
-				return err
+
+			// set owner reference only if owner resource is not being deleted, otherwise the owner
+			// reference will be reset in case of deleting with cascade=false.
+			if ownerMeta.GetDeletionTimestamp().IsZero() {
+				err := controllerutil.SetControllerReference(ownerMeta, existingMeta, s.Scheme)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		return nil
