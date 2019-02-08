@@ -14,13 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint: errcheck,golint
 package testutil
 
 import (
+	"context"
 	"time"
+
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
@@ -67,4 +76,36 @@ func NodeConditions(master, replicating, lagged, readOnly bool) []api.NodeCondit
 			LastTransitionTime: t,
 		},
 	}
+}
+
+// RefreshFn receives a client and a runtime.Objects and refreshes the object from k8s
+// example: Eventually(RefreshFn(c, cluster.Unwrap())).Should(HaveClusterStatusReadyNodes(2))
+func RefreshFn(c client.Client, obj runtime.Object) func() runtime.Object {
+	return func() runtime.Object {
+		objMeta, ok := obj.(metav1.Object)
+		if !ok {
+			return nil
+		}
+
+		objKey := types.NamespacedName{
+			Name:      objMeta.GetName(),
+			Namespace: objMeta.GetNamespace(),
+		}
+
+		if err := c.Get(context.TODO(), objKey, obj); err == nil {
+			return obj
+		}
+
+		// if the object is not updated then return nil, not the old object
+		return nil
+	}
+}
+
+// HaveClusterStatusReadyNodes a matcher that checks cluster ready nodes to equal the given value
+func HaveClusterStatusReadyNodes(nodes int) gomegatypes.GomegaMatcher {
+	return PointTo(MatchFields(IgnoreExtras, Fields{
+		"Status": MatchFields(IgnoreExtras, Fields{
+			"ReadyNodes": Equal(nodes),
+		}),
+	}))
 }

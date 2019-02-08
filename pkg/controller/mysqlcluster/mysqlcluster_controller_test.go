@@ -40,6 +40,7 @@ import (
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
+	util "github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
@@ -231,7 +232,7 @@ var _ = Describe("MysqlCluster controller", func() {
 				Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["config_rev"]).To(Equal(cfgMap.ResourceVersion))
 				Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["secret_rev"]).To(Equal(secret.ResourceVersion))
 			})
-			It("should update cluster ready condition", func() {
+			It("should update cluster ready nodes", func() {
 				// get statefulset
 				sfsKey := types.NamespacedName{
 					Name:      cluster.GetNameForResource(mysqlcluster.StatefulSet),
@@ -250,7 +251,9 @@ var _ = Describe("MysqlCluster controller", func() {
 				// expect a reconcile event
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-				Eventually(getClusterConditions(c, cluster), timeout).Should(haveCondWithStatus(api.ClusterConditionReady, corev1.ConditionTrue))
+
+				// check ready nodes are updated
+				Eventually(util.RefreshFn(c, cluster.Unwrap())).Should(util.HaveClusterStatusReadyNodes(2))
 			})
 			It("should label pods as healthy and as master accordingly", func() {
 				pod0 := getPod(cluster, 0)
@@ -525,23 +528,6 @@ func nodeStatusForPod(cluster *mysqlcluster.MysqlCluster, pod *corev1.Pod, maste
 			},
 		},
 	}
-}
-
-// getClusterConditions is a helper func that returns a functions that returns cluster status conditions
-func getClusterConditions(c client.Client, cluster *mysqlcluster.MysqlCluster) func() []api.ClusterCondition {
-	return func() []api.ClusterCondition {
-		cl := &api.MysqlCluster{}
-		c.Get(context.TODO(), types.NamespacedName{Name: cluster.Name, Namespace: cluster.Namespace}, cl)
-		return cl.Status.Conditions
-	}
-}
-
-// haveCondWithStatus is a helper func that returns a matcher to check for an existing condition in a ClusterCondition list.
-func haveCondWithStatus(condType api.ClusterConditionType, status corev1.ConditionStatus) gomegatypes.GomegaMatcher {
-	return ContainElement(MatchFields(IgnoreExtras, Fields{
-		"Type":   Equal(condType),
-		"Status": Equal(status),
-	}))
 }
 
 func haveLabelWithValue(label, value string) gomegatypes.GomegaMatcher {
