@@ -80,6 +80,7 @@ func (c *MysqlCluster) condIndex(condType api.ClusterConditionType) (int, bool) 
 	return 0, false
 }
 
+// GetClusterCondition returns the cluster condition of the given type
 func (c *MysqlCluster) GetClusterCondition(condType api.ClusterConditionType) *api.ClusterCondition {
 	i, found := c.condIndex(condType)
 	if found {

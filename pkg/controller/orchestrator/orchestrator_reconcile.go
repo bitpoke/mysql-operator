@@ -282,7 +282,7 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) (InstancesSet, []
 		return readyInstances, shouldDiscover, shouldForget
 	}
 
-	var toRemove []orc.InstanceKey
+	toRemove := []orc.InstanceKey{}
 	for _, i := range instances {
 		toRemove = append(toRemove, i.Key)
 	}
@@ -381,17 +381,6 @@ func (ou *orcUpdater) updateStatusForRecoveries(recoveries []orc.TopologyRecover
 		ou.cluster.UpdateStatusCondition(api.ClusterConditionFailoverAck,
 			core.ConditionFalse, "NoPendingFailoverAckExists", "no pending ack")
 	}
-}
-
-// nolint: unparam
-func condIndexCluster(cluster *mysqlcluster.MysqlCluster, condType api.ClusterConditionType) (int, bool) {
-	for i, cond := range cluster.Status.Conditions {
-		if cond.Type == condType {
-			return i, true
-		}
-	}
-
-	return 0, false
 }
 
 // updateNodeCondition is a helper function that updates condition for a specific node
@@ -541,14 +530,4 @@ func makeRecoveryMessage(acks []orc.TopologyRecovery) string {
 	}
 
 	return strings.Join(texts, " ")
-}
-
-func isInstInMaintenance(instKey orc.InstanceKey, maintenances []orc.Maintenance) bool {
-	for _, m := range maintenances {
-		if m.Key == instKey {
-			return true
-		}
-	}
-
-	return false
 }

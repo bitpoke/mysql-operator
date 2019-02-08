@@ -41,8 +41,9 @@ import (
 )
 
 var (
-	one = int32(1)
-	two = int32(2)
+	one   = int32(1)
+	two   = int32(2)
+	three = int32(3)
 )
 
 var _ = Describe("Orchestrator controller", func() {
