@@ -20,16 +20,13 @@ const (
 	// MysqlPort is the default mysql port.
 	MysqlPort = 3306
 
-	// HelperXtrabackupPort is the port on which we serve backups
-	HelperXtrabackupPort = 3307
-
 	// OrcTopologyDir path where orc conf secret is mounted
 	OrcTopologyDir = "/var/run/orc-topology"
 
-	// HelperServerPort represents the port on which http server will run
-	HelperServerPort = 8088
-	// HelperServerProbePath the probe path
-	HelperServerProbePath = "/health"
+	// SidecarServerPort represents the port on which http server will run
+	SidecarServerPort = 8007
+	// SidecarServerProbePath the probe path
+	SidecarServerProbePath = "/health"
 
 	// ExporterPort is the port that metrics will be exported
 	ExporterPort = 9125

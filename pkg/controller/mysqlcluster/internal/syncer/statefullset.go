@@ -85,14 +85,6 @@ func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*apps.StatefulSet)
 
-	if out.Status.ReadyReplicas == *s.cluster.Spec.Replicas {
-		s.cluster.UpdateStatusCondition(api.ClusterConditionReady,
-			core.ConditionTrue, "statefulset ready", "Cluster is ready.")
-	} else {
-		s.cluster.UpdateStatusCondition(api.ClusterConditionReady,
-			core.ConditionFalse, "statefulset not ready", "Cluster is not ready.")
-	}
-
 	s.cluster.Status.ReadyNodes = int(out.Status.ReadyReplicas)
 
 	out.Spec.Replicas = s.cluster.Spec.Replicas
@@ -356,21 +348,20 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		},
 	})
 
-	helper := s.ensureContainer(containerSidecarName,
+	// SIDECAR container
+	sidecar := s.ensureContainer(containerSidecarName,
 		s.opt.HelperImage,
 		[]string{"config-and-serve"},
 	)
-	helper.Ports = ensurePorts(core.ContainerPort{
-		Name:          HelperXtrabackupPortName,
-		ContainerPort: HelperXtrabackupPort,
+	sidecar.Ports = ensurePorts(core.ContainerPort{
+		Name:          SidecarServerPortName,
+		ContainerPort: SidecarServerPort,
 	})
-	helper.Resources = ensureResources(containerSidecarName)
-
-	// HELPER container
-	helper.ReadinessProbe = ensureProbe(30, 5, 5, core.Handler{
+	sidecar.Resources = ensureResources(containerSidecarName)
+	sidecar.ReadinessProbe = ensureProbe(30, 5, 5, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
-			Path:   HelperServerProbePath,
-			Port:   intstr.FromInt(HelperServerPort),
+			Path:   SidecarServerProbePath,
+			Port:   intstr.FromInt(SidecarServerPort),
 			Scheme: core.URISchemeHTTP,
 		},
 	})
@@ -417,7 +408,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 
 	containers := []core.Container{
 		mysql,
-		helper,
+		sidecar,
 		exporter,
 		heartbeat,
 	}

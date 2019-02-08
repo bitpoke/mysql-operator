@@ -28,25 +28,20 @@ const (
 	// MysqlPort is the default mysql port.
 	MysqlPort = constants.MysqlPort
 
-	// HelperXtrabackupPortName is name of the port on which we take backups
-	HelperXtrabackupPortName = "xtrabackup"
-	// HelperXtrabackupPort is the port on which we serve backups
-	HelperXtrabackupPort = constants.HelperXtrabackupPort
-
 	// OrcTopologyDir path where orc conf secret is mounted
 	OrcTopologyDir = constants.OrcTopologyDir
 
-	// HelperServerPort represents the port on which http server will run
-	HelperServerPort = constants.HelperServerPort
-	// HelperServerProbePath the probe path
-	HelperServerProbePath = constants.HelperServerProbePath
+	// SidecarServerPortName name of the port
+	SidecarServerPortName = "xtrabackup"
+	// SidecarServerPort represents the port on which http server will run
+	SidecarServerPort = constants.SidecarServerPort
+	// SidecarServerProbePath the probe path
+	SidecarServerProbePath = constants.SidecarServerProbePath
 
 	// ExporterPort is the port that metrics will be exported
 	ExporterPort = constants.ExporterPort
-
 	//ExporterPortName the name of the metrics exporter port
 	ExporterPortName = "prometheus"
-
 	// ExporterPath is the path on which metrics are expose
 	ExporterPath = constants.ExporterPath
 
@@ -56,13 +51,10 @@ const (
 
 	// ConfVolumeMountPath is the path where mysql configs will be mounted
 	ConfVolumeMountPath = constants.ConfVolumeMountPath
-
 	// DataVolumeMountPath is the path to mysql data
 	DataVolumeMountPath = constants.DataVolumeMountPath
-
 	// ConfMapVolumeMountPath represents the temp config mount path in init containers
 	ConfMapVolumeMountPath = constants.ConfMapVolumeMountPath
-
 	// ConfDPath is the path to extra mysql configs dir
 	ConfDPath = constants.ConfDPath
 )

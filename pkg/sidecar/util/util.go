@@ -40,9 +40,6 @@ import (
 var log = logf.Log.WithName("sidecar.util")
 
 var (
-	// BackupPort is the port on which xtrabackup expose backups, 3306
-	BackupPort = strconv.Itoa(constants.HelperXtrabackupPort)
-
 	// MysqlPort represents port on which mysql works
 	MysqlPort = strconv.Itoa(constants.MysqlPort)
 
@@ -71,9 +68,9 @@ var (
 	OrcTopologyDir = constants.OrcTopologyDir
 
 	// ServerPort http server port
-	ServerPort = constants.HelperServerPort
+	ServerPort = constants.SidecarServerPort
 	// ServerProbeEndpoint is the http server endpoint for probe
-	ServerProbeEndpoint = constants.HelperServerProbePath
+	ServerProbeEndpoint = constants.SidecarServerProbePath
 	// ServerBackupEndpoint is the http server endpoint for backups
 	ServerBackupEndpoint = "/xbackup"
 )
