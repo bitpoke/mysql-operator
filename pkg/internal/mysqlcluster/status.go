@@ -80,6 +80,15 @@ func (c *MysqlCluster) condIndex(condType api.ClusterConditionType) (int, bool) 
 	return 0, false
 }
 
+func (c *MysqlCluster) GetClusterCondition(condType api.ClusterConditionType) *api.ClusterCondition {
+	i, found := c.condIndex(condType)
+	if found {
+		return &c.Status.Conditions[i]
+	}
+
+	return nil
+}
+
 // UpdateNodeConditionStatus updates the status of the condition for a given name and type
 func (c *MysqlCluster) UpdateNodeConditionStatus(nodeName string, condType api.NodeConditionType, status core.ConditionStatus) bool {
 	i := c.GetNodeStatusIndex(nodeName)

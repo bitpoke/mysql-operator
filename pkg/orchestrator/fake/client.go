@@ -232,12 +232,13 @@ func (o *OrcFakeClient) Master(clusterHint string) (*Instance, error) {
 	if !ok {
 		return nil, NewErrorMsg("Unable to determine cluster name", "/master")
 	}
+
 	for _, inst := range insts {
 		if !inst.ReadOnly {
 			return inst, nil
 		}
 	}
-	return nil, NewErrorMsg("Unable to determine master", "/master")
+	return nil, NewErrorMsg("No masters found", "/master")
 }
 
 // Cluster returns the list of instances from a cluster

@@ -82,6 +82,11 @@ func IsNotFound(err error) bool {
 		if strings.Contains(orcErr.Message, "Cannot read instance") {
 			return true
 		}
+
+		// https://github.com/github/orchestrator/blob/7bef26f042aafbd956daeaede0cd4aab2ba46e65/go/http/api.go#L1949
+		if strings.Contains(orcErr.Message, "No masters found") {
+			return true
+		}
 	}
 	return false
 }

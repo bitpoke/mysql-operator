@@ -128,8 +128,8 @@ var _ = Describe("Orchestrator reconciler", func() {
 		It("should update cluster status", func() {
 			_, err := orcSyncer.Sync(context.TODO())
 			Expect(err).To(Succeed())
-			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionReadOnly, core.ConditionFalse))
-			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionFalse))
+			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionReadOnly, core.ConditionFalse, "ClusterReadOnlyFalse"))
+			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionFalse, "NoPendingFailoverAckExists"))
 			Expect(cluster.Status.Nodes).To(HaveLen(1))
 		})
 
@@ -138,7 +138,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 			orcClient.AddRecoveries(cluster.GetClusterAlias(), false)
 			_, err := orcSyncer.Sync(context.TODO())
 			Expect(err).To(Succeed())
-			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
+			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue, "PendingFailoverAckExists"))
 		})
 
 		It("should not acknowledge pending recoveries when cluster is not ready for enough time", func() {
@@ -150,7 +150,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 			_, err := orcSyncer.Sync(context.TODO())
 			Expect(err).To(Succeed())
 
-			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
+			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue, "PendingFailoverAckExists"))
 			Expect(orcClient.CheckAck(id)).To(Equal(false))
 		})
 
@@ -168,7 +168,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 
 			_, err := orcSyncer.Sync(context.TODO())
 			Expect(err).To(Succeed())
-			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue))
+			Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionFailoverAck, core.ConditionTrue, "PendingFailoverAckExists"))
 			Expect(orcClient.CheckAck(id)).To(Equal(true))
 
 			var event string
@@ -339,110 +339,133 @@ var _ = Describe("Orchestrator reconciler", func() {
 				recorder:  rec,
 				orcClient: orcClient,
 			}
-
-		})
-
-		It("should set the master readOnly when cluster is read only", func() {
 			// set cluster on readonly, master should be in read only state
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
 				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
-				ReadOnly:    false,
+				ReadOnly:    false, // mark node as master
+				// mark instance as uptodate
+				IsUpToDate:       true,
+				IsLastCheckValid: true,
 			})
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
 				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
 				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
 				ReadOnly:    true,
+				// set replication running on replica
+				Slave_SQL_Running: true,
+				Slave_IO_Running:  true,
+				// mark instance as uptodate
+				IsUpToDate:       true,
+				IsLastCheckValid: true,
 			})
 
+			// update cluster nodes status
+			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+			master, _ := orcClient.Master(cluster.GetClusterAlias())
+			updater.updateStatusFromOrc(insts, master)
+		})
+
+		It("should update status for nodes on cluster", func() {
+			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))
+			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(1))).To(haveNodeCondWithStatus(api.NodeConditionReplicating, core.ConditionTrue))
+		})
+
+		It("should set the master readOnly when cluster is read only", func() {
 			cluster.Spec.ReadOnly = true
 
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-			Expect(updater.markReadOnlyNodesInOrc(insts, []orc.Maintenance{})).To(Succeed())
+			master, _ := orcClient.Master(cluster.GetClusterAlias())
+			updater.markReadOnlyNodesInOrc(insts, master)
 
+			// check master (node-0) to be read-only
 			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-			for _, instance := range insts {
-				if instance.Key.Hostname == cluster.GetPodHostname(0) {
-					Expect(instance.ReadOnly).To(Equal(true))
-				}
-			}
-
+			node0 := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
+			Expect(node0.ReadOnly).To(Equal(true))
 		})
 
 		It("should set the master writable when cluster is writable", func() {
-			orcClient.AddInstance(orc.Instance{
-				ClusterName: cluster.GetClusterAlias(),
-				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
-				ReadOnly:    true,
-			})
-			orcClient.AddInstance(orc.Instance{
-				ClusterName: cluster.GetClusterAlias(),
-				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
-				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
-				ReadOnly:    true,
-			})
-
 			//Set ReadOnly to false in order to get the master Writable
 			cluster.Spec.ReadOnly = false
 
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-			Expect(updater.markReadOnlyNodesInOrc(insts, []orc.Maintenance{})).To(Succeed())
+			master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0)) // set node0 as master
+			updater.markReadOnlyNodesInOrc(insts, master)
 
+			// check master (node-0) to be writable
 			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
-			master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
-			Expect(master.ReadOnly).To(Equal(false))
+			node0 := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
+			Expect(node0.ReadOnly).To(Equal(false))
 
-			slave := InstancesSet(insts).GetInstance(cluster.GetPodHostname(1))
-			Expect(slave.ReadOnly).To(Equal(true))
-
+			// check slave (node-1) to be read-only
+			node1 := InstancesSet(insts).GetInstance(cluster.GetPodHostname(1))
+			Expect(node1.ReadOnly).To(Equal(true))
 		})
 
 		It("should remove old nodes from orchestrator", func() {
-			orcClient.AddInstance(orc.Instance{
-				ClusterName: cluster.GetClusterAlias(),
-				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
-				ReadOnly:    false,
-			})
-			orcClient.AddInstance(orc.Instance{
-				ClusterName: cluster.GetClusterAlias(),
-				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
-				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
-				ReadOnly:    true,
-			})
-
 			cluster.Spec.Replicas = &one
 			cluster.Status.ReadyNodes = 1
+			// set cluster ready condition and set lastTransitionTime to 100 seconds before
+			cluster.UpdateStatusCondition(api.ClusterConditionReady, core.ConditionTrue, "", "")
+			ltt := metav1.NewTime(time.Now().Add(-100 * time.Second))
+			cluster.GetClusterCondition(api.ClusterConditionReady).LastTransitionTime = ltt
 
 			// call register and unregister nodes in orc
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-			updater.updateNodesInOrc(insts)
+			_, _, rm := updater.updateNodesInOrc(insts)
+			updater.forgetNodesFromOrc(rm)
 
 			// check for instances in orc
 			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
 			Expect(insts).To(HaveLen(1))
 		})
 
-		When("status.readyNodes != spec.replicas", func() {
-			It("should not remove nodes from orchestrator", func() {
-				orcClient.AddInstance(orc.Instance{
-					ClusterName: cluster.GetClusterAlias(),
-					Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
-					ReadOnly:    false,
-				})
-				orcClient.AddInstance(orc.Instance{
-					ClusterName: cluster.GetClusterAlias(),
-					Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
-					MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
-					ReadOnly:    true,
-				})
-
+		When("cluster is not ready", func() {
+			BeforeEach(func() {
 				cluster.Spec.Replicas = &two
 				cluster.Status.ReadyNodes = 1
+				// call status updater to update status
+				updater.updateClusterReadyStatus()
+			})
 
+			It("should mark cluster as not ready", func() {
+				Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionReady, core.ConditionFalse, "StatefulSetNotReady"))
+
+				// mark cluster as ready
+				cluster.Status.ReadyNodes = 2
+				updater.updateClusterReadyStatus()
+
+				Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionReady, core.ConditionTrue, "ClusterReady"))
+
+				// update cluster nodes status but this time with a not replicating node
+				orcClient.AddInstance(orc.Instance{
+					ClusterName: cluster.GetClusterAlias(),
+					Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(2)},
+					MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+					ReadOnly:    true,
+					// set replication running on replica
+					Slave_SQL_Running: false,
+					Slave_IO_Running:  false,
+					// mark instance as uptodate
+					IsUpToDate:       true,
+					IsLastCheckValid: true,
+				})
+				insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+				master, _ := orcClient.Master(cluster.GetClusterAlias())
+				cluster.Spec.Replicas = &three
+				cluster.Status.ReadyNodes = 3
+				updater.updateStatusFromOrc(insts, master)
+				updater.updateClusterReadyStatus()
+
+				Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionReady, core.ConditionFalse, "NotReplicating"))
+			})
+
+			It("should not remove nodes from orchestrator", func() {
 				// call register and unregister nodes in orc
 				insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-				updater.updateNodesInOrc(insts)
+				_, _, rm := updater.updateNodesInOrc(insts)
+				updater.forgetNodesFromOrc(rm)
 
 				// check for instances in orc
 				insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
@@ -465,11 +488,12 @@ func haveNodeCondWithStatus(condType api.NodeConditionType, status core.Conditio
 }
 
 // haveCondWithStatus is a helper func that returns a matcher to check for an existing condition in a ClusterCondition list.
-func haveCondWithStatus(condType api.ClusterConditionType, status core.ConditionStatus) gomegatypes.GomegaMatcher {
+func haveCondWithStatus(condType api.ClusterConditionType, status core.ConditionStatus, reason string) gomegatypes.GomegaMatcher {
 	return MatchFields(IgnoreExtras, Fields{
 		"Conditions": ContainElement(MatchFields(IgnoreExtras, Fields{
 			"Type":   Equal(condType),
 			"Status": Equal(status),
+			"Reason": Equal(reason),
 		})),
 	})
 
