@@ -171,15 +171,16 @@ func configReadOnly() error {
 
 func configTopology() error {
 	if util.NodeRole() == "slave" {
-
+		log.Info("setting up as slave")
 		if util.ShouldBootstrapNode() {
+			log.Info("doing bootstrap")
 			if gtid, err := util.ReadPurgedGTID(); err == nil {
-				log.V(1).Info("RESET MASTER and setting GTID_PURGED", "gtid", gtid)
+				log.Info("RESET MASTER and setting GTID_PURGED", "gtid", gtid)
 				if errQ := util.RunQuery("RESET MASTER; SET GLOBAL GTID_PURGED=?", gtid); errQ != nil {
 					return errQ
 				}
 			} else {
-				log.V(-1).Info("can't determin what GTID to purge", "error", err)
+				log.V(-1).Info("can't determine what GTID to purge", "error", err)
 			}
 		}
 
