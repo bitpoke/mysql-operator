@@ -63,14 +63,14 @@ func (ou *orcUpdater) GetOwner() runtime.Object { return ou.cluster }
 func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 	// get instances from orchestrator
 	var (
-		instancesOrc InstancesSet
+		allInstances InstancesSet
 		err          error
 		recoveries   []orc.TopologyRecovery
 		master       *orc.Instance
 	)
 
 	// get all related instances from orchestrator
-	if instancesOrc, err = ou.orcClient.Cluster(ou.cluster.GetClusterAlias()); err != nil {
+	if allInstances, err = ou.orcClient.Cluster(ou.cluster.GetClusterAlias()); err != nil {
 		log.V(-1).Info("can't get instances from orchestrator", "alias", ou.cluster.GetClusterAlias(), "error", err.Error())
 		if !orc.IsNotFound(err) {
 			log.Error(err, "orchestrator is not reachable", "cluster_alias", ou.cluster.GetClusterAlias())
@@ -88,12 +88,12 @@ func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 	}
 
 	// register nodes in orchestrator if needed, or remove nodes from status
-	instances, shouldDiscover, shouldRemove := ou.updateNodesInOrc(instancesOrc)
+	instances, undiscoveredInstances, toRemoveInstances := ou.updateNodesInOrc(allInstances)
 
 	// register new nodes into orchestrator
-	ou.discoverNodesInOrc(shouldDiscover)
+	ou.discoverNodesInOrc(undiscoveredInstances)
 
-	// remove nodes that are not in orchestrator
+	// remove nodes which are not registered in orchestrator from status
 	ou.removeNodeConditionNotInOrc(instances)
 
 	// set readonly in orchestrator if needed
@@ -106,7 +106,7 @@ func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 	ou.updateClusterReadyStatus()
 
 	// remove old nodes from orchestrator, depends on cluster ready status
-	ou.forgetNodesFromOrc(shouldRemove)
+	ou.forgetNodesFromOrc(toRemoveInstances)
 
 	// get recoveries for this cluster
 	if recoveries, err = ou.orcClient.AuditRecovery(ou.cluster.GetClusterAlias()); err != nil {
