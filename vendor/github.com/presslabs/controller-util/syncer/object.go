@@ -11,6 +11,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+var (
+	errOwnerDeleted = fmt.Errorf("owner is deleted")
+)
+
 // ObjectSyncer is a syncer.Interface for syncing kubernetes.Objects only by
 // passing a SyncFn
 type ObjectSyncer struct {
@@ -43,7 +47,11 @@ func (s *ObjectSyncer) Sync(ctx context.Context) (SyncResult, error) {
 	// check deep diff
 	diff := deep.Equal(s.previousObject, s.Obj)
 
-	if err != nil {
+	// don't pass to user error for owner deletion, just don't create the object
+	if err == errOwnerDeleted {
+		log.Info(string(result.Operation), "key", key, "kind", fmt.Sprintf("%T", s.Obj), "error", err)
+		err = nil
+	} else if err != nil {
 		result.SetEventData(eventWarning, basicEventReason(s.Name, err),
 			fmt.Sprintf("%T %s failed syncing: %s", s.Obj, key, err))
 		log.Error(err, string(result.Operation), "key", key, "kind", fmt.Sprintf("%T", s.Obj), "diff", diff)
@@ -82,6 +90,10 @@ func (s *ObjectSyncer) mutateFn() controllerutil.MutateFn {
 				if err != nil {
 					return err
 				}
+			} else if ctime := existingMeta.GetCreationTimestamp(); ctime.IsZero() {
+				// the owner is deleted, don't recreate the resource if does not exist, because gc
+				// will not delete it again because has no owner reference set
+				return errOwnerDeleted
 			}
 		}
 		return nil
