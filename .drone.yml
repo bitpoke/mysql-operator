@@ -1,3 +1,7 @@
+branches:
+  - master
+  - 1.x
+
 workspace:
   base: /root/go
   path: src/github.com/presslabs/mysql-operator
