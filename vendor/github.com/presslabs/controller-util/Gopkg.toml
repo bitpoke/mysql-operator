@@ -11,17 +11,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+required = [
+    "github.com/onsi/ginkgo/ginkgo",
+    "sigs.k8s.io/testing_frameworks/integration",
+    ]
 
 [prune]
   go-tests = true
+
+[[constraint]]
+  name="code.cloudfoundry.org/lager"
+  version = "v2.0.0"
 
 [[constraint]]
   name="github.com/imdario/mergo"
   version = "v0.3.6"
 
 [[constraint]]
-name="sigs.k8s.io/controller-runtime"
-version="v0.1.4"
+  name = "sigs.k8s.io/controller-runtime"
+  version = "v0.1.10"
 
 # For dependency below: Refer to issue https://github.com/golang/dep/issues/1799
 [[constraint]]
