@@ -32,7 +32,7 @@ const (
 	OrcTopologyDir = constants.OrcTopologyDir
 
 	// SidecarServerPortName name of the port
-	SidecarServerPortName = "xtrabackup"
+	SidecarServerPortName = "sidecar-http"
 	// SidecarServerPort represents the port on which http server will run
 	SidecarServerPort = constants.SidecarServerPort
 	// SidecarServerProbePath the probe path

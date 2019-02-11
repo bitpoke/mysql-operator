@@ -24,7 +24,7 @@ const (
 	OrcTopologyDir = "/var/run/orc-topology"
 
 	// SidecarServerPort represents the port on which http server will run
-	SidecarServerPort = 8007
+	SidecarServerPort = 8080
 	// SidecarServerProbePath the probe path
 	SidecarServerProbePath = "/health"
 
