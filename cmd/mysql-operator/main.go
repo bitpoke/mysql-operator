@@ -74,7 +74,7 @@ func main() {
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{
-		LeaderElection:          true,
+		LeaderElection:          opt.LeaderElection,
 		LeaderElectionNamespace: opt.LeaderElectionNamespace,
 		LeaderElectionID:        opt.LeaderElectionID,
 		Namespace:               opt.Namespace,

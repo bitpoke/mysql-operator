@@ -58,9 +58,11 @@ type Options struct {
 	// nodes. This field is set in cluster secret as well.
 	OrchestratorTopologyUser string
 
+	LeaderElection bool
+
 	// LeaderElectionNamespace the namespace where the lock resource will be created
 	LeaderElectionNamespace string
-	// LederElectionID the name of the lock resource
+	// LeaderElectionID the name of the lock resource
 	LeaderElectionID string
 
 	// Namespace where to look after objects. This will limit the operator action range.
@@ -97,6 +99,9 @@ const (
 	defaultOrchestratorTopologyUser     = ""
 	defaultOrchestratorTopologyPassword = ""
 
+	defaultHTTPServerAddr = ":80"
+
+	defaultLeaderElection          = true
 	defaultLeaderElectionNamespace = "default"
 	defaultLeaderElectionID        = ""
 
@@ -127,6 +132,8 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.OrchestratorTopologyUser, "orchestrator-topology-user", defaultOrchestratorTopologyPassword,
 		"The orchestrator topology user. Can also be set as ORC_TOPOLOGY_USER environment variable.")
 
+	fs.BoolVar(&o.LeaderElection, "leader-election", defaultLeaderElection,
+		"Enable or disable leader election.")
 	fs.StringVar(&o.LeaderElectionNamespace, "leader-election-namespace", defaultLeaderElectionNamespace,
 		"The leader election namespace.")
 	fs.StringVar(&o.LeaderElectionID, "leader-election-id", defaultLeaderElectionID,
