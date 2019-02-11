@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 
-	logf "github.com/presslabs/controller-util/log"
 	"github.com/spf13/pflag"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/klog"
@@ -29,7 +28,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
+	logf "github.com/presslabs/controller-util/log"
+
 	"github.com/presslabs/mysql-operator/pkg/apis"
+	"github.com/presslabs/mysql-operator/pkg/broker"
 	"github.com/presslabs/mysql-operator/pkg/controller"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
@@ -93,6 +95,11 @@ func main() {
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
 		log.Error(err, "unable to setup controllers")
+		os.Exit(1)
+	}
+
+	if err := broker.AddToManager(mgr); err != nil {
+		log.Error(err, "unable to setup service broker server")
 		os.Exit(1)
 	}
 

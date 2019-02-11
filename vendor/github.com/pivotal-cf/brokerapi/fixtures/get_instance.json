@@ -1,0 +1,8 @@
+{
+    "service_id" : "0A789746-596F-4CEA-BFAC-A0795DA056E3",
+    "plan_id" : "plan-id",
+    "dashboard_url" : "https://example.com/dashboard/some-instance",
+    "parameters": {
+			"param1" : "value1"
+    }
+}

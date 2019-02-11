@@ -10,6 +10,17 @@
   version = "v0.30.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:f5f16082835d029b8d5eb7f1b3c5acebb1e7b2fafdd74a242aad58fe253ef9a9"
+  name = "code.cloudfoundry.org/lager"
+  packages = [
+    ".",
+    "internal/truncate",
+  ]
+  pruneopts = "T"
+  revision = "54c4f2530ddeb742ce9c9ee26f5fa758d6c1b3b6"
+
+[[projects]]
   digest = "1:464aef731a5f82ded547c62e249a2e9ec59fbbc9ddab53cda7b9857852630a61"
   name = "github.com/appscode/jsonpatch"
   packages = ["."]
@@ -187,6 +198,14 @@
   pruneopts = "T"
   revision = "7c663266750e7d82587642f65e60bc4083f1f84e"
   version = "v0.2.0"
+
+[[projects]]
+  digest = "1:03e234a7f71e1bab87804517e5f729b4cc3534cabd2b7cc692052282f6215192"
+  name = "github.com/gorilla/mux"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "a7962380ca08b5a188038c69871b8d3fbdf31e89"
+  version = "v1.7.0"
 
 [[projects]]
   branch = "master"
@@ -374,6 +393,18 @@
   version = "v2.0.1"
 
 [[projects]]
+  digest = "1:a3aab69c64e13abb111db55a5ca2a67cc76a723f52f3d856efb687f2ae532b6d"
+  name = "github.com/pivotal-cf/brokerapi"
+  packages = [
+    ".",
+    "auth",
+    "middlewares/originating_identity_header",
+  ]
+  pruneopts = "T"
+  revision = "644cda48aed126142816ea9fdf0c676e7d66032e"
+  version = "v4.2.1"
+
+[[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -386,6 +417,7 @@
   name = "github.com/presslabs/controller-util"
   packages = [
     "log",
+    "log/adapters/lager",
     "mergo/transformers",
     "rand",
     "syncer",
@@ -1001,13 +1033,16 @@
     "github.com/onsi/gomega",
     "github.com/onsi/gomega/gstruct",
     "github.com/onsi/gomega/types",
+    "github.com/pivotal-cf/brokerapi",
     "github.com/presslabs/controller-util/log",
+    "github.com/presslabs/controller-util/log/adapters/lager",
     "github.com/presslabs/controller-util/mergo/transformers",
     "github.com/presslabs/controller-util/rand",
     "github.com/presslabs/controller-util/syncer",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "github.com/wgliang/cron",
+    "go.uber.org/zap",
     "golang.org/x/net/context",
     "k8s.io/api/apps/v1",
     "k8s.io/api/batch/v1",
@@ -1034,6 +1069,7 @@
     "k8s.io/client-go/tools/clientcmd/api",
     "k8s.io/client-go/tools/portforward",
     "k8s.io/client-go/tools/record",
+    "k8s.io/client-go/tools/reference",
     "k8s.io/client-go/transport/spdy",
     "k8s.io/client-go/util/workqueue",
     "k8s.io/code-generator/cmd/deepcopy-gen",
