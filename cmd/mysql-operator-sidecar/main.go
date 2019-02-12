@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 
+	logf "github.com/presslabs/controller-util/log"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
@@ -28,8 +29,6 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/sidecar/appconf"
 	"github.com/presslabs/mysql-operator/pkg/sidecar/apphelper"
 	"github.com/presslabs/mysql-operator/pkg/sidecar/apptakebackup"
-	customLog "github.com/presslabs/mysql-operator/pkg/util/log"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var log = logf.Log.WithName("sidecar")
@@ -49,6 +48,8 @@ func main() {
 	}
 
 	// add flags and parse them
+	debug := false
+	flag.BoolVar(&debug, "debug", false, "Set logger in debug mode")
 	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 	if err := cmd.ParseFlags(os.Args[1:]); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to parse global flags, see helps, err: %s", err)
@@ -56,7 +57,7 @@ func main() {
 	}
 
 	// setup logging
-	logf.SetLogger(customLog.ZapLogger())
+	logf.SetLogger(logf.ZapLogger(debug))
 
 	confCmd := &cobra.Command{
 		Use:   "init-configs",

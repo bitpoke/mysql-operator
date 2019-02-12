@@ -382,7 +382,7 @@
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:c2e43fd96b4d164d4d573afd73cb8610a27c2ed735a4d028329f162c48d8782e"
+  digest = "1:0018931fa4284edacbbfc104fbd34c7a560edee63a1375188c8627e3c000c6c6"
   name = "github.com/presslabs/controller-util"
   packages = [
     "mergo/transformers",
@@ -390,8 +390,8 @@
     "syncer",
   ]
   pruneopts = "T"
-  revision = "2411d6b0c73e38cce863544a0f9945f6fc848c22"
-  version = "v0.1.9"
+  revision = "3df98a3c1e2b9cfe8cd1b1960dc5067845035d91"
+  version = "v0.1.10"
 
 [[projects]]
   digest = "1:3b5729e3fc486abc6fc16ce026331c3d196e788c3b973081ecf5d28ae3e1050d"
@@ -1038,6 +1038,7 @@
     "k8s.io/client-go/transport/spdy",
     "k8s.io/client-go/util/workqueue",
     "k8s.io/code-generator/cmd/deepcopy-gen",
+    "k8s.io/klog",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/controller",

@@ -22,10 +22,8 @@ import (
 
 	// loggging
 	"github.com/go-logr/logr"
-	"github.com/go-logr/zapr"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
+	utilLog "github.com/presslabs/controller-util/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -46,16 +44,6 @@ func DrainChan(requests <-chan reconcile.Request) {
 }
 
 // NewTestLogger returns a logger good for tests
-func NewTestLogger(w io.Writer, options ...zap.Option) logr.Logger {
-	encoderCfg := zapcore.EncoderConfig{
-		MessageKey:     "msg",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.StringDurationEncoder,
-	}
-	sink := zapcore.AddSync(w)
-	core := zapcore.NewCore(zapcore.NewConsoleEncoder(encoderCfg), sink, zap.DebugLevel)
-	return zapr.NewLogger(zap.New(core).WithOptions(options...))
+func NewTestLogger(w io.Writer) logr.Logger {
+	return utilLog.ZapLoggerTo(w, true)
 }

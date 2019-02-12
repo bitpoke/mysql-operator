@@ -20,10 +20,6 @@ required = [
   go-tests = true
 
 [[constraint]]
-  name="code.cloudfoundry.org/lager"
-  version = "v2.0.0"
-
-[[constraint]]
   name="github.com/imdario/mergo"
   version = "v0.3.6"
 

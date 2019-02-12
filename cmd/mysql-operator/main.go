@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"os"
 
-	customLog "github.com/presslabs/mysql-operator/pkg/util/log"
+	logf "github.com/presslabs/controller-util/log"
 	"github.com/spf13/pflag"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
 	"github.com/presslabs/mysql-operator/pkg/apis"
@@ -40,6 +40,9 @@ func main() {
 	fs := pflag.NewFlagSet(os.Args[0], pflag.ExitOnError)
 	fs.AddGoFlagSet(flag.CommandLine)
 
+	debug := false
+	fs.BoolVar(&debug, "debug", false, "Set logger in debug mode")
+
 	opt := options.GetOptions()
 	opt.AddFlags(fs)
 	if err := fs.Parse(os.Args); err != nil {
@@ -48,7 +51,12 @@ func main() {
 	}
 
 	// set logging
-	logf.SetLogger(customLog.ZapLogger())
+	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
+	klog.InitFlags(klogFlags)
+	klogFlags.Set("logtostderr", "true")      // nolint: errcheck
+	klogFlags.Set("alsologtostderr", "false") // nolint: errcheck
+
+	logf.SetLogger(logf.ZapLogger(debug))
 
 	if err := opt.Validate(); err != nil {
 		log.Error(err, "failed to validate command line args, see help.")
