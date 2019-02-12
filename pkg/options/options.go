@@ -38,7 +38,7 @@ func getFromEnvOrDefault(key, def string) string {
 
 // Options is the data structure that contains information about mysql operator configuration
 type Options struct {
-	HelperImage string
+	SidecarImage string
 
 	MetricsExporterImage string
 
@@ -93,13 +93,13 @@ const (
 )
 
 var (
-	defaultHelperImage  = "quay.io/presslabs/mysql-helper:" + util.AppVersion
+	defaultSidecarImage = "quay.io/presslabs/mysql-operator-sidecar:" + util.AppVersion
 	defaultJobGraceTime = 24 * time.Hour
 )
 
 // AddFlags registers all mysql-operator needed flags
 func (o *Options) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.HelperImage, "helper-image", defaultHelperImage,
+	fs.StringVar(&o.SidecarImage, "sidecar-image", defaultSidecarImage,
 		"The image that instrumentate mysql.")
 
 	fs.StringVar(&o.MetricsExporterImage, "metrics-exporter-image", defaultExporterImage,
@@ -135,7 +135,7 @@ var once sync.Once
 func GetOptions() *Options {
 	once.Do(func() {
 		instance = &Options{
-			HelperImage:          defaultHelperImage,
+			SidecarImage:         defaultSidecarImage,
 			MetricsExporterImage: defaultExporterImage,
 
 			ImagePullPolicy:             defaultImagePullPolicy,

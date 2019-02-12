@@ -303,13 +303,13 @@ func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
 	return []core.Container{
 		// init container for configs
 		s.ensureContainer(containerInitName,
-			s.opt.HelperImage,
+			s.opt.SidecarImage,
 			[]string{"files-config"},
 		),
 
 		// clone container
 		s.ensureContainer(containerCloneName,
-			s.opt.HelperImage,
+			s.opt.SidecarImage,
 			[]string{"clone"},
 		),
 	}
@@ -350,7 +350,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 
 	// SIDECAR container
 	sidecar := s.ensureContainer(containerSidecarName,
-		s.opt.HelperImage,
+		s.opt.SidecarImage,
 		[]string{"config-and-serve"},
 	)
 	sidecar.Ports = ensurePorts(core.ContainerPort{
@@ -393,7 +393,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 
 	// PT-HEARTBEAT container
 	heartbeat := s.ensureContainer(containerHeartBeatName,
-		s.opt.HelperImage,
+		s.opt.SidecarImage,
 		[]string{
 			"pt-heartbeat",
 			"--update", "--replace",
@@ -424,7 +424,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		command = append(command, getCliOptionsFromQueryLimits(s.cluster.Spec.QueryLimits)...)
 
 		killer := s.ensureContainer(containerKillerName,
-			s.opt.HelperImage,
+			s.opt.SidecarImage,
 			command,
 		)
 

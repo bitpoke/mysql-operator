@@ -47,11 +47,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// for glog
-	if err := flag.Lookup("logtostderr").Value.Set("true"); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to set glog to use stderr, err: %s", err)
-	}
-
 	// set logging
 	logf.SetLogger(customLog.ZapLogger())
 

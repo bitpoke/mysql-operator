@@ -39,7 +39,7 @@ spec:
             - --leader-election-namespace={{ .Release.Namespace }}
             - --orchestrator-uri=http://{{ template "mysql-operator.orchestrator.fullname" . }}.{{ .Release.Namespace }}/api
             {{- if .Values.sidecarImage }}
-            - --helper-image={{ .Values.sidecarImage }}
+            - --sidecar-image={{ .Values.sidecarImage }}
             {{- end -}}
             {{- range $arg := .Values.extraArgs }}
             - {{ $arg }}

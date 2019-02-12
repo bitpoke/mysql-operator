@@ -19,18 +19,25 @@ package log
 import (
 	"flag"
 	"log"
-	"strconv"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/klog"
 )
 
 var debug = false
+var logLevel = 0
 
 func init() {
-	flag.BoolVar(&debug, "debug", false, "set logger in debug mode")
+	flag.BoolVar(&debug, "debug", false, "Set logger in debug mode")
+	flag.IntVar(&logLevel, "v", 0, "Set verbosity level")
+
+	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
+	klog.InitFlags(klogFlags)
+	klogFlags.Set("logtostderr", "true")      // nolint: errcheck
+	klogFlags.Set("alsologtostderr", "false") // nolint: errcheck
 }
 
 // ZapLogger returns a configured logged based on command line flags -v and --debug
@@ -51,11 +58,11 @@ func ZapLogger() logr.Logger {
 
 	// get the v value from flags and then set the logger value
 	level := zapcore.WarnLevel
-	if strLevel, err := strconv.Atoi(flag.Lookup("v").Value.String()); err == nil {
-		if strLevel > maxLevel {
-			strLevel = maxLevel
+	if logLevel > 0 {
+		if logLevel > maxLevel {
+			logLevel = maxLevel
 		}
-		level = zapcore.Level(-1 * strLevel)
+		level = zapcore.Level(-1 * logLevel)
 	}
 
 	// set debugger level
