@@ -4,8 +4,9 @@ IMAGE_NAME := mysql-operator
 SIDECAR_IMAGE_NAME := mysql-operator-sidecar
 BUILD_TAG := build
 IMAGE_TAGS := $(APP_VERSION)
+PKG_NAME := github.com/presslabs/mysql-operator
 
-BINDIR := bin
+BINDIR := $(PWD)/bin
 KUBEBUILDER_VERSION ?= 1.0.7
 HELM_VERSION ?= 2.11.0
 
@@ -20,7 +21,7 @@ ifeq 'yes' "$(shell test -f $(BINDIR)/kubebuilder && echo -n 'yes')"
 	KUBEBUILDER_ASSETS ?= $(BINDIR)
 endif
 
-all: test skaffold-build
+all: test build
 
 # Run tests
 test: generate fmt vet manifests
@@ -33,9 +34,17 @@ build: generate fmt vet
 	go build -o bin/mysql-operator github.com/presslabs/mysql-operator/cmd/mysql-operator
 	go build -o bin/mysql-operator-sidecar github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
 
-skaffold-build:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o $(BINDIR)/mysql-operator_linux_amd64 github.com/presslabs/mysql-operator/cmd/mysql-operator
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o $(BINDIR)/mysql-operator-sidecar_linux_amd64 github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
+# skaffold build
+bin/mysql-operator_linux_amd64: $(shell hack/development/related-go-files.sh $(PKG_NAME) cmd/mysql-operator/main.go)
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o bin/mysql-operator_linux_amd64 github.com/presslabs/mysql-operator/cmd/mysql-operator
+
+bin/mysql-operator-sidecar_linux_amd64: $(shell hack/development/related-go-files.sh $(PKG_NAME) cmd/mysql-operator-sidecar/main.go)
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o bin/mysql-operator-sidecar_linux_amd64 github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
+
+skaffold-build: bin/mysql-operator_linux_amd64 bin/mysql-operator-sidecar_linux_amd64
+
+skaffold-run: skaffold-build
+	skaffold run
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet
