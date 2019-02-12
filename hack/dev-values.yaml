@@ -1,5 +1,5 @@
 extraArgs:
-  - -v=3
+  - -v=1
   - --debug
 
 installCRDs: false
