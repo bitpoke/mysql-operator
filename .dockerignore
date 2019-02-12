@@ -1,2 +1,4 @@
 .git
 bin/*
+!bin/mysql-operator_linux_amd64
+!bin/mysql-operator-sidecar_linux_amd64

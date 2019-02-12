@@ -3,9 +3,11 @@ kind: Config
 build:
   artifacts:
   - image: quay.io/presslabs/mysql-operator
+    docker:
+      dockerfile: hack/development/Dockerfile.operator
   - image: quay.io/presslabs/mysql-operator-sidecar
     docker:
-      dockerfile: Dockerfile.sidecar
+      dockerfile: hack/development/Dockerfile.sidecar
   local:
     push: true
 deploy:
@@ -14,7 +16,7 @@ deploy:
     - name: test
       chartPath: hack/charts/mysql-operator
       valuesFiles:
-      - hack/dev-values.yaml
+      - hack/development/dev-values.yaml
       values:
         image: quay.io/presslabs/mysql-operator
         sidecarImage: quay.io/presslabs/mysql-operator-sidecar

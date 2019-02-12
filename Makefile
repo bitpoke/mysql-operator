@@ -5,7 +5,7 @@ SIDECAR_IMAGE_NAME := mysql-operator-sidecar
 BUILD_TAG := build
 IMAGE_TAGS := $(APP_VERSION)
 
-BINDIR := $(PWD)/bin
+BINDIR := bin
 KUBEBUILDER_VERSION ?= 1.0.7
 HELM_VERSION ?= 2.11.0
 
@@ -20,7 +20,7 @@ ifeq 'yes' "$(shell test -f $(BINDIR)/kubebuilder && echo -n 'yes')"
 	KUBEBUILDER_ASSETS ?= $(BINDIR)
 endif
 
-all: test build
+all: test skaffold-build
 
 # Run tests
 test: generate fmt vet manifests
@@ -32,6 +32,10 @@ test: generate fmt vet manifests
 build: generate fmt vet
 	go build -o bin/mysql-operator github.com/presslabs/mysql-operator/cmd/mysql-operator
 	go build -o bin/mysql-operator-sidecar github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
+
+skaffold-build:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o $(BINDIR)/mysql-operator_linux_amd64 github.com/presslabs/mysql-operator/cmd/mysql-operator
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o $(BINDIR)/mysql-operator-sidecar_linux_amd64 github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet

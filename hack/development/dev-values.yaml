@@ -1,0 +1,9 @@
+extraArgs:
+  - --debug
+
+installCRDs: false
+
+orchestrator:
+  topologyPassword: password1
+  antiAffinity: soft
+  replicas: 1
