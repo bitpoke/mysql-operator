@@ -85,6 +85,8 @@ func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 			log.Error(err, "orchestrator is not reachable", "cluster_alias", ou.cluster.GetClusterAlias())
 			return syncer.SyncResult{}, err
 		}
+	} else if master != nil {
+		log.V(1).Info("cluster master", "master", master.Key.Hostname, "cluster", ou.cluster.GetClusterAlias())
 	}
 
 	// register nodes in orchestrator if needed, or remove nodes from status
@@ -150,7 +152,7 @@ func (ou *orcUpdater) updateClusterReadyStatus() {
 		}
 	}
 
-	if !hasMaster && !ou.cluster.Spec.ReadOnly {
+	if !hasMaster && !ou.cluster.Spec.ReadOnly && int(*ou.cluster.Spec.Replicas) > 0 {
 		ou.cluster.UpdateStatusCondition(api.ClusterConditionReady, core.ConditionFalse, "NoMaster",
 			"Cluster has no designated master")
 		return
