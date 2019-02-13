@@ -192,11 +192,17 @@ func (o *OrcFakeClient) Discover(host string, port int) error {
 		Port:     port,
 	})
 
+	readOnly := true
+	if strings.Contains(host, "-0") {
+		// make node-0 as master alywas
+		readOnly = false
+	}
+
 	cluster := o.getHostClusterAlias(host)
 	o.AddInstance(Instance{
 		ClusterName: cluster,
 		Key:         InstanceKey{Hostname: host},
-		ReadOnly:    false,
+		ReadOnly:    readOnly,
 		SlaveLagSeconds: sql.NullInt64{
 			Valid: false,
 			Int64: 0,

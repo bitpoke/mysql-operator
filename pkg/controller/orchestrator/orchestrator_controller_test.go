@@ -204,12 +204,10 @@ var _ = Describe("Orchestrator controller", func() {
 		})
 
 		It("should update the status after a sync", func() {
-			orcClient.AddInstance(orc.Instance{
-				ClusterName: cluster.GetClusterAlias(),
-				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
-			})
-
-			// wait reconciliation request
+			// wait reconciliation requests those requests should ensure that the cluster node
+			// status is updated as master
+			By("wait two reconcile requests")
+			Eventually(requests, noReconcileTime+reconcileTimeout).Should(Receive(Equal(expectedRequest)))
 			Eventually(requests, noReconcileTime+reconcileTimeout).Should(Receive(Equal(expectedRequest)))
 
 			// get latest cluster values
