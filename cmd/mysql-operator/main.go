@@ -77,6 +77,7 @@ func main() {
 		LeaderElection:          true,
 		LeaderElectionNamespace: opt.LeaderElectionNamespace,
 		LeaderElectionID:        opt.LeaderElectionID,
+		Namespace:               opt.Namespace,
 	})
 	if err != nil {
 		log.Error(err, "unable to create a new manager")

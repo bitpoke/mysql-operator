@@ -122,10 +122,13 @@ func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 	}
 
 	in.RestartPolicy = core.RestartPolicyNever
+	in.ImagePullSecrets = []core.LocalObjectReference{
+		{Name: s.opt.ImagePullSecretName},
+	}
 
 	in.Containers[0].Name = "backup"
 	in.Containers[0].Image = s.opt.SidecarImage
-	in.Containers[0].ImagePullPolicy = core.PullIfNotPresent
+	in.Containers[0].ImagePullPolicy = s.opt.ImagePullPolicy
 	in.Containers[0].Args = []string{
 		"take-backup-to",
 		s.getBackupCandidate(),
