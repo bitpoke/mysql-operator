@@ -41,6 +41,9 @@ spec:
             {{- if .Values.sidecarImage }}
             - --sidecar-image={{ .Values.sidecarImage }}
             {{- end -}}
+            {{- if .Values.watchNamespace }}
+            - --namespace={{ .Values.watchNamespace }}
+            {{- end }}
             {{- range $arg := .Values.extraArgs }}
             - {{ $arg }}
             {{- end }}
