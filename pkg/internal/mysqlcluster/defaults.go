@@ -18,6 +18,7 @@ package mysqlcluster
 
 import (
 	"fmt"
+
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -39,6 +40,15 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 	// set default image pull policy
 	if len(cluster.Spec.PodSpec.ImagePullPolicy) == 0 {
 		cluster.Spec.PodSpec.ImagePullPolicy = opt.ImagePullPolicy
+	}
+
+	// set default image pull secrets
+	if len(cluster.Spec.PodSpec.ImagePullSecrets) == 0 {
+		if len(opt.ImagePullSecretName) != 0 {
+			cluster.Spec.PodSpec.ImagePullSecrets = []core.LocalObjectReference{
+				{Name: opt.ImagePullSecretName},
+			}
+		}
 	}
 
 	if len(cluster.Spec.MysqlVersion) == 0 {

@@ -19,7 +19,6 @@ package options
 import (
 	"os"
 	"sync"
-	"time"
 
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
@@ -38,23 +37,34 @@ func getFromEnvOrDefault(key, def string) string {
 
 // Options is the data structure that contains information about mysql operator configuration
 type Options struct {
+	// SidecarImage is the image used in sidecar container to serve backups and configure MySQL
 	SidecarImage string
 
+	// MetricsExporterImage is the image for exporter container
 	MetricsExporterImage string
 
+	// ImagePullSecretName is the secret name where are found secrets for pulling images. This is
+	// the default value and may be overwrite by the cluster .spec.podSpec.imagePullSecrets field.
 	ImagePullSecretName string
-	ImagePullPolicy     corev1.PullPolicy
+	// ImagePullPolicy is the default image pull policy
+	ImagePullPolicy corev1.PullPolicy
 
-	OrchestratorURI              string
+	// OrchestratorURI represents the URI where the Orchestrator can be reached.
+	OrchestratorURI string
+	// OrchestratorTopologyPassword is the password that is used by Orchestrator to connect to MySQL
+	// nodes. This field is set in cluster secret as well.
 	OrchestratorTopologyPassword string
-	OrchestratorTopologyUser     string
+	// OrchestratorTopologyUser is the user that is used by Orchestrator to connect to MySQL
+	// nodes. This field is set in cluster secret as well.
+	OrchestratorTopologyUser string
 
-	JobCompleteSuccessGraceTime time.Duration
-
-	HTTPServeAddr string
-
+	// LeaderElectionNamespace the namespace where the lock resource will be created
 	LeaderElectionNamespace string
-	LeaderElectionID        string
+	// LederElectionID the name of the lock resource
+	LeaderElectionID string
+
+	// Namespace where to look after objects. This will limit the operator action range.
+	Namespace string
 }
 
 type pullpolicy corev1.PullPolicy
@@ -81,20 +91,20 @@ func newPullPolicyValue(defaultValue corev1.PullPolicy, v *corev1.PullPolicy) *p
 const (
 	defaultExporterImage = "prom/mysqld-exporter:latest"
 
-	defaultImagePullPolicy = corev1.PullIfNotPresent
+	defaultImagePullPolicy     = corev1.PullIfNotPresent
+	defaultImagePullSecretName = ""
 
 	defaultOrchestratorTopologyUser     = ""
 	defaultOrchestratorTopologyPassword = ""
 
-	defaultHTTPServerAddr = ":80"
-
 	defaultLeaderElectionNamespace = "default"
 	defaultLeaderElectionID        = ""
+
+	defaultNamespace = ""
 )
 
 var (
 	defaultSidecarImage = "quay.io/presslabs/mysql-operator-sidecar:" + util.AppVersion
-	defaultJobGraceTime = 24 * time.Hour
 )
 
 // AddFlags registers all mysql-operator needed flags
@@ -104,7 +114,7 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&o.MetricsExporterImage, "metrics-exporter-image", defaultExporterImage,
 		"The image for mysql metrics exporter.")
-	fs.StringVar(&o.ImagePullSecretName, "image-pull-secret", "",
+	fs.StringVar(&o.ImagePullSecretName, "image-pull-secret", defaultImagePullSecretName,
 		"The secret name for used as pull secret.")
 
 	fs.VarP(newPullPolicyValue(defaultImagePullPolicy, &o.ImagePullPolicy),
@@ -116,16 +126,14 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 		"The orchestrator topology password. Can also be set as ORC_TOPOLOGY_PASSWORD environment variable.")
 	fs.StringVar(&o.OrchestratorTopologyUser, "orchestrator-topology-user", defaultOrchestratorTopologyPassword,
 		"The orchestrator topology user. Can also be set as ORC_TOPOLOGY_USER environment variable.")
-	fs.DurationVar(&o.JobCompleteSuccessGraceTime, "job-grace-time", defaultJobGraceTime,
-		"The time in hours how jobs after completion are keept.")
-
-	fs.StringVar(&o.HTTPServeAddr, "http-serve-addr", defaultHTTPServerAddr,
-		"The address for http server.")
 
 	fs.StringVar(&o.LeaderElectionNamespace, "leader-election-namespace", defaultLeaderElectionNamespace,
 		"The leader election namespace.")
 	fs.StringVar(&o.LeaderElectionID, "leader-election-id", defaultLeaderElectionID,
 		"The leader election id.")
+
+	fs.StringVar(&o.Namespace, "namespace", defaultNamespace,
+		"The namespace to restrict the client to watch objects.")
 }
 
 var instance *Options
@@ -138,13 +146,13 @@ func GetOptions() *Options {
 			SidecarImage:         defaultSidecarImage,
 			MetricsExporterImage: defaultExporterImage,
 
-			ImagePullPolicy:             defaultImagePullPolicy,
-			JobCompleteSuccessGraceTime: defaultJobGraceTime,
+			ImagePullPolicy:     defaultImagePullPolicy,
+			ImagePullSecretName: defaultImagePullSecretName,
 
-			OrchestratorTopologyUser:     "",
-			OrchestratorTopologyPassword: "",
+			OrchestratorTopologyUser:     defaultOrchestratorTopologyUser,
+			OrchestratorTopologyPassword: defaultOrchestratorTopologyPassword,
 
-			HTTPServeAddr: defaultHTTPServerAddr,
+			Namespace: defaultNamespace,
 		}
 	})
 
