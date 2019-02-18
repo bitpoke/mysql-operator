@@ -109,6 +109,12 @@ pipeline:
       - helm package mysql-operator
       - CHART="$(basename *.tgz)" ; MESSAGE="Publish $(basename $CHART .tgz)"
       - /usr/local/bin/gh put --skip-existing -m "$MESSAGE" "$CHART" "presslabs/charts/docs/"
+      - rm *.tgz
+      # publish cluster chart
+      - (cd mysql-cluster && helm dep build)
+      - helm package mysql-cluster
+      - CHART="$(basename *.tgz)" ; MESSAGE="Publish $(basename $CHART .tgz)"
+      - /usr/local/bin/gh put --skip-existing -m "$MESSAGE" "$CHART" "presslabs/charts/docs/"
     secrets:
       - GH_PASSWORD
     when:
