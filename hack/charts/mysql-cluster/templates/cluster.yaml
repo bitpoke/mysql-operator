@@ -1,0 +1,40 @@
+apiVersion: mysql.presslabs.org/v1alpha1
+kind: MysqlCluster
+metadata:
+  name: {{ include "mysql-cluster.clusterName" . }}
+  labels:
+    app: {{ template "mysql-cluster.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicas }}
+  secretName: {{ include "mysql-cluster.secretName" . }}
+
+  {{- if .Values.backupSecretName }}
+  backupSecretName: {{ .Values.backupSecretName }}
+  {{- else if .Values.backupCredentials }}
+  backupSecretName: {{ include "mysql-cluster.backupSecretName" . }}
+  {{- else if .Values.backupSchedule }}
+  {{ required "One of .mysql.backupBucketSecretName and .mysql.backupCredentails should be specified" "" }}
+  {{- end }}
+
+  {{- if .Values.backupSchedule }}
+  backupSchedule: {{ .Values.backupSchedule }}
+  backupURL: {{ required ".mysql.backupURL is missing" .Values.backupURL }}
+  {{- end }}
+
+  {{- if .Values.mysqlConfig }}
+  mysqlConf:
+    {{ toYaml .Values.mysqlConf | nindent 4 }}
+  {{- end }}
+
+  {{- if .Values.podSpec }}
+  podSpec:
+    {{ toYaml .Values.podSpec | nindent 4 }}
+  {{- end }}
+
+  {{- if .Values.volumeSpec }}
+  volumeSpec:
+    {{ toYaml .Values.volumeSpec | nindent 4 }}
+  {{- end }}
