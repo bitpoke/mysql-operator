@@ -59,6 +59,11 @@ func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 			"my.cnf": data,
 		}
 
+		// set MySQL init scripts
+		for name, script := range initScripts {
+			out.Data[name] = script
+		}
+
 		return nil
 	})
 }

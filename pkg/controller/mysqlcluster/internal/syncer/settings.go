@@ -65,4 +65,11 @@ var (
 
 	// ExporterTargetPort is the port for the exporter
 	ExporterTargetPort = intstr.FromInt(ExporterPort)
+
+	initScripts = map[string]string{
+		"99-exit-when-donw.sh": `
+		  echo "Initialization complete, now exiting!"
+		  exit 0
+        `,
+	}
 )
