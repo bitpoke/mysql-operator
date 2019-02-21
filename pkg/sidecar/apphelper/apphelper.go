@@ -22,7 +22,7 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	"github.com/presslabs/mysql-operator/pkg/sidecar/util"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/app"
 )
 
 var log = logf.Log.WithName("sidecar.apphelper")
@@ -36,64 +36,62 @@ const (
 
 // RunRunCommand is the main command, and represents the runtime helper that
 // configures the mysql server
-func RunRunCommand(stopCh <-chan struct{}) error {
+func RunRunCommand(cfg *app.MysqlConfig) error {
 	log.Info("start initialization")
 
 	// wait for mysql to be ready
-	if err := waitForMysqlReady(); err != nil {
+	if err := waitForMysqlReady(cfg); err != nil {
 		return fmt.Errorf("mysql is not ready, err: %s", err)
 	}
 
 	// deactivate super read only
 	log.Info("temporary disable SUPER_READ_ONLY")
-	if err := util.RunQuery("SET GLOBAL READ_ONLY = 1; SET GLOBAL SUPER_READ_ONLY = 0;"); err != nil {
+	if err := app.RunQuery(cfg, "SET GLOBAL READ_ONLY = 1; SET GLOBAL SUPER_READ_ONLY = 0;"); err != nil {
 		return fmt.Errorf("failed to configure master node, err: %s", err)
 	}
 
 	// update orchestrator user and password if orchestrator is configured
 	log.V(1).Info("configure orchestrator credentials")
-	if len(util.GetOrcUser()) > 0 {
-		if err := configureOrchestratorUser(); err != nil {
-			return err
-		}
+	if err := configureOrchestratorUser(cfg); err != nil {
+		return err
 	}
 
 	// update replication user and password
 	log.V(1).Info("configure replication credentials")
-	if err := configureReplicationUser(); err != nil {
+	if err := configureReplicationUser(cfg); err != nil {
 		return err
 	}
 
 	// update metrics exporter user and password
 	log.V(1).Info("configure metrics exporter credentials")
-	if err := configureExporterUser(); err != nil {
+	if err := configureExporterUser(cfg); err != nil {
 		return err
 	}
 
 	// if it's slave set replication source (master host)
 	log.V(1).Info("configure topology")
-	if err := configTopology(); err != nil {
+	if err := configTopology(cfg); err != nil {
 		return err
 	}
 
 	// mark setup as complete by writing a row in config table
 	log.V(1).Info("flag setup as complet")
-	if err := markConfigurationDone(); err != nil {
+	if err := markConfigurationDone(cfg); err != nil {
 		return err
 	}
 
 	// if it's master node then make it writtable else make it read only
 	log.V(1).Info("configure read only flag")
-	if err := configReadOnly(); err != nil {
+	if err := configReadOnly(cfg); err != nil {
 		return err
 	}
 
 	log.V(1).Info("start http server")
-	srv := newServer(stopCh)
+	srv := newServer(cfg)
 	return srv.ListenAndServe()
 }
 
-func configureOrchestratorUser() error {
+func configureOrchestratorUser(cfg *app.MysqlConfig) error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
 	  GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO ?@'%%' IDENTIFIED BY ?;
@@ -104,49 +102,50 @@ func configureOrchestratorUser() error {
 	// insert toolsDBName, it's not user input so it's safe. Can't use
 	// placeholders for table names, see:
 	// https://github.com/golang/go/issues/18478
-	query = fmt.Sprintf(query, util.ToolsDbName)
+	query = fmt.Sprintf(query, app.ToolsDbName)
 
-	if err := util.RunQuery(query, util.GetOrcUser(), util.GetOrcPass(), util.GetOrcUser(), util.GetOrcUser()); err != nil {
+	if err := app.RunQuery(cfg, query, cfg.OrchestratorUser, cfg.OrchestratorPassword,
+		cfg.OrchestratorUser, cfg.OrchestratorPassword); err != nil {
 		return fmt.Errorf("failed to configure orchestrator (user/pass/access), err: %s", err)
 	}
 
 	return nil
 }
 
-func configureReplicationUser() error {
+func configureReplicationUser(cfg *app.MysqlConfig) error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
 	  GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO ?@'%' IDENTIFIED BY ?;
 	`
-	if err := util.RunQuery(query, util.GetReplUser(), util.GetReplPass()); err != nil {
+	if err := app.RunQuery(cfg, query, cfg.ReplicationUser, cfg.ReplicationPassword); err != nil {
 		return fmt.Errorf("failed to configure replication user: %s", err)
 	}
 
 	return nil
 }
 
-func configureExporterUser() error {
+func configureExporterUser(cfg *app.MysqlConfig) error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
 	  GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO ?@'127.0.0.1' IDENTIFIED BY ? WITH MAX_USER_CONNECTIONS 3;
 	`
-	if err := util.RunQuery(query, util.GetExporterUser(), util.GetExporterPass()); err != nil {
+	if err := app.RunQuery(cfg, query, cfg.MetricsUser, cfg.MetricsPassword); err != nil {
 		return fmt.Errorf("failed to metrics exporter user: %s", err)
 	}
 
 	return nil
 }
 
-func waitForMysqlReady() error {
+func waitForMysqlReady(cfg *app.MysqlConfig) error {
 	log.V(1).Info("wait for mysql to be ready")
 
 	for i := 0; i < timeOut; i++ {
 		time.Sleep(1 * time.Second)
-		if err := util.RunQuery("SELECT 1"); err == nil {
+		if err := app.RunQuery(cfg, "SELECT 1"); err == nil {
 			break
 		}
 	}
-	if err := util.RunQuery("SELECT 1"); err != nil {
+	if err := app.RunQuery(cfg, "SELECT 1"); err != nil {
 		log.V(1).Info("mysql is not ready", "error", err)
 		return err
 	}
@@ -156,27 +155,27 @@ func waitForMysqlReady() error {
 
 }
 
-func configReadOnly() error {
+func configReadOnly(cfg *app.MysqlConfig) error {
 	var query string
-	if util.NodeRole() == "master" {
+	if cfg.NodeRole == app.MasterNode {
 		query = "SET GLOBAL READ_ONLY = 0"
 	} else {
 		query = "SET GLOBAL SUPER_READ_ONLY = 1"
 	}
-	if err := util.RunQuery(query); err != nil {
+	if err := app.RunQuery(cfg, query); err != nil {
 		return fmt.Errorf("failed to set read_only config, err: %s", err)
 	}
 	return nil
 }
 
-func configTopology() error {
-	if util.NodeRole() == "slave" {
+func configTopology(cfg *app.MysqlConfig) error {
+	if cfg.NodeRole == app.SlaveNode {
 		log.Info("setting up as slave")
-		if util.ShouldBootstrapNode() {
+		if app.ShouldBootstrapNode() {
 			log.Info("doing bootstrap")
-			if gtid, err := util.ReadPurgedGTID(); err == nil {
+			if gtid, err := app.ReadPurgedGTID(); err == nil {
 				log.Info("RESET MASTER and setting GTID_PURGED", "gtid", gtid)
-				if errQ := util.RunQuery("RESET MASTER; SET GLOBAL GTID_PURGED=?", gtid); errQ != nil {
+				if errQ := app.RunQuery(cfg, "RESET MASTER; SET GLOBAL GTID_PURGED=?", gtid); errQ != nil {
 					return errQ
 				}
 			} else {
@@ -192,14 +191,14 @@ func configTopology() error {
 		    MASTER_PASSWORD=?,
 		    MASTER_CONNECT_RETRY=?;
 		`
-		if err := util.RunQuery(query,
-			util.GetMasterHost(), util.GetReplUser(), util.GetReplPass(), connRetry,
+		if err := app.RunQuery(cfg, query,
+			cfg.MasterHost, cfg.ReplicationUser, cfg.ReplicationPassword, connRetry,
 		); err != nil {
 			return fmt.Errorf("failed to configure slave node, err: %s", err)
 		}
 
 		query = "START SLAVE;"
-		if err := util.RunQuery(query); err != nil {
+		if err := app.RunQuery(cfg, query); err != nil {
 			log.Info("failed to start slave in the simple mode, trying a second method")
 			// TODO: https://bugs.mysql.com/bug.php?id=83713
 			query2 := `
@@ -209,7 +208,7 @@ func configTopology() error {
 			  reset slave;
 			  start slave;
 			`
-			if err := util.RunQuery(query2); err != nil {
+			if err := app.RunQuery(cfg, query2); err != nil {
 				return fmt.Errorf("failed to start slave node, err: %s", err)
 			}
 		}
@@ -218,7 +217,7 @@ func configTopology() error {
 	return nil
 }
 
-func markConfigurationDone() error {
+func markConfigurationDone(cfg *app.MysqlConfig) error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
 	  BEGIN;
@@ -235,9 +234,9 @@ func markConfigurationDone() error {
 
 	// insert tables and databases names. It's safe because is not user input.
 	// see: https://github.com/golang/go/issues/18478
-	query = fmt.Sprintf(query, util.ToolsDbName, util.ToolsInitTableName)
+	query = fmt.Sprintf(query, app.ToolsDbName, app.ToolsInitTableName)
 
-	if err := util.RunQuery(query, util.GetHostname()); err != nil {
+	if err := app.RunQuery(cfg, query, cfg.Hostname); err != nil {
 		return fmt.Errorf("failed to mark configuration done, err: %s", err)
 	}
 

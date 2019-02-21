@@ -24,29 +24,31 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/presslabs/mysql-operator/pkg/sidecar/util"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/app"
 )
 
 type server struct {
+	cfg *app.MysqlConfig
 	http.Server
 }
 
-func newServer(stop <-chan struct{}) *server {
+func newServer(cfg *app.MysqlConfig) *server {
 	mux := http.NewServeMux()
 	srv := &server{
+		cfg: cfg,
 		Server: http.Server{
-			Addr:    fmt.Sprintf(":%d", util.ServerPort),
+			Addr:    fmt.Sprintf(":%d", app.ServerPort),
 			Handler: mux,
 		},
 	}
 
 	// Add handle functions
-	mux.HandleFunc(util.ServerProbeEndpoint, srv.healthHandler)
-	mux.Handle(util.ServerBackupEndpoint, util.MaxClients(http.HandlerFunc(srv.backupHandler), 1))
+	mux.HandleFunc(app.ServerProbeEndpoint, srv.healthHandler)
+	mux.Handle(app.ServerBackupEndpoint, app.MaxClients(http.HandlerFunc(srv.backupHandler), 1))
 
 	// Shutdown gracefully the http server
 	go func() {
-		<-stop // wait for stop signal
+		<-cfg.StopCh // wait for stop signal
 		if err := srv.Shutdown(context.Background()); err != nil {
 			log.Error(err, "failed to stop http server")
 
@@ -82,9 +84,9 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 
 	// nolint: gosec
 	xtrabackup := exec.Command("xtrabackup", "--backup", "--slave-info", "--stream=xbstream",
-		fmt.Sprintf("--tables-exclude=%s.%s", util.ToolsDbName, util.ToolsInitTableName),
-		"--host=127.0.0.1", fmt.Sprintf("--user=%s", util.GetReplUser()),
-		fmt.Sprintf("--password=%s", util.GetReplPass()))
+		fmt.Sprintf("--tables-exclude=%s.%s", app.ToolsDbName, app.ToolsInitTableName),
+		"--host=127.0.0.1", fmt.Sprintf("--user=%s", s.cfg.ReplicationUser),
+		fmt.Sprintf("--password=%s", s.cfg.ReplicationPassword))
 
 	xtrabackup.Stderr = os.Stderr
 
@@ -123,5 +125,5 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) isAuthenticated(r *http.Request) bool {
 	user, pass, ok := r.BasicAuth()
-	return ok && user == util.GetBackupUser() && pass == util.GetBackupPass()
+	return ok && user == s.cfg.BackupUser && pass == s.cfg.BackupPassword
 }
