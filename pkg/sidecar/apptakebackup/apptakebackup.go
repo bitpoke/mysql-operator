@@ -24,22 +24,22 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	"github.com/presslabs/mysql-operator/pkg/sidecar/util"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/app"
 )
 
 var log = logf.Log.WithName("sidecar.apptakebackup")
 
 // RunTakeBackupCommand starts a backup command
 // nolint: unparam
-func RunTakeBackupCommand(stopCh <-chan struct{}, srcHost, destBucket string) error {
+func RunTakeBackupCommand(cfg *app.BaseConfig, srcHost, destBucket string) error {
 	log.Info("take a backup", "host", srcHost, "bucket", destBucket)
 	destBucket = normalizeBucketURI(destBucket)
-	return pushBackupFromTo(srcHost, destBucket)
+	return pushBackupFromTo(cfg, srcHost, destBucket)
 }
 
-func pushBackupFromTo(srcHost, destBucket string) error {
+func pushBackupFromTo(cfg *app.BaseConfig, srcHost, destBucket string) error {
 
-	backupBody, err := util.RequestABackup(srcHost, util.ServerBackupEndpoint)
+	backupBody, err := app.RequestABackup(cfg, srcHost, app.ServerBackupEndpoint)
 	if err != nil {
 		return fmt.Errorf("getting backup: %s", err)
 	}
@@ -49,7 +49,7 @@ func pushBackupFromTo(srcHost, destBucket string) error {
 
 	// nolint: gosec
 	rclone := exec.Command("rclone",
-		fmt.Sprintf("--config=%s", util.RcloneConfigFile), "rcat", destBucket)
+		fmt.Sprintf("--config=%s", app.RcloneConfigFile), "rcat", destBucket)
 
 	gzip.Stdin = backupBody
 	gzip.Stderr = os.Stderr

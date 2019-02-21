@@ -24,18 +24,18 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	"github.com/presslabs/mysql-operator/pkg/sidecar/util"
+	"github.com/presslabs/mysql-operator/pkg/sidecar/app"
 )
 
 var log = logf.Log.WithName("sidecar.appclone")
 
 // RunCloneCommand clone the data from source.
 // nolint: gocyclo
-func RunCloneCommand(stopCh <-chan struct{}) error {
-	log.Info("clonning command", "host", util.GetHostname())
+func RunCloneCommand(cfg *app.BaseConfig) error {
+	log.Info("clonning command", "host", cfg.Hostname)
 
 	// skip cloning if data exists.
-	if !util.ShouldBootstrapNode() {
+	if !app.ShouldBootstrapNode() {
 		log.Info("data exists and is initialized, skipping cloning.")
 		return nil
 	}
@@ -49,22 +49,21 @@ func RunCloneCommand(stopCh <-chan struct{}) error {
 		return fmt.Errorf("removing lost+found: %s", err)
 	}
 
-	if util.NodeRole() == "master" {
-		initBucket := util.GetInitBucket()
-		if len(initBucket) == 0 {
+	if cfg.NodeRole == app.MasterNode {
+		if cfg.InitBucketURL == nil {
 			log.Info("skip cloning init bucket uri is not set.")
 			// let mysqld initialize data dir
 			return nil
 		}
-		err := cloneFromBucket(initBucket)
+		err := cloneFromBucket(*cfg.InitBucketURL)
 		if err != nil {
 			return fmt.Errorf("failed to clone from bucket, err: %s", err)
 		}
 	} else {
 		// clonging from prior node
-		if util.GetServerID() > 100 {
-			sourceHost := util.GetHostFor(util.GetServerID() - 1)
-			err := cloneFromSource(sourceHost)
+		if cfg.ServerID > 100 {
+			sourceHost := cfg.GetHostFor(cfg.ServerID - 1)
+			err := cloneFromSource(cfg, sourceHost)
 			if err != nil {
 				return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)
 			}
@@ -88,7 +87,7 @@ func cloneFromBucket(initBucket string) error {
 
 	log.Info("cloning from bucket", "bucket", initBucket)
 
-	if _, err := os.Stat(util.RcloneConfigFile); os.IsNotExist(err) {
+	if _, err := os.Stat(app.RcloneConfigFile); os.IsNotExist(err) {
 		log.Error(err, "rclone config file does not exists")
 		return err
 	}
@@ -96,7 +95,7 @@ func cloneFromBucket(initBucket string) error {
 	// writes to stdout the content of the bucket uri
 	// nolint: gosec
 	rclone := exec.Command("rclone", "-vv",
-		fmt.Sprintf("--config=%s", util.RcloneConfigFile), "cat", initBucket)
+		fmt.Sprintf("--config=%s", app.RcloneConfigFile), "cat", initBucket)
 
 	// gzip reads from stdin decompress and then writes to stdout
 	// nolint: gosec
@@ -106,7 +105,7 @@ func cloneFromBucket(initBucket string) error {
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
 	// nolint: gosec
-	xbstream := exec.Command("xbstream", "-x", "-C", util.DataDir)
+	xbstream := exec.Command("xbstream", "-x", "-C", app.DataDir)
 
 	var err error
 	// rclone | gzip | xbstream
@@ -150,10 +149,10 @@ func cloneFromBucket(initBucket string) error {
 	return nil
 }
 
-func cloneFromSource(host string) error {
+func cloneFromSource(cfg *app.BaseConfig, host string) error {
 	log.Info("cloning from node", "host", host)
 
-	backupBody, err := util.RequestABackup(host, util.ServerBackupEndpoint)
+	backupBody, err := app.RequestABackup(cfg, host, app.ServerBackupEndpoint)
 	if err != nil {
 		return fmt.Errorf("fail to get backup: %s", err)
 	}
@@ -162,7 +161,7 @@ func cloneFromSource(host string) error {
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
 	// nolint: gosec
-	xbstream := exec.Command("xbstream", "-x", "-C", util.DataDir)
+	xbstream := exec.Command("xbstream", "-x", "-C", app.DataDir)
 
 	xbstream.Stdin = backupBody
 	xbstream.Stderr = os.Stderr
@@ -179,14 +178,9 @@ func cloneFromSource(host string) error {
 }
 
 func xtrabackupPreperData() error {
-	replUser := util.GetReplUser()
-	replPass := util.GetReplPass()
-
-	// TODO: remove user and password for here, not needed.
 	// nolint: gosec
 	xtbkCmd := exec.Command("xtrabackup", "--prepare",
-		fmt.Sprintf("--target-dir=%s", util.DataDir),
-		fmt.Sprintf("--user=%s", replUser), fmt.Sprintf("--password=%s", replPass))
+		fmt.Sprintf("--target-dir=%s", app.DataDir))
 
 	xtbkCmd.Stderr = os.Stderr
 
@@ -195,7 +189,7 @@ func xtrabackupPreperData() error {
 
 // nolint: gosec
 func checkIfDataExists() bool {
-	path := fmt.Sprintf("%s/mysql", util.DataDir)
+	path := fmt.Sprintf("%s/mysql", app.DataDir)
 	_, err := os.Open(path)
 
 	if os.IsNotExist(err) {
@@ -208,6 +202,6 @@ func checkIfDataExists() bool {
 }
 
 func deleteLostFound() error {
-	path := fmt.Sprintf("%s/lost+found", util.DataDir)
+	path := fmt.Sprintf("%s/lost+found", app.DataDir)
 	return os.RemoveAll(path)
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
+	"github.com/presslabs/mysql-operator/pkg/sidecar/app"
 	"github.com/presslabs/mysql-operator/pkg/sidecar/appclone"
 	"github.com/presslabs/mysql-operator/pkg/sidecar/appconf"
 	"github.com/presslabs/mysql-operator/pkg/sidecar/apphelper"
@@ -59,11 +60,14 @@ func main() {
 	// setup logging
 	logf.SetLogger(logf.ZapLogger(debug))
 
+	// init configs
+	cfg := app.NewBasicConfig(stopCh)
+
 	confCmd := &cobra.Command{
 		Use:   "init-configs",
 		Short: "Init subcommand, for init files.",
 		Run: func(cmd *cobra.Command, args []string) {
-			err := appconf.RunConfigCommand(stopCh)
+			err := appconf.RunConfigCommand(cfg)
 			if err != nil {
 				log.Error(err, "init command failed")
 				os.Exit(1)
@@ -76,7 +80,7 @@ func main() {
 		Use:   "clone",
 		Short: "Clone data from a bucket or prior node.",
 		Run: func(cmd *cobra.Command, args []string) {
-			err := appclone.RunCloneCommand(stopCh)
+			err := appclone.RunCloneCommand(cfg)
 			if err != nil {
 				log.Error(err, "clone command failed")
 				os.Exit(1)
@@ -85,18 +89,19 @@ func main() {
 	}
 	cmd.AddCommand(cloneCmd)
 
-	helperCmd := &cobra.Command{
+	sidecarCmd := &cobra.Command{
 		Use:   "run",
 		Short: "Configs mysql users, replication, and serve backups.",
 		Run: func(cmd *cobra.Command, args []string) {
-			err := apphelper.RunRunCommand(stopCh)
+			mysqlCFG := app.NewMysqlConfig(cfg)
+			err := apphelper.RunRunCommand(mysqlCFG)
 			if err != nil {
 				log.Error(err, "run command failed")
 				os.Exit(1)
 			}
 		},
 	}
-	cmd.AddCommand(helperCmd)
+	cmd.AddCommand(sidecarCmd)
 
 	takeBackupCmd := &cobra.Command{
 		Use:   "take-backup-to",
@@ -108,7 +113,7 @@ func main() {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			err := apptakebackup.RunTakeBackupCommand(stopCh, args[0], args[1])
+			err := apptakebackup.RunTakeBackupCommand(cfg, args[0], args[1])
 			if err != nil {
 				log.Error(err, "take backup command failed")
 				os.Exit(1)
