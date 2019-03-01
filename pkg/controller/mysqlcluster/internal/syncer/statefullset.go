@@ -41,6 +41,7 @@ const (
 	confVolumeName    = "conf"
 	confMapVolumeName = "config-map"
 	dataVolumeName    = "data"
+	secretVolumeName  = "secret"
 )
 
 // containers names
@@ -57,12 +58,11 @@ const (
 type sfsSyncer struct {
 	cluster           *mysqlcluster.MysqlCluster
 	configMapRevision string
-	secretRevision    string
 	opt               *options.Options
 }
 
 // NewStatefulSetSyncer returns a syncer for stateful set
-func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, cmRev, secRev string, opt *options.Options) syncer.Interface {
+func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, cmRev string, opt *options.Options) syncer.Interface {
 	obj := &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(mysqlcluster.StatefulSet),
@@ -73,7 +73,6 @@ func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 	sync := &sfsSyncer{
 		cluster:           cluster,
 		configMapRevision: cmRev,
-		secretRevision:    secRev,
 		opt:               opt,
 	}
 
@@ -99,7 +98,6 @@ func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 	}
 
 	out.Spec.Template.ObjectMeta.Annotations["config_rev"] = s.configMapRevision
-	out.Spec.Template.ObjectMeta.Annotations["secret_rev"] = s.secretRevision
 	out.Spec.Template.ObjectMeta.Annotations["prometheus.io/scrape"] = "true"
 	out.Spec.Template.ObjectMeta.Annotations["prometheus.io/port"] = fmt.Sprintf("%d", ExporterPort)
 
@@ -459,10 +457,12 @@ func (s *sfsSyncer) ensureVolumes() []core.Volume {
 	}
 
 	return []core.Volume{
+		// mysql configs volume
 		ensureVolume(confVolumeName, core.VolumeSource{
 			EmptyDir: &core.EmptyDirVolumeSource{},
 		}),
 
+		// initial config map volume
 		ensureVolume(confMapVolumeName, core.VolumeSource{
 			ConfigMap: &core.ConfigMapVolumeSource{
 				LocalObjectReference: core.LocalObjectReference{
@@ -472,7 +472,15 @@ func (s *sfsSyncer) ensureVolumes() []core.Volume {
 			},
 		}),
 
+		// data volume
 		ensureVolume(dataVolumeName, dataVolume),
+
+		// credentials volume
+		ensureVolume(secretVolumeName, core.VolumeSource{
+			Secret: &core.SecretVolumeSource{
+				SecretName: s.cluster.Spec.SecretName,
+			},
+		}),
 	}
 }
 
@@ -550,7 +558,7 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 			},
 		}
 
-	case containerCloneName, containerMysqlName, containerSidecarName:
+	case containerCloneName, containerMysqlName:
 		return []core.VolumeMount{
 			core.VolumeMount{
 				Name:      confVolumeName,
@@ -559,6 +567,22 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 			core.VolumeMount{
 				Name:      dataVolumeName,
 				MountPath: DataVolumeMountPath,
+			},
+		}
+
+	case containerSidecarName:
+		return []core.VolumeMount{
+			core.VolumeMount{
+				Name:      confVolumeName,
+				MountPath: ConfVolumeMountPath,
+			},
+			core.VolumeMount{
+				Name:      dataVolumeName,
+				MountPath: DataVolumeMountPath,
+			},
+			core.VolumeMount{
+				Name:      secretVolumeName,
+				MountPath: secretMountPath,
 			},
 		}
 

@@ -52,6 +52,10 @@ const (
 
 	// ConfDPath is the path to extra mysql configs dir
 	ConfDPath = "/etc/mysql/conf.d"
+
+	// SecretMountPath represents the path where the credentials secret will be mounted
+	// nolint: gosec
+	SecretMountPath = "/etc/secrets/"
 )
 
 var (

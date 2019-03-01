@@ -216,8 +216,6 @@ spec:
                   description: VolumeName is the binding reference to the PersistentVolume
                     backing this claim.
                   type: string
-              required:
-              - dataSource
               type: object
           required:
           - secretName

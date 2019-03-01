@@ -47,27 +47,26 @@ func RunSidecarCommand(cfg *Config, stop <-chan struct{}) error {
 		return fmt.Errorf("failed to configure master node, err: %s", err)
 	}
 
-	// update orchestrator user and password if orchestrator is configured
-	log.V(1).Info("configure orchestrator credentials")
-	if err := configureOrchestratorUser(cfg); err != nil {
-		return err
-	}
+	rSubject := NewSubject(cfg)
 
-	// update replication user and password
-	log.V(1).Info("configure replication credentials")
+	rSubject.AddObserver("configure-orchestrator", configureOrchestratorUser)
+	rSubject.AddObserver("configure-app-credentials", refreshAppCredentials)
+
+	rSubject.Start(stop)
+
+	log.V(1).Info("configure replication user")
 	if err := configureReplicationUser(cfg); err != nil {
 		return err
 	}
 
-	// update metrics exporter user and password
-	log.V(1).Info("configure metrics exporter credentials")
+	log.V(1).Info("configure metrics exporter user")
 	if err := configureExporterUser(cfg); err != nil {
 		return err
 	}
 
 	// if it's slave set replication source (master host)
 	log.V(1).Info("configure topology")
-	if err := configTopology(cfg); err != nil {
+	if err := configureTopology(cfg); err != nil {
 		return err
 	}
 
@@ -79,7 +78,7 @@ func RunSidecarCommand(cfg *Config, stop <-chan struct{}) error {
 
 	// if it's master node then make it writtable else make it read only
 	log.V(1).Info("configure read only flag")
-	if err := configReadOnly(cfg); err != nil {
+	if err := configureReadOnly(cfg); err != nil {
 		return err
 	}
 
@@ -89,11 +88,21 @@ func RunSidecarCommand(cfg *Config, stop <-chan struct{}) error {
 }
 
 func configureOrchestratorUser(cfg *Config) error {
+	if !updateAll(cfg.OrchestratorUser, cfg.OrchestratorPassword) {
+		return nil
+	}
+
+	finish, err := temporaryDisableSuperReadOnly(cfg)
+	if err != nil {
+		return err
+	}
+	defer finish()
+
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
 
-	  CREATE USER IF NOT EXISTS ?@'%%';
-	  ALTER USER ?@'%%' IDENTIFIED BY ?;
+      CREATE USER IF NOT EXISTS ?@'%%';
+      ALTER USER ?@'%%' IDENTIFIED BY ?;
 
 	  GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO ?@'%%';
 	  GRANT SELECT ON %s.* TO ?@'%%';
@@ -105,11 +114,13 @@ func configureOrchestratorUser(cfg *Config) error {
 	// https://github.com/golang/go/issues/18478
 	query = fmt.Sprintf(query, toolsDbName)
 
-	user := cfg.OrchestratorUser
-	pass := cfg.OrchestratorPassword
+	user := cfg.OrchestratorUser.String()
+	pass := cfg.OrchestratorPassword.String()
 	if err := runQuery(cfg, query, user, user, pass, user, user, user); err != nil {
 		return fmt.Errorf("failed to configure orchestrator (user/pass/access), err: %s", err)
 	}
+
+	log.Info("finish orchestrator user")
 
 	return nil
 }
@@ -118,10 +129,11 @@ func configureReplicationUser(cfg *Config) error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
 
-	  CREATE USER IF NOT EXISTS ?@'%';
-	  ALTER USER ?@'%' IDENTIFIED BY ?;
+      CREATE USER IF NOT EXISTS ?@'%';
+      ALTER USER ?@'%' IDENTIFIED BY ?;
 
-	  GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO ?@'%';
+	  GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT,
+            REPLICATION SLAVE ON *.* TO ?@'%';
 	`
 	user := cfg.ReplicationUser
 	pass := cfg.ReplicationPassword
@@ -136,12 +148,11 @@ func configureExporterUser(cfg *Config) error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
 
-	  CREATE USER IF NOT EXISTS ?@'localhost';
-	  ALTER USER ?@'localhost' IDENTIFIED BY ? WITH MAX_USER_CONNECTIONS 3;
+      CREATE USER IF NOT EXISTS ?@'localhost';
+      ALTER USER ?@'localhost' IDENTIFIED BY ? WITH MAX_USER_CONNECTIONS 3;
 
 	  GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO ?@'localhost';
 	`
-
 	user := cfg.MetricsUser
 	pass := cfg.MetricsPassword
 	if err := runQuery(cfg, query, user, user, pass, user); err != nil {
@@ -170,7 +181,7 @@ func waitForMysqlReady(cfg *Config) error {
 
 }
 
-func configReadOnly(cfg *Config) error {
+func configureReadOnly(cfg *Config) error {
 	var query string
 	if cfg.NodeRole() == MasterNode {
 		query = "SET GLOBAL READ_ONLY = 0"
@@ -183,14 +194,15 @@ func configReadOnly(cfg *Config) error {
 	return nil
 }
 
-func configTopology(cfg *Config) error {
+func configureTopology(cfg *Config) error {
 	if cfg.NodeRole() == SlaveNode {
 		log.Info("setting up as slave")
 		if shouldBootstrapNode() {
 			log.Info("doing bootstrap")
 			if gtid, err := readPurgedGTID(); err == nil {
 				log.Info("RESET MASTER and setting GTID_PURGED", "gtid", gtid)
-				if errQ := runQuery(cfg, "RESET MASTER; SET GLOBAL GTID_PURGED=?", gtid); errQ != nil {
+				if errQ := runQuery(
+					cfg, "RESET MASTER; SET GLOBAL GTID_PURGED=?", gtid); errQ != nil {
 					return errQ
 				}
 			} else {
@@ -201,13 +213,15 @@ func configTopology(cfg *Config) error {
 		// slave node
 		query := `
 		  CHANGE MASTER TO MASTER_AUTO_POSITION=1,
+			MASTER_USER=?,
+			MASTER_PASSWORD=?,
 		    MASTER_HOST=?,
-		    MASTER_USER=?,
-		    MASTER_PASSWORD=?,
 		    MASTER_CONNECT_RETRY=?;
 		`
-		if err := runQuery(cfg, query,
-			cfg.MasterFQDN(), cfg.ReplicationUser, cfg.ReplicationPassword, connRetry,
+		user := cfg.ReplicationUser
+		pass := cfg.ReplicationPassword
+		if err := runQuery(
+			cfg, query, user, pass, cfg.MasterFQDN(), connRetry,
 		); err != nil {
 			return fmt.Errorf("failed to configure slave node, err: %s", err)
 		}
@@ -294,4 +308,68 @@ func getGTIDFrom(reader io.Reader) (string, error) {
 	}
 
 	return gtid, nil
+}
+
+func temporaryDisableSuperReadOnly(cfg *Config) (func(), error) {
+	setReadOnly := make(chan struct{}, 1)
+	close := func() {
+		// send the close signal
+		setReadOnly <- struct{}{}
+	}
+
+	superReadOnly, err := readMysqlVariable(cfg, true, "SUPER_READ_ONLY")
+	if err != nil {
+		return close, err
+	}
+
+	log.Info("node super read only", "superReadOnly", superReadOnly)
+
+	if superReadOnly == "0" {
+		return close, nil
+	}
+
+	query := "SET @@GLOBAL.SUPER_READ_ONLY = 0;"
+	if err := runQuery(cfg, query); err != nil {
+		return close, err
+	}
+
+	go func() {
+		// wait for actions to finish
+		<-setReadOnly
+		query := "SET @@GLOBAL.SUPER_READ_ONLY = 1;"
+		if err := runQuery(cfg, query); err != nil {
+			log.Error(err, "failed to set super read only")
+		}
+	}()
+
+	return close, nil
+}
+
+func refreshAppCredentials(cfg *Config) error {
+	if !updateAll(cfg.MysqlPassword) {
+		return nil
+	}
+
+	// update also the mysql user, this is only to read the user from secret
+	updateAll(cfg.MysqlUser)
+
+	finish, err := temporaryDisableSuperReadOnly(cfg)
+	if err != nil {
+		return err
+	}
+	defer finish()
+
+	query := `
+	  SET @@SESSION.SQL_LOG_BIN = 0;
+
+      ALTER USER IF EXISTS ?@'%' IDENTIFIED BY ?;
+	`
+
+	user := cfg.MysqlUser.String()
+	pass := cfg.MysqlPassword.String()
+	if err := runQuery(cfg, query, user, pass); err != nil {
+		return fmt.Errorf("failed to configure application user: %s", err)
+	}
+
+	return nil
 }

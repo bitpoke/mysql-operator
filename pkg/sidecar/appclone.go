@@ -63,7 +63,7 @@ func RunCloneCommand(cfg *Config) error {
 			}
 		} else {
 			return fmt.Errorf(
-				"failed to initialize because no of no prior node exists, check orchestrator maybe",
+				"failed to initialize because no prior node exists, check orchestrator maybe",
 			)
 		}
 	}

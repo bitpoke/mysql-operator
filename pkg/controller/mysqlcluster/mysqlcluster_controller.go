@@ -189,7 +189,6 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	configMapResourceVersion := configMapSyncer.GetObject().(*corev1.ConfigMap).ResourceVersion
-	secretResourceVersion := secretSyncer.GetObject().(*corev1.Secret).ResourceVersion
 
 	// run the syncers for services, pdb and statefulset
 	syncers := []syncer.Interface{
@@ -197,7 +196,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		clustersyncer.NewMasterSVCSyncer(r.Client, r.scheme, cluster),
 		clustersyncer.NewHealthySVCSyncer(r.Client, r.scheme, cluster),
 
-		clustersyncer.NewStatefulSetSyncer(r.Client, r.scheme, cluster, configMapResourceVersion, secretResourceVersion, r.opt),
+		clustersyncer.NewStatefulSetSyncer(r.Client, r.scheme, cluster, configMapResourceVersion, r.opt),
 	}
 
 	if len(cluster.Spec.MinAvailable) != 0 {

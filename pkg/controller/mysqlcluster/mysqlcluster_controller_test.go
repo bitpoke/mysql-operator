@@ -224,13 +224,13 @@ var _ = Describe("MysqlCluster controller", func() {
 					Name:      cluster.GetNameForResource(mysqlcluster.ConfigMap),
 					Namespace: cluster.Namespace,
 				}, cfgMap)).To(Succeed())
-				Expect(c.Get(context.TODO(), types.NamespacedName{
-					Name:      secret.Name,
-					Namespace: secret.Namespace,
-				}, secret)).To(Succeed())
+				// Expect(c.Get(context.TODO(), types.NamespacedName{
+				// 	Name:      secret.Name,
+				// 	Namespace: secret.Namespace,
+				// }, secret)).To(Succeed())
 
 				Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["config_rev"]).To(Equal(cfgMap.ResourceVersion))
-				Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["secret_rev"]).To(Equal(secret.ResourceVersion))
+				//Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["secret_rev"]).To(Equal(secret.ResourceVersion))
 			})
 			It("should update cluster ready nodes", func() {
 				// get statefulset

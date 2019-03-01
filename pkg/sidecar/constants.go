@@ -56,8 +56,12 @@ var (
 	serverPort = constants.SidecarServerPort
 	// ServerProbeEndpoint is the http server endpoint for probe
 	serverProbeEndpoint = constants.SidecarServerProbePath
-	// ServerBackupEndpoint is the http server endpoint for backups
+
+	// serverBackupEndpoint is the http server endpoint for backups
 	serverBackupEndpoint = "/xbackup"
+
+	// secretMountPath is the path to directory where the secret is mounted
+	secretMountPath = constants.SecretMountPath
 )
 
 const (
