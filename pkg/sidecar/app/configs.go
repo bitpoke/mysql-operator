@@ -43,7 +43,8 @@ const (
 
 // BaseConfig contains information related with the pod.
 type BaseConfig struct {
-	StopCh <-chan struct{}
+	// Stop represents the shutdown channel
+	Stop <-chan struct{}
 
 	// Hostname represents the pod hostname
 	Hostname string
@@ -54,79 +55,77 @@ type BaseConfig struct {
 	// ServiceName is the name of the headless service
 	ServiceName string
 
-	// NodeRole represents the MySQL role of the node, can be on of: msater, slave
-	NodeRole NodeRole
 	// ServerID represents the MySQL server id
 	ServerID int
 
 	// InitBucketURL represents the init bucket to initialize mysql
-	InitBucketURL *string
+	InitBucketURL string
 
 	// OrchestratorURL is the URL to connect to orchestrator
-	OrchestratorURL *string
-
-	// MasterHost represents the cluster master hostname
-	MasterHost string
+	OrchestratorURL string
 
 	// backup user and password for http endpoint
 	BackupUser     string
 	BackupPassword string
 }
 
-// GetHostFor returns the pod hostname for given MySQL server id
-func (cfg *BaseConfig) GetHostFor(id int) string {
+// FQDNForServer returns the pod hostname for given MySQL server id
+func (cfg *BaseConfig) FQDNForServer(id int) string {
 	base := mysqlcluster.GetNameForResource(mysqlcluster.StatefulSet, cfg.ClusterName)
 	return fmt.Sprintf("%s-%d.%s.%s", base, id-100, cfg.ServiceName, cfg.Namespace)
 }
 
-func (cfg *BaseConfig) getOrcClient() orc.Interface {
-	if cfg.OrchestratorURL == nil {
+func (cfg *BaseConfig) newOrcClient() orc.Interface {
+	if len(cfg.OrchestratorURL) == 0 {
+		log.Info("OrchestratorURL not set")
 		return nil
 	}
 
-	return orc.NewFromURI(*cfg.OrchestratorURL)
+	return orc.NewFromURI(cfg.OrchestratorURL)
 }
 
-func (cfg *BaseConfig) getFQClusterName() string {
+// ClusterFQDN returns the cluster FQ Name of the cluster from which the node belongs
+func (cfg *BaseConfig) ClusterFQDN() string {
 	return fmt.Sprintf("%s.%s", cfg.ClusterName, cfg.Namespace)
 }
 
-func (cfg *BaseConfig) getMasterHost() string {
-	if client := cfg.getOrcClient(); client != nil {
-		if master, err := client.Master(cfg.getFQClusterName()); err == nil {
+// MasterFQDN the FQ Name of the cluster's master
+func (cfg *BaseConfig) MasterFQDN() string {
+	if client := cfg.newOrcClient(); client != nil {
+		if master, err := client.Master(cfg.ClusterFQDN()); err == nil {
 			return master.Key.Hostname
 		}
 	}
 
 	log.V(-1).Info("failed to obtain master from orchestrator, go for default master",
-		"master", cfg.GetHostFor(100))
-	return cfg.GetHostFor(100)
+		"master", cfg.FQDNForServer(100))
+	return cfg.FQDNForServer(100)
 
+}
+
+// NodeRole returns the role of the current node
+func (cfg *BaseConfig) NodeRole() NodeRole {
+	if cfg.Hostname == cfg.MasterFQDN() {
+		return MasterNode
+	}
+
+	return SlaveNode
 }
 
 // NewBasicConfig returns a pointer to BaseConfig configured from environment variables
 func NewBasicConfig(stop <-chan struct{}) *BaseConfig {
 	cfg := &BaseConfig{
-		StopCh:      stop,
+		Stop:        stop,
 		Hostname:    getEnvValue("HOSTNAME"),
 		ClusterName: getEnvValue("MY_CLUSTER_NAME"),
 		Namespace:   getEnvValue("MY_NAMESPACE"),
 		ServiceName: getEnvValue("MY_SERVICE_NAME"),
 
-		InitBucketURL:   getEnvP("INIT_BUCKET_URI"),
-		OrchestratorURL: getEnvP("ORCHESTRATOR_URI"),
+		InitBucketURL:   getEnvValue("INIT_BUCKET_URI"),
+		OrchestratorURL: getEnvValue("ORCHESTRATOR_URI"),
 
 		BackupUser:     getEnvValue("MYSQL_BACKUP_USER"),
 		BackupPassword: getEnvValue("MYSQL_BACKUP_PASSWORD"),
-	}
-
-	// get master host
-	cfg.MasterHost = cfg.getMasterHost()
-
-	// set node role
-	cfg.NodeRole = SlaveNode
-	if cfg.Hostname == cfg.MasterHost {
-		cfg.NodeRole = MasterNode
 	}
 
 	// get server id
@@ -143,13 +142,6 @@ func getEnvValue(key string) string {
 	}
 
 	return value
-}
-
-func getEnvP(key string) *string {
-	if value := getEnvValue(key); len(value) != 0 {
-		return &value
-	}
-	return nil
 }
 
 func getOrdinalFromHostname(hn string) int {
@@ -171,7 +163,7 @@ type MysqlConfig struct {
 	// inherit from base config
 	BaseConfig
 
-	MysqlDSN *string
+	MysqlDSN string
 
 	// replication user and password
 	ReplicationUser     string
@@ -211,11 +203,11 @@ func NewMysqlConfig(cfg *BaseConfig) *MysqlConfig {
 }
 
 // getMySQLConnectionString returns the mysql DSN
-func getMySQLConnectionString() (*string, error) {
+func getMySQLConnectionString() (string, error) {
 	cnfPath := path.Join(ConfigDir, "client.cnf")
 	cfg, err := ini.Load(cnfPath)
 	if err != nil {
-		return nil, fmt.Errorf("Could not open %s: %s", cnfPath, err)
+		return "", fmt.Errorf("Could not open %s: %s", cnfPath, err)
 	}
 
 	client := cfg.Section("client")
@@ -223,12 +215,12 @@ func getMySQLConnectionString() (*string, error) {
 	user := client.Key("user").String()
 	password := client.Key("password").String()
 	port, err := client.Key("port").Int()
-
 	if err != nil {
-		return nil, fmt.Errorf("Invalid port in %s: %s", cnfPath, err)
+		return "", fmt.Errorf("Invalid port in %s: %s", cnfPath, err)
 	}
+
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/?timeout=5s&multiStatements=true&interpolateParams=true",
 		user, password, host, port,
 	)
-	return &dsn, nil
+	return dsn, nil
 }

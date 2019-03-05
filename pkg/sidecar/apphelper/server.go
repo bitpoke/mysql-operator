@@ -48,7 +48,7 @@ func newServer(cfg *app.MysqlConfig) *server {
 
 	// Shutdown gracefully the http server
 	go func() {
-		<-cfg.StopCh // wait for stop signal
+		<-cfg.Stop // wait for stop signal
 		if err := srv.Shutdown(context.Background()); err != nil {
 			log.Error(err, "failed to stop http server")
 
