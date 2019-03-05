@@ -36,14 +36,14 @@ const (
 
 // RunConfigCommand generates my.cnf, client.cnf and 10-dynamic.cnf files.
 func RunConfigCommand(cfg *app.BaseConfig) error {
-	log.Info("configuring server", "host", cfg.Hostname, "role", cfg.NodeRole)
+	log.Info("configuring server", "host", cfg.Hostname, "role", cfg.NodeRole())
 
 	if err := app.CopyFile(app.MountConfigDir+"/my.cnf", app.ConfigDir+"/my.cnf"); err != nil {
 		return fmt.Errorf("copy file my.cnf: %s", err)
 	}
 
 	uPass := pkgutil.RandomString(rStrLen)
-	reportHost := cfg.GetHostFor(cfg.ServerID)
+	reportHost := cfg.FQDNForServer(cfg.ServerID)
 
 	var dynCFG, utilityCFG, clientCFG *ini.File
 	var err error

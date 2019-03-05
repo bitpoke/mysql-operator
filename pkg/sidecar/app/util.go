@@ -33,12 +33,12 @@ var log = logf.Log.WithName("sidecar.app")
 
 // RunQuery executes a query
 func RunQuery(cfg *MysqlConfig, q string, args ...interface{}) error {
-	if cfg.MysqlDSN == nil {
+	if len(cfg.MysqlDSN) == 0 {
 		log.Info("could not get mysql connection DSN")
 		return fmt.Errorf("no DSN specified")
 	}
 
-	db, err := sql.Open("mysql", *cfg.MysqlDSN)
+	db, err := sql.Open("mysql", cfg.MysqlDSN)
 	if err != nil {
 		return err
 	}

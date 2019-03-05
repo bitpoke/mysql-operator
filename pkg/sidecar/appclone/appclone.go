@@ -49,20 +49,20 @@ func RunCloneCommand(cfg *app.BaseConfig) error {
 		return fmt.Errorf("removing lost+found: %s", err)
 	}
 
-	if cfg.NodeRole == app.MasterNode {
-		if cfg.InitBucketURL == nil {
+	if cfg.NodeRole() == app.MasterNode {
+		if len(cfg.InitBucketURL) == 0 {
 			log.Info("skip cloning init bucket uri is not set.")
 			// let mysqld initialize data dir
 			return nil
 		}
-		err := cloneFromBucket(*cfg.InitBucketURL)
+		err := cloneFromBucket(cfg.InitBucketURL)
 		if err != nil {
 			return fmt.Errorf("failed to clone from bucket, err: %s", err)
 		}
 	} else {
 		// clonging from prior node
 		if cfg.ServerID > 100 {
-			sourceHost := cfg.GetHostFor(cfg.ServerID - 1)
+			sourceHost := cfg.FQDNForServer(cfg.ServerID - 1)
 			err := cloneFromSource(cfg, sourceHost)
 			if err != nil {
 				return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)

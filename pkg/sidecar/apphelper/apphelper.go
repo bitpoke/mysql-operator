@@ -157,7 +157,7 @@ func waitForMysqlReady(cfg *app.MysqlConfig) error {
 
 func configReadOnly(cfg *app.MysqlConfig) error {
 	var query string
-	if cfg.NodeRole == app.MasterNode {
+	if cfg.NodeRole() == app.MasterNode {
 		query = "SET GLOBAL READ_ONLY = 0"
 	} else {
 		query = "SET GLOBAL SUPER_READ_ONLY = 1"
@@ -169,7 +169,7 @@ func configReadOnly(cfg *app.MysqlConfig) error {
 }
 
 func configTopology(cfg *app.MysqlConfig) error {
-	if cfg.NodeRole == app.SlaveNode {
+	if cfg.NodeRole() == app.SlaveNode {
 		log.Info("setting up as slave")
 		if app.ShouldBootstrapNode() {
 			log.Info("doing bootstrap")
@@ -192,7 +192,7 @@ func configTopology(cfg *app.MysqlConfig) error {
 		    MASTER_CONNECT_RETRY=?;
 		`
 		if err := app.RunQuery(cfg, query,
-			cfg.MasterHost, cfg.ReplicationUser, cfg.ReplicationPassword, connRetry,
+			cfg.MasterFQDN(), cfg.ReplicationUser, cfg.ReplicationPassword, connRetry,
 		); err != nil {
 			return fmt.Errorf("failed to configure slave node, err: %s", err)
 		}
