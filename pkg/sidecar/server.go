@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package apphelper
+package sidecar
 
 import (
 	"context"
@@ -23,28 +23,26 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-
-	"github.com/presslabs/mysql-operator/pkg/sidecar/app"
 )
 
 type server struct {
-	cfg *app.MysqlConfig
+	cfg *Config
 	http.Server
 }
 
-func newServer(cfg *app.MysqlConfig) *server {
+func newServer(cfg *Config) *server {
 	mux := http.NewServeMux()
 	srv := &server{
 		cfg: cfg,
 		Server: http.Server{
-			Addr:    fmt.Sprintf(":%d", app.ServerPort),
+			Addr:    fmt.Sprintf(":%d", serverPort),
 			Handler: mux,
 		},
 	}
 
 	// Add handle functions
-	mux.HandleFunc(app.ServerProbeEndpoint, srv.healthHandler)
-	mux.Handle(app.ServerBackupEndpoint, app.MaxClients(http.HandlerFunc(srv.backupHandler), 1))
+	mux.HandleFunc(serverProbeEndpoint, srv.healthHandler)
+	mux.Handle(serverBackupEndpoint, maxClients(http.HandlerFunc(srv.backupHandler), 1))
 
 	// Shutdown gracefully the http server
 	go func() {
@@ -84,7 +82,7 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 
 	// nolint: gosec
 	xtrabackup := exec.Command("xtrabackup", "--backup", "--slave-info", "--stream=xbstream",
-		fmt.Sprintf("--tables-exclude=%s.%s", app.ToolsDbName, app.ToolsInitTableName),
+		fmt.Sprintf("--tables-exclude=%s.%s", toolsDbName, toolsInitTableName),
 		"--host=127.0.0.1", fmt.Sprintf("--user=%s", s.cfg.ReplicationUser),
 		fmt.Sprintf("--password=%s", s.cfg.ReplicationPassword))
 
@@ -126,4 +124,16 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 func (s *server) isAuthenticated(r *http.Request) bool {
 	user, pass, ok := r.BasicAuth()
 	return ok && user == s.cfg.BackupUser && pass == s.cfg.BackupPassword
+}
+
+// maxClients limit an http endpoint to allow just n max concurrent connections
+func maxClients(h http.Handler, n int) http.Handler {
+	sema := make(chan struct{}, n)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sema <- struct{}{}
+		defer func() { <-sema }()
+
+		h.ServeHTTP(w, r)
+	})
 }

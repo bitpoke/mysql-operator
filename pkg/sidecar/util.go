@@ -14,10 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package app
+package sidecar
 
 import (
-	"bufio"
 	"database/sql"
 	"fmt"
 	"io"
@@ -29,10 +28,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-var log = logf.Log.WithName("sidecar.app")
+var log = logf.Log.WithName("sidecar")
 
-// RunQuery executes a query
-func RunQuery(cfg *MysqlConfig, q string, args ...interface{}) error {
+// runQuery executes a query
+func runQuery(cfg *Config, q string, args ...interface{}) error {
 	if len(cfg.MysqlDSN) == 0 {
 		log.Info("could not get mysql connection DSN")
 		return fmt.Errorf("no DSN specified")
@@ -51,10 +50,10 @@ func RunQuery(cfg *MysqlConfig, q string, args ...interface{}) error {
 	return nil
 }
 
-// CopyFile the src file to dst. Any existing file will be overwritten and will not
+// copyFile the src file to dst. Any existing file will be overwritten and will not
 // copy file attributes.
 // nolint: gosec
-func CopyFile(src, dst string) error {
+func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
 		return err
@@ -82,23 +81,11 @@ func CopyFile(src, dst string) error {
 	return nil
 }
 
-// MaxClients limit an http endpoint to allow just n max concurrent connections
-func MaxClients(h http.Handler, n int) http.Handler {
-	sema := make(chan struct{}, n)
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		sema <- struct{}{}
-		defer func() { <-sema }()
-
-		h.ServeHTTP(w, r)
-	})
-}
-
-// RequestABackup connects to specified host and endpoint and gets the backup
-func RequestABackup(cfg *BaseConfig, host, endpoint string) (io.Reader, error) {
+// requestABackup connects to specified host and endpoint and gets the backup
+func requestABackup(cfg *Config, host, endpoint string) (io.Reader, error) {
 	log.Info("initialize a backup", "host", host, "endpoint", endpoint)
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d%s", host, ServerPort, endpoint), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d%s", host, serverPort, endpoint), nil)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create request: %s", err)
 	}
@@ -120,50 +107,10 @@ func RequestABackup(cfg *BaseConfig, host, endpoint string) (io.Reader, error) {
 	return resp.Body, nil
 }
 
-// ReadPurgedGTID returns the GTID from xtrabackup_binlog_info file
-func ReadPurgedGTID() (string, error) {
-	file, err := os.Open(fmt.Sprintf("%s/xtrabackup_binlog_info", DataDir))
-	if err != nil {
-		return "", err
-	}
-
-	defer func() {
-		if err1 := file.Close(); err1 != nil {
-			log.Error(err1, "failed to close file")
-		}
-	}()
-
-	return getGTIDFrom(file)
-}
-
-// getGTIDFrom parse the content from xtrabackup_binlog_info file passed as
-// io.Reader and extracts the GTID.
-func getGTIDFrom(reader io.Reader) (string, error) {
-	scanner := bufio.NewScanner(reader)
-	scanner.Split(bufio.ScanWords)
-
-	count := 0
-	gtid := ""
-	for scanner.Scan() {
-		if count == 2 {
-			gtid = scanner.Text()
-		}
-		count++
-	}
-
-	if err := scanner.Err(); err != nil {
-		return "", err
-	} else if len(gtid) == 0 {
-		return "", fmt.Errorf("failed to read GTID reached EOF")
-	}
-
-	return gtid, nil
-}
-
-// ShouldBootstrapNode checks if the mysql data is at the first initialization
-func ShouldBootstrapNode() bool {
-	_, err := os.Open(fmt.Sprintf("%s/%s/%s.CSV", DataDir,
-		ToolsDbName, ToolsInitTableName))
+// shouldBootstrapNode checks if the mysql data is at the first initialization
+func shouldBootstrapNode() bool {
+	_, err := os.Open(fmt.Sprintf("%s/%s/%s.CSV", dataDir,
+		toolsDbName, toolsInitTableName))
 	if os.IsNotExist(err) {
 		return true
 	} else if err != nil {

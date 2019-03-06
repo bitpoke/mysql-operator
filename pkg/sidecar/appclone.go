@@ -14,28 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package appclone
+package sidecar
 
 import (
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
-
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-
-	"github.com/presslabs/mysql-operator/pkg/sidecar/app"
 )
-
-var log = logf.Log.WithName("sidecar.appclone")
 
 // RunCloneCommand clone the data from source.
 // nolint: gocyclo
-func RunCloneCommand(cfg *app.BaseConfig) error {
+func RunCloneCommand(cfg *Config) error {
 	log.Info("clonning command", "host", cfg.Hostname)
 
 	// skip cloning if data exists.
-	if !app.ShouldBootstrapNode() {
+	if !shouldBootstrapNode() {
 		log.Info("data exists and is initialized, skipping cloning.")
 		return nil
 	}
@@ -49,7 +43,7 @@ func RunCloneCommand(cfg *app.BaseConfig) error {
 		return fmt.Errorf("removing lost+found: %s", err)
 	}
 
-	if cfg.NodeRole() == app.MasterNode {
+	if cfg.NodeRole() == MasterNode {
 		if len(cfg.InitBucketURL) == 0 {
 			log.Info("skip cloning init bucket uri is not set.")
 			// let mysqld initialize data dir
@@ -87,7 +81,7 @@ func cloneFromBucket(initBucket string) error {
 
 	log.Info("cloning from bucket", "bucket", initBucket)
 
-	if _, err := os.Stat(app.RcloneConfigFile); os.IsNotExist(err) {
+	if _, err := os.Stat(rcloneConfigFile); os.IsNotExist(err) {
 		log.Error(err, "rclone config file does not exists")
 		return err
 	}
@@ -95,7 +89,7 @@ func cloneFromBucket(initBucket string) error {
 	// writes to stdout the content of the bucket uri
 	// nolint: gosec
 	rclone := exec.Command("rclone", "-vv",
-		fmt.Sprintf("--config=%s", app.RcloneConfigFile), "cat", initBucket)
+		fmt.Sprintf("--config=%s", rcloneConfigFile), "cat", initBucket)
 
 	// gzip reads from stdin decompress and then writes to stdout
 	// nolint: gosec
@@ -105,7 +99,7 @@ func cloneFromBucket(initBucket string) error {
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
 	// nolint: gosec
-	xbstream := exec.Command("xbstream", "-x", "-C", app.DataDir)
+	xbstream := exec.Command("xbstream", "-x", "-C", dataDir)
 
 	var err error
 	// rclone | gzip | xbstream
@@ -149,10 +143,10 @@ func cloneFromBucket(initBucket string) error {
 	return nil
 }
 
-func cloneFromSource(cfg *app.BaseConfig, host string) error {
+func cloneFromSource(cfg *Config, host string) error {
 	log.Info("cloning from node", "host", host)
 
-	backupBody, err := app.RequestABackup(cfg, host, app.ServerBackupEndpoint)
+	backupBody, err := requestABackup(cfg, host, serverBackupEndpoint)
 	if err != nil {
 		return fmt.Errorf("fail to get backup: %s", err)
 	}
@@ -161,7 +155,7 @@ func cloneFromSource(cfg *app.BaseConfig, host string) error {
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
 	// nolint: gosec
-	xbstream := exec.Command("xbstream", "-x", "-C", app.DataDir)
+	xbstream := exec.Command("xbstream", "-x", "-C", dataDir)
 
 	xbstream.Stdin = backupBody
 	xbstream.Stderr = os.Stderr
@@ -180,7 +174,7 @@ func cloneFromSource(cfg *app.BaseConfig, host string) error {
 func xtrabackupPreperData() error {
 	// nolint: gosec
 	xtbkCmd := exec.Command("xtrabackup", "--prepare",
-		fmt.Sprintf("--target-dir=%s", app.DataDir))
+		fmt.Sprintf("--target-dir=%s", dataDir))
 
 	xtbkCmd.Stderr = os.Stderr
 
@@ -189,7 +183,7 @@ func xtrabackupPreperData() error {
 
 // nolint: gosec
 func checkIfDataExists() bool {
-	path := fmt.Sprintf("%s/mysql", app.DataDir)
+	path := fmt.Sprintf("%s/mysql", dataDir)
 	_, err := os.Open(path)
 
 	if os.IsNotExist(err) {
@@ -202,6 +196,6 @@ func checkIfDataExists() bool {
 }
 
 func deleteLostFound() error {
-	path := fmt.Sprintf("%s/lost+found", app.DataDir)
+	path := fmt.Sprintf("%s/lost+found", dataDir)
 	return os.RemoveAll(path)
 }

@@ -25,11 +25,7 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
-	"github.com/presslabs/mysql-operator/pkg/sidecar/app"
-	"github.com/presslabs/mysql-operator/pkg/sidecar/appclone"
-	"github.com/presslabs/mysql-operator/pkg/sidecar/appconf"
-	"github.com/presslabs/mysql-operator/pkg/sidecar/apphelper"
-	"github.com/presslabs/mysql-operator/pkg/sidecar/apptakebackup"
+	"github.com/presslabs/mysql-operator/pkg/sidecar"
 )
 
 var log = logf.Log.WithName("sidecar")
@@ -61,13 +57,13 @@ func main() {
 	logf.SetLogger(logf.ZapLogger(debug))
 
 	// init configs
-	cfg := app.NewBasicConfig(stopCh)
+	cfg := sidecar.NewConfig(stopCh)
 
 	confCmd := &cobra.Command{
 		Use:   "init-configs",
 		Short: "Init subcommand, for init files.",
 		Run: func(cmd *cobra.Command, args []string) {
-			err := appconf.RunConfigCommand(cfg)
+			err := sidecar.RunConfigCommand(cfg)
 			if err != nil {
 				log.Error(err, "init command failed")
 				os.Exit(1)
@@ -80,7 +76,7 @@ func main() {
 		Use:   "clone",
 		Short: "Clone data from a bucket or prior node.",
 		Run: func(cmd *cobra.Command, args []string) {
-			err := appclone.RunCloneCommand(cfg)
+			err := sidecar.RunCloneCommand(cfg)
 			if err != nil {
 				log.Error(err, "clone command failed")
 				os.Exit(1)
@@ -93,8 +89,7 @@ func main() {
 		Use:   "run",
 		Short: "Configs mysql users, replication, and serve backups.",
 		Run: func(cmd *cobra.Command, args []string) {
-			mysqlCFG := app.NewMysqlConfig(cfg)
-			err := apphelper.RunRunCommand(mysqlCFG)
+			err := sidecar.RunSidecarCommand(cfg)
 			if err != nil {
 				log.Error(err, "run command failed")
 				os.Exit(1)
@@ -113,7 +108,7 @@ func main() {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			err := apptakebackup.RunTakeBackupCommand(cfg, args[0], args[1])
+			err := sidecar.RunTakeBackupCommand(cfg, args[0], args[1])
 			if err != nil {
 				log.Error(err, "take backup command failed")
 				os.Exit(1)
