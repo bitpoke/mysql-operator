@@ -18,6 +18,8 @@ spec:
       labels:
         app: {{ template "mysql-operator.name" . }}
         release: {{ .Release.Name }}
+      annotations:
+        checksum/topology-secret: {{ include "mysql-operator.orchestrator.topology-secret-hash" . }}
     spec:
       serviceAccountName: {{ template "mysql-operator.serviceAccountName" . }}
       containers:
