@@ -53,3 +53,10 @@ Create the name of the service account to use
     {{ default "default" .Values.rbac.serviceAccountName }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Get the sha256 of the orchestrator user and password to annotate deployments that depends on them.
+*/}}
+{{- define "mysql-operator.orchestrator.topology-secret-hash" -}}
+{{- print .Values.orchestrator.topologyUser .Values.orchestrator.topologyPassword | sha256sum -}}
+{{- end -}}
