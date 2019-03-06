@@ -14,32 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package apptakebackup
+package sidecar
 
 import (
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
-
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-
-	"github.com/presslabs/mysql-operator/pkg/sidecar/app"
 )
 
-var log = logf.Log.WithName("sidecar.apptakebackup")
-
 // RunTakeBackupCommand starts a backup command
-// nolint: unparam
-func RunTakeBackupCommand(cfg *app.BaseConfig, srcHost, destBucket string) error {
+func RunTakeBackupCommand(cfg *Config, srcHost, destBucket string) error {
 	log.Info("take a backup", "host", srcHost, "bucket", destBucket)
 	destBucket = normalizeBucketURI(destBucket)
 	return pushBackupFromTo(cfg, srcHost, destBucket)
 }
 
-func pushBackupFromTo(cfg *app.BaseConfig, srcHost, destBucket string) error {
+func pushBackupFromTo(cfg *Config, srcHost, destBucket string) error {
 
-	backupBody, err := app.RequestABackup(cfg, srcHost, app.ServerBackupEndpoint)
+	backupBody, err := requestABackup(cfg, srcHost, serverBackupEndpoint)
 	if err != nil {
 		return fmt.Errorf("getting backup: %s", err)
 	}
@@ -49,7 +42,7 @@ func pushBackupFromTo(cfg *app.BaseConfig, srcHost, destBucket string) error {
 
 	// nolint: gosec
 	rclone := exec.Command("rclone",
-		fmt.Sprintf("--config=%s", app.RcloneConfigFile), "rcat", destBucket)
+		fmt.Sprintf("--config=%s", rcloneConfigFile), "rcat", destBucket)
 
 	gzip.Stdin = backupBody
 	gzip.Stderr = os.Stderr

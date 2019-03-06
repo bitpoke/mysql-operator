@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package appconf
+package sidecar
 
 import (
 	"fmt"
@@ -22,23 +22,19 @@ import (
 	"strconv"
 
 	"github.com/go-ini/ini"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	"github.com/presslabs/mysql-operator/pkg/sidecar/app"
 	pkgutil "github.com/presslabs/mysql-operator/pkg/util"
 )
-
-var log = logf.Log.WithName("sidecar.appconf")
 
 const (
 	rStrLen = 18
 )
 
 // RunConfigCommand generates my.cnf, client.cnf and 10-dynamic.cnf files.
-func RunConfigCommand(cfg *app.BaseConfig) error {
+func RunConfigCommand(cfg *Config) error {
 	log.Info("configuring server", "host", cfg.Hostname, "role", cfg.NodeRole())
 
-	if err := app.CopyFile(app.MountConfigDir+"/my.cnf", app.ConfigDir+"/my.cnf"); err != nil {
+	if err := copyFile(mountConfigDir+"/my.cnf", configDir+"/my.cnf"); err != nil {
 		return fmt.Errorf("copy file my.cnf: %s", err)
 	}
 
@@ -52,26 +48,26 @@ func RunConfigCommand(cfg *app.BaseConfig) error {
 		return fmt.Errorf("failed to get dynamic configs: %s", err)
 	}
 
-	if err = os.Mkdir(app.ConfDPath, os.FileMode(0755)); err != nil {
+	if err = os.Mkdir(confDPath, os.FileMode(0755)); err != nil {
 		if !os.IsExist(err) {
-			return fmt.Errorf("error mkdir %s/conf.d: %s", app.ConfigDir, err)
+			return fmt.Errorf("error mkdir %s/conf.d: %s", configDir, err)
 		}
 	}
-	if err = dynCFG.SaveTo(app.ConfDPath + "/10-dynamic.cnf"); err != nil {
+	if err = dynCFG.SaveTo(confDPath + "/10-dynamic.cnf"); err != nil {
 		return fmt.Errorf("failed to save configs: %s", err)
 	}
-	if utilityCFG, err = getUtilityUserConfigs(app.UtilityUser, uPass); err != nil {
+	if utilityCFG, err = getUtilityUserConfigs(utilityUser, uPass); err != nil {
 		return fmt.Errorf("failed to configure utility user: %s", err)
 	}
-	if err = utilityCFG.SaveTo(app.ConfDPath + "/10-utility-user.cnf"); err != nil {
+	if err = utilityCFG.SaveTo(confDPath + "/10-utility-user.cnf"); err != nil {
 		return fmt.Errorf("failed to configure utility user: %s", err)
 	}
 
-	if clientCFG, err = getClientConfigs(app.UtilityUser, uPass); err != nil {
+	if clientCFG, err = getClientConfigs(utilityUser, uPass); err != nil {
 		return fmt.Errorf("failed to get client configs: %s", err)
 	}
 
-	if err = clientCFG.SaveTo(app.ConfigDir + "/client.cnf"); err != nil {
+	if err = clientCFG.SaveTo(configDir + "/client.cnf"); err != nil {
 		return fmt.Errorf("failed to save configs: %s", err)
 	}
 
@@ -86,7 +82,7 @@ func getClientConfigs(user, pass string) (*ini.File, error) {
 	if _, err := client.NewKey("host", "127.0.0.1"); err != nil {
 		return nil, err
 	}
-	if _, err := client.NewKey("port", app.MysqlPort); err != nil {
+	if _, err := client.NewKey("port", mysqlPort); err != nil {
 		return nil, err
 	}
 	if _, err := client.NewKey("user", user); err != nil {

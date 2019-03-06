@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package app
+package sidecar
 
 import (
 	"strconv"
@@ -27,43 +27,39 @@ import (
 
 var (
 	// MysqlPort represents port on which mysql works
-	MysqlPort = strconv.Itoa(constants.MysqlPort)
+	mysqlPort = strconv.Itoa(constants.MysqlPort)
 
 	// ConfigDir is the mysql configs path, /etc/mysql
-	ConfigDir = constants.ConfVolumeMountPath
+	configDir = constants.ConfVolumeMountPath
 
 	// ConfDPath is /etc/mysql/conf.d
-	ConfDPath = constants.ConfDPath
+	confDPath = constants.ConfDPath
 
 	// MountConfigDir is the mounted configs that needs processing
-	MountConfigDir = constants.ConfMapVolumeMountPath
+	mountConfigDir = constants.ConfMapVolumeMountPath
 
 	// DataDir is the mysql data. /var/lib/mysql
-	DataDir = constants.DataVolumeMountPath
+	dataDir = constants.DataVolumeMountPath
 
 	// ToolsDbName is the name of the tools table
-	ToolsDbName = constants.HelperDbName
+	toolsDbName = constants.HelperDbName
 	// ToolsInitTableName is the name of the init table
-	ToolsInitTableName = "init"
+	toolsInitTableName = "init"
 
 	// UtilityUser is the name of the percona utility user.
-	UtilityUser = "sys_utility_sidecar"
-
-	// OrcTopologyDir contains the path where the secret with orc credentials is
-	// mounted.
-	OrcTopologyDir = constants.OrcTopologyDir
+	utilityUser = "sys_utility_sidecar"
 
 	// ServerPort http server port
-	ServerPort = constants.SidecarServerPort
+	serverPort = constants.SidecarServerPort
 	// ServerProbeEndpoint is the http server endpoint for probe
-	ServerProbeEndpoint = constants.SidecarServerProbePath
+	serverProbeEndpoint = constants.SidecarServerProbePath
 	// ServerBackupEndpoint is the http server endpoint for backups
-	ServerBackupEndpoint = "/xbackup"
+	serverBackupEndpoint = "/xbackup"
 )
 
 const (
 	// RcloneConfigFile represents the path to the file that contains rclon
 	// configs. This path should be the same as defined in docker entrypoint
 	// script from mysql-operator-sidecar/docker-entrypoint.sh. /etc/rclone.conf
-	RcloneConfigFile = "/etc/rclone.conf"
+	rcloneConfigFile = "/etc/rclone.conf"
 )
