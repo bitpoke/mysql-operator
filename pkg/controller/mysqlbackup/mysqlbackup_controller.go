@@ -121,6 +121,9 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 
 	log.V(1).Info("reconcile backup", "backup", backup)
 
+	// Set defaults on backup
+	r.scheme.Default(backup.Unwrap())
+
 	// migrate old backups to the new version
 	// TODO: remove this in version v0.3.0
 	if backup.Spec.BackupURL == "" && backup.Spec.BackupURI == "" && backup.Status.Completed && len(backup.Status.BackupURI) > 0 {
@@ -128,32 +131,44 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, r.Update(context.TODO(), backup)
 	}
 
+	// save the backup for later check for diff
 	savedBackup := backup.Unwrap().DeepCopy()
+
+	// cluster name should be specified for a backup
 	if len(backup.Spec.ClusterName) == 0 {
 		return reconcile.Result{}, fmt.Errorf("cluster name is not specified")
 	}
 
+	deletionJobSyncer := backupSyncer.NewRemoteJobSyncer(r.Client, r.scheme, backup, r.opt)
+	err = syncer.Sync(context.TODO(), deletionJobSyncer, r.recorder)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// if the backup is completed then skip the reconciliation
 	if backup.Status.Completed {
 		// silence skip it
 		log.V(1).Info("backup already completed", "name", backup.Name)
 		return reconcile.Result{}, nil
 	}
 
-	clusterKey := types.NamespacedName{Name: backup.Spec.ClusterName, Namespace: backup.Namespace}
-	cluster := mysqlcluster.New(&mysqlv1alpha1.MysqlCluster{})
-	if err = r.Get(context.TODO(), clusterKey, cluster.Unwrap()); err != nil {
+	// get related cluster
+	var cluster *mysqlcluster.MysqlCluster
+	if cluster, err = r.getRelatedCluster(backup); err != nil {
 		return reconcile.Result{}, fmt.Errorf("cluster not found: %s", err)
 	}
 
+	// set defaults for the backup base on the related cluster
 	backup.SetDefaults(cluster)
 
+	// create the backup job syncer and run it
 	jobSyncer := backupSyncer.NewJobSyncer(r.Client, r.scheme, backup, cluster, r.opt)
 	err = syncer.Sync(context.TODO(), jobSyncer, r.recorder)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// update spec
+	// update spec if modified
 	if !reflect.DeepEqual(savedBackup, backup.Unwrap()) {
 		if err = r.Update(context.TODO(), backup.Unwrap()); err != nil {
 			return reconcile.Result{}, err
@@ -161,4 +176,14 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileMysqlBackup) getRelatedCluster(backup *mysqlbackup.MysqlBackup) (*mysqlcluster.MysqlCluster, error) {
+	clusterKey := types.NamespacedName{Name: backup.Spec.ClusterName, Namespace: backup.Namespace}
+	cluster := mysqlcluster.New(&mysqlv1alpha1.MysqlCluster{})
+	if err := r.Get(context.TODO(), clusterKey, cluster.Unwrap()); err != nil {
+		return nil, err
+	}
+
+	return cluster, nil
 }

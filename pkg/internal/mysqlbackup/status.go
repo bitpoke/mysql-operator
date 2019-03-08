@@ -76,3 +76,13 @@ func (c *MysqlBackup) condExists(ty api.BackupConditionType) (int, bool) {
 
 	return 0, false
 }
+
+// GetBackupCondition returns a pointer to the condition of the provided type
+func (c *MysqlBackup) GetBackupCondition(condType api.BackupConditionType) *api.BackupCondition {
+	i, found := c.condExists(condType)
+	if found {
+		return &c.Status.Conditions[i]
+	}
+
+	return nil
+}
