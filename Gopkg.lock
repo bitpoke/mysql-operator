@@ -382,16 +382,17 @@
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:0018931fa4284edacbbfc104fbd34c7a560edee63a1375188c8627e3c000c6c6"
+  digest = "1:e759a27f8a63ab2aa0fc770135434d680c54cbaacf81a6aa55dbd31ba368d648"
   name = "github.com/presslabs/controller-util"
   packages = [
+    "log",
     "mergo/transformers",
     "rand",
     "syncer",
   ]
   pruneopts = "T"
-  revision = "3df98a3c1e2b9cfe8cd1b1960dc5067845035d91"
-  version = "v0.1.10"
+  revision = "5d0cd1e9e71f054ce878f5e663b6ade4bc399b42"
+  version = "v0.1.11"
 
 [[projects]]
   digest = "1:3b5729e3fc486abc6fc16ce026331c3d196e788c3b973081ecf5d28ae3e1050d"
@@ -988,7 +989,6 @@
     "github.com/emicklei/go-restful",
     "github.com/go-ini/ini",
     "github.com/go-logr/logr",
-    "github.com/go-logr/zapr",
     "github.com/go-sql-driver/mysql",
     "github.com/go-test/deep",
     "github.com/golang/glog",
@@ -1001,14 +1001,13 @@
     "github.com/onsi/gomega",
     "github.com/onsi/gomega/gstruct",
     "github.com/onsi/gomega/types",
+    "github.com/presslabs/controller-util/log",
     "github.com/presslabs/controller-util/mergo/transformers",
     "github.com/presslabs/controller-util/rand",
     "github.com/presslabs/controller-util/syncer",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "github.com/wgliang/cron",
-    "go.uber.org/zap",
-    "go.uber.org/zap/zapcore",
     "golang.org/x/net/context",
     "k8s.io/api/apps/v1",
     "k8s.io/api/batch/v1",
