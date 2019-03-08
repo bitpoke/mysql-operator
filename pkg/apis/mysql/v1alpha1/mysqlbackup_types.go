@@ -22,7 +22,8 @@ import (
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// NOTE: json tags are required. Any new fields you add must have json tags for the fields to be
+// serialized.
 
 // MysqlBackupSpec defines the desired state of MysqlBackup
 type MysqlBackupSpec struct {
@@ -42,8 +43,13 @@ type MysqlBackupSpec struct {
 
 	// BackupSecretName the name of secrets that contains the credentials to
 	// access the bucket. Default is used the secret specified in cluster.
-	// optinal
+	// +optional
 	BackupSecretName string `json:"backupSecretName,omitempty"`
+
+	// DeletePolicy the deletion policy that specify how to treat the data from remote storage. By
+	// default it's used softDelete.
+	// +optional
+	DeletePolicy DeletePolicy `json:"deletePolicy,omitempty"`
 }
 
 // BackupCondition defines condition struct for backup resource
@@ -69,6 +75,17 @@ const (
 	BackupComplete BackupConditionType = "Complete"
 	// BackupFailed means backup has failed
 	BackupFailed BackupConditionType = "Failed"
+)
+
+// DeletePolicy defines the types of policies for backup deletions are
+type DeletePolicy string
+
+const (
+	// HardDelete when used it will delete the backup from remote storage then will remove the
+	// MysqlBackup resource from Kubernetes.
+	HardDelete DeletePolicy = "hardDelete"
+	// SoftDelete when used it will delete only the MysqlBackup resource from Kuberentes.
+	SoftDelete DeletePolicy = "softDelete"
 )
 
 // MysqlBackupStatus defines the observed state of MysqlBackup

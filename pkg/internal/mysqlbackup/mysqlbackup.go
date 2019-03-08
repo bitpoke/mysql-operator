@@ -86,3 +86,8 @@ func (b *MysqlBackup) composeBackupURL(base string) string {
 	fileName := fmt.Sprintf("/%s-%s.%s", b.GetName(), timestamp, BackupSuffix)
 	return base + fileName
 }
+
+//GetNameForDeletionJob returns the name for the hard deletion job.
+func (b *MysqlBackup) GetNameForDeletionJob() string {
+	return fmt.Sprintf("%s-djob", b.Name)
+}

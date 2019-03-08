@@ -31,7 +31,7 @@ spec:
             backupSecretName:
               description: BackupSecretName the name of secrets that contains the
                 credentials to access the bucket. Default is used the secret specified
-                in cluster. optinal
+                in cluster.
               type: string
             backupURL:
               description: BackupURL represents the URL to the backup location, this
@@ -44,6 +44,10 @@ spec:
               type: string
             clusterName:
               description: ClustterName represents the cluster for which to take backup
+              type: string
+            deletePolicy:
+              description: DeletePolicy the deletion policy that specify how to treat
+                the data from remote storage. By default it's used softDelete.
               type: string
           required:
           - clusterName

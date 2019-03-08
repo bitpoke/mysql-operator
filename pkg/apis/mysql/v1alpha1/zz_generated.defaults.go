@@ -28,9 +28,22 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&MysqlBackup{}, func(obj interface{}) { SetObjectDefaults_MysqlBackup(obj.(*MysqlBackup)) })
+	scheme.AddTypeDefaultingFunc(&MysqlBackupList{}, func(obj interface{}) { SetObjectDefaults_MysqlBackupList(obj.(*MysqlBackupList)) })
 	scheme.AddTypeDefaultingFunc(&MysqlCluster{}, func(obj interface{}) { SetObjectDefaults_MysqlCluster(obj.(*MysqlCluster)) })
 	scheme.AddTypeDefaultingFunc(&MysqlClusterList{}, func(obj interface{}) { SetObjectDefaults_MysqlClusterList(obj.(*MysqlClusterList)) })
 	return nil
+}
+
+func SetObjectDefaults_MysqlBackup(in *MysqlBackup) {
+	SetDefaults_MysqlBackup(in)
+}
+
+func SetObjectDefaults_MysqlBackupList(in *MysqlBackupList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_MysqlBackup(a)
+	}
 }
 
 func SetObjectDefaults_MysqlCluster(in *MysqlCluster) {
