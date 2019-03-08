@@ -13,6 +13,9 @@ import (
 
 var (
 	errOwnerDeleted = fmt.Errorf("owner is deleted")
+
+	// ErrIgnore when returned the syncer ignores it and returns nil
+	ErrIgnore = fmt.Errorf("ignored error")
 )
 
 // ObjectSyncer is a syncer.Interface for syncing kubernetes.Objects only by
@@ -50,6 +53,9 @@ func (s *ObjectSyncer) Sync(ctx context.Context) (SyncResult, error) {
 	// don't pass to user error for owner deletion, just don't create the object
 	if err == errOwnerDeleted {
 		log.Info(string(result.Operation), "key", key, "kind", fmt.Sprintf("%T", s.Obj), "error", err)
+		err = nil
+	} else if err == ErrIgnore {
+		log.V(1).Info("syncer skiped", "key", key, "kind", fmt.Sprintf("%T", s.Obj))
 		err = nil
 	} else if err != nil {
 		result.SetEventData(eventWarning, basicEventReason(s.Name, err),
