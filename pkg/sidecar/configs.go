@@ -52,9 +52,6 @@ type Config struct {
 	// ServiceName is the name of the headless service
 	ServiceName string
 
-	// ServerID represents the MySQL server id
-	ServerID int
-
 	// InitBucketURL represents the init bucket to initialize mysql
 	InitBucketURL string
 
@@ -65,14 +62,11 @@ type Config struct {
 	BackupUser     string
 	BackupPassword string
 
-	// MysqlDSN represents the connection string to connect to MySQL
-	MysqlDSN string
-
 	// replication user and password
 	ReplicationUser     string
 	ReplicationPassword string
 
-	// metrcis exporter user and password
+	// metrics exporter user and password
 	MetricsUser     string
 	MetricsPassword string
 
@@ -84,7 +78,7 @@ type Config struct {
 // FQDNForServer returns the pod hostname for given MySQL server id
 func (cfg *Config) FQDNForServer(id int) string {
 	base := mysqlcluster.GetNameForResource(mysqlcluster.StatefulSet, cfg.ClusterName)
-	return fmt.Sprintf("%s-%d.%s.%s", base, id-100, cfg.ServiceName, cfg.Namespace)
+	return fmt.Sprintf("%s-%d.%s.%s", base, id-MysqlServerIDOffset, cfg.ServiceName, cfg.Namespace)
 }
 
 func (cfg *Config) newOrcClient() orc.Interface {
@@ -110,18 +104,34 @@ func (cfg *Config) MasterFQDN() string {
 	}
 
 	log.V(-1).Info("failed to obtain master from orchestrator, go for default master",
-		"master", cfg.FQDNForServer(100))
-	return cfg.FQDNForServer(100)
+		"master", cfg.FQDNForServer(MysqlServerIDOffset))
+	return cfg.FQDNForServer(MysqlServerIDOffset)
 
 }
 
 // NodeRole returns the role of the current node
 func (cfg *Config) NodeRole() NodeRole {
-	if cfg.FQDNForServer(cfg.ServerID) == cfg.MasterFQDN() {
+	if cfg.FQDNForServer(cfg.ServerID()) == cfg.MasterFQDN() {
 		return MasterNode
 	}
 
 	return SlaveNode
+}
+
+// ServerID returns the MySQL server id
+func (cfg *Config) ServerID() int {
+	ordinal := getOrdinalFromHostname(cfg.Hostname)
+	return ordinal + MysqlServerIDOffset
+}
+
+// MysqlDSN returns the connection string to MySQL server
+func (cfg *Config) MysqlDSN() string {
+	var dsn string
+	var err error
+	if dsn, err = getMySQLConnectionString(); err != nil {
+		log.Info("failed to get mysql DSN string", "error", err)
+	}
+	return dsn
 }
 
 // NewConfig returns a pointer to Config configured from environment variables
@@ -148,22 +158,13 @@ func NewConfig() *Config {
 		OrchestratorPassword: getEnvValue("MYSQL_ORC_TOPOLOGY_PASSWORD"),
 	}
 
-	// get server id
-	ordinal := getOrdinalFromHostname(cfg.Hostname)
-	cfg.ServerID = ordinal + 100
-
-	var err error
-	if cfg.MysqlDSN, err = getMySQLConnectionString(); err != nil {
-		log.Info("failed to get mysql DSN string", "error", err)
-	}
-
 	return cfg
 }
 
 func getEnvValue(key string) string {
 	value := os.Getenv(key)
 	if len(value) == 0 {
-		log.Info("envirorment is not set", "key", key)
+		log.Info("environment is not set", "key", key)
 	}
 
 	return value

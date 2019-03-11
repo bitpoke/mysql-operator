@@ -55,8 +55,8 @@ func RunCloneCommand(cfg *Config) error {
 		}
 	} else {
 		// clonging from prior node
-		if cfg.ServerID > 100 {
-			sourceHost := cfg.FQDNForServer(cfg.ServerID - 1)
+		if cfg.ServerID() > 100 {
+			sourceHost := cfg.FQDNForServer(cfg.ServerID() - 1)
 			err := cloneFromSource(cfg, sourceHost)
 			if err != nil {
 				return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)

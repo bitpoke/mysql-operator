@@ -49,3 +49,6 @@ hack/docker/mysql-operator/mysql-operator
 
 # ignore vscode
 .vscode
+
+# goland
+.idea

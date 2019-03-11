@@ -91,7 +91,11 @@ func RunSidecarCommand(cfg *Config, stop <-chan struct{}) error {
 func configureOrchestratorUser(cfg *Config) error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
-	  GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO ?@'%%' IDENTIFIED BY ?;
+
+	  CREATE USER IF NOT EXISTS ?@'%%';
+	  ALTER USER ?@'%%' IDENTIFIED BY ?;
+
+	  GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO ?@'%%';
 	  GRANT SELECT ON %s.* TO ?@'%%';
 	  GRANT SELECT ON mysql.slave_master_info TO ?@'%%';
 	`
@@ -101,8 +105,9 @@ func configureOrchestratorUser(cfg *Config) error {
 	// https://github.com/golang/go/issues/18478
 	query = fmt.Sprintf(query, toolsDbName)
 
-	if err := runQuery(cfg, query, cfg.OrchestratorUser, cfg.OrchestratorPassword,
-		cfg.OrchestratorUser, cfg.OrchestratorPassword); err != nil {
+	user := cfg.OrchestratorUser
+	pass := cfg.OrchestratorPassword
+	if err := runQuery(cfg, query, user, user, pass, user, user, user); err != nil {
 		return fmt.Errorf("failed to configure orchestrator (user/pass/access), err: %s", err)
 	}
 
@@ -112,9 +117,15 @@ func configureOrchestratorUser(cfg *Config) error {
 func configureReplicationUser(cfg *Config) error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
-	  GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO ?@'%' IDENTIFIED BY ?;
+
+	  CREATE USER IF NOT EXISTS ?@'%';
+	  ALTER USER ?@'%' IDENTIFIED BY ?;
+
+	  GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO ?@'%';
 	`
-	if err := runQuery(cfg, query, cfg.ReplicationUser, cfg.ReplicationPassword); err != nil {
+	user := cfg.ReplicationUser
+	pass := cfg.ReplicationPassword
+	if err := runQuery(cfg, query, user, user, pass, user); err != nil {
 		return fmt.Errorf("failed to configure replication user: %s", err)
 	}
 
@@ -124,9 +135,16 @@ func configureReplicationUser(cfg *Config) error {
 func configureExporterUser(cfg *Config) error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
-	  GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO ?@'127.0.0.1' IDENTIFIED BY ? WITH MAX_USER_CONNECTIONS 3;
+
+	  CREATE USER IF NOT EXISTS ?@'localhost';
+	  ALTER USER ?@'localhost' IDENTIFIED BY ? WITH MAX_USER_CONNECTIONS 3;
+
+	  GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO ?@'localhost';
 	`
-	if err := runQuery(cfg, query, cfg.MetricsUser, cfg.MetricsPassword); err != nil {
+
+	user := cfg.MetricsUser
+	pass := cfg.MetricsPassword
+	if err := runQuery(cfg, query, user, user, pass, user); err != nil {
 		return fmt.Errorf("failed to metrics exporter user: %s", err)
 	}
 

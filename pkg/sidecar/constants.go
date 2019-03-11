@@ -26,6 +26,9 @@ import (
 )
 
 var (
+	// MysqlServerIDOffset represents the offset with which all server ids are shifted from 0
+	MysqlServerIDOffset = 100
+
 	// MysqlPort represents port on which mysql works
 	mysqlPort = strconv.Itoa(constants.MysqlPort)
 

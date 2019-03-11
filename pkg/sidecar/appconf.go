@@ -47,12 +47,12 @@ func RunConfigCommand(cfg *Config) error {
 	}
 
 	uPass := pkgutil.RandomString(rStrLen)
-	reportHost := cfg.FQDNForServer(cfg.ServerID)
+	reportHost := cfg.FQDNForServer(cfg.ServerID())
 
 	var identityCFG, utilityCFG, clientCFG *ini.File
 
 	// mysql server identity configs
-	if identityCFG, err = getIdentityConfigs(cfg.ServerID, reportHost); err != nil {
+	if identityCFG, err = getIdentityConfigs(cfg.ServerID(), reportHost); err != nil {
 		return fmt.Errorf("failed to get dynamic configs: %s", err)
 	}
 	if err = identityCFG.SaveTo(path.Join(confDPath, "10-identity.cnf")); err != nil {
