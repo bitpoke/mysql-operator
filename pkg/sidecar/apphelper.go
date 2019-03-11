@@ -33,7 +33,7 @@ const (
 
 // RunSidecarCommand is the main command, and represents the runtime helper that
 // configures the mysql server
-func RunSidecarCommand(cfg *Config) error {
+func RunSidecarCommand(cfg *Config, stop <-chan struct{}) error {
 	log.Info("start initialization")
 
 	// wait for mysql to be ready
@@ -84,7 +84,7 @@ func RunSidecarCommand(cfg *Config) error {
 	}
 
 	log.V(1).Info("start http server")
-	srv := newServer(cfg)
+	srv := newServer(cfg, stop)
 	return srv.ListenAndServe()
 }
 
@@ -262,19 +262,17 @@ func getGTIDFrom(reader io.Reader) (string, error) {
 	scanner := bufio.NewScanner(reader)
 	scanner.Split(bufio.ScanWords)
 
-	count := 0
 	gtid := ""
-	for scanner.Scan() {
-		if count == 2 {
+	for i := 0; scanner.Scan(); i++ {
+		if i == 2 {
 			gtid = scanner.Text()
 		}
-		count++
 	}
 
 	if err := scanner.Err(); err != nil {
 		return "", err
 	} else if len(gtid) == 0 {
-		return "", fmt.Errorf("failed to read GTID reached EOF")
+		return "", io.EOF
 	}
 
 	return gtid, nil

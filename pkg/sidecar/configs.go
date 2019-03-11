@@ -43,9 +43,6 @@ const (
 
 // Config contains information related with the pod.
 type Config struct {
-	// Stop represents the shutdown channel
-	Stop <-chan struct{}
-
 	// Hostname represents the pod hostname
 	Hostname string
 	// ClusterName is the MySQL cluster name
@@ -128,9 +125,8 @@ func (cfg *Config) NodeRole() NodeRole {
 }
 
 // NewConfig returns a pointer to Config configured from environment variables
-func NewConfig(stop <-chan struct{}) *Config {
+func NewConfig() *Config {
 	cfg := &Config{
-		Stop:        stop,
 		Hostname:    getEnvValue("HOSTNAME"),
 		ClusterName: getEnvValue("MY_CLUSTER_NAME"),
 		Namespace:   getEnvValue("MY_NAMESPACE"),

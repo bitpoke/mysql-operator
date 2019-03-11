@@ -31,7 +31,7 @@ import (
 var log = logf.Log.WithName("sidecar")
 
 func main() {
-	stopCh := signals.SetupSignalHandler()
+	stop := signals.SetupSignalHandler()
 
 	cmd := &cobra.Command{
 		Use:   "mysql-operator-sidecar",
@@ -57,7 +57,7 @@ func main() {
 	logf.SetLogger(logf.ZapLogger(debug))
 
 	// init configs
-	cfg := sidecar.NewConfig(stopCh)
+	cfg := sidecar.NewConfig()
 
 	confCmd := &cobra.Command{
 		Use:   "init-configs",
@@ -89,7 +89,7 @@ func main() {
 		Use:   "run",
 		Short: "Configs mysql users, replication, and serve backups.",
 		Run: func(cmd *cobra.Command, args []string) {
-			err := sidecar.RunSidecarCommand(cfg)
+			err := sidecar.RunSidecarCommand(cfg, stop)
 			if err != nil {
 				log.Error(err, "run command failed")
 				os.Exit(1)

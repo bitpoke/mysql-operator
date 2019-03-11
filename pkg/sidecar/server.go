@@ -30,7 +30,7 @@ type server struct {
 	http.Server
 }
 
-func newServer(cfg *Config) *server {
+func newServer(cfg *Config, stop <-chan struct{}) *server {
 	mux := http.NewServeMux()
 	srv := &server{
 		cfg: cfg,
@@ -46,7 +46,7 @@ func newServer(cfg *Config) *server {
 
 	// Shutdown gracefully the http server
 	go func() {
-		<-cfg.Stop // wait for stop signal
+		<-stop // wait for stop signal
 		if err := srv.Shutdown(context.Background()); err != nil {
 			log.Error(err, "failed to stop http server")
 
