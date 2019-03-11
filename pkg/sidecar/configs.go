@@ -117,7 +117,7 @@ func (cfg *Config) MasterFQDN() string {
 
 // NodeRole returns the role of the current node
 func (cfg *Config) NodeRole() NodeRole {
-	if cfg.Hostname == cfg.MasterFQDN() {
+	if cfg.FQDNForServer(cfg.ServerID) == cfg.MasterFQDN() {
 		return MasterNode
 	}
 
@@ -154,7 +154,7 @@ func NewConfig() *Config {
 
 	var err error
 	if cfg.MysqlDSN, err = getMySQLConnectionString(); err != nil {
-		log.Error(err, "get mysql dsn")
+		log.Info("failed to get mysql DSN string", "error", err)
 	}
 
 	return cfg
