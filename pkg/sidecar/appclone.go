@@ -61,9 +61,16 @@ func RunCloneCommand(cfg *Config) error {
 			if err != nil {
 				return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)
 			}
+			// clone from master if no prior node and node is not master
+		} else if cfg.ServerID() == 100 {
+			sourceHost := cfg.MasterFQDN()
+			err := cloneFromSource(cfg, sourceHost)
+			if err != nil {
+				return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)
+			}
 		} else {
 			return fmt.Errorf(
-				"failed to initialize because no of no prior node exists, check orchestrator maybe",
+				"failed to initialize because no prior node exists, check orchestrator maybe",
 			)
 		}
 	}
