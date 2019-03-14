@@ -43,13 +43,32 @@ var _ = Describe("MysqlBackupCron cron job", func() {
 		c client.Client
 		// stop channel for controller manager
 		stop chan struct{}
+
+		clusterName string
+		namespace   string
+		j           *job
 	)
 
 	BeforeEach(func() {
 		mgr, err := manager.New(cfg, manager.Options{})
 		Expect(err).To(Succeed())
 		c = mgr.GetClient()
+
+		// NOTE: field indexer should be added before starting the manager
+		Expect(addBackupFieldIndexers(mgr)).To(Succeed())
+
 		stop = StartTestManager(mgr)
+
+		clusterName = fmt.Sprintf("cl-%d", rand.Int31())
+		namespace = "default"
+
+		limit := 5
+		j = &job{
+			ClusterName:                    clusterName,
+			Namespace:                      namespace,
+			c:                              c,
+			BackupScheduleJobsHistoryLimit: &limit,
+		}
 	})
 	AfterEach(func() {
 		close(stop)
@@ -57,22 +76,18 @@ var _ = Describe("MysqlBackupCron cron job", func() {
 
 	When("more backups are created", func() {
 		var (
-			clusterName string
-			ns          string
-			backups     []api.MysqlBackup
+			backups []api.MysqlBackup
 		)
 
 		BeforeEach(func() {
-			clusterName = fmt.Sprintf("cl-%d", rand.Int31())
-			ns = "default"
-
-			for i := 0; i < 10; i++ {
+			for i := 0; i < (*j.BackupScheduleJobsHistoryLimit + 5); i++ {
 				backup := api.MysqlBackup{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("bk-%d", i),
-						Namespace: ns,
+						Namespace: namespace,
 						Labels: map[string]string{
 							"recurrent": "true",
+							"cluster":   clusterName,
 						},
 					},
 					Spec: api.MysqlBackupSpec{
@@ -81,7 +96,7 @@ var _ = Describe("MysqlBackupCron cron job", func() {
 				}
 				Expect(c.Create(context.TODO(), &backup)).To(Succeed())
 				backups = append(backups, backup)
-				time.Sleep(time.Second / 3)
+				time.Sleep(time.Second / 6)
 			}
 		})
 
@@ -92,26 +107,47 @@ var _ = Describe("MysqlBackupCron cron job", func() {
 		})
 
 		It("should delete only older backups", func() {
-			limit := len(backups) - 5
-			j := &job{
-				ClusterName:                    clusterName,
-				Namespace:                      ns,
-				c:                              c,
-				BackupScheduleJobsHistoryLimit: &limit,
-			}
+
 			lo := &client.ListOptions{
 				LabelSelector: labels.SelectorFromSet(labels.Set{
 					"recurrent": "true",
+					"cluster":   clusterName,
 				}),
-				Namespace: ns,
+				Namespace: namespace,
 			}
 			Eventually(testutil.ListAllBackupsFn(c, lo)).Should(HaveLen(len(backups)))
 
 			j.backupGC()
 
-			Eventually(testutil.ListAllBackupsFn(c, lo)).Should(HaveLen(limit))
+			Eventually(testutil.ListAllBackupsFn(c, lo)).Should(HaveLen(*j.BackupScheduleJobsHistoryLimit))
 			Eventually(testutil.ListAllBackupsFn(c, lo)).ShouldNot(
 				ContainElement(testutil.BackupWithName("bk-3")))
+		})
+	})
+
+	When("a backup exists", func() {
+		var (
+			backup *api.MysqlBackup
+		)
+
+		BeforeEach(func() {
+			var err error
+			backup, err = j.createBackup()
+			Expect(err).To(Succeed())
+		})
+		AfterEach(func() {
+			c.Delete(context.TODO(), backup)
+		})
+
+		It("should detect the running backup", func() {
+			Eventually(j.anyScheduledBackupRunning).Should(Equal(true))
+		})
+
+		It("should not detect any running backup", func() {
+			backup.Status.Completed = true
+			Expect(c.Update(context.TODO(), backup)).To(Succeed())
+
+			Eventually(j.anyScheduledBackupRunning).Should(Equal(false))
 		})
 	})
 })

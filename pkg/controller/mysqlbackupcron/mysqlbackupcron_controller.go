@@ -95,7 +95,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	return nil
+	return addBackupFieldIndexers(mgr)
 }
 
 var _ reconcile.Reconciler = &ReconcileMysqlBackup{}
@@ -201,4 +201,14 @@ func (r *ReconcileMysqlBackup) unregisterCluster(clusterKey types.NamespacedName
 	}
 
 	return nil
+}
+
+func addBackupFieldIndexers(mgr manager.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(&mysqlv1alpha1.MysqlBackup{}, "status.completed", func(b runtime.Object) []string {
+		completed := "false"
+		if b.(*mysqlv1alpha1.MysqlBackup).Status.Completed {
+			completed = "true"
+		}
+		return []string{completed}
+	})
 }
