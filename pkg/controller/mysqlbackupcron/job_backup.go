@@ -54,43 +54,62 @@ func (j *job) Run() {
 	}
 
 	// create the backup
-	if err := j.createBackup(); err != nil {
+	if _, err := j.createBackup(); err != nil {
 		log.Error(err, "failed to create backup")
 	}
 }
 
 func (j *job) anyScheduledBackupRunning() bool {
-	return false
+	backupsList := &api.MysqlBackupList{}
+	// select all backups with labels recurrent=true and and not completed of the cluster
+	selector := j.backupSelector()
+	selector.MatchingField("status.completed", "false")
+
+	if err := j.c.List(context.TODO(), selector, backupsList); err != nil {
+		log.Error(err, "failed getting backups", "selector", selector)
+		return false
+	}
+
+	if len(backupsList.Items) == 0 {
+		return false
+	}
+
+	log.V(1).Info("at least a backup is running", "backups", backupsList.Items)
+	return true
 }
 
-func (j *job) createBackup() error {
+func (j *job) createBackup() (*api.MysqlBackup, error) {
 	backupName := fmt.Sprintf("%s-auto-%s", j.ClusterName, time.Now().Format("2006-01-02t15-04-05"))
 
 	backup := &api.MysqlBackup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      backupName,
 			Namespace: j.Namespace,
-			Labels: map[string]string{
-				"recurrent": "true",
-				"cluster":   j.ClusterName,
-			},
+			Labels:    j.recurrentBackupLabels(),
 		},
 		Spec: api.MysqlBackupSpec{
 			ClusterName: j.ClusterName,
 		},
 	}
-	return j.c.Create(context.TODO(), backup)
+	return backup, j.c.Create(context.TODO(), backup)
+}
+
+func (j *job) backupSelector() *client.ListOptions {
+	return client.InNamespace(j.Namespace).MatchingLabels(j.recurrentBackupLabels())
+}
+
+func (j *job) recurrentBackupLabels() map[string]string {
+	return map[string]string{
+		"recurrent": "true",
+		"cluster":   j.ClusterName,
+	}
 }
 
 func (j *job) backupGC() {
 	var err error
-
 	backupsList := &api.MysqlBackupList{}
-	selector := &client.ListOptions{}
-	selector = selector.InNamespace(j.Namespace).MatchingLabels(map[string]string{"recurrent": "true"})
-
-	if err = j.c.List(context.TODO(), selector, backupsList); err != nil {
-		log.Error(err, "failed getting backups", "selector", selector)
+	if err = j.c.List(context.TODO(), j.backupSelector(), backupsList); err != nil {
+		log.Error(err, "failed getting backups", "selector", j.backupSelector())
 		return
 	}
 
