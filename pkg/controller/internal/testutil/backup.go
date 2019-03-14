@@ -67,7 +67,7 @@ func BackupForCluster(cluster *api.MysqlCluster) gomegatypes.GomegaMatcher {
 func BackupWithName(name string) gomegatypes.GomegaMatcher {
 	return MatchFields(IgnoreExtras, Fields{
 		"ObjectMeta": MatchFields(IgnoreExtras, Fields{
-			"Name": Equal(name),
+			"ClusterName": Equal(name),
 		}),
 	})
 }
