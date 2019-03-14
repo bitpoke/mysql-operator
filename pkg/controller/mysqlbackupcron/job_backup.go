@@ -20,122 +20,66 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"sync"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
-var (
-	// polling time for backup to be completed
-	backupPollingTime = 5 * time.Second
-	// time to wait for a backup to be completed
-	backupWatchTimeout = time.Hour
-)
-
 // The job structure contains the context to schedule a backup
 type job struct {
-	Name      string
-	Namespace string
+	ClusterName string
+	Namespace   string
 
-	BackupRunning *bool
-
-	lock *sync.Mutex
-	c    client.Client
+	// kubernetes client
+	c client.Client
 
 	BackupScheduleJobsHistoryLimit *int
 }
 
-func (j job) Run() {
-	backupName := fmt.Sprintf("%s-auto-backup-%s", j.Name, time.Now().Format("2006-01-02t15-04-05"))
-	backupKey := types.NamespacedName{Name: backupName, Namespace: j.Namespace}
-	log.Info("scheduled backup job started", "namespace", j.Namespace, "name", backupName)
+func (j *job) Run() {
+	log.Info("scheduled backup job started", "namespace", j.Namespace, "cluster_name", j.ClusterName)
 
+	// run garbage collector if needed
 	if j.BackupScheduleJobsHistoryLimit != nil {
 		defer j.backupGC()
 	}
 
-	// Wrap backup creation to ensure that lock is released when backup is
-	// created
-
-	created := func() bool {
-		j.lock.Lock()
-		defer j.lock.Unlock()
-
-		if *j.BackupRunning {
-			log.Info("last scheduled backup still running! Can't initiate a new backup",
-				"cluster", fmt.Sprintf("%s/%s", j.Namespace, j.Name))
-			return false
-		}
-
-		tries := 0
-		for {
-			var err error
-			cluster := &api.MysqlBackup{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      backupName,
-					Namespace: j.Namespace,
-					Labels: map[string]string{
-						"recurrent": "true",
-					},
-				},
-				Spec: api.MysqlBackupSpec{
-					ClusterName: j.Name,
-				},
-			}
-			if err = j.c.Create(context.TODO(), cluster); err == nil {
-				break
-			}
-
-			if tries > 5 {
-				log.Error(err, "fail to create backup, max tries exceeded",
-					"cluster", j.Name, "retries", tries, "backup", backupName)
-				return false
-			}
-
-			log.Info("failed to create backup, retring", "backup", backupName,
-				"error", err, "tries", tries)
-
-			time.Sleep(5 * time.Second)
-			tries++
-		}
-
-		*j.BackupRunning = true
-		return true
-	}()
-	if !created {
+	// check if a backup is running
+	if j.anyScheduledBackupRunning() {
+		log.Info("a scheduled backup already running, skip doing another one")
 		return
 	}
 
-	defer func() {
-		j.lock.Lock()
-		defer j.lock.Unlock()
-		*j.BackupRunning = false
-	}()
-
-	err := wait.PollImmediate(backupPollingTime, backupWatchTimeout, func() (bool, error) {
-		backup := &api.MysqlBackup{}
-		if err := j.c.Get(context.TODO(), backupKey, backup); err != nil {
-			log.Info("failed to get backup", "backup", backupName, "error", err)
-			return false, nil
-		}
-		if backup.Status.Completed {
-			log.Info("backup finished", "backup", backup)
-			return true, nil
-		}
-
-		return false, nil
-	})
-
-	if err != nil {
-		log.Error(err, "waiting for backup to finish, failed",
-			"backup", backupName, "cluster", fmt.Sprintf("%s/%s", j.Namespace, j.Name))
+	// create the backup
+	if err := j.createBackup(); err != nil {
+		log.Error(err, "failed to create backup")
 	}
+}
+
+func (j *job) anyScheduledBackupRunning() bool {
+	return false
+}
+
+func (j *job) createBackup() error {
+	backupName := fmt.Sprintf("%s-auto-%s", j.ClusterName, time.Now().Format("2006-01-02t15-04-05"))
+
+	backup := &api.MysqlBackup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      backupName,
+			Namespace: j.Namespace,
+			Labels: map[string]string{
+				"recurrent": "true",
+				"cluster":   j.ClusterName,
+			},
+		},
+		Spec: api.MysqlBackupSpec{
+			ClusterName: j.ClusterName,
+		},
+	}
+	return j.c.Create(context.TODO(), backup)
 }
 
 func (j *job) backupGC() {

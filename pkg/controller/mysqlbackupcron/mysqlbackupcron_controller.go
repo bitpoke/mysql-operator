@@ -147,8 +147,8 @@ func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.Mysq
 	defer r.lockJobRegister.Unlock()
 
 	for _, entry := range r.cron.Entries() {
-		j, ok := entry.Job.(job)
-		if ok && j.Name == cluster.Name && j.Namespace == cluster.Namespace {
+		j, ok := entry.Job.(*job)
+		if ok && j.ClusterName == cluster.Name && j.Namespace == cluster.Namespace {
 			log.V(1).Info("cluster already added to cron.", "cluster", cluster.Name)
 
 			// change scheduler for already added crons
@@ -182,12 +182,10 @@ func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.Mysq
 		}
 	}
 
-	r.cron.Schedule(schedule, job{
-		Name:                           cluster.Name,
+	r.cron.Schedule(schedule, &job{
+		ClusterName:                    cluster.Name,
 		Namespace:                      cluster.Namespace,
 		c:                              r.Client,
-		BackupRunning:                  new(bool),
-		lock:                           new(sync.Mutex),
 		BackupScheduleJobsHistoryLimit: cluster.Spec.BackupScheduleJobsHistoryLimit,
 	}, cluster.Name)
 

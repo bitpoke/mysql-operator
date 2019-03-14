@@ -177,10 +177,10 @@ var _ = Describe("MysqlBackupCron controller", func() {
 
 			// check cron entry to have a single entry
 			Expect(cron.Entries()).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Job": MatchFields(IgnoreExtras, Fields{
-					"Name":                           Equal(cluster.Name),
+				"Job": PointTo(MatchFields(IgnoreExtras, Fields{
+					"ClusterName":                    Equal(cluster.Name),
 					"BackupScheduleJobsHistoryLimit": PointTo(Equal(limit)),
-				}),
+				})),
 			}))))
 		})
 
@@ -203,7 +203,7 @@ var _ = Describe("MysqlBackupCron controller", func() {
 				}
 			})
 
-			It("should create the mysqlbackup", func() {
+			It("should create the mysqlbackup only once", func() {
 				lo := &client.ListOptions{
 					LabelSelector: labels.SelectorFromSet(labels.Set{
 						"recurrent": "true",
@@ -222,9 +222,9 @@ var _ = Describe("MysqlBackupCron controller", func() {
 
 func haveCronJob(name string, sched cronpkg.Schedule) gomegatypes.GomegaMatcher {
 	return ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-		"Job": MatchFields(IgnoreExtras, Fields{
-			"Name": Equal(name),
-		}),
+		"Job": PointTo(MatchFields(IgnoreExtras, Fields{
+			"ClusterName": Equal(name),
+		})),
 		"Schedule": Equal(sched),
 	})))
 }

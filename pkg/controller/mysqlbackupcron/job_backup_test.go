@@ -20,7 +20,6 @@ package mysqlbackupcron
 import (
 	"fmt"
 	"math/rand"
-	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -93,13 +92,10 @@ var _ = Describe("MysqlBackupCron cron job", func() {
 		})
 
 		It("should delete only older backups", func() {
-			f := false
 			limit := len(backups) - 5
-			j := job{
-				Name:                           clusterName,
+			j := &job{
+				ClusterName:                    clusterName,
 				Namespace:                      ns,
-				BackupRunning:                  &f,
-				lock:                           &sync.Mutex{},
 				c:                              c,
 				BackupScheduleJobsHistoryLimit: &limit,
 			}
