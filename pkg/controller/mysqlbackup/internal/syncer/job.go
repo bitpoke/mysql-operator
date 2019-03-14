@@ -63,6 +63,12 @@ func NewJobSyncer(c client.Client, s *runtime.Scheme, backup *mysqlbackup.MysqlB
 func (s *jobSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*batch.Job)
 
+	if s.backup.Status.Completed {
+		log.V(1).Info("backup already completed", "name", s.backup.Name)
+		// skip doing anything
+		return syncer.ErrIgnore
+	}
+
 	if len(s.backup.GetBackupURL(s.cluster)) == 0 {
 		log.Info("can't get bucketURI", "cluster", s.cluster, "backup", s.backup)
 		return fmt.Errorf("can't get bucketURI")
@@ -80,14 +86,6 @@ func (s *jobSyncer) SyncFn(in runtime.Object) error {
 
 	out.Spec.Template.Spec = s.ensurePodSpec(out.Spec.Template.Spec)
 	return nil
-}
-
-func (s *jobSyncer) getBackupSecretName() string {
-	if len(s.backup.Spec.BackupSecretName) > 0 {
-		return s.backup.Spec.BackupSecretName
-	}
-
-	return s.cluster.Spec.BackupSecretName
 }
 
 // getBackupCandidate returns the hostname of the first not-lagged and
@@ -163,12 +161,12 @@ func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 		},
 	}
 
-	if len(s.getBackupSecretName()) != 0 {
+	if len(s.backup.Spec.BackupSecretName) != 0 {
 		in.Containers[0].EnvFrom = []core.EnvFromSource{
 			core.EnvFromSource{
 				SecretRef: &core.SecretEnvSource{
 					LocalObjectReference: core.LocalObjectReference{
-						Name: s.getBackupSecretName(),
+						Name: s.backup.Spec.BackupSecretName,
 					},
 				},
 			},

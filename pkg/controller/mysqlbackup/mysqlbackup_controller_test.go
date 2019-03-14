@@ -225,6 +225,8 @@ var _ = Describe("MysqlBackup controller", func() {
 			Expect(c.Create(context.TODO(), backup.Unwrap())).To(Succeed())
 
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			// update backup defaults from cluster
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 		})
 
 		AfterEach(func() {

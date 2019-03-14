@@ -46,10 +46,10 @@ type MysqlBackupSpec struct {
 	// +optional
 	BackupSecretName string `json:"backupSecretName,omitempty"`
 
-	// DeletePolicy the deletion policy that specify how to treat the data from remote storage. By
+	// RemoteDeletePolicy the deletion policy that specify how to treat the data from remote storage. By
 	// default it's used softDelete.
 	// +optional
-	DeletePolicy DeletePolicy `json:"deletePolicy,omitempty"`
+	RemoteDeletePolicy DeletePolicy `json:"remoteDeletePolicy,omitempty"`
 }
 
 // BackupCondition defines condition struct for backup resource
@@ -81,11 +81,12 @@ const (
 type DeletePolicy string
 
 const (
-	// HardDelete when used it will delete the backup from remote storage then will remove the
-	// MysqlBackup resource from Kubernetes.
-	HardDelete DeletePolicy = "hardDelete"
-	// SoftDelete when used it will delete only the MysqlBackup resource from Kuberentes.
-	SoftDelete DeletePolicy = "softDelete"
+	// Delete when used it will try to delete the backup from remote storage then will remove the
+	// MysqlBackup resource from Kubernetes. The remote deletion is not guaranteed that will succeed.
+	Delete DeletePolicy = "delete"
+	// Retain when used it will delete only the MysqlBackup resource from Kuberentes and will keep the backup
+	// on remote storage.
+	Retain DeletePolicy = "retain"
 )
 
 // MysqlBackupStatus defines the observed state of MysqlBackup

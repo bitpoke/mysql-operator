@@ -17,34 +17,46 @@ limitations under the License.
 package syncer
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/imdario/mergo"
 	"github.com/presslabs/controller-util/mergo/transformers"
 	"github.com/presslabs/controller-util/syncer"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlbackup"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlbackup"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
 const (
 	// RemoteStorageFinalizer is the finalizer name used when hardDelete policy is used
-	RemoteStorageFinalizer = "backups.mysql.presslabs.org/remote-storage"
+	RemoteStorageFinalizer = "backups.mysql.presslabs.org/remote-storage-cleanup"
+
+	// RemoteDeletionFailedEvent is the event that is set on the cluster when the cleanup job fails
+	RemoteDeletionFailedEvent = "RemoteDeletionFailed"
 )
 
 type deletionJobSyncer struct {
-	backup *mysqlbackup.MysqlBackup
-	opt    *options.Options
+	backup   *mysqlbackup.MysqlBackup
+	cluster  *mysqlcluster.MysqlCluster
+	opt      *options.Options
+	schema   *runtime.Scheme
+	recorder record.EventRecorder
 }
 
-// NewRemoteJobSyncer returns a job syncer for hard deletion job. The job which removes the backup
+// NewDeleteJobSyncer returns a job syncer for hard deletion job. The job which removes the backup
 // from remote storage.
-func NewRemoteJobSyncer(c client.Client, s *runtime.Scheme,
-	backup *mysqlbackup.MysqlBackup, opt *options.Options) syncer.Interface {
+func NewDeleteJobSyncer(c client.Client, s *runtime.Scheme, backup *mysqlbackup.MysqlBackup,
+	cluster *mysqlcluster.MysqlCluster, opt *options.Options, r record.EventRecorder) syncer.Interface {
 
 	job := &batch.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -54,17 +66,21 @@ func NewRemoteJobSyncer(c client.Client, s *runtime.Scheme,
 	}
 
 	jobSyncer := deletionJobSyncer{
-		backup: backup,
-		opt:    opt,
+		cluster:  cluster,
+		backup:   backup,
+		opt:      opt,
+		schema:   s,
+		recorder: r,
 	}
 
-	return syncer.NewObjectSyncer("Backup", backup.Unwrap(), job, c, s, jobSyncer.SyncFn)
+	return syncer.NewObjectSyncer("BackupCleaner", nil, job, c, s, jobSyncer.SyncFn)
 }
 
+// nolint: gocyclo
 func (s *deletionJobSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*batch.Job)
 
-	if s.backup.Spec.DeletePolicy == api.SoftDelete {
+	if s.backup.Spec.RemoteDeletePolicy == api.Retain {
 		// do nothing
 		return syncer.ErrIgnore
 	}
@@ -83,6 +99,10 @@ func (s *deletionJobSyncer) SyncFn(in runtime.Object) error {
 		return syncer.ErrIgnore
 	}
 
+	if len(s.backup.Spec.BackupURL) == 0 {
+		return fmt.Errorf("empty .spec.backupURL")
+	}
+
 	// check if the job is created and if not create it
 	if out.ObjectMeta.CreationTimestamp.IsZero() {
 		out.Labels = map[string]string{
@@ -95,11 +115,23 @@ func (s *deletionJobSyncer) SyncFn(in runtime.Object) error {
 		if err != nil {
 			return err
 		}
+
+		// explicit set owner reference on job because  the owner has set deletionTimestamp, at this point, and
+		// the syncer will not set it
+		err = controllerutil.SetControllerReference(s.backup.Unwrap(), out, s.schema)
+		if err != nil {
+			return err
+		}
 	}
 
 	completed, failed := getJobStatus(out)
-	if completed && !failed {
+	if completed {
 		removeFinalizer(s.backup.Unwrap(), RemoteStorageFinalizer)
+	}
+
+	// announce the cluster if deletion from remote storage failed
+	if failed {
+		s.recordWEventOnCluster(RemoteDeletionFailedEvent, "job failed")
 	}
 
 	return nil
@@ -107,7 +139,8 @@ func (s *deletionJobSyncer) SyncFn(in runtime.Object) error {
 
 func (s *deletionJobSyncer) ensurePodSpec() core.PodSpec {
 	return core.PodSpec{
-		Containers: s.ensureContainers(),
+		RestartPolicy: core.RestartPolicyNever,
+		Containers:    s.ensureContainers(),
 		ImagePullSecrets: []core.LocalObjectReference{
 			{Name: s.opt.ImagePullSecretName},
 		},
@@ -122,10 +155,27 @@ func (s *deletionJobSyncer) ensureContainers() []core.Container {
 			ImagePullPolicy: s.opt.ImagePullPolicy,
 			Args: []string{
 				"rclone", "--config=/etc/rclone.conf", "delete",
-				s.backup.Status.BackupURI,
+				bucketForRclone(s.backup.Spec.BackupURL),
+			},
+			EnvFrom: []core.EnvFromSource{
+				{
+					SecretRef: &core.SecretEnvSource{
+						LocalObjectReference: core.LocalObjectReference{
+							Name: s.backup.Spec.BackupSecretName,
+						},
+					},
+				},
 			},
 		},
 	}
+}
+
+func (s *deletionJobSyncer) recordWEventOnCluster(reason, msg string) {
+	s.recorder.Eventf(s.cluster, "Warning", reason, msg)
+}
+
+func bucketForRclone(name string) string {
+	return strings.Replace(name, "://", ":", 1)
 }
 
 func getJobStatus(job *batch.Job) (bool, bool) {

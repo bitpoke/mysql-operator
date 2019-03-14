@@ -27,6 +27,8 @@ import (
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/record"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlbackup"
@@ -36,14 +38,16 @@ import (
 
 var _ = Describe("MysqlBackup remove job syncer", func() {
 	var (
-		cluster *mysqlcluster.MysqlCluster
-		backup  *mysqlbackup.MysqlBackup
-		syncer  *deletionJobSyncer
+		cluster  *mysqlcluster.MysqlCluster
+		backup   *mysqlbackup.MysqlBackup
+		syncer   *deletionJobSyncer
+		recorder *record.FakeRecorder
 	)
 
 	BeforeEach(func() {
 		clusterName := fmt.Sprintf("cluster-%d", rand.Int31())
 		name := fmt.Sprintf("backup-%d", rand.Int31())
+		recorder = record.NewFakeRecorder(100)
 		ns := "default"
 
 		two := int32(2)
@@ -64,18 +68,21 @@ var _ = Describe("MysqlBackup remove job syncer", func() {
 		})
 
 		syncer = &deletionJobSyncer{
-			backup: backup,
-			opt:    options.GetOptions(),
+			cluster:  cluster,
+			backup:   backup,
+			opt:      options.GetOptions(),
+			recorder: recorder,
+			schema:   scheme.Scheme,
 		}
 	})
 
 	It("should skip job creation when no needed", func() {
 		delJob := &batch.Job{}
-		backup.Spec.DeletePolicy = api.SoftDelete
+		backup.Spec.RemoteDeletePolicy = api.Retain
 		// skip job creation because backup is set to soft delete
 		Expect(syncer.SyncFn(delJob)).To(Equal(syncerpkg.ErrIgnore))
 
-		backup.Spec.DeletePolicy = api.HardDelete
+		backup.Spec.RemoteDeletePolicy = api.Delete
 		// skip job creation because backup is not deleted
 		Expect(syncer.SyncFn(delJob)).To(Equal(syncerpkg.ErrIgnore))
 		Expect(backup.Finalizers).To(ContainElement(RemoteStorageFinalizer))
@@ -88,9 +95,9 @@ var _ = Describe("MysqlBackup remove job syncer", func() {
 		Expect(backup.Finalizers).ToNot(ContainElement(RemoteStorageFinalizer))
 	})
 
-	It("should create the job", func() {
+	It("should create the job and update backup finalizer", func() {
 		delJob := &batch.Job{}
-		backup.Spec.DeletePolicy = api.HardDelete
+		backup.Spec.RemoteDeletePolicy = api.Delete
 		deletionTime := metav1.NewTime(time.Now())
 		backup.DeletionTimestamp = &deletionTime
 		Expect(syncer.SyncFn(delJob)).To(Succeed())
@@ -107,6 +114,16 @@ var _ = Describe("MysqlBackup remove job syncer", func() {
 			batch.JobCondition{
 				Type:   batch.JobFailed,
 				Status: core.ConditionTrue,
+			},
+		}
+		Expect(syncer.SyncFn(delJob)).To(Succeed())
+		Expect(backup.Finalizers).ToNot(ContainElement(RemoteStorageFinalizer))
+		Expect(recorder.Events).To(Receive(ContainSubstring(RemoteDeletionFailedEvent)))
+
+		delJob.Status.Conditions = []batch.JobCondition{
+			batch.JobCondition{
+				Type:   batch.JobComplete,
+				Status: core.ConditionFalse,
 			},
 		}
 		Expect(syncer.SyncFn(delJob)).To(Succeed())

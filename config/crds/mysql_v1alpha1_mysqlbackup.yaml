@@ -45,9 +45,9 @@ spec:
             clusterName:
               description: ClustterName represents the cluster for which to take backup
               type: string
-            deletePolicy:
-              description: DeletePolicy the deletion policy that specify how to treat
-                the data from remote storage. By default it's used softDelete.
+            remoteDeletePolicy:
+              description: RemoteDeletePolicy the deletion policy that specify how
+                to treat the data from remote storage. By default it's used softDelete.
               type: string
           required:
           - clusterName

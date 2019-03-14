@@ -139,19 +139,6 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, fmt.Errorf("cluster name is not specified")
 	}
 
-	deletionJobSyncer := backupSyncer.NewRemoteJobSyncer(r.Client, r.scheme, backup, r.opt)
-	err = syncer.Sync(context.TODO(), deletionJobSyncer, r.recorder)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// if the backup is completed then skip the reconciliation
-	if backup.Status.Completed {
-		// silence skip it
-		log.V(1).Info("backup already completed", "name", backup.Name)
-		return reconcile.Result{}, nil
-	}
-
 	// get related cluster
 	var cluster *mysqlcluster.MysqlCluster
 	if cluster, err = r.getRelatedCluster(backup); err != nil {
@@ -161,18 +148,17 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 	// set defaults for the backup base on the related cluster
 	backup.SetDefaults(cluster)
 
-	// create the backup job syncer and run it
-	jobSyncer := backupSyncer.NewJobSyncer(r.Client, r.scheme, backup, cluster, r.opt)
-	err = syncer.Sync(context.TODO(), jobSyncer, r.recorder)
-	if err != nil {
+	syncers := []syncer.Interface{
+		backupSyncer.NewDeleteJobSyncer(r.Client, r.scheme, backup, cluster, r.opt, r.recorder),
+		backupSyncer.NewJobSyncer(r.Client, r.scheme, backup, cluster, r.opt),
+	}
+
+	if err = r.sync(context.TODO(), syncers); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// update spec if modified
-	if !reflect.DeepEqual(savedBackup, backup.Unwrap()) {
-		if err = r.Update(context.TODO(), backup.Unwrap()); err != nil {
-			return reconcile.Result{}, err
-		}
+	if err = r.updateBackup(savedBackup, backup); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
@@ -186,4 +172,22 @@ func (r *ReconcileMysqlBackup) getRelatedCluster(backup *mysqlbackup.MysqlBackup
 	}
 
 	return cluster, nil
+}
+
+func (r *ReconcileMysqlBackup) updateBackup(savedBackup *mysqlv1alpha1.MysqlBackup, backup *mysqlbackup.MysqlBackup) error {
+	if !reflect.DeepEqual(savedBackup, backup.Unwrap()) {
+		if err := r.Update(context.TODO(), backup.Unwrap()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *ReconcileMysqlBackup) sync(ctx context.Context, syncers []syncer.Interface) error {
+	for _, s := range syncers {
+		if err := syncer.Sync(ctx, s, r.recorder); err != nil {
+			return err
+		}
+	}
+	return nil
 }

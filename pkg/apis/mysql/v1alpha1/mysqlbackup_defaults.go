@@ -19,7 +19,7 @@ package v1alpha1
 // SetDefaults_MysqlBackup sets the defaults for a mysqlbackup object
 // nolint: golint
 func SetDefaults_MysqlBackup(b *MysqlBackup) {
-	if len(b.Spec.DeletePolicy) == 0 {
-		b.Spec.DeletePolicy = SoftDelete
+	if len(b.Spec.RemoteDeletePolicy) == 0 {
+		b.Spec.RemoteDeletePolicy = Retain
 	}
 }
