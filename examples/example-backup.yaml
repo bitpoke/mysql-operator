@@ -15,3 +15,6 @@ spec:
   ## specify a secret where to find credentials to access the
   ## bucket
   # backupSecretName: backup-secret
+
+  ## specify the remote deletion policy. It can be on of ["retain", "delete"]
+  # remoteDeletePolicy: retain

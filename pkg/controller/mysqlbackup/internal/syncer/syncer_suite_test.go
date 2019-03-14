@@ -18,13 +18,46 @@ limitations under the License.
 package syncer
 
 import (
+	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
+
+var t *envtest.Environment
+var cfg *rest.Config
+var c client.Client
 
 func TestSyncers(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecsWithDefaultAndCustomReporters(t, "Backup syncers suit", []Reporter{})
 }
+
+var _ = BeforeSuite(func() {
+	var err error
+
+	t = &envtest.Environment{
+		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "..", "..", "config", "crds")},
+	}
+
+	err = api.SchemeBuilder.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	cfg, err = t.Start()
+	Expect(err).NotTo(HaveOccurred())
+
+	c, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	Expect(err).NotTo(HaveOccurred())
+})
+
+var _ = AfterSuite(func() {
+	t.Stop()
+})
