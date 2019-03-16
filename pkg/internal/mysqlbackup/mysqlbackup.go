@@ -83,6 +83,6 @@ func (b *MysqlBackup) composeBackupURL(base string) string {
 	}
 
 	timestamp := time.Now().Format("2006-01-02T15:04:05")
-	fileName := fmt.Sprintf("/%s-%s.%s", b.Spec.ClusterName, timestamp, BackupSuffix)
+	fileName := fmt.Sprintf("/%s-%s.%s", b.GetName(), timestamp, BackupSuffix)
 	return base + fileName
 }
