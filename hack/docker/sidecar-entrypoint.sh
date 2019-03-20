@@ -25,7 +25,7 @@ storage_class = ${GCS_STORAGE_CLASS:-"MULTI_REGIONAL"}
 type = http
 url = ${HTTP_URL}
 [azure]
-type = azure blob storage
+type = azureblob
 account = ${AZUREBLOB_ACCOUNT}
 key = ${AZUREBLOB_KEY}
 EOF
