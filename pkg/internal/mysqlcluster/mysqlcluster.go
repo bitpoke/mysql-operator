@@ -62,10 +62,7 @@ func (c *MysqlCluster) GetLabels() labels.Set {
 	}
 
 	labels := labels.Set{
-		// TODO: remove those labels at major release and update selector labels
-		"app":           "mysql-operator",
-		"mysql_cluster": c.Name,
-
+		"mysql.presslabs.org/cluster":  c.Name,
 		"app.kubernetes.io/name":       "mysql",
 		"app.kubernetes.io/instance":   instance,
 		"app.kubernetes.io/version":    version,
@@ -83,8 +80,9 @@ func (c *MysqlCluster) GetLabels() labels.Set {
 // GetSelectorLabels returns the labels that will be used as selector
 func (c *MysqlCluster) GetSelectorLabels() labels.Set {
 	return labels.Set{
-		"app":           "mysql-operator",
-		"mysql_cluster": c.Name,
+		"app.kubernetes.io/name":       "mysql",
+		"mysql.presslabs.org/cluster":  c.Name,
+		"app.kubernetes.io/managed-by": "mysql.presslabs.org",
 	}
 }
 
@@ -169,11 +167,6 @@ func (c *MysqlCluster) GetMysqlImage() string {
 
 // UpdateSpec updates the cluster specs that need to be saved
 func (c *MysqlCluster) UpdateSpec() {
-	// TODO: when BackupURI is removed clear this
-	if len(c.Spec.BackupURL) == 0 {
-		c.Spec.BackupURL = c.Spec.BackupURI
-	}
-
 	// TODO: delete this when when inlined PVC is removed from spec.
 	if c.Spec.VolumeSpec.PersistentVolumeClaim == nil {
 		if c.Spec.VolumeSpec.HostPath == nil && c.Spec.VolumeSpec.EmptyDir == nil {

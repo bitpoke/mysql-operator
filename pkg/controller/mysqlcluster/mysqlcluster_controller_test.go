@@ -413,7 +413,7 @@ var _ = Describe("MysqlCluster controller", func() {
 				corev1.ReadWriteOnce,
 			}
 
-			cluster.Spec.BackupURI = backupURL
+			cluster.Spec.BackupURL = backupURL
 			cluster.Spec.VolumeSpec = api.VolumeSpec{
 				// old PVC field
 				PersistentVolumeClaimSpec: corev1.PersistentVolumeClaimSpec{
