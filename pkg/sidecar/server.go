@@ -79,6 +79,7 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Trailer", "Success")
 
 	// nolint: gosec
 	xtrabackup := exec.Command("xtrabackup", "--backup", "--slave-info", "--stream=xbstream",
@@ -112,13 +113,15 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	flusher.Flush()
-
 	if err := xtrabackup.Wait(); err != nil {
 		log.Error(err, "failed waiting for xtrabackup to finish")
 		http.Error(w, "xtrabackup failed", http.StatusInternalServerError)
 		return
 	}
+
+	// success
+	w.Header().Set("Success", "true")
+	flusher.Flush()
 }
 
 func (s *server) isAuthenticated(r *http.Request) bool {
@@ -136,4 +139,50 @@ func maxClients(h http.Handler, n int) http.Handler {
 
 		h.ServeHTTP(w, r)
 	})
+}
+
+// requestABackup connects to specified host and endpoint and gets the backup
+func requestABackup(cfg *Config, host, endpoint string) (*http.Response, error) {
+	log.Info("initialize a backup", "host", host, "endpoint", endpoint)
+
+	req, err := http.NewRequest("GET", fmt.Sprintf(
+		"http://%s:%d%s", host, serverPort, endpoint), nil)
+
+	if err != nil {
+		return nil, fmt.Errorf("fail to create request: %s", err)
+	}
+
+	// set authentification user and password
+	req.SetBasicAuth(cfg.BackupUser, cfg.BackupPassword)
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil || resp.StatusCode != 200 {
+		status := "unknown"
+		if resp != nil {
+			status = resp.Status
+		}
+		return nil, fmt.Errorf("fail to get backup: %s, code: %s", err, status)
+	}
+
+	return resp, nil
+}
+
+func checkBackupTrailers(resp *http.Response) error {
+	if values, ok := resp.Trailer["Success"]; !ok || !stringInSlice("true", values) {
+		// backup is failed, remove from remote
+		return fmt.Errorf("backup failed to be taken: no 'Success' trailer found")
+	}
+
+	return nil
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
