@@ -20,7 +20,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 
 	// add mysql driver
@@ -47,7 +46,7 @@ func runQuery(cfg *Config, q string, args ...interface{}) error {
 		}
 	}()
 
-	log.V(1).Info("running query", "query", q, "args", args)
+	log.V(1).Info("running query", "query", q)
 	if _, err := db.Exec(q, args...); err != nil {
 		return err
 	}
@@ -84,32 +83,6 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	return nil
-}
-
-// requestABackup connects to specified host and endpoint and gets the backup
-func requestABackup(cfg *Config, host, endpoint string) (io.Reader, error) {
-	log.Info("initialize a backup", "host", host, "endpoint", endpoint)
-
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d%s", host, serverPort, endpoint), nil)
-	if err != nil {
-		return nil, fmt.Errorf("fail to create request: %s", err)
-	}
-
-	// set authentification user and password
-	req.SetBasicAuth(cfg.BackupUser, cfg.BackupPassword)
-
-	client := &http.Client{}
-
-	resp, err := client.Do(req)
-	if err != nil || resp.StatusCode != 200 {
-		status := "unknown"
-		if resp != nil {
-			status = resp.Status
-		}
-		return nil, fmt.Errorf("fail to get backup: %s, code: %s", err, status)
-	}
-
-	return resp.Body, nil
 }
 
 // shouldBootstrapNode checks if the mysql data is at the first initialization

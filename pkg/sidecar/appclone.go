@@ -153,7 +153,7 @@ func cloneFromBucket(initBucket string) error {
 func cloneFromSource(cfg *Config, host string) error {
 	log.Info("cloning from node", "host", host)
 
-	backupBody, err := requestABackup(cfg, host, serverBackupEndpoint)
+	response, err := requestABackup(cfg, host, serverBackupEndpoint)
 	if err != nil {
 		return fmt.Errorf("fail to get backup: %s", err)
 	}
@@ -164,7 +164,7 @@ func cloneFromSource(cfg *Config, host string) error {
 	// nolint: gosec
 	xbstream := exec.Command("xbstream", "-x", "-C", dataDir)
 
-	xbstream.Stdin = backupBody
+	xbstream.Stdin = response.Body
 	xbstream.Stderr = os.Stderr
 
 	if err := xbstream.Start(); err != nil {
@@ -173,6 +173,10 @@ func cloneFromSource(cfg *Config, host string) error {
 
 	if err := xbstream.Wait(); err != nil {
 		return fmt.Errorf("xbstream wait error: %s", err)
+	}
+
+	if err := checkBackupTrailers(response); err != nil {
+		return err
 	}
 
 	return nil

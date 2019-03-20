@@ -31,8 +31,9 @@ func RunTakeBackupCommand(cfg *Config, srcHost, destBucket string) error {
 }
 
 func pushBackupFromTo(cfg *Config, srcHost, destBucket string) error {
+	tmpDestBucket := fmt.Sprintf("%s.tmp", destBucket)
 
-	backupBody, err := requestABackup(cfg, srcHost, serverBackupEndpoint)
+	response, err := requestABackup(cfg, srcHost, serverBackupEndpoint)
 	if err != nil {
 		return fmt.Errorf("getting backup: %s", err)
 	}
@@ -42,9 +43,9 @@ func pushBackupFromTo(cfg *Config, srcHost, destBucket string) error {
 
 	// nolint: gosec
 	rclone := exec.Command("rclone",
-		fmt.Sprintf("--config=%s", rcloneConfigFile), "rcat", destBucket)
+		fmt.Sprintf("--config=%s", rcloneConfigFile), "rcat", tmpDestBucket)
 
-	gzip.Stdin = backupBody
+	gzip.Stdin = response.Body
 	gzip.Stderr = os.Stderr
 	rclone.Stderr = os.Stderr
 
@@ -66,9 +67,31 @@ func pushBackupFromTo(cfg *Config, srcHost, destBucket string) error {
 
 	// wait for both commands to finish successful
 	for i := 1; i <= 2; i++ {
-		if err := <-errChan; err != nil {
+		if err = <-errChan; err != nil {
 			return err
 		}
+	}
+
+	if err = checkBackupTrailers(response); err != nil {
+		// backup failed so delete it from remote
+		log.Info("backup was partially taken", "trailers", response.Trailer)
+		return err
+	}
+
+	log.Info("backup was taken successfully now move, now move it to permanent URL")
+
+	// the backup was a success
+	// remove .tmp extension
+	// nolint: gosec
+	rcMove := exec.Command("rclone",
+		fmt.Sprintf("--config=%s", rcloneConfigFile), "moveto", tmpDestBucket, destBucket)
+
+	if err = rcMove.Start(); err != nil {
+		return fmt.Errorf("final move failed: %s", err)
+	}
+
+	if err = rcMove.Wait(); err != nil {
+		return fmt.Errorf("final move failed: %s", err)
 	}
 
 	return nil
