@@ -140,14 +140,14 @@ var _ = Describe("MysqlBackupCron cron job", func() {
 		})
 
 		It("should detect the running backup", func() {
-			Eventually(j.anyScheduledBackupRunning).Should(Equal(true))
+			Eventually(j.scheduledBackupsRunningCount).Should(Equal(1))
 		})
 
 		It("should not detect any running backup", func() {
 			backup.Status.Completed = true
 			Expect(c.Update(context.TODO(), backup)).To(Succeed())
 
-			Eventually(j.anyScheduledBackupRunning).Should(Equal(false))
+			Eventually(j.scheduledBackupsRunningCount).Should(Equal(0))
 		})
 	})
 })
