@@ -70,14 +70,7 @@ type MysqlClusterSpec struct {
 	// +optional
 	BackupSchedule string `json:"backupSchedule,omitempty"`
 
-	// Represents the location where to put backups.
-	// DEPRECATED: use BackupURL instead. This field will be dropped in next
-	// versions.
-	// +optional
-	BackupURI string `json:"backupUri,omitempty"`
-
 	// Represents an URL to the location where to put backups. This field is the
-	// same as backupUri.
 	// +optional
 	BackupURL string `json:"backupURL,omitempty"`
 

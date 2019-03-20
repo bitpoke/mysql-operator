@@ -124,13 +124,6 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 	// Set defaults on backup
 	r.scheme.Default(backup.Unwrap())
 
-	// migrate old backups to the new version
-	// TODO: remove this in version v0.3.0
-	if backup.Spec.BackupURL == "" && backup.Spec.BackupURI == "" && backup.Status.Completed && len(backup.Status.BackupURI) > 0 {
-		backup.Spec.BackupURL = backup.Status.BackupURI
-		return reconcile.Result{}, r.Update(context.TODO(), backup)
-	}
-
 	// save the backup for later check for diff
 	savedBackup := backup.Unwrap().DeepCopy()
 

@@ -288,22 +288,6 @@ var _ = Describe("MysqlBackup controller", func() {
 		AfterEach(func() {
 			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
 		})
-
-		It("should use backupURI as backupURL", func() {
-			backup.Spec.BackupURL = ""
-			backup.Spec.BackupURI = "gs://bucket/"
-			Expect(c.Create(context.TODO(), backup.Unwrap())).To(Succeed())
-			defer c.Delete(context.TODO(), backup.Unwrap())
-
-			// wait for a reconcile request
-			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-
-			Eventually(refreshFn(c, backupKey)).Should(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Spec": MatchFields(IgnoreExtras, Fields{
-					"BackupURL": ContainSubstring(backup.Spec.BackupURI),
-				}),
-			})))
-		})
 	})
 })
 

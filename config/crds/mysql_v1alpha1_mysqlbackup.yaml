@@ -36,11 +36,7 @@ spec:
             backupURL:
               description: BackupURL represents the URL to the backup location, this
                 can be partially specifyied. Default is used the one specified in
-                the cluster. Is the same as backupURI.
-              type: string
-            backupUri:
-              description: Specify an URI where to put the backup. This is deprecated
-                and will be removed in future releases. Use BackupURL instead.
+                the cluster.
               type: string
             clusterName:
               description: ClustterName represents the cluster for which to take backup
@@ -54,10 +50,6 @@ spec:
           type: object
         status:
           properties:
-            backupUri:
-              description: BackupURI represent the fully uri to the backup location
-                This field is deprecated and will be removed in future releases.
-              type: string
             completed:
               description: Complete marks the backup in final state
               type: boolean
