@@ -57,11 +57,7 @@ const (
 var (
 	// MysqlImageVersions is a map of supported mysql version and their image
 	MysqlImageVersions = map[string]string{
-		// TODO: this MySQL version, based on Debian, is DEPRECATED and will be removed in next
-		// major release of the operator.
-		// percona:5.7 based on debian
-		"5.7": "percona@sha256:c8b69b3c753cb04f1cbf8a4a1f295f51675761ee6368a47808a5205e2d45cfeb",
 		// percona:5.7.24 centos based image
-		"5.7-centos": "percona@sha256:b3b7fb177b416563c46fe012298e042ec1607cc0539ce6014146380b0d27b08c",
+		"5.7": "percona@sha256:b3b7fb177b416563c46fe012298e042ec1607cc0539ce6014146380b0d27b08c",
 	}
 )
