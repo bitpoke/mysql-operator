@@ -80,6 +80,32 @@ $ kubectl apply -f example-backup-secret.yaml
 `GCS_SERVICE_ACCOUNT_JSON_KEY` and `GCS_PROJECT_ID` must be base64 encoded.
 {{% /note %}}
 
+### Setup a backup to Azure Blob Storage
+You need to specify the `backupBucketURL` for the cluster to an URL like `azure://STORAGE_ACCOUNT`, and a secret.
+
+Create a file named `example-backup-secret.yaml` and copy into it the following YAML code:
+
+``` yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-cluster-backup-secret
+type: Opaque
+data:
+  AZUREBLOB_ACCOUNT: #
+  AZUREBLOB_KEY: #
+```
+
+Then run this command:
+
+``` shell
+$ kubectl apply -f example-backup-secret.yaml
+```
+
+{{% note %}}
+`AZUREBLOB_ACCOUNT` and `AZUREBLOB_KEY` must be base64 encoded.
+{{% /note %}}
+
 ### Requesting a backup
 
 You need to create a file named `example-backup.yaml` and copy into it the following YAML code:
