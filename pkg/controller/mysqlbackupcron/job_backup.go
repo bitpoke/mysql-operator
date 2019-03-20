@@ -48,8 +48,9 @@ func (j *job) Run() {
 	}
 
 	// check if a backup is running
-	if j.anyScheduledBackupRunning() {
-		log.Info("a scheduled backup already running, skip doing another one")
+	if j.scheduledBackupsRunningCount() > 0 {
+		log.V(1).Info("at least a backup is running",
+			"backups_len", j.scheduledBackupsRunningCount())
 		return
 	}
 
@@ -59,7 +60,7 @@ func (j *job) Run() {
 	}
 }
 
-func (j *job) anyScheduledBackupRunning() bool {
+func (j *job) scheduledBackupsRunningCount() int {
 	backupsList := &api.MysqlBackupList{}
 	// select all backups with labels recurrent=true and and not completed of the cluster
 	selector := j.backupSelector()
@@ -67,15 +68,10 @@ func (j *job) anyScheduledBackupRunning() bool {
 
 	if err := j.c.List(context.TODO(), selector, backupsList); err != nil {
 		log.Error(err, "failed getting backups", "selector", selector)
-		return false
+		return 0
 	}
 
-	if len(backupsList.Items) == 0 {
-		return false
-	}
-
-	log.V(1).Info("at least a backup is running", "backups", backupsList.Items)
-	return true
+	return len(backupsList.Items)
 }
 
 func (j *job) createBackup() (*api.MysqlBackup, error) {
