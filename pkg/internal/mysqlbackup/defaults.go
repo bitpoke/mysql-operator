@@ -22,12 +22,6 @@ import (
 
 // SetDefaults sets default for backup
 func (w *MysqlBackup) SetDefaults(cluster *mysqlcluster.MysqlCluster) {
-	// the source of truth is BackupURL if this is not set then use what is in
-	// BackupURI
-	if len(w.Spec.BackupURL) == 0 {
-		w.Spec.BackupURL = w.Spec.BackupURI
-	}
-
 	w.Spec.BackupURL = w.GetBackupURL(cluster)
 
 	if len(w.Spec.BackupSecretName) == 0 {

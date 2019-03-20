@@ -49,10 +49,6 @@ spec:
               description: Represents an URL to the location where to put backups.
                 This field is the same as backupUri.
               type: string
-            backupUri:
-              description: 'Represents the location where to put backups. DEPRECATED:
-                use BackupURL instead. This field will be dropped in next versions.'
-              type: string
             image:
               description: To specify the image that will be used for mysql server
                 container. If this is specified then the mysqlVersion is ignored.
