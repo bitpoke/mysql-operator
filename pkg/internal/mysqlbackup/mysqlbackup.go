@@ -63,10 +63,6 @@ func (b *MysqlBackup) GetBackupURL(cluster *mysqlcluster.MysqlCluster) string {
 	}
 
 	if len(cluster.Spec.BackupURL) == 0 {
-		cluster.Spec.BackupURL = cluster.Spec.BackupURI
-	}
-
-	if len(cluster.Spec.BackupURL) == 0 {
 		return ""
 	}
 	return b.composeBackupURL(cluster.Spec.BackupURL)
