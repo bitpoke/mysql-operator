@@ -70,8 +70,8 @@ func (s *jobSyncer) SyncFn(in runtime.Object) error {
 	}
 
 	if len(s.backup.GetBackupURL(s.cluster)) == 0 {
-		log.Info("can't get bucketURI", "cluster", s.cluster, "backup", s.backup)
-		return fmt.Errorf("can't get bucketURI")
+		log.Info("can't get backupURL", "cluster", s.cluster, "backup", s.backup)
+		return fmt.Errorf("can't get backupURL")
 	}
 
 	// check if job is already created an just update the status
