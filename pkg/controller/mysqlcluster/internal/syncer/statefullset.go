@@ -407,6 +407,9 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			"--database", HelperDbName,
 			"--table", "heartbeat",
 			"--defaults-file", fmt.Sprintf("%s/client.cnf", ConfVolumeMountPath),
+			// it's important to exit when exceeding more than 20 failed attempts otherwise
+			// pt-heartbeat will run forever using old connection.
+			"--fail-successive-errors=20",
 		},
 	)
 	heartbeat.Resources = ensureResources(containerHeartBeatName)
