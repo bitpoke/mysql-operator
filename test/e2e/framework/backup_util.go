@@ -106,5 +106,5 @@ func HaveBackupCond(condType api.BackupConditionType, status corev1.ConditionSta
 
 // GetNameForJob returns the job name of a backup
 func GetNameForJob(backup *api.MysqlBackup) string {
-	return fmt.Sprintf("%s-bjob", backup.Name)
+	return fmt.Sprintf("%s-backup", backup.Name)
 }
