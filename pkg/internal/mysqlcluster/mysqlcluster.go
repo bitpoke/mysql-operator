@@ -167,11 +167,5 @@ func (c *MysqlCluster) GetMysqlImage() string {
 
 // UpdateSpec updates the cluster specs that need to be saved
 func (c *MysqlCluster) UpdateSpec() {
-	// TODO: delete this when when inlined PVC is removed from spec.
-	if c.Spec.VolumeSpec.PersistentVolumeClaim == nil {
-		if c.Spec.VolumeSpec.HostPath == nil && c.Spec.VolumeSpec.EmptyDir == nil {
-			// pvc, hostPath and emptyDir not specified then set pvc init from inline
-			c.Spec.VolumeSpec.PersistentVolumeClaim = &c.Spec.VolumeSpec.PersistentVolumeClaimSpec
-		}
-	}
+	// nothing to do
 }

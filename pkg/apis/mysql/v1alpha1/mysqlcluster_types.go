@@ -70,7 +70,7 @@ type MysqlClusterSpec struct {
 	// +optional
 	BackupSchedule string `json:"backupSchedule,omitempty"`
 
-	// Represents an URL to the location where to put backups. This field is the
+	// Represents an URL to the location where to put backups.
 	// +optional
 	BackupURL string `json:"backupURL,omitempty"`
 
@@ -129,10 +129,6 @@ type PodSpec struct {
 // VolumeSpec is the desired spec for storing mysql data. Only one of its
 // members may be specified.
 type VolumeSpec struct {
-	// DEPRECATED: use `persistentVolumeCalim` field instead to set PVC
-	// specification
-	core.PersistentVolumeClaimSpec `json:",inline"`
-
 	// EmptyDir to use as data volume for mysql. EmptyDir represents a temporary
 	// directory that shares a pod's lifetime.
 	// +optional
