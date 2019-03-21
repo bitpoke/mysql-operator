@@ -136,10 +136,10 @@ func configureExporterUser(cfg *Config) error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
 
-	  CREATE USER IF NOT EXISTS ?@'localhost';
-	  ALTER USER ?@'localhost' IDENTIFIED BY ? WITH MAX_USER_CONNECTIONS 3;
+	  CREATE USER IF NOT EXISTS ?@'127.0.0.1';
+	  ALTER USER ?@'127.0.0.1' IDENTIFIED BY ? WITH MAX_USER_CONNECTIONS 3;
 
-	  GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO ?@'localhost';
+	  GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO ?@'127.0.0.1';
 	`
 
 	user := cfg.MetricsUser
