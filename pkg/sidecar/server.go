@@ -25,6 +25,12 @@ import (
 	"os/exec"
 )
 
+const (
+	backupStatusTrailer = "X-Backup-Status"
+	backupSuccessfull   = "Success"
+	backupFailed        = "Failed"
+)
+
 type server struct {
 	cfg *Config
 	http.Server
@@ -79,7 +85,7 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Trailer", "Success")
+	w.Header().Set("Trailer", backupStatusTrailer)
 
 	// nolint: gosec
 	xtrabackup := exec.Command("xtrabackup", "--backup", "--slave-info", "--stream=xbstream",
@@ -115,12 +121,13 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := xtrabackup.Wait(); err != nil {
 		log.Error(err, "failed waiting for xtrabackup to finish")
+		w.Header().Set(backupStatusTrailer, backupFailed)
 		http.Error(w, "xtrabackup failed", http.StatusInternalServerError)
 		return
 	}
 
 	// success
-	w.Header().Set("Success", "true")
+	w.Header().Set(backupStatusTrailer, backupSuccessfull)
 	flusher.Flush()
 }
 
@@ -170,7 +177,7 @@ func requestABackup(cfg *Config, host, endpoint string) (*http.Response, error) 
 }
 
 func checkBackupTrailers(resp *http.Response) error {
-	if values, ok := resp.Trailer["Success"]; !ok || !stringInSlice("true", values) {
+	if values, ok := resp.Trailer[backupStatusTrailer]; !ok || !stringInSlice(backupSuccessfull, values) {
 		// backup is failed, remove from remote
 		return fmt.Errorf("backup failed to be taken: no 'Success' trailer found")
 	}
