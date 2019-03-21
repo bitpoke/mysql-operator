@@ -47,7 +47,6 @@ spec:
               type: string
             backupURL:
               description: Represents an URL to the location where to put backups.
-                This field is the same as backupUri.
               type: string
             image:
               description: To specify the image that will be used for mysql server
@@ -161,23 +160,6 @@ spec:
             volumeSpec:
               description: PVC extra specifiaction
               properties:
-                accessModes:
-                  description: 'AccessModes contains the desired access modes the
-                    volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
-                  items:
-                    type: string
-                  type: array
-                dataSource:
-                  description: This field requires the VolumeSnapshotDataSource alpha
-                    feature gate to be enabled and currently VolumeSnapshot is the
-                    only supported data source. If the provisioner can support VolumeSnapshot
-                    data source, it will create a new volume and data will be restored
-                    to the volume at the same time. If the provisioner does not support
-                    VolumeSnapshot data source, volume will not be created and the
-                    failure will be reported as an event. In the future, we plan to
-                    support more data source types and the behavior of the provisioner
-                    may change.
-                  type: object
                 emptyDir:
                   description: EmptyDir to use as data volume for mysql. EmptyDir
                     represents a temporary directory that shares a pod's lifetime.
@@ -192,26 +174,6 @@ spec:
                     for mysql data. It has the highest level of precedence, followed
                     by HostPath and EmptyDir. And represents the PVC specification.
                   type: object
-                resources:
-                  description: 'Resources represents the minimum resources the volume
-                    should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
-                  type: object
-                selector:
-                  description: A label query over volumes to consider for binding.
-                  type: object
-                storageClassName:
-                  description: 'Name of the StorageClass required by the claim. More
-                    info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
-                  type: string
-                volumeMode:
-                  description: volumeMode defines what type of volume is required
-                    by the claim. Value of Filesystem is implied when not included
-                    in claim spec. This is a beta feature.
-                  type: string
-                volumeName:
-                  description: VolumeName is the binding reference to the PersistentVolume
-                    backing this claim.
-                  type: string
               type: object
           required:
           - secretName
