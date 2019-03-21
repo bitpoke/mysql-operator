@@ -367,7 +367,6 @@ var _ = Describe("MysqlCluster controller", func() {
 		var (
 			expectedRequest reconcile.Request
 			cluster         *mysqlcluster.MysqlCluster
-			clusterKey      types.NamespacedName
 			secret          *corev1.Secret
 		)
 
@@ -394,44 +393,12 @@ var _ = Describe("MysqlCluster controller", func() {
 				},
 			})
 
-			clusterKey = types.NamespacedName{
-				Name:      cluster.Name,
-				Namespace: cluster.Namespace,
-			}
-
 			Expect(c.Create(context.TODO(), secret)).To(Succeed())
 		})
 
 		AfterEach(func() {
 			c.Delete(context.TODO(), secret)
 			c.Delete(context.TODO(), cluster.Unwrap())
-		})
-
-		It("should update cluster new fields from the deprecated ones", func() {
-			backupURL := "gs://bucket/"
-			accessModes := []corev1.PersistentVolumeAccessMode{
-				corev1.ReadWriteOnce,
-			}
-
-			cluster.Spec.BackupURL = backupURL
-			cluster.Spec.VolumeSpec = api.VolumeSpec{
-				// old PVC field
-				PersistentVolumeClaimSpec: corev1.PersistentVolumeClaimSpec{
-					AccessModes: accessModes,
-				},
-			}
-
-			// crete cluster
-			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
-			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-			// one extra reconcile event because of spec updates
-			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-
-			Expect(c.Get(context.TODO(), clusterKey, cluster.Unwrap())).To(Succeed())
-			Expect(cluster.Spec.VolumeSpec.PersistentVolumeClaim.AccessModes).To(
-				Equal(accessModes))
-			Expect(cluster.Spec.BackupURL).To(Equal(backupURL))
 		})
 
 		It("should set emptyDir as data volume", func() {
