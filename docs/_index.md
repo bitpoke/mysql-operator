@@ -1,7 +1,7 @@
 ---
-title: Getting started
+title:  MySQL Operator
 linktitle: Getting started with MySQL operator
-description: How to setup a cluster with MySQL operator
+description:  The MySQL Kubernetes Operator manages all the necessary resources for deploying and managing a highly available MySQL cluster.
 categories: [mysql operator]
 keywords: [mysql operator, cluster, getting-started]
 menu:
@@ -13,6 +13,8 @@ aliases: []
 toc: true
 related: true
 layout: project
+logo: mysql_operator
+syntax: golang
 ---
 
 Deploying and using the MySQL operator requires for it to have access to a Kubernetes cluster and to
@@ -64,7 +66,7 @@ data:
   # root password is required to be specified
   ROOT_PASSWORD: bm90LXNvLXNlY3VyZQ==
 ```
-#### Note 
+#### Note
 `ROOT_PASSWORD` must be base64 encoded.
 
 Now, to create a cluster you need just a simple YAML file that defines it. An example can be found
@@ -82,7 +84,7 @@ spec:
   secretName: my-secret
 ```
 
-To deploy the cluster, run: 
+To deploy the cluster, run:
 
 ```shell
 kubectl apply -f example-cluster-secret.yaml
@@ -142,7 +144,7 @@ data:
   # S3_ENDPOINT:
 ```
 
-Then run this command: 
+Then run this command:
 
 ```yaml
 apiVersion: v1
@@ -151,11 +153,11 @@ metadata:
   name: my-cluster-backup-secret
 type: Opaque
 data:
-  GCS_SERVICE_ACCOUNT_JSON_KEY: # 
+  GCS_SERVICE_ACCOUNT_JSON_KEY: #
   GCS_PROJECT_ID: #
 ```
 
-Then run this command: 
+Then run this command:
 
 ```shell
 kubectl apply -f example-backup-secret.yaml
@@ -180,7 +182,7 @@ spec:
 Run the following command:
 
 ```shell
-kubectl apply -f example-backup.yaml 
+kubectl apply -f example-backup.yaml
 ```
 
 You need to specify the `backupBucketUri` for the corresponding cluster to an URI like
@@ -199,7 +201,7 @@ spec:
   backupUri: gs://pl-test-mysql-operator/
 ```
 
-Then run the following command: 
+Then run the following command:
 
 ```shell
 kubectl apply -f example-cluster.yaml
