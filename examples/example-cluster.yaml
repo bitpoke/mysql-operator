@@ -6,7 +6,7 @@ spec:
   replicas: 2
   secretName: my-secret
   # mysqlVersion: 5.7
-  # initBucketURI: gs://bucket_name/backup.xtrabackup.gz
+  # initBucketURL: gs://bucket_name/backup.xtrabackup.gz
   # initBucketSecretName:
 
   ## PodDisruptionBudget
