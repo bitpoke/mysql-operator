@@ -31,7 +31,7 @@ var _ = Describe("Test sidecar configs", func() {
 			Hostname:       "cluster-mysql-0",
 			ClusterName:    "cluster",
 			Namespace:      "default",
-			ServiceName:    "cluster-mysql-nodes",
+			ServiceName:    "mysql",
 			BackupUser:     "backup-user",
 			BackupPassword: "backup-password",
 		}
@@ -45,7 +45,7 @@ var _ = Describe("Test sidecar configs", func() {
 	})
 
 	It("should get the default master", func() {
-		Expect(cfg.MasterFQDN()).To(Equal("cluster-mysql-0.cluster-mysql-nodes.default"))
+		Expect(cfg.MasterFQDN()).To(Equal("cluster-mysql-0.mysql.default"))
 	})
 
 	It("should determine the node role", func() {
