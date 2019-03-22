@@ -126,12 +126,6 @@ var _ = Describe("MysqlCluster controller", func() {
 				},
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      fmt.Sprintf("%s-mysql-nodes", name),
-						Namespace: cluster.Namespace,
-					},
-				},
-				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-mysql-master", name),
 						Namespace: cluster.Namespace,
 					},
@@ -201,7 +195,7 @@ var _ = Describe("MysqlCluster controller", func() {
 				Eventually(func() error { return c.Get(context.TODO(), key, obj) }, timeout).Should(Succeed())
 			},
 			Entry("reconciles the statefulset", "%s-mysql", &appsv1.StatefulSet{}),
-			Entry("reconciles the headless service", "%s-mysql-nodes", &corev1.Service{}),
+			//Entry("reconciles the headless service", "mysql", &corev1.Service{}),
 			Entry("reconciles the master service", "%s-mysql-master", &corev1.Service{}),
 			Entry("reconciles the config map", "%s-mysql", &corev1.ConfigMap{}),
 			Entry("reconciles the pod disruption budget", "%s-mysql", &policyv1beta1.PodDisruptionBudget{}),

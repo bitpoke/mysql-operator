@@ -26,6 +26,11 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
+const (
+	// HeadlessSVCName is the name of the headless service that is commonly used for all clusters
+	HeadlessSVCName = "mysql"
+)
+
 // MysqlCluster is the wrapper for api.MysqlCluster type
 type MysqlCluster struct {
 	*api.MysqlCluster
@@ -62,7 +67,8 @@ func (c *MysqlCluster) GetLabels() labels.Set {
 	}
 
 	labels := labels.Set{
-		"mysql.presslabs.org/cluster":  c.Name,
+		"mysql.presslabs.org/cluster": c.Name,
+
 		"app.kubernetes.io/name":       "mysql",
 		"app.kubernetes.io/instance":   instance,
 		"app.kubernetes.io/version":    version,
@@ -80,8 +86,9 @@ func (c *MysqlCluster) GetLabels() labels.Set {
 // GetSelectorLabels returns the labels that will be used as selector
 func (c *MysqlCluster) GetSelectorLabels() labels.Set {
 	return labels.Set{
+		"mysql.presslabs.org/cluster": c.Name,
+
 		"app.kubernetes.io/name":       "mysql",
-		"mysql.presslabs.org/cluster":  c.Name,
 		"app.kubernetes.io/managed-by": "mysql.presslabs.org",
 	}
 }
@@ -117,7 +124,7 @@ func GetNameForResource(name ResourceName, clusterName string) string {
 	case MasterService:
 		return fmt.Sprintf("%s-mysql-master", clusterName)
 	case HeadlessSVC:
-		return fmt.Sprintf("%s-mysql-nodes", clusterName)
+		return HeadlessSVCName
 	default:
 		return fmt.Sprintf("%s-mysql", clusterName)
 	}

@@ -19,6 +19,7 @@ package mysqlcluster
 import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -35,11 +36,14 @@ func NewHeadlessSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 		},
 	}
 
-	return syncer.NewObjectSyncer("HeadlessSVC", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
+	return syncer.NewObjectSyncer("HeadlessSVC", nil, obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*core.Service)
 
 		out.Spec.ClusterIP = "None"
-		out.Spec.Selector = cluster.GetSelectorLabels()
+		out.Spec.Selector = labels.Set{
+			"app.kubernetes.io/name":       "mysql",
+			"app.kubernetes.io/managed-by": "mysql.presslabs.org",
+		}
 		if len(out.Spec.Ports) != 2 {
 			out.Spec.Ports = make([]core.ServicePort, 2)
 		}
