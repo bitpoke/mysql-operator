@@ -191,10 +191,10 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		Value: s.opt.OrchestratorURI,
 	})
 
-	if len(s.cluster.Spec.InitBucketURI) > 0 && name == containerCloneName {
+	if len(s.cluster.Spec.InitBucketURL) > 0 && name == containerCloneName {
 		env = append(env, core.EnvVar{
 			Name:  "INIT_BUCKET_URI",
-			Value: s.cluster.Spec.InitBucketURI,
+			Value: s.cluster.Spec.InitBucketURL,
 		})
 	}
 
