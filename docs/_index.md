@@ -121,7 +121,7 @@ Backups are stored on object storage services like S3 or Google Cloud Storage. I
 
 ### Setup a backup on S3
 
-You need to specify the `backupBucketUri` for the cluster to an URI like `s3://BUCKET_NAME`, and a secret.
+You need to specify the `backupURL` for the cluster to an URL like `s3://BUCKET_NAME/cluster-name/`, and a secret.
 
 ```yaml
 apiVersion: v1
@@ -185,8 +185,8 @@ Run the following command:
 kubectl apply -f example-backup.yaml
 ```
 
-You need to specify the `backupBucketUri` for the corresponding cluster to an URI like
-`gs://BUCKET_NAME` and `backupSecretName`. Open the file named `example-cluster.yaml` and copy it into
+You need to specify the `backupURL` for the corresponding cluster to an URL like
+`gs://BUCKET_NAME/` and `backupSecretName`. Open the file named `example-cluster.yaml` and copy it into
  the following YAML code:
 
 ```yaml
@@ -198,7 +198,7 @@ spec:
   replicas: 2
   secretName: my-secret
   backupSecretName: my-cluster-backup-secret
-  backupUri: gs://pl-test-mysql-operator/
+  backupURL: gs://pl-test-mysql-operator/
 ```
 
 Then run the following command:

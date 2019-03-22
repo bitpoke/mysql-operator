@@ -53,7 +53,10 @@ type MysqlClusterSpec struct {
 	// +optional
 	Image string `json:"image,omitempty"`
 
-	// A bucket URI that contains a xtrabackup to initialize the mysql database.
+	// A bucket URL that contains a xtrabackup to initialize the mysql database.
+	// +optional
+	InitBucketURL string `json:"initBucketURL,omitempty"`
+	// Same as InitBucketURL but is DEPRECATED
 	// +optional
 	InitBucketURI        string `json:"initBucketURI,omitempty"`
 	InitBucketSecretName string `json:"initBucketSecretName,omitempty"`
