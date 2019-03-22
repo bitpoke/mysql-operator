@@ -19,6 +19,7 @@ package fake
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -173,12 +174,11 @@ func (o *OrcFakeClient) CheckDiscovered(key string) bool {
 }
 
 func (o *OrcFakeClient) getHostClusterAlias(host string) string {
-	// input: cluster-1943285891-mysql-0.cluster-1943285891-mysql-nodes.default
+	// input: cluster-1943285891-mysql-0.mysql.default
 	// output: cluster-1943285891.default
-	s := strings.Split(host, ".")
-	ns := s[2]
-	cluster := strings.Replace(s[1], "-mysql-nodes", "", 1)
-	return fmt.Sprintf("%s.%s", cluster, ns)
+	re := regexp.MustCompile(`^([\w-]+)-mysql-\d*.mysql.([\w-]+)$`)
+	values := re.FindStringSubmatch(host)
+	return fmt.Sprintf("%s.%s", values[1], values[2])
 }
 
 // Discover register a host into orchestrator
