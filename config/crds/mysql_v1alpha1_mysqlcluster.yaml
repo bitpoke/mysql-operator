@@ -54,8 +54,8 @@ spec:
               type: string
             initBucketSecretName:
               type: string
-            initBucketURI:
-              description: A bucket URI that contains a xtrabackup to initialize the
+            initBucketURL:
+              description: A bucket URL that contains a xtrabackup to initialize the
                 mysql database.
               type: string
             maxSlaveLatency:

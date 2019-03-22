@@ -129,7 +129,7 @@ var _ = Describe("Mysql backups tests", func() {
 			// create cluster
 			cl := framework.NewCluster(name, f.Namespace.Name)
 			cl.Spec.InitBucketSecretName = backupSecret.Name
-			cl.Spec.InitBucketURI = backup.Spec.BackupURL
+			cl.Spec.InitBucketURL = backup.Spec.BackupURL
 			Expect(f.Client.Create(context.TODO(), cl)).To(Succeed(),
 				"failed to create cluster '%s'", cluster.Name)
 
