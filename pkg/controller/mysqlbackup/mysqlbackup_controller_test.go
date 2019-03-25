@@ -61,10 +61,10 @@ var _ = Describe("MysqlBackup controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 		c = mgr.GetClient()
 
-		recFn, requests = SetupTestReconcile(newReconciler(mgr))
+		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr))
 		Expect(add(mgr, recFn)).To(Succeed())
 
-		stop = StartTestManager(mgr)
+		stop = testutil.StartTestManager(mgr)
 	})
 
 	AfterEach(func() {
@@ -120,11 +120,11 @@ var _ = Describe("MysqlBackup controller", func() {
 			// create a cluster with 2 nodes
 			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
 			cluster.Status.Nodes = []api.NodeStatus{
-				api.NodeStatus{
+				{
 					Name:       cluster.GetPodHostname(0),
 					Conditions: testutil.NodeConditions(true, false, false, false),
 				},
-				api.NodeStatus{
+				{
 					Name:       cluster.GetPodHostname(1),
 					Conditions: testutil.NodeConditions(false, true, false, true),
 				},
@@ -173,7 +173,7 @@ var _ = Describe("MysqlBackup controller", func() {
 
 			// update job as completed
 			job.Status.Conditions = []batch.JobCondition{
-				batch.JobCondition{
+				{
 					Type:   batch.JobComplete,
 					Status: core.ConditionTrue,
 				},
@@ -194,11 +194,11 @@ var _ = Describe("MysqlBackup controller", func() {
 
 			// update job as completed and failed
 			job.Status.Conditions = []batch.JobCondition{
-				batch.JobCondition{
+				{
 					Type:   batch.JobComplete,
 					Status: core.ConditionTrue,
 				},
-				batch.JobCondition{
+				{
 					Type:   batch.JobFailed,
 					Status: core.ConditionTrue,
 				},

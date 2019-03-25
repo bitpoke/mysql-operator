@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/imdario/mergo"
-	"github.com/presslabs/controller-util/mergo/transformers"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -30,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/presslabs/controller-util/mergo/transformers"
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
@@ -143,8 +143,23 @@ func (s *sfsSyncer) ensureContainer(name, image string, args []string) core.Cont
 	}
 }
 
+func (s *sfsSyncer) envVarFromSecret(name, key string, opt bool) core.EnvVar {
+	env := core.EnvVar{
+		Name: name,
+		ValueFrom: &core.EnvVarSource{
+			SecretKeyRef: &core.SecretKeySelector{
+				LocalObjectReference: core.LocalObjectReference{
+					Name: s.cluster.Spec.SecretName,
+				},
+				Key:      key,
+				Optional: &opt,
+			},
+		},
+	}
+	return env
+}
+
 func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
-	boolTrue := true
 	env := []core.EnvVar{}
 
 	env = append(env, core.EnvVar{
@@ -200,105 +215,20 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 
 	switch name {
 	case containerExporterName:
-		env = append(env, core.EnvVar{
-			Name: "USER",
-			ValueFrom: &core.EnvVarSource{
-				SecretKeyRef: &core.SecretKeySelector{
-					LocalObjectReference: core.LocalObjectReference{
-						Name: s.cluster.Spec.SecretName,
-					},
-					Key: "METRICS_EXPORTER_USER",
-				},
-			},
-		})
-		env = append(env, core.EnvVar{
-			Name: "PASSWORD",
-			ValueFrom: &core.EnvVarSource{
-				SecretKeyRef: &core.SecretKeySelector{
-					LocalObjectReference: core.LocalObjectReference{
-						Name: s.cluster.Spec.SecretName,
-					},
-					Key: "METRICS_EXPORTER_PASSWORD",
-				},
-			},
-		})
+		env = append(env, s.envVarFromSecret("USER", "METRICS_EXPORTER_USER", false))
+		env = append(env, s.envVarFromSecret("PASSWORD", "METRICS_EXPORTER_PASSWORD", false))
 		env = append(env, core.EnvVar{
 			Name:  "DATA_SOURCE_NAME",
 			Value: fmt.Sprintf("$(USER):$(PASSWORD)@(127.0.0.1:%d)/", MysqlPort),
 		})
 	case containerMysqlName:
-		env = append(env, core.EnvVar{
-			Name: "MYSQL_ROOT_PASSWORD",
-			ValueFrom: &core.EnvVarSource{
-				SecretKeyRef: &core.SecretKeySelector{
-					LocalObjectReference: core.LocalObjectReference{
-						Name: s.cluster.Spec.SecretName,
-					},
-					Key: "ROOT_PASSWORD",
-				},
-			},
-		})
-		env = append(env, core.EnvVar{
-			Name: "MYSQL_USER",
-			ValueFrom: &core.EnvVarSource{
-				SecretKeyRef: &core.SecretKeySelector{
-					LocalObjectReference: core.LocalObjectReference{
-						Name: s.cluster.Spec.SecretName,
-					},
-					Key:      "USER",
-					Optional: &boolTrue,
-				},
-			},
-		})
-		env = append(env, core.EnvVar{
-			Name: "MYSQL_PASSWORD",
-			ValueFrom: &core.EnvVarSource{
-				SecretKeyRef: &core.SecretKeySelector{
-					LocalObjectReference: core.LocalObjectReference{
-						Name: s.cluster.Spec.SecretName,
-					},
-					Key:      "PASSWORD",
-					Optional: &boolTrue,
-				},
-			},
-		})
-		env = append(env, core.EnvVar{
-			Name: "MYSQL_DATABASE",
-			ValueFrom: &core.EnvVarSource{
-				SecretKeyRef: &core.SecretKeySelector{
-					LocalObjectReference: core.LocalObjectReference{
-						Name: s.cluster.Spec.SecretName,
-					},
-					Key:      "DATABASE",
-					Optional: &boolTrue,
-				},
-			},
-		})
+		env = append(env, s.envVarFromSecret("MYSQL_ROOT_PASSWORD", "ROOT_PASSWORD", false))
+		env = append(env, s.envVarFromSecret("MYSQL_USER", "USER", true))
+		env = append(env, s.envVarFromSecret("MYSQL_PASSWORD", "PASSWORD", true))
+		env = append(env, s.envVarFromSecret("MYSQL_DATABASE", "DATABASE", true))
 	case containerCloneName:
-		env = append(env, core.EnvVar{
-			Name: "MYSQL_BACKUP_USER",
-			ValueFrom: &core.EnvVarSource{
-				SecretKeyRef: &core.SecretKeySelector{
-					LocalObjectReference: core.LocalObjectReference{
-						Name: s.cluster.Spec.SecretName,
-					},
-					Key:      "BACKUP_USER",
-					Optional: &boolTrue,
-				},
-			},
-		})
-		env = append(env, core.EnvVar{
-			Name: "MYSQL_BACKUP_PASSWORD",
-			ValueFrom: &core.EnvVarSource{
-				SecretKeyRef: &core.SecretKeySelector{
-					LocalObjectReference: core.LocalObjectReference{
-						Name: s.cluster.Spec.SecretName,
-					},
-					Key:      "BACKUP_PASSWORD",
-					Optional: &boolTrue,
-				},
-			},
-		})
+		env = append(env, s.envVarFromSecret("MYSQL_BACKUP_USER", "BACKUP_USER", true))
+		env = append(env, s.envVarFromSecret("MYSQL_BACKUP_PASSWORD", "BACKUP_PASSWORD", true))
 	}
 
 	return env
@@ -498,7 +428,7 @@ func (s *sfsSyncer) ensureVolumeClaimTemplates(in []core.PersistentVolumeClaim) 
 		trueVar := true
 
 		data.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
-			metav1.OwnerReference{
+			{
 				APIVersion: api.SchemeGroupVersion.String(),
 				Kind:       "MysqlCluster",
 				Name:       s.cluster.Name,
@@ -543,11 +473,11 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 	switch name {
 	case containerInitName:
 		return []core.VolumeMount{
-			core.VolumeMount{
+			{
 				Name:      confVolumeName,
 				MountPath: ConfVolumeMountPath,
 			},
-			core.VolumeMount{
+			{
 				Name:      confMapVolumeName,
 				MountPath: ConfMapVolumeMountPath,
 			},
@@ -555,11 +485,11 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 
 	case containerCloneName, containerMysqlName, containerSidecarName:
 		return []core.VolumeMount{
-			core.VolumeMount{
+			{
 				Name:      confVolumeName,
 				MountPath: ConfVolumeMountPath,
 			},
-			core.VolumeMount{
+			{
 				Name:      dataVolumeName,
 				MountPath: DataVolumeMountPath,
 			},
@@ -567,7 +497,7 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 
 	case containerHeartBeatName, containerKillerName:
 		return []core.VolumeMount{
-			core.VolumeMount{
+			{
 				Name:      confVolumeName,
 				MountPath: ConfVolumeMountPath,
 			},

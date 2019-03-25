@@ -57,7 +57,7 @@ var _ = Describe("MysqlBackupCron cron job", func() {
 		// NOTE: field indexer should be added before starting the manager
 		Expect(addBackupFieldIndexers(mgr)).To(Succeed())
 
-		stop = StartTestManager(mgr)
+		stop = testutil.StartTestManager(mgr)
 
 		clusterName = fmt.Sprintf("cl-%d", rand.Int31())
 		namespace = "default"
