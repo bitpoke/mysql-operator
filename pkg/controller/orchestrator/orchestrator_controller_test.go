@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 	fakeOrc "github.com/presslabs/mysql-operator/pkg/orchestrator/fake"
@@ -76,10 +77,10 @@ var _ = Describe("Orchestrator controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 		c = mgr.GetClient()
 
-		recFn, requests = SetupTestReconcile(newReconciler(mgr, orcClient))
+		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, orcClient))
 		Expect(add(mgr, recFn)).To(Succeed())
 
-		stop = StartTestManager(mgr)
+		stop = testutil.StartTestManager(mgr)
 	})
 
 	AfterEach(func() {
@@ -164,9 +165,9 @@ var _ = Describe("Orchestrator controller", func() {
 			mgr, err := manager.New(cfg, manager.Options{})
 			Expect(err).NotTo(HaveOccurred())
 			c = mgr.GetClient()
-			recFn, requests = SetupTestReconcile(newReconciler(mgr, orcClient))
+			recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, orcClient))
 			Expect(add(mgr, recFn)).To(Succeed())
-			stop = StartTestManager(mgr)
+			stop = testutil.StartTestManager(mgr)
 
 			// wait a second for a request
 			Consistently(requests, noReconcileTime).ShouldNot(Receive(Equal(expectedRequest)))

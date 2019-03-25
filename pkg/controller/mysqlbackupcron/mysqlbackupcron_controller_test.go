@@ -66,10 +66,10 @@ var _ = Describe("MysqlBackupCron controller", func() {
 		Expect(err).To(Succeed())
 		c = mgr.GetClient()
 
-		recFn, requests = SetupTestReconcile(newReconciler(mgr, cron))
+		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, cron))
 		Expect(add(mgr, recFn)).To(Succeed())
 
-		stop = StartTestManager(mgr)
+		stop = testutil.StartTestManager(mgr)
 	})
 
 	AfterEach(func() {
