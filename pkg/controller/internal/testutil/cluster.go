@@ -24,12 +24,12 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
@@ -55,22 +55,22 @@ func NodeConditions(master, replicating, lagged, readOnly bool) []api.NodeCondit
 
 	t := metav1.NewTime(time.Now())
 	return []api.NodeCondition{
-		api.NodeCondition{
+		{
 			Type:               api.NodeConditionMaster,
 			Status:             masterCond,
 			LastTransitionTime: t,
 		},
-		api.NodeCondition{
+		{
 			Type:               api.NodeConditionReplicating,
 			Status:             replicatingCond,
 			LastTransitionTime: t,
 		},
-		api.NodeCondition{
+		{
 			Type:               api.NodeConditionLagged,
 			Status:             laggedCond,
 			LastTransitionTime: t,
 		},
-		api.NodeCondition{
+		{
 			Type:               api.NodeConditionReadOnly,
 			Status:             readOnlyCond,
 			LastTransitionTime: t,
