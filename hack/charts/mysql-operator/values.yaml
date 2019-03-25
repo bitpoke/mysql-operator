@@ -26,6 +26,8 @@ affinity: {}
 
 extraArgs: []
 
+podSecurityPolicy: false
+
 rbac:
   create: true
   serviceAccountName: default

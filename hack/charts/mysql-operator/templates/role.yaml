@@ -1,0 +1,12 @@
+{{- if .Values.podSecurityPolicy }}
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: mysql-operator
+rules:
+- apiGroups: ['policy']
+  resources: ['podsecuritypolicies']
+  verbs:     ['use']
+  resourceNames:
+  - mysql-operator
+{{- end }}
