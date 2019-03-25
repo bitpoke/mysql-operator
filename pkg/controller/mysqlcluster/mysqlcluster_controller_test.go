@@ -40,7 +40,6 @@ import (
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
-	util "github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
@@ -69,10 +68,10 @@ var _ = Describe("MysqlCluster controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 		c = mgr.GetClient()
 
-		recFn, requests = SetupTestReconcile(newReconciler(mgr))
+		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr))
 		Expect(add(mgr, recFn)).To(Succeed())
 
-		stop = StartTestManager(mgr)
+		stop = testutil.StartTestManager(mgr)
 	})
 
 	AfterEach(func() {
@@ -253,7 +252,7 @@ var _ = Describe("MysqlCluster controller", func() {
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 				// check ready nodes are updated
-				Eventually(util.RefreshFn(c, cluster.Unwrap())).Should(util.HaveClusterStatusReadyNodes(2))
+				Eventually(testutil.RefreshFn(c, cluster.Unwrap())).Should(testutil.HaveClusterStatusReadyNodes(2))
 			})
 			It("should label pods as healthy and as master accordingly", func() {
 				pod0 := getPod(cluster, 0)
@@ -487,7 +486,7 @@ func getPod(cluster *mysqlcluster.MysqlCluster, index int) *corev1.Pod {
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:  "dummy",
 					Image: "dummy",
 				},
@@ -511,17 +510,17 @@ func nodeStatusForPod(cluster *mysqlcluster.MysqlCluster, pod *corev1.Pod, maste
 	return api.NodeStatus{
 		Name: name,
 		Conditions: []api.NodeCondition{
-			api.NodeCondition{
+			{
 				Type:               api.NodeConditionMaster,
 				Status:             boolToStatus(master),
 				LastTransitionTime: metav1.NewTime(t),
 			},
-			api.NodeCondition{
+			{
 				Type:               api.NodeConditionLagged,
 				Status:             boolToStatus(lagged),
 				LastTransitionTime: metav1.NewTime(t),
 			},
-			api.NodeCondition{
+			{
 				Type:               api.NodeConditionReplicating,
 				Status:             boolToStatus(replicating),
 				LastTransitionTime: metav1.NewTime(t),

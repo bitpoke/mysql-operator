@@ -14,17 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//nolint: golint
 package testutil
 
 import (
 	"io"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	// loggging
 	"github.com/go-logr/logr"
 
-	utilLog "github.com/presslabs/controller-util/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	utilLog "github.com/presslabs/controller-util/log"
 )
 
 const (
@@ -46,4 +52,26 @@ func DrainChan(requests <-chan reconcile.Request) {
 // NewTestLogger returns a logger good for tests
 func NewTestLogger(w io.Writer) logr.Logger {
 	return utilLog.ZapLoggerTo(w, true)
+}
+
+// SetupTestReconcile returns a reconcile.Reconcile implementation that delegates to inner and
+// writes the request to requests after Reconcile is finished.
+func SetupTestReconcile(inner reconcile.Reconciler) (reconcile.Reconciler, chan reconcile.Request) {
+	requests := make(chan reconcile.Request)
+	fn := reconcile.Func(func(req reconcile.Request) (reconcile.Result, error) {
+		result, err := inner.Reconcile(req)
+		requests <- req
+		return result, err
+	})
+	return fn, requests
+}
+
+// StartTestManager adds recFn
+func StartTestManager(mgr manager.Manager) chan struct{} {
+	stop := make(chan struct{})
+	go func() {
+		defer GinkgoRecover()
+		Expect(mgr.Start(stop)).NotTo(HaveOccurred())
+	}()
+	return stop
 }
