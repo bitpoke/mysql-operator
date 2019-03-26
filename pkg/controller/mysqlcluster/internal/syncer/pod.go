@@ -73,7 +73,7 @@ func (s *podSyncer) SyncFn(in runtime.Object) error {
 	lagged := s.cluster.GetNodeCondition(s.hostname, api.NodeConditionLagged)
 
 	if master == nil {
-		return fmt.Errorf("master status not set for all conditions")
+		return fmt.Errorf("master status condition not set")
 	}
 
 	isMaster := master.Status == core.ConditionTrue
