@@ -171,7 +171,9 @@ func (s *deletionJobSyncer) ensureContainers() []core.Container {
 }
 
 func (s *deletionJobSyncer) recordWEventOnCluster(reason, msg string) {
-	s.recorder.Eventf(s.cluster, "Warning", reason, msg)
+	if s.cluster != nil {
+		s.recorder.Eventf(s.cluster, "Warning", reason, msg)
+	}
 }
 
 func bucketForRclone(name string) string {
