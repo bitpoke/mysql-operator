@@ -97,6 +97,10 @@ func (c *MysqlCluster) GetSelectorLabels() labels.Set {
 type ResourceName string
 
 const (
+	// OldHeadlessSVC is the name of the old headless service
+	// DEPRECATED
+	OldHeadlessSVC = "old-headless"
+
 	// HeadlessSVC is the alias of the headless service resource
 	HeadlessSVC ResourceName = "headless"
 	// StatefulSet is the alias of the statefulset resource
@@ -125,6 +129,8 @@ func GetNameForResource(name ResourceName, clusterName string) string {
 		return fmt.Sprintf("%s-mysql-master", clusterName)
 	case HeadlessSVC:
 		return HeadlessSVCName
+	case OldHeadlessSVC:
+		return fmt.Sprintf("%s-mysql-nodes", clusterName)
 	default:
 		return fmt.Sprintf("%s-mysql", clusterName)
 	}
