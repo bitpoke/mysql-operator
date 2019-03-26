@@ -39,6 +39,7 @@ import (
 
 	cleaner "github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/cleaner"
 	clustersyncer "github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
+	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/upgrades"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
@@ -147,6 +148,15 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 	log.Info("syncing cluster", "cluster", request.NamespacedName.String())
+
+	// run upgrader
+	up := upgrades.NewUpgrader(r.Client, r.recorder, cluster, r.opt)
+	if up.ShouldUpdate() {
+		log.V(1).Info("running upgrader")
+		if err = up.Run(context.TODO()); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
 
 	// Update cluster spec that need to be saved
 	spec := *cluster.Spec.DeepCopy()

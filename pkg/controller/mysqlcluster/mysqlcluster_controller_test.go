@@ -103,7 +103,11 @@ var _ = Describe("MysqlCluster controller", func() {
 			}
 
 			cluster = mysqlcluster.New(&api.MysqlCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns,
+					Annotations: map[string]string{
+						"mysql.presslabs.org/version": "300",
+					},
+				},
 				Spec: api.MysqlClusterSpec{
 					Replicas:   &two,
 					SecretName: secret.Name,
@@ -379,7 +383,11 @@ var _ = Describe("MysqlCluster controller", func() {
 			}
 
 			cluster = mysqlcluster.New(&api.MysqlCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns,
+					Annotations: map[string]string{
+						"mysql.presslabs.org/version": "300",
+					},
+				},
 				Spec: api.MysqlClusterSpec{
 					Replicas:   &two,
 					SecretName: secret.Name,
