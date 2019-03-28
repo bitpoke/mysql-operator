@@ -26,7 +26,11 @@ affinity: {}
 
 extraArgs: []
 
-podSecurityPolicy: false
+podSecurityPolicy:
+  enabled: false
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'docker/default'
+    seccomp.security.alpha.kubernetes.io/defaultProfileName:  'docker/default'
 
 rbac:
   create: true
