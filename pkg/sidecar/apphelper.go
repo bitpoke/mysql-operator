@@ -282,8 +282,8 @@ func getGTIDFrom(reader io.Reader) (string, error) {
 
 	gtid := ""
 	for i := 0; scanner.Scan(); i++ {
-		if i == 2 {
-			gtid = scanner.Text()
+		if i >= 2 {
+			gtid += scanner.Text()
 		}
 	}
 
