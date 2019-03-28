@@ -13,5 +13,5 @@ rules:
   resources: ['podsecuritypolicies']
   verbs:     ['use']
   resourceNames:
-  - mysql-operator
+  - '{{ template "mysql-operator.fullname" . }}'
 {{- end }}
