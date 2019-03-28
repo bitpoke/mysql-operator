@@ -8,9 +8,10 @@ metadata:
     chart: '{{ template "mysql-operator.chart" . }}'
     heritage: '{{ .Release.Service }}'
     release: '{{ .Release.Name }}'
+  {{- with .Values.podSecurityPolicy.annotations }}
   annotations:
-    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'docker/default'
-    seccomp.security.alpha.kubernetes.io/defaultProfileName:  'docker/default'
+{{ toYaml . | indent 4 }}
+  {{- end }}
 spec:
   privileged: false
   # Required to prevent escalations to root.
@@ -29,8 +30,6 @@ spec:
   - 'projected'
   - 'secret'
   - 'downwardAPI'
-  # Assume that persistentVolumes set up by the cluster admin are safe to use.
-  - 'persistentVolumeClaim'
   hostNetwork: false
   hostIPC: false
   hostPID: false
