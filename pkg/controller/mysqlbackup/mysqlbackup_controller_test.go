@@ -256,8 +256,8 @@ var _ = Describe("MysqlBackup controller", func() {
 		})
 
 		AfterEach(func() {
-			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
 			Expect(c.Delete(context.TODO(), backup.Unwrap())).To(Succeed())
+			c.Delete(context.TODO(), cluster.Unwrap())
 		})
 
 		It("should skip creating job", func() {
@@ -277,6 +277,33 @@ var _ = Describe("MysqlBackup controller", func() {
 			// NOTE: maybe check in an eventually for job to be created.
 			job := &batch.Job{}
 			Expect(c.Get(context.TODO(), jobKey, job)).To(Succeed())
+		})
+
+		It("should create deletion job if backup is deleted", func() {
+			backup.Spec.RemoteDeletePolicy = api.Delete
+			backup.Spec.BackupURL = "gs://test_bucket/"
+			backup.Spec.ClusterName = cluster.Name
+			Expect(c.Update(context.TODO(), backup.Unwrap())).To(Succeed())
+
+			// wait for reconcile request
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			// delete cluster and backup
+			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
+			Expect(c.Delete(context.TODO(), backup.Unwrap())).To(Succeed())
+
+			// wait for reconcile request
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			delJobKey := types.NamespacedName{
+				Name:      backup.GetNameForDeletionJob(),
+				Namespace: backup.Namespace,
+			}
+
+			delJob := &batch.Job{}
+			Expect(c.Get(context.TODO(), delJobKey, delJob)).To(Succeed())
+
 		})
 	})
 
