@@ -35,6 +35,8 @@ func newFinalizerSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 
 		// always add finalizer, this action is idempotent
 		addFinalizer(out, OrchestratorFinalizer)
+		// TODO: remove this in next version
+		removeFinalizer(out, OldOrchestratorFinalizer)
 
 		// if cluster is deleted then check orchestrator status and remove finalizer if no node is in orchestrator
 		if out.DeletionTimestamp != nil {
