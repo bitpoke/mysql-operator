@@ -52,7 +52,10 @@ const (
 
 	// OrchestratorFinalizer is set when the cluster is registered in
 	// orchestrator and is removed when no nodes are in orchestrator
-	OrchestratorFinalizer = "OrchestratorFinalizer"
+	OrchestratorFinalizer = "mysql.presslabs.org/registered-in-orchestrator"
+
+	// OldOrchestratorFinalizer is the old finalizer name that is DEPRECATED
+	OldOrchestratorFinalizer = "OrchestratorFinalizer"
 )
 
 var log = logf.Log.WithName(controllerName)
