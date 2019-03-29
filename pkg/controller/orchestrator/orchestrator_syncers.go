@@ -81,9 +81,7 @@ func removeFinalizer(in *api.MysqlCluster, finalizer string) {
 	)
 	for index, f = range in.Finalizers {
 		if f == finalizer {
-			break
+			in.Finalizers = append(in.Finalizers[:index], in.Finalizers[index+1:]...)
 		}
 	}
-
-	in.Finalizers = append(in.Finalizers[:index], in.Finalizers[index+1:]...)
 }
