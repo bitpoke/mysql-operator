@@ -1,6 +1,8 @@
 branches:
   - master
   - 1.x
+  # TODO: remove this branch when version 0.3.0 is released
+  - dev3.0
 
 workspace:
   base: /root/go
