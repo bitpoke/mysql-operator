@@ -54,6 +54,9 @@ spec:
               type: string
             initBucketSecretName:
               type: string
+            initBucketURI:
+              description: Same as InitBucketURL but is DEPRECATED
+              type: string
             initBucketURL:
               description: A bucket URL that contains a xtrabackup to initialize the
                 mysql database.
