@@ -296,14 +296,13 @@ var _ = Describe("MysqlBackup controller", func() {
 			// wait for reconcile request
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
-			delJobKey := types.NamespacedName{
-				Name:      backup.GetNameForDeletionJob(),
-				Namespace: backup.Namespace,
+			delJob := &batch.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      backup.GetNameForDeletionJob(),
+					Namespace: backup.Namespace,
+				},
 			}
-
-			delJob := &batch.Job{}
-			Expect(c.Get(context.TODO(), delJobKey, delJob)).To(Succeed())
-
+			Eventually(testutil.RefreshFn(c, delJob)).ShouldNot(BeNil())
 		})
 	})
 
