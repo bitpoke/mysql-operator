@@ -26,10 +26,21 @@ spec:
 
   ## Specify additional pod specification
   # podSpec:
+  #   affinity:
+  #     podAntiAffinity:
+  #       preferredDuringSchedulingIgnoredDuringExecution:
+  #         weight: 100
+  #         podAffinityTerm:
+  #           topologyKey: "kubernetes.io/hostname"
+  #           labelSelector:
+  #             matchlabels: <cluster-labels>
   #   resources:
   #     requests:
   #       memory: 1G
   #       cpu:    200m
+  #   tolerations: []
+  #   priorityClassName:
+  #   serviceAccountName: default
 
   ## Specify additional volume specification
   # volumeSpec:
