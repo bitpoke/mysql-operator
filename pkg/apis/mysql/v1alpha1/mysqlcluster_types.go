@@ -122,11 +122,14 @@ type PodSpec struct {
 	ImagePullPolicy  core.PullPolicy             `json:"imagePullPolicy,omitempty"`
 	ImagePullSecrets []core.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	Labels       map[string]string         `json:"labels,omitempty"`
-	Annotations  map[string]string         `json:"annotations,omitempty"`
-	Resources    core.ResourceRequirements `json:"resources,omitempty"`
-	Affinity     core.Affinity             `json:"affinity,omitempty"`
-	NodeSelector map[string]string         `json:"nodeSelector,omitempty"`
+	Labels             map[string]string         `json:"labels,omitempty"`
+	Annotations        map[string]string         `json:"annotations,omitempty"`
+	Resources          core.ResourceRequirements `json:"resources,omitempty"`
+	Affinity           *core.Affinity            `json:"affinity,omitempty"`
+	NodeSelector       map[string]string         `json:"nodeSelector,omitempty"`
+	PriorityClassName  string                    `json:"priorityClassName,omitempty"`
+	Tolerations        []core.Toleration         `json:"tolerations,omitempty"`
+	ServiceAccountName string                    `json:"serviceAccountName,omitempty"`
 }
 
 // VolumeSpec is the desired spec for storing mysql data. Only one of its
