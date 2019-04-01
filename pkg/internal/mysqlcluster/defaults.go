@@ -58,15 +58,17 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 	}
 
 	// set pod antiaffinity to nodes stay away from other nodes.
-	if cluster.Spec.PodSpec.Affinity.PodAntiAffinity == nil {
-		cluster.Spec.PodSpec.Affinity.PodAntiAffinity = &core.PodAntiAffinity{
-			PreferredDuringSchedulingIgnoredDuringExecution: []core.WeightedPodAffinityTerm{
-				core.WeightedPodAffinityTerm{
-					Weight: 100,
-					PodAffinityTerm: core.PodAffinityTerm{
-						TopologyKey: "kubernetes.io/hostname",
-						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: cluster.GetLabels(),
+	if cluster.Spec.PodSpec.Affinity == nil {
+		cluster.Spec.PodSpec.Affinity = &core.Affinity{
+			PodAntiAffinity: &core.PodAntiAffinity{
+				PreferredDuringSchedulingIgnoredDuringExecution: []core.WeightedPodAffinityTerm{
+					core.WeightedPodAffinityTerm{
+						Weight: 100,
+						PodAffinityTerm: core.PodAffinityTerm{
+							TopologyKey: "kubernetes.io/hostname",
+							LabelSelector: &metav1.LabelSelector{
+								MatchLabels: cluster.GetLabels(),
+							},
 						},
 					},
 				},
