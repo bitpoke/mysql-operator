@@ -50,6 +50,20 @@ kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/mast
 kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/examples/example-cluster.yaml
 ```
 
+## Roadmap to v1.0 
+ - [ ] Integration with Google Cloud Marketplace, OperatorHub.io, AWS Marketplace
+ - [ ] CRD Validation and webhooks
+ - [ ] SSL support
+ - [ ] Default integrated with MySQL 8.0
+ - [ ] Proxy SQL integration
+ - [ ] Backup policies
+ - [x] Physical backups
+ - [x] HA [Orchestrator](https://github.com/github/orchestrator) integration 
+ - [x] [Prometheus](https://github.com/prometheus/prometheus) metrics exporter
+ - [x] Lag mitigation
+ - [x] Query limits
+ 
+
 ## Tech considerations
 
 This project uses Percona Server for MySQL 5.7 because of backup improvements (eg. backup locks), monitoring improvements and some serviceability improvements (eg. utility user). Although we could have used MariaDB, our primary focus being WordPress, we wanted a drop-in rather than a fork. In the future we might support MariaDB if that can be implemented in a compatible way.
