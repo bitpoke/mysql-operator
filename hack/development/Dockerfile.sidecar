@@ -1,5 +1,5 @@
 # Copy the mysql-operator-sidecar into it's own image
-FROM debian:stretch as sidecar
+FROM debian:stretch-slim as sidecar
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
