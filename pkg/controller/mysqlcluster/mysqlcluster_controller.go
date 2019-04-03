@@ -193,21 +193,22 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	secretSyncer := clustersyncer.NewSecretSyncer(r.Client, r.scheme, cluster, r.opt)
+	secretSyncer := clustersyncer.NewOperatedSecretSyncer(r.Client, r.scheme, cluster, r.opt)
 	if err = syncer.Sync(context.TODO(), secretSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	configMapResourceVersion := configMapSyncer.GetObject().(*corev1.ConfigMap).ResourceVersion
-	secretResourceVersion := secretSyncer.GetObject().(*corev1.Secret).ResourceVersion
+	cmRev := configMapSyncer.GetObject().(*corev1.ConfigMap).ResourceVersion
+	sctRev := secretSyncer.GetObject().(*corev1.Secret).ResourceVersion
 
 	// run the syncers for services, pdb and statefulset
 	syncers := []syncer.Interface{
+		clustersyncer.NewSecretSyncer(r.Client, r.scheme, cluster, r.opt),
 		clustersyncer.NewHeadlessSVCSyncer(r.Client, r.scheme, cluster),
 		clustersyncer.NewMasterSVCSyncer(r.Client, r.scheme, cluster),
 		clustersyncer.NewHealthySVCSyncer(r.Client, r.scheme, cluster),
 
-		clustersyncer.NewStatefulSetSyncer(r.Client, r.scheme, cluster, configMapResourceVersion, secretResourceVersion, r.opt),
+		clustersyncer.NewStatefulSetSyncer(r.Client, r.scheme, cluster, cmRev, sctRev, r.opt),
 	}
 
 	if len(cluster.Spec.MinAvailable) != 0 {
