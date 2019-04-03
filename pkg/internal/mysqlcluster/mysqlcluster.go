@@ -113,6 +113,8 @@ const (
 	HealthyNodesService ResourceName = "healthy-nodes-service"
 	// PodDisruptionBudget is the name of pod disruption budget for the stateful set
 	PodDisruptionBudget ResourceName = "pdb"
+	// Secret is the name of the "private" secret that contains operator related credentials
+	Secret ResourceName = "operated-secret"
 )
 
 // GetNameForResource returns the name of a resource from above
@@ -131,6 +133,8 @@ func GetNameForResource(name ResourceName, clusterName string) string {
 		return HeadlessSVCName
 	case OldHeadlessSVC:
 		return fmt.Sprintf("%s-mysql-nodes", clusterName)
+	case Secret:
+		return fmt.Sprintf("%s-mysql-operated", clusterName)
 	default:
 		return fmt.Sprintf("%s-mysql", clusterName)
 	}
