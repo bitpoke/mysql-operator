@@ -12,7 +12,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator github.c
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator-sidecar github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
 
 # Copy the mysql-operator-sidecar into it's own image
-FROM debian:stretch as sidecar
+FROM debian:stretch-slim as sidecar
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
