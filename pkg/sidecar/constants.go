@@ -49,9 +49,6 @@ var (
 	// ToolsInitTableName is the name of the init table
 	toolsInitTableName = "init"
 
-	// UtilityUser is the name of the percona utility user.
-	utilityUser = "sys_utility_sidecar"
-
 	// ServerPort http server port
 	serverPort = constants.SidecarServerPort
 	// ServerProbeEndpoint is the http server endpoint for probe

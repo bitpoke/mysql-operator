@@ -19,11 +19,9 @@ package sidecar
 import (
 	"fmt"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 
-	"github.com/go-ini/ini"
 	// add mysql driver
 	_ "github.com/go-sql-driver/mysql"
 
@@ -57,6 +55,10 @@ type Config struct {
 
 	// OrchestratorURL is the URL to connect to orchestrator
 	OrchestratorURL string
+
+	// OperatorUser represents the credentials that the operator will use to connect to the mysql
+	OperatorUser     string
+	OperatorPassword string
 
 	// backup user and password for http endpoint
 	BackupUser     string
@@ -126,12 +128,9 @@ func (cfg *Config) ServerID() int {
 
 // MysqlDSN returns the connection string to MySQL server
 func (cfg *Config) MysqlDSN() string {
-	var dsn string
-	var err error
-	if dsn, err = getMySQLConnectionString(); err != nil {
-		log.Info("failed to get mysql DSN string", "error", err)
-	}
-	return dsn
+	return fmt.Sprintf("%s:%s@tcp(127.0.0.1:%s)/?timeout=5s&multiStatements=true&interpolateParams=true",
+		cfg.OperatorUser, cfg.OperatorPassword, mysqlPort,
+	)
 }
 
 // NewConfig returns a pointer to Config configured from environment variables
@@ -145,17 +144,20 @@ func NewConfig() *Config {
 		InitBucketURL:   getEnvValue("INIT_BUCKET_URI"),
 		OrchestratorURL: getEnvValue("ORCHESTRATOR_URI"),
 
-		BackupUser:     getEnvValue("MYSQL_BACKUP_USER"),
-		BackupPassword: getEnvValue("MYSQL_BACKUP_PASSWORD"),
+		OperatorUser:     getEnvValue("OPERATOR_USER"),
+		OperatorPassword: getEnvValue("OPERATOR_PASSWORD"),
 
-		ReplicationUser:     getEnvValue("MYSQL_REPLICATION_USER"),
-		ReplicationPassword: getEnvValue("MYSQL_REPLICATION_PASSWORD"),
+		BackupUser:     getEnvValue("BACKUP_USER"),
+		BackupPassword: getEnvValue("BACKUP_PASSWORD"),
 
-		MetricsUser:     getEnvValue("MYSQL_METRICS_EXPORTER_USER"),
-		MetricsPassword: getEnvValue("MYSQL_METRICS_EXPORTER_PASSWORD"),
+		ReplicationUser:     getEnvValue("REPLICATION_USER"),
+		ReplicationPassword: getEnvValue("REPLICATION_PASSWORD"),
 
-		OrchestratorUser:     getEnvValue("MYSQL_ORC_TOPOLOGY_USER"),
-		OrchestratorPassword: getEnvValue("MYSQL_ORC_TOPOLOGY_PASSWORD"),
+		MetricsUser:     getEnvValue("METRICS_EXPORTER_USER"),
+		MetricsPassword: getEnvValue("METRICS_EXPORTER_PASSWORD"),
+
+		OrchestratorUser:     getEnvValue("ORC_TOPOLOGY_USER"),
+		OrchestratorPassword: getEnvValue("ORC_TOPOLOGY_PASSWORD"),
 	}
 
 	return cfg
@@ -182,27 +184,4 @@ func getOrdinalFromHostname(hn string) int {
 	}
 
 	return 0
-}
-
-// getMySQLConnectionString returns the mysql DSN
-func getMySQLConnectionString() (string, error) {
-	cnfPath := path.Join(configDir, "client.cnf")
-	cfg, err := ini.Load(cnfPath)
-	if err != nil {
-		return "", fmt.Errorf("Could not open %s: %s", cnfPath, err)
-	}
-
-	client := cfg.Section("client")
-	host := client.Key("host").String()
-	user := client.Key("user").String()
-	password := client.Key("password").String()
-	port, err := client.Key("port").Int()
-	if err != nil {
-		return "", fmt.Errorf("Invalid port in %s: %s", cnfPath, err)
-	}
-
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/?timeout=5s&multiStatements=true&interpolateParams=true",
-		user, password, host, port,
-	)
-	return dsn, nil
 }
