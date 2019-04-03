@@ -62,7 +62,7 @@ type sfsSyncer struct {
 }
 
 // NewStatefulSetSyncer returns a syncer for stateful set
-func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, cmRev, secRev string, opt *options.Options) syncer.Interface {
+func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, cmRev, sctRev string, opt *options.Options) syncer.Interface {
 	obj := &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(mysqlcluster.StatefulSet),
@@ -73,7 +73,7 @@ func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 	sync := &sfsSyncer{
 		cluster:           cluster,
 		configMapRevision: cmRev,
-		secretRevision:    secRev,
+		secretRevision:    sctRev,
 		opt:               opt,
 	}
 
@@ -147,13 +147,13 @@ func (s *sfsSyncer) ensureContainer(name, image string, args []string) core.Cont
 	}
 }
 
-func (s *sfsSyncer) envVarFromSecret(name, key string, opt bool) core.EnvVar {
+func (s *sfsSyncer) envVarFromSecret(sctName, name, key string, opt bool) core.EnvVar {
 	env := core.EnvVar{
 		Name: name,
 		ValueFrom: &core.EnvVarSource{
 			SecretKeyRef: &core.SecretKeySelector{
 				LocalObjectReference: core.LocalObjectReference{
-					Name: s.cluster.Spec.SecretName,
+					Name: sctName,
 				},
 				Key:      key,
 				Optional: &opt,
@@ -217,22 +217,24 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		})
 	}
 
+	sctName := s.cluster.Spec.SecretName
+	sctOpName := s.cluster.GetNameForResource(mysqlcluster.Secret)
 	switch name {
 	case containerExporterName:
-		env = append(env, s.envVarFromSecret("USER", "METRICS_EXPORTER_USER", false))
-		env = append(env, s.envVarFromSecret("PASSWORD", "METRICS_EXPORTER_PASSWORD", false))
+		env = append(env, s.envVarFromSecret(sctOpName, "USER", "METRICS_EXPORTER_USER", false))
+		env = append(env, s.envVarFromSecret(sctOpName, "PASSWORD", "METRICS_EXPORTER_PASSWORD", false))
 		env = append(env, core.EnvVar{
 			Name:  "DATA_SOURCE_NAME",
 			Value: fmt.Sprintf("$(USER):$(PASSWORD)@(127.0.0.1:%d)/", MysqlPort),
 		})
 	case containerMysqlName:
-		env = append(env, s.envVarFromSecret("MYSQL_ROOT_PASSWORD", "ROOT_PASSWORD", false))
-		env = append(env, s.envVarFromSecret("MYSQL_USER", "USER", true))
-		env = append(env, s.envVarFromSecret("MYSQL_PASSWORD", "PASSWORD", true))
-		env = append(env, s.envVarFromSecret("MYSQL_DATABASE", "DATABASE", true))
+		env = append(env, s.envVarFromSecret(sctName, "MYSQL_ROOT_PASSWORD", "ROOT_PASSWORD", false))
+		env = append(env, s.envVarFromSecret(sctName, "MYSQL_USER", "USER", true))
+		env = append(env, s.envVarFromSecret(sctName, "MYSQL_PASSWORD", "PASSWORD", true))
+		env = append(env, s.envVarFromSecret(sctName, "MYSQL_DATABASE", "DATABASE", true))
 	case containerCloneName:
-		env = append(env, s.envVarFromSecret("MYSQL_BACKUP_USER", "BACKUP_USER", true))
-		env = append(env, s.envVarFromSecret("MYSQL_BACKUP_PASSWORD", "BACKUP_PASSWORD", true))
+		env = append(env, s.envVarFromSecret(sctOpName, "BACKUP_USER", "BACKUP_USER", true))
+		env = append(env, s.envVarFromSecret(sctOpName, "BACKUP_PASSWORD", "BACKUP_PASSWORD", true))
 	}
 
 	return env
@@ -462,10 +464,9 @@ func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 	}
 	if name == containerSidecarName {
 		envSources = append(envSources, core.EnvFromSource{
-			Prefix: "MYSQL_",
 			SecretRef: &core.SecretEnvSource{
 				LocalObjectReference: core.LocalObjectReference{
-					Name: s.cluster.Spec.SecretName,
+					Name: s.cluster.GetNameForResource(mysqlcluster.Secret),
 				},
 			},
 		})

@@ -19,7 +19,6 @@ package mysqlcluster
 import (
 	"fmt"
 
-	"github.com/presslabs/controller-util/rand"
 	"github.com/presslabs/controller-util/syncer"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,12 +29,9 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
-const (
-	rStrLen = 18
-)
-
 // NewSecretSyncer returns secret syncer
 // nolint: gocyclo
+// TODO: this syncer is not needed anymore and can be removed in future version
 func NewSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, opt *options.Options) syncer.Interface {
 	obj := &core.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -49,54 +45,6 @@ func NewSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlclus
 
 		if _, ok := out.Data["ROOT_PASSWORD"]; !ok {
 			return fmt.Errorf("ROOT_PASSWORD not set in secret: %s", out.Name)
-		}
-
-		if len(out.Data["REPLICATION_USER"]) == 0 {
-			random, err := rand.AlphaNumericString(5)
-			if err != nil {
-				return err
-			}
-			out.Data["REPLICATION_USER"] = []byte("repl_" + random)
-		}
-		if len(out.Data["REPLICATION_PASSWORD"]) == 0 {
-			random, err := rand.ASCIIString(rStrLen)
-			if err != nil {
-				return err
-			}
-			out.Data["REPLICATION_PASSWORD"] = []byte(random)
-		}
-		if len(out.Data["METRICS_EXPORTER_USER"]) == 0 {
-			random, err := rand.AlphaNumericString(5)
-			if err != nil {
-				return err
-			}
-			out.Data["METRICS_EXPORTER_USER"] = []byte("exp_" + random)
-		}
-		if len(out.Data["METRICS_EXPORTER_PASSWORD"]) == 0 {
-			random, err := rand.AlphaNumericString(rStrLen)
-			if err != nil {
-				return err
-			}
-			out.Data["METRICS_EXPORTER_PASSWORD"] = []byte(random)
-		}
-
-		out.Data["ORC_TOPOLOGY_USER"] = []byte(opt.OrchestratorTopologyUser)
-		out.Data["ORC_TOPOLOGY_PASSWORD"] = []byte(opt.OrchestratorTopologyPassword)
-
-		if len(out.Data["BACKUP_USER"]) == 0 {
-			random, err := rand.AlphaNumericString(rStrLen)
-			if err != nil {
-				return err
-			}
-			out.Data["BACKUP_USER"] = []byte(random)
-		}
-
-		if len(out.Data["BACKUP_PASSWORD"]) == 0 {
-			random, err := rand.ASCIIString(rStrLen)
-			if err != nil {
-				return err
-			}
-			out.Data["BACKUP_PASSWORD"] = []byte(random)
 		}
 
 		return nil
