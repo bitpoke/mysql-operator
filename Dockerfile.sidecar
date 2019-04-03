@@ -30,7 +30,7 @@ RUN wget -nv https://github.com/ncw/rclone/releases/download/v1.46/rclone-v1.46-
     && chmod 755 /usr/local/bin/rclone
 
 # Copy the mysql-operator-sidecar into it's own image
-FROM debian:stretch as sidecar
+FROM debian:stretch-slim as sidecar
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
