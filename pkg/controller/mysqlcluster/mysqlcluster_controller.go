@@ -111,7 +111,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO watch for secret
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &mysqlv1alpha1.MysqlCluster{},
+	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
