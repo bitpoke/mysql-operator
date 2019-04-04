@@ -42,8 +42,12 @@ func NewOperatedSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *m
 		},
 	}
 
-	return syncer.NewObjectSyncer("OperatedSecret", nil, obj, c, scheme, func(in runtime.Object) error {
+	return syncer.NewObjectSyncer("OperatedSecret", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*core.Secret)
+
+		if out.Data == nil {
+			out.Data = make(map[string][]byte)
+		}
 
 		// the user used for operator to connect to the mysql node for configuration
 		out.Data["OPERATOR_USER"] = []byte("sys_operator")

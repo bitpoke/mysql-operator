@@ -128,6 +128,12 @@ var _ = Describe("MysqlCluster controller", func() {
 						Namespace: cluster.Namespace,
 					},
 				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s-mysql-operated", name),
+						Namespace: cluster.Namespace,
+					},
+				},
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-mysql-master", name),
@@ -172,8 +178,8 @@ var _ = Describe("MysqlCluster controller", func() {
 		AfterEach(func() {
 			// manually delete all created resources because GC isn't enabled in the test controller plane
 			removeAllCreatedResource(c, components)
-			c.Delete(context.TODO(), secret)
-			c.Delete(context.TODO(), cluster.Unwrap())
+			Expect(c.Delete(context.TODO(), secret)).To(Succeed())
+			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
 		})
 
 		It("should have only one reconcile request", func() {
@@ -199,8 +205,8 @@ var _ = Describe("MysqlCluster controller", func() {
 				Eventually(func() error { return c.Get(context.TODO(), key, obj) }, timeout).Should(Succeed())
 			},
 			Entry("reconciles the statefulset", "%s-mysql", &appsv1.StatefulSet{}),
-			//Entry("reconciles the headless service", "mysql", &corev1.Service{}),
 			Entry("reconciles the master service", "%s-mysql-master", &corev1.Service{}),
+			Entry("reconciles the operator secret", "%s-mysql-operated", &corev1.Secret{}),
 			Entry("reconciles the config map", "%s-mysql", &corev1.ConfigMap{}),
 			Entry("reconciles the pod disruption budget", "%s-mysql", &policyv1beta1.PodDisruptionBudget{}),
 		)
@@ -221,13 +227,14 @@ var _ = Describe("MysqlCluster controller", func() {
 					Name:      cluster.GetNameForResource(mysqlcluster.ConfigMap),
 					Namespace: cluster.Namespace,
 				}, cfgMap)).To(Succeed())
+				sct := &corev1.Secret{}
 				Expect(c.Get(context.TODO(), types.NamespacedName{
-					Name:      secret.Name,
+					Name:      cluster.GetNameForResource(mysqlcluster.Secret),
 					Namespace: secret.Namespace,
-				}, secret)).To(Succeed())
+				}, sct)).To(Succeed())
 
 				Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["config_rev"]).To(Equal(cfgMap.ResourceVersion))
-				Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["secret_rev"]).To(Equal(secret.ResourceVersion))
+				Expect(statefulSet.Spec.Template.ObjectMeta.Annotations["secret_rev"]).To(Equal(sct.ResourceVersion))
 			})
 			It("should update cluster ready nodes", func() {
 				// get statefulset
@@ -342,12 +349,12 @@ var _ = Describe("MysqlCluster controller", func() {
 			It("should update cluster secret with keys", func() {
 				s := &corev1.Secret{}
 				sKey := types.NamespacedName{
-					Name:      secret.Name,
+					Name:      cluster.GetNameForResource(mysqlcluster.Secret),
 					Namespace: secret.Namespace,
 				}
 				Expect(c.Get(context.TODO(), sKey, s)).To(Succeed())
 
-				Expect(s.OwnerReferences).To(HaveLen(0), "should have no owner reference set")
+				Expect(s.OwnerReferences).To(HaveLen(1))
 
 				// check for keys to be set
 				Expect(s.Data).To(HaveKey("REPLICATION_USER"))
@@ -356,6 +363,17 @@ var _ = Describe("MysqlCluster controller", func() {
 				Expect(s.Data).To(HaveKey("METRICS_EXPORTER_PASSWORD"))
 				Expect(s.Data).To(HaveKey("ORC_TOPOLOGY_USER"))
 				Expect(s.Data).To(HaveKey("ORC_TOPOLOGY_PASSWORD"))
+			})
+
+			It("should not set owner reference on cluster secret", func() {
+				s := &corev1.Secret{}
+				sKey := types.NamespacedName{
+					Name:      secret.Name,
+					Namespace: secret.Namespace,
+				}
+				Expect(c.Get(context.TODO(), sKey, s)).To(Succeed())
+
+				Expect(s.OwnerReferences).To(HaveLen(0), "should have no owner reference set")
 			})
 		})
 	})
@@ -398,8 +416,8 @@ var _ = Describe("MysqlCluster controller", func() {
 		})
 
 		AfterEach(func() {
-			c.Delete(context.TODO(), secret)
-			c.Delete(context.TODO(), cluster.Unwrap())
+			Expect(c.Delete(context.TODO(), secret)).To(Succeed())
+			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
 		})
 
 		It("should set emptyDir as data volume", func() {
