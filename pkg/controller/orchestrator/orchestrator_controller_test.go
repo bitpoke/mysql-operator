@@ -133,7 +133,7 @@ var _ = Describe("Orchestrator controller", func() {
 			Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
 
 			By("wait for a first reconcile event")
-			// this is a sincronization event
+			// this is a synchronization event
 			Eventually(requests, 4*time.Second).Should(Receive(Equal(expectedRequest)))
 		})
 

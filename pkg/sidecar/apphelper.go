@@ -47,24 +47,6 @@ func RunSidecarCommand(cfg *Config, stop <-chan struct{}) error {
 		return fmt.Errorf("failed to configure master node, err: %s", err)
 	}
 
-	// update orchestrator user and password if orchestrator is configured
-	log.V(1).Info("configure orchestrator credentials")
-	if err := configureOrchestratorUser(cfg); err != nil {
-		return err
-	}
-
-	// update replication user and password
-	log.V(1).Info("configure replication credentials")
-	if err := configureReplicationUser(cfg); err != nil {
-		return err
-	}
-
-	// update metrics exporter user and password
-	log.V(1).Info("configure metrics exporter credentials")
-	if err := configureExporterUser(cfg); err != nil {
-		return err
-	}
-
 	// if it's slave set replication source (master host)
 	log.V(1).Info("configure topology")
 	if err := configTopology(cfg); err != nil {
@@ -86,69 +68,6 @@ func RunSidecarCommand(cfg *Config, stop <-chan struct{}) error {
 	log.V(1).Info("start http server")
 	srv := newServer(cfg, stop)
 	return srv.ListenAndServe()
-}
-
-func configureOrchestratorUser(cfg *Config) error {
-	query := `
-	  SET @@SESSION.SQL_LOG_BIN = 0;
-
-	  CREATE USER IF NOT EXISTS ?@'%%';
-	  ALTER USER ?@'%%' IDENTIFIED BY ?;
-
-	  GRANT SUPER, PROCESS, REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO ?@'%%';
-	  GRANT SELECT ON %s.* TO ?@'%%';
-	  GRANT SELECT ON mysql.slave_master_info TO ?@'%%';
-	`
-
-	// insert toolsDBName, it's not user input so it's safe. Can't use
-	// placeholders for table names, see:
-	// https://github.com/golang/go/issues/18478
-	query = fmt.Sprintf(query, toolsDbName)
-
-	user := cfg.OrchestratorUser
-	pass := cfg.OrchestratorPassword
-	if err := runQuery(cfg, query, user, user, pass, user, user, user); err != nil {
-		return fmt.Errorf("failed to configure orchestrator (user/pass/access), err: %s", err)
-	}
-
-	return nil
-}
-
-func configureReplicationUser(cfg *Config) error {
-	query := `
-	  SET @@SESSION.SQL_LOG_BIN = 0;
-
-	  CREATE USER IF NOT EXISTS ?@'%';
-	  ALTER USER ?@'%' IDENTIFIED BY ?;
-
-	  GRANT SELECT, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO ?@'%';
-	`
-	user := cfg.ReplicationUser
-	pass := cfg.ReplicationPassword
-	if err := runQuery(cfg, query, user, user, pass, user); err != nil {
-		return fmt.Errorf("failed to configure replication user: %s", err)
-	}
-
-	return nil
-}
-
-func configureExporterUser(cfg *Config) error {
-	query := `
-	  SET @@SESSION.SQL_LOG_BIN = 0;
-
-	  CREATE USER IF NOT EXISTS ?@'127.0.0.1';
-	  ALTER USER ?@'127.0.0.1' IDENTIFIED BY ? WITH MAX_USER_CONNECTIONS 3;
-
-	  GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO ?@'127.0.0.1';
-	`
-
-	user := cfg.MetricsUser
-	pass := cfg.MetricsPassword
-	if err := runQuery(cfg, query, user, user, pass, user); err != nil {
-		return fmt.Errorf("failed to metrics exporter user: %s", err)
-	}
-
-	return nil
 }
 
 func waitForMysqlReady(cfg *Config) error {
@@ -175,7 +94,8 @@ func configReadOnly(cfg *Config) error {
 	if cfg.NodeRole() == MasterNode {
 		query = "SET GLOBAL READ_ONLY = 0"
 	} else {
-		query = "SET GLOBAL SUPER_READ_ONLY = 1"
+		// TODO: make it super read only - but fix pt-heartbeat problem first
+		query = "SET GLOBAL READ_ONLY = 1"
 	}
 	if err := runQuery(cfg, query); err != nil {
 		return fmt.Errorf("failed to set read_only config, err: %s", err)
