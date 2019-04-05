@@ -32,6 +32,9 @@ const (
 	rStrLen = 18
 )
 
+// const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+// const ascii = letters + "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+
 // NewOperatedSecretSyncer returns secret syncer
 // nolint: gocyclo
 func NewOperatedSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, opt *options.Options) syncer.Interface {
@@ -52,7 +55,8 @@ func NewOperatedSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *m
 		// the user used for operator to connect to the mysql node for configuration
 		out.Data["OPERATOR_USER"] = []byte("sys_operator")
 		if len(out.Data["REPLICATION_PASSWORD"]) == 0 {
-			random, err := rand.ASCIIString(rStrLen)
+			// NOTE: use Alpha numeric string because ASCII can generate characters that are not escaped
+			random, err := rand.AlphaNumericString(rStrLen)
 			if err != nil {
 				return err
 			}
@@ -62,7 +66,7 @@ func NewOperatedSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *m
 		// the user that is used to configure replication between nodes
 		out.Data["REPLICATION_USER"] = []byte("sys_replication")
 		if len(out.Data["REPLICATION_PASSWORD"]) == 0 {
-			random, err := rand.ASCIIString(rStrLen)
+			random, err := rand.AlphaNumericString(rStrLen)
 			if err != nil {
 				return err
 			}
@@ -86,7 +90,7 @@ func NewOperatedSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *m
 		// the user that is used to serve backups over HTTP
 		out.Data["BACKUP_USER"] = []byte("sys_backups")
 		if len(out.Data["BACKUP_PASSWORD"]) == 0 {
-			random, err := rand.ASCIIString(rStrLen)
+			random, err := rand.AlphaNumericString(rStrLen)
 			if err != nil {
 				return err
 			}

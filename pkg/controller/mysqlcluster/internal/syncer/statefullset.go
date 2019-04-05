@@ -462,7 +462,7 @@ func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 			},
 		})
 	}
-	if name == containerSidecarName {
+	if name == containerSidecarName || name == containerInitName {
 		envSources = append(envSources, core.EnvFromSource{
 			SecretRef: &core.SecretEnvSource{
 				LocalObjectReference: core.LocalObjectReference{
