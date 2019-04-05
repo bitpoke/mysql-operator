@@ -131,12 +131,22 @@ func initFileQuery(cfg *Config) []byte {
 		"SET @@SESSION.SQL_LOG_BIN = 0;",
 	}
 
-	queries = append(queries, createUserQuery(cfg.OperatorUser, cfg.OperatorPassword, "%", []string{"SUPER"}, "*.*"))
+	// configure operator utility user
+	queries = append(queries, createUserQuery(cfg.OperatorUser, cfg.OperatorPassword, "%",
+		//[]string{"SUPER", "SHOW DATABASES", "PROCESS", "RELOAD", "CREATE", "SELECT"}, "*.*",
+		[]string{"ALL"}, "*.*", // TODO: remove this before commit
+		[]string{"ALL PRIVILEGES"}, fmt.Sprintf("%s.*", toolsDbName)))
+
+	// configure orchestrator user
 	queries = append(queries, createUserQuery(cfg.OrchestratorUser, cfg.OrchestratorPassword, "%",
 		[]string{"SUPER", "PROCESS", "REPLICATION SLAVE", "REPLICATION CLIENT", "RELOAD"}, "*.*",
 		[]string{"SELECT"}, "mysql.slave_master_info"))
+
+	// configure replication user
 	queries = append(queries, createUserQuery(cfg.ReplicationUser, cfg.ReplicationPassword, "%",
 		[]string{"SELECT", "PROCESS", "RELOAD", "LOCK TABLES", "REPLICATION CLIENT", "REPLICATION SLAVE"}, "*.*"))
+
+	// configure metrics exporter user
 	queries = append(queries, createUserQuery(cfg.MetricsUser, cfg.MetricsPassword, "127.0.0.1",
 		[]string{"SELECT", "PROCESS", "REPLICATION CLIENT"}, "*.*"))
 
