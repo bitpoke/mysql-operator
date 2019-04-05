@@ -2,7 +2,7 @@
 set -e
 
 echo "Create rclone.conf file."
-cat <<EOF > /etc/rclone.conf
+cat <<EOF > /tmp/rclone.conf
 [s3]
 type = s3
 env_auth = false
