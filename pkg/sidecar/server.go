@@ -91,7 +91,8 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 	xtrabackup := exec.Command("xtrabackup", "--backup", "--slave-info", "--stream=xbstream",
 		fmt.Sprintf("--tables-exclude=%s.%s", toolsDbName, toolsInitTableName),
 		"--host=127.0.0.1", fmt.Sprintf("--user=%s", s.cfg.ReplicationUser),
-		fmt.Sprintf("--password=%s", s.cfg.ReplicationPassword))
+		fmt.Sprintf("--password=%s", s.cfg.ReplicationPassword),
+		"--target-dir=/tmp/xtrabackup_backupfiles/")
 
 	xtrabackup.Stderr = os.Stderr
 

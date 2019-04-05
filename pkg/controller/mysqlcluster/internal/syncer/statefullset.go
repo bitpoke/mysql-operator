@@ -126,7 +126,8 @@ func (s *sfsSyncer) ensurePodSpec() core.PodSpec {
 		ImagePullSecrets: s.cluster.Spec.PodSpec.ImagePullSecrets,
 		SecurityContext: &core.PodSecurityContext{
 			// mount volumes with mysql gid
-			FSGroup: &fsGroup,
+			FSGroup:   &fsGroup,
+			RunAsUser: &fsGroup,
 		},
 	}
 }

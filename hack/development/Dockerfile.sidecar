@@ -1,5 +1,10 @@
 # Copy the mysql-operator-sidecar into it's own image
+# NOTE: this image is for development only
 FROM debian:stretch-slim as sidecar
+
+RUN groupadd -g 999 mysql
+RUN useradd -u 999 -r -g 999 -s /sbin/nologin \
+    -c "Default Application User" mysql
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -22,6 +27,8 @@ RUN apt-get update \
     && mv rclone-*-linux-amd64/rclone /usr/local/bin/ \
     && rm -rf rclone-*-linux-amd64 rclone-current-linux-amd64.zip \
     && chmod 755 /usr/local/bin/rclone
+
+USER mysql
 
 # set expiration time for dev images
 # https://support.coreos.com/hc/en-us/articles/115001384693-Tag-Expiration

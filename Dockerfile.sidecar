@@ -32,6 +32,10 @@ RUN wget -nv https://github.com/ncw/rclone/releases/download/v1.46/rclone-v1.46-
 # Copy the mysql-operator-sidecar into it's own image
 FROM debian:stretch-slim as sidecar
 
+RUN groupadd -g 999 mysql
+RUN useradd -u 999 -r -g 999 -s /sbin/nologin \
+    -c "Default Application User" mysql
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         apt-transport-https ca-certificates wget \
@@ -49,6 +53,8 @@ RUN apt-get update \
     && mkdir -p /usr/share/src \
     && wget https://github.com/maxbube/mydumper/archive/v0.9.5.tar.gz -O /usr/share/src/mydumper-v0.9.5.tar.gz
 
+
+USER mysql
 
 COPY ./hack/docker/sidecar-entrypoint.sh /usr/local/bin/sidecar-entrypoint.sh
 COPY --from=builder /go/src/github.com/presslabs/mysql-operator/mysql-operator-sidecar /usr/local/bin/mysql-operator-sidecar
