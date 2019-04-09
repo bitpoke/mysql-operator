@@ -73,7 +73,7 @@ func RunConfigCommand(cfg *Config) error {
 		return fmt.Errorf("failed to get client configs: %s", err)
 	}
 
-	if err = clientCFG.SaveTo(path.Join(configDir, "client.cnf")); err != nil {
+	if err = clientCFG.SaveTo(confClientPath); err != nil {
 		return fmt.Errorf("failed to save configs: %s", err)
 	}
 
@@ -82,7 +82,7 @@ func RunConfigCommand(cfg *Config) error {
 
 func getClientConfigs(user, pass string) (*ini.File, error) {
 	cfg := ini.Empty()
-	// create file /etc/mysql/client.cnf
+	// create client.cnf file
 	client := cfg.Section("client")
 
 	if _, err := client.NewKey("host", "127.0.0.1"); err != nil {
@@ -133,9 +133,9 @@ func initFileQuery(cfg *Config) []byte {
 
 	// configure operator utility user
 	queries = append(queries, createUserQuery(cfg.OperatorUser, cfg.OperatorPassword, "%",
-		//[]string{"SUPER", "SHOW DATABASES", "PROCESS", "RELOAD", "CREATE", "SELECT"}, "*.*",
-		[]string{"ALL"}, "*.*", // TODO: remove this before commit
-		[]string{"ALL PRIVILEGES"}, fmt.Sprintf("%s.*", toolsDbName)))
+		[]string{"SUPER", "SHOW DATABASES", "PROCESS", "RELOAD", "CREATE", "SELECT"}, "*.*",
+		//[]string{"ALL"}, "*.*", // TODO: remove this before commit
+		[]string{"ALL"}, fmt.Sprintf("%s.*", toolsDbName)))
 
 	// configure orchestrator user
 	queries = append(queries, createUserQuery(cfg.OrchestratorUser, cfg.OrchestratorPassword, "%",
@@ -176,7 +176,10 @@ func createUserQuery(name, pass, host string, rights ...interface{}) string {
 		grants = append(grants, grant)
 	}
 
-	return fmt.Sprintf("\nCREATE USER IF NOT EXISTS %s;\n"+
-		"ALTER USER %s IDENTIFIED BY '%s';\n%s",
-		user, user, pass, strings.Join(grants, "\n"))
+	return fmt.Sprintf("\n"+
+		"DROP USER IF EXISTS %s;\n"+
+		"CREATE USER %s;\n"+
+		"ALTER USER %s IDENTIFIED BY '%s';\n"+
+		"%s", // GRANTs statements
+		user, user, user, pass, strings.Join(grants, "\n"))
 }

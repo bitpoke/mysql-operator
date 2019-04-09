@@ -57,6 +57,8 @@ const (
 	ConfMapVolumeMountPath = constants.ConfMapVolumeMountPath
 	// ConfDPath is the path to extra mysql configs dir
 	ConfDPath = constants.ConfDPath
+
+	confClientPath = constants.ConfClientPath
 )
 
 var (
