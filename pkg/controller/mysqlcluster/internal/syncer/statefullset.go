@@ -271,7 +271,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		Exec: &core.ExecAction{
 			Command: []string{
 				"mysqladmin",
-				"--defaults-file=/etc/mysql/client.cnf",
+				fmt.Sprintf("--defaults-file=%s", confClientPath),
 				"ping",
 			},
 		},
@@ -282,7 +282,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		Exec: &core.ExecAction{
 			Command: []string{
 				"mysql",
-				"--defaults-file=/etc/mysql/client.cnf",
+				fmt.Sprintf("--defaults-file=%s", confClientPath),
 				"-e",
 				"SELECT 1",
 			},
@@ -342,7 +342,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			"--create-table",
 			"--database", HelperDbName,
 			"--table", "heartbeat",
-			"--defaults-file", fmt.Sprintf("%s/client.cnf", ConfVolumeMountPath),
+			"--defaults-file", confClientPath,
 			// it's important to exit when exceeding more than 20 failed attempts otherwise
 			// pt-heartbeat will run forever using old connection.
 			"--fail-successive-errors=20",
