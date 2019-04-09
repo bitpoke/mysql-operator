@@ -96,13 +96,13 @@ func (s *jobSyncer) getBackupCandidate() string {
 		replicating := s.cluster.GetNodeCondition(node.Name, api.NodeConditionReplicating)
 		lagged := s.cluster.GetNodeCondition(node.Name, api.NodeConditionLagged)
 
-		isMaster := master.Status == core.ConditionTrue
-		isReplicating := replicating != nil && replicating.Status == core.ConditionTrue
-		isLagged := lagged != nil && lagged.Status == core.ConditionTrue
-
 		if master == nil || replicating == nil || lagged == nil {
 			continue
 		}
+
+		isMaster := master.Status == core.ConditionTrue
+		isReplicating := replicating.Status == core.ConditionTrue
+		isLagged := lagged.Status == core.ConditionTrue
 
 		// select a node that is not master is replicating and is not lagged
 		if !isMaster && isReplicating && !isLagged {
