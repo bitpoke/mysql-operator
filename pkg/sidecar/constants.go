@@ -41,6 +41,9 @@ var (
 	// MountConfigDir is the mounted configs that needs processing
 	mountConfigDir = constants.ConfMapVolumeMountPath
 
+	// confClientPath the path where to put the client.cnf file
+	confClientPath = constants.ConfClientPath
+
 	// DataDir is the mysql data. /var/lib/mysql
 	dataDir = constants.DataVolumeMountPath
 

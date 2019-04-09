@@ -52,6 +52,9 @@ const (
 
 	// ConfDPath is the path to extra mysql configs dir
 	ConfDPath = "/etc/mysql/conf.d"
+
+	// ConfClientPath represents the path to the client MySQL client configuration
+	ConfClientPath = "/etc/mysql/client.conf"
 )
 
 var (
