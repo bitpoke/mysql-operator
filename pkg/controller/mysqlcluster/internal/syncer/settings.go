@@ -45,10 +45,6 @@ const (
 	// ExporterPath is the path on which metrics are expose
 	ExporterPath = constants.ExporterPath
 
-	// HelperDbName represent the database name that is used by operator to
-	// manage the mysql cluster.
-	HelperDbName = constants.HelperDbName
-
 	// ConfVolumeMountPath is the path where mysql configs will be mounted
 	ConfVolumeMountPath = constants.ConfVolumeMountPath
 	// DataVolumeMountPath is the path to mysql data
