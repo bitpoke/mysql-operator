@@ -77,6 +77,15 @@ func RunConfigCommand(cfg *Config) error {
 		return fmt.Errorf("failed to save configs: %s", err)
 	}
 
+	// mysql client connect credentials
+	if clientCFG, err = getClientConfigs(cfg.HeartBeatUser, cfg.HeartBeatPassword); err != nil {
+		return fmt.Errorf("failed to get heartbeat configs: %s", err)
+	}
+
+	if err = clientCFG.SaveTo(confHeartbeatPath); err != nil {
+		return fmt.Errorf("failed to save heartbeat configs: %s", err)
+	}
+
 	return nil
 }
 
@@ -134,7 +143,6 @@ func initFileQuery(cfg *Config) []byte {
 	// configure operator utility user
 	queries = append(queries, createUserQuery(cfg.OperatorUser, cfg.OperatorPassword, "%",
 		[]string{"SUPER", "SHOW DATABASES", "PROCESS", "RELOAD", "CREATE", "SELECT"}, "*.*",
-		//[]string{"ALL"}, "*.*", // TODO: remove this before commit
 		[]string{"ALL"}, fmt.Sprintf("%s.*", toolsDbName)))
 
 	// configure orchestrator user
@@ -149,6 +157,14 @@ func initFileQuery(cfg *Config) []byte {
 	// configure metrics exporter user
 	queries = append(queries, createUserQuery(cfg.MetricsUser, cfg.MetricsPassword, "127.0.0.1",
 		[]string{"SELECT", "PROCESS", "REPLICATION CLIENT"}, "*.*"))
+	queries = append(queries, fmt.Sprintf("ALTER USER %s@'127.0.0.1' WITH MAX_USER_CONNECTIONS 3;", cfg.MetricsUser))
+
+	// configure heartbeat user
+	// because of pt-heartbeat make sure not to have ALL or SUPER privileges:
+	// https://github.com/percona/percona-toolkit/blob/e85ce15ef24bc4614b4d2f13792fa73583d68f8e/bin/pt-heartbeat#L6433
+	queries = append(queries, createUserQuery(cfg.HeartBeatUser, cfg.HeartBeatPassword, "127.0.0.1",
+		[]string{"CREATE", "SELECT", "DELETE", "UPDATE", "INSERT"}, fmt.Sprintf("%s.%s", toolsDbName, toolsHeartbeatTableName),
+		[]string{"REPLICATION CLIENT"}, "*.*"))
 
 	return []byte(strings.Join(queries, "\n"))
 }
@@ -180,6 +196,6 @@ func createUserQuery(name, pass, host string, rights ...interface{}) string {
 		"DROP USER IF EXISTS %s;\n"+
 		"CREATE USER %s;\n"+
 		"ALTER USER %s IDENTIFIED BY '%s';\n"+
-		"%s", // GRANTs statements
+		"%s\n", // GRANTs statements
 		user, user, user, pass, strings.Join(grants, "\n"))
 }

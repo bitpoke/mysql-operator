@@ -25,6 +25,8 @@ import (
 	// add mysql driver
 	_ "github.com/go-sql-driver/mysql"
 
+	"github.com/presslabs/controller-util/rand"
+
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 )
@@ -75,6 +77,10 @@ type Config struct {
 	// orchestrator credentials
 	OrchestratorUser     string
 	OrchestratorPassword string
+
+	// heartbeat credentials
+	HeartBeatUser     string
+	HeartBeatPassword string
 }
 
 // FQDNForServer returns the pod hostname for given MySQL server id
@@ -135,6 +141,11 @@ func (cfg *Config) MysqlDSN() string {
 
 // NewConfig returns a pointer to Config configured from environment variables
 func NewConfig() *Config {
+	hbPass, err := rand.AlphaNumericString(10)
+	if err != nil {
+		panic(err)
+	}
+
 	cfg := &Config{
 		Hostname:    getEnvValue("HOSTNAME"),
 		ClusterName: getEnvValue("MY_CLUSTER_NAME"),
@@ -158,6 +169,9 @@ func NewConfig() *Config {
 
 		OrchestratorUser:     getEnvValue("ORC_TOPOLOGY_USER"),
 		OrchestratorPassword: getEnvValue("ORC_TOPOLOGY_PASSWORD"),
+
+		HeartBeatUser:     heartBeatUserName,
+		HeartBeatPassword: hbPass,
 	}
 
 	return cfg
