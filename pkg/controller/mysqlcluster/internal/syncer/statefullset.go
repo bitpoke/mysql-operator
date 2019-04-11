@@ -18,6 +18,7 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 	"strings"
 
 	"github.com/imdario/mergo"
@@ -314,7 +315,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			fmt.Sprintf("--web.listen-address=0.0.0.0:%d", ExporterPort),
 			fmt.Sprintf("--web.telemetry-path=%s", ExporterPath),
 			"--collect.heartbeat",
-			fmt.Sprintf("--collect.heartbeat.database=%s", HelperDbName),
+			fmt.Sprintf("--collect.heartbeat.database=%s", constants.HelperDbName),
 		},
 	)
 	exporter.Ports = ensurePorts(core.ContainerPort{
@@ -340,9 +341,9 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			"--update", "--replace",
 			"--check-read-only",
 			"--create-table",
-			"--database", HelperDbName,
+			"--database", constants.HelperDbName,
 			"--table", "heartbeat",
-			"--defaults-file", confClientPath,
+			"--defaults-file", constants.ConfHeartBeatPath,
 			// it's important to exit when exceeding more than 20 failed attempts otherwise
 			// pt-heartbeat will run forever using old connection.
 			"--fail-successive-errors=20",

@@ -41,8 +41,11 @@ var (
 	// MountConfigDir is the mounted configs that needs processing
 	mountConfigDir = constants.ConfMapVolumeMountPath
 
-	// confClientPath the path where to put the client.cnf file
+	// confClientPath the path where to put the client.conf file
 	confClientPath = constants.ConfClientPath
+
+	// confHeartbeatPath the path where to put the heartbeat.conf file
+	confHeartbeatPath = constants.ConfHeartBeatPath
 
 	// DataDir is the mysql data. /var/lib/mysql
 	dataDir = constants.DataVolumeMountPath
@@ -51,6 +54,12 @@ var (
 	toolsDbName = constants.HelperDbName
 	// ToolsInitTableName is the name of the init table
 	toolsInitTableName = "init"
+
+	// toolsHeartbeatTableName is the name used for pt-heartbeat table
+	toolsHeartbeatTableName = "heartbeat"
+
+	// heartBeatUserName is the MySQL user that is used for pt-heartbeat
+	heartBeatUserName = "sys_heartbeat"
 
 	// ServerPort http server port
 	serverPort = constants.SidecarServerPort

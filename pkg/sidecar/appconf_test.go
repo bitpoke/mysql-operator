@@ -27,6 +27,7 @@ var _ = Describe("Test sidecar appconf", func() {
 DROP USER IF EXISTS uName@'%';
 CREATE USER uName@'%';
 ALTER USER uName@'%' IDENTIFIED BY 'uPass';
+
 `))
 	})
 
@@ -35,7 +36,8 @@ ALTER USER uName@'%' IDENTIFIED BY 'uPass';
 DROP USER IF EXISTS uName@'%';
 CREATE USER uName@'%';
 ALTER USER uName@'%' IDENTIFIED BY 'uPass';
-GRANT SELECT, SUPER ON *.* TO uName@'%';`))
+GRANT SELECT, SUPER ON *.* TO uName@'%';
+`))
 	})
 
 	It("should create the right query for users with grants", func() {
@@ -44,7 +46,8 @@ DROP USER IF EXISTS uName@'%';
 CREATE USER uName@'%';
 ALTER USER uName@'%' IDENTIFIED BY 'uPass';
 GRANT SELECT ON *.* TO uName@'%';
-GRANT SUPER ON a.b TO uName@'%';`))
+GRANT SUPER ON a.b TO uName@'%';
+`))
 	})
 
 	It("should fail if bad parameters passed", func() {

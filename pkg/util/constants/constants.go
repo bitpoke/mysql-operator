@@ -54,7 +54,12 @@ const (
 	ConfDPath = "/etc/mysql/conf.d"
 
 	// ConfClientPath represents the path to the client MySQL client configuration
+	// it's important to have a different extension than .cnf to be ignore by MySQL include
 	ConfClientPath = "/etc/mysql/client.conf"
+
+	// ConfHeartBeatPath the path where to put the heartbeat.conf file
+	// it's important to have a different extension than .cnf to be ignore by MySQL include
+	ConfHeartBeatPath = "/etc/mysql/heartbeat.conf"
 )
 
 var (

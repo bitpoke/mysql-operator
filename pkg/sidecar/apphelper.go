@@ -94,8 +94,7 @@ func configReadOnly(cfg *Config) error {
 	if cfg.NodeRole() == MasterNode {
 		query = "SET GLOBAL READ_ONLY = 0"
 	} else {
-		// TODO: make it super read only - but fix pt-heartbeat problem first
-		query = "SET GLOBAL READ_ONLY = 1"
+		query = "SET GLOBAL SUPER_READ_ONLY = 1"
 	}
 	if err := runQuery(cfg, query); err != nil {
 		return fmt.Errorf("failed to set read_only config, err: %s", err)
