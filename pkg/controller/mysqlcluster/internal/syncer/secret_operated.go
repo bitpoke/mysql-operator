@@ -54,7 +54,7 @@ func NewOperatedSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *m
 
 		// the user used for operator to connect to the mysql node for configuration
 		out.Data["OPERATOR_USER"] = []byte("sys_operator")
-		if len(out.Data["REPLICATION_PASSWORD"]) == 0 {
+		if len(out.Data["OPERATOR_PASSWORD"]) == 0 {
 			// NOTE: use Alpha numeric string because ASCII can generate characters that are not escaped
 			random, err := rand.AlphaNumericString(rStrLen)
 			if err != nil {
