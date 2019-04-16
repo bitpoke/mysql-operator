@@ -1,4 +1,6 @@
 # MySQL Operator
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fpresslabs%2Fmysql-operator.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fpresslabs%2Fmysql-operator?ref=badge_shield)
+
 
 MySQL Operator enables bulletproof MySQL on Kubernetes. It manages all the necessary resources for deploying and managing a highly available MySQL cluster. It provides efortless backups, while keeping the cluster highly available.
 
@@ -71,3 +73,6 @@ This project uses Percona Server for MySQL 5.7 because of backup improvements (e
 ## License
 
 This project is licensed under Apache 2.0 license. Read the [LICENSE](LICENSE) file in the top distribution directory for the full license text.
+
+
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fpresslabs%2Fmysql-operator.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fpresslabs%2Fmysql-operator?ref=badge_large)
