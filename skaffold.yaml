@@ -14,7 +14,7 @@ deploy:
   helm:
     releases:
     - name: test
-      chartPath: hack/charts/mysql-operator
+      chartPath: hack/charts/mysql-operatoar
       valuesFiles:
       - hack/development/dev-values.yaml
       values:
