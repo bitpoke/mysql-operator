@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+MISSING=($(grep -s -rL --include "*.go" "Licensed under the Apache License, Version 2.0" pkg cmd))
+
+if [[ -n "${MISSING[0]}" ]]; then
+    echo "Files missing license header:"
+    printf "\t%s\n" "${MISSING[@]}"
+    exit 1
+fi
+exit 0

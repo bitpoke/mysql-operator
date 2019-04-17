@@ -77,6 +77,7 @@ generate:
 
 lint:
 	$(BINDIR)/golangci-lint run ./pkg/... ./cmd/...
+	hack/license-check
 
 .PHONY: chart
 chart: generate manifests
