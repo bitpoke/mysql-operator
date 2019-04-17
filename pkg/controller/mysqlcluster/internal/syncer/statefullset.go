@@ -133,6 +133,11 @@ func (s *sfsSyncer) ensurePodSpec() core.PodSpec {
 		PriorityClassName:  s.cluster.Spec.PodSpec.PriorityClassName,
 		Tolerations:        s.cluster.Spec.PodSpec.Tolerations,
 		ServiceAccountName: s.cluster.Spec.PodSpec.ServiceAccountName,
+		ReadinessGates: []core.PodReadinessGate{
+			{
+				ConditionType: mysqlcluster.NodeInitializedConditionType,
+			},
+		},
 	}
 }
 
@@ -315,7 +320,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			fmt.Sprintf("--web.listen-address=0.0.0.0:%d", ExporterPort),
 			fmt.Sprintf("--web.telemetry-path=%s", ExporterPath),
 			"--collect.heartbeat",
-			fmt.Sprintf("--collect.heartbeat.database=%s", constants.HelperDbName),
+			fmt.Sprintf("--collect.heartbeat.database=%s", constants.OperatorDbName),
 		},
 	)
 	exporter.Ports = ensurePorts(core.ContainerPort{
@@ -341,7 +346,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			"--update", "--replace",
 			"--check-read-only",
 			"--create-table",
-			"--database", constants.HelperDbName,
+			"--database", constants.OperatorDbName,
 			"--table", "heartbeat",
 			"--defaults-file", constants.ConfHeartBeatPath,
 			// it's important to exit when exceeding more than 20 failed attempts otherwise
