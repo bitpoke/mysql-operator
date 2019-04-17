@@ -34,12 +34,15 @@ const (
 	// ExporterPath is the path on which metrics are expose
 	ExporterPath = "/metrics"
 
-	// HelperDbName represent the database name that is used by operator to
+	// OperatorDbName represent the database name that is used by operator to
 	// manage the mysql cluster. This database contains a table with
 	// initialization history and table managed by pt-heartbeat. Be aware that
-	// when changeing this value to update the orchestrator chart value for
+	// when changing this value to update the orchestrator chart value for
 	// SlaveLagQuery in hack/charts/mysql-operator/values.yaml.
-	HelperDbName = "sys_operator"
+	OperatorDbName = "sys_operator"
+
+	// OperatorInitTableName represents the name of the table that is used to mark configuration complete
+	OperatorInitTableName = "init"
 
 	// ConfVolumeMountPath is the path where mysql configs will be mounted
 	ConfVolumeMountPath = "/etc/mysql"
