@@ -45,7 +45,10 @@ RUN apt-get update \
         percona-toolkit percona-xtrabackup-24 unzip \
     && wget https://github.com/maxbube/mydumper/releases/download/v0.9.5/mydumper_0.9.5-2.stretch_amd64.deb \
     && dpkg -i mydumper_0.9.5-2.stretch_amd64.deb \
-    && rm -rf mydumper_0.9.5-2.stretch_amd64.deb /var/lib/apt/lists/*
+    && rm -rf mydumper_0.9.5-2.stretch_amd64.deb /var/lib/apt/lists/* \
+    && mkdir -p /usr/share/src \
+    && wget https://github.com/maxbube/mydumper/archive/v0.9.5.tar.gz -O /usr/share/src/mydumper-v0.9.5.tar.gz
+
 
 COPY ./hack/docker/sidecar-entrypoint.sh /usr/local/bin/sidecar-entrypoint.sh
 COPY --from=builder /go/src/github.com/presslabs/mysql-operator/mysql-operator-sidecar /usr/local/bin/mysql-operator-sidecar
