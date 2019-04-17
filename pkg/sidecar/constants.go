@@ -51,7 +51,7 @@ var (
 	dataDir = constants.DataVolumeMountPath
 
 	// ToolsDbName is the name of the tools table
-	toolsDbName = constants.HelperDbName
+	toolsDbName = constants.OperatorDbName
 	// ToolsInitTableName is the name of the init table
 	toolsInitTableName = "init"
 
