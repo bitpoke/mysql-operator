@@ -1,6 +1,6 @@
 # MySQL Operator
 
-MySQL Operator enables bulletproof MySQL on Kubernetes. It manages all the necessary resources for deploying and managing a highly available MySQL cluster. It provides efortless backups, while keeping the cluster highly available.
+MySQL Operator enables bulletproof MySQL on Kubernetes. It manages all the necessary resources for deploying and managing a highly available MySQL cluster. It provides effortless backups, while keeping the cluster highly available.
 
 MySQL Operator was developed by the awesome engineering team at [Presslabs](https://www.presslabs.com/), a Smart Managed WordPress Hosting platform.
 
