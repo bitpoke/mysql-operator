@@ -47,6 +47,9 @@ const (
 	// ConfVolumeMountPath is the path where mysql configs will be mounted
 	ConfVolumeMountPath = "/etc/mysql"
 
+	// InitDBVolumeMountPath the path where to put *.sql init files. Docker entrypoint runs the scripts from this path.
+	InitDBVolumeMountPath = "/docker-entrypoint-initdb.d/"
+
 	// DataVolumeMountPath is the path to mysql data
 	DataVolumeMountPath = "/var/lib/mysql"
 

@@ -41,6 +41,7 @@ import (
 const (
 	confVolumeName    = "conf"
 	confMapVolumeName = "config-map"
+	initDBVolumeName  = "init-scripts"
 	dataVolumeName    = "data"
 )
 
@@ -133,11 +134,12 @@ func (s *sfsSyncer) ensurePodSpec() core.PodSpec {
 		PriorityClassName:  s.cluster.Spec.PodSpec.PriorityClassName,
 		Tolerations:        s.cluster.Spec.PodSpec.Tolerations,
 		ServiceAccountName: s.cluster.Spec.PodSpec.ServiceAccountName,
-		ReadinessGates: []core.PodReadinessGate{
-			{
-				ConditionType: mysqlcluster.NodeInitializedConditionType,
-			},
-		},
+		// TODO: uncomment this when limiting operator for k8s version > 1.13
+		// ReadinessGates: []core.PodReadinessGate{
+		// 	{
+		// 		ConditionType: mysqlcluster.NodeInitializedConditionType,
+		// 	},
+		// },
 	}
 }
 
@@ -408,6 +410,10 @@ func (s *sfsSyncer) ensureVolumes() []core.Volume {
 			EmptyDir: &core.EmptyDirVolumeSource{},
 		}),
 
+		ensureVolume(initDBVolumeName, core.VolumeSource{
+			EmptyDir: &core.EmptyDirVolumeSource{},
+		}),
+
 		ensureVolume(confMapVolumeName, core.VolumeSource{
 			ConfigMap: &core.ConfigMapVolumeSource{
 				LocalObjectReference: core.LocalObjectReference{
@@ -492,6 +498,10 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 				Name:      confMapVolumeName,
 				MountPath: ConfMapVolumeMountPath,
 			},
+			{
+				Name:      initDBVolumeName,
+				MountPath: constants.InitDBVolumeMountPath,
+			},
 		}
 
 	case containerCloneName, containerMysqlName, containerSidecarName:
@@ -503,6 +513,10 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 			{
 				Name:      dataVolumeName,
 				MountPath: DataVolumeMountPath,
+			},
+			{
+				Name:      initDBVolumeName,
+				MountPath: constants.InitDBVolumeMountPath,
 			},
 		}
 

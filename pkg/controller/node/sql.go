@@ -19,15 +19,25 @@ package node
 import (
 	"database/sql"
 	"fmt"
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
 	"time"
+
+	// add mysql driver
+	_ "github.com/go-sql-driver/mysql"
+
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 const (
 	// mysqlReadyTries represents the number of tries with 1 second sleep between them to check if MySQL is ready
-	mysqlReadyTries = 20
+	mysqlReadyTries = 5
 	// connRetry represents the number of tries to connect to master server
 	connRetry = 10
+)
+
+const (
+	initCompletedKey = "init_completed"
+	// InitGtidPurgedKey represents the key from the init table where is gtid_purged should be purged
+	InitGtidPurgedKey = "gtid_purged"
 )
 
 type nodeSQLRunner struct {
@@ -66,26 +76,6 @@ func (r *nodeSQLRunner) Wait() error {
 
 }
 
-// runQuery executes a query
-func (r *nodeSQLRunner) runQuery(q string, args ...interface{}) error {
-	db, err := sql.Open("mysql", r.dsn)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if cErr := db.Close(); cErr != nil {
-			log.Error(cErr, "failed closing the database connection")
-		}
-	}()
-
-	log.V(1).Info("running query", "query", q)
-	if _, err := db.Exec(q, args...); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (r *nodeSQLRunner) SetReadOnly() error {
 	return r.runQuery("SET GLOBAL SUPER_READ_ONLY = 1")
 }
@@ -95,9 +85,40 @@ func (r *nodeSQLRunner) SetWritable() error {
 	return r.runQuery("SET GLOBAL SUPER_READ = 0")
 }
 
-func (r *nodeSQLRunner) ConfigureSlaveNode(masterHost string) error {
+func (r *nodeSQLRunner) EnableSuperReadOnly() error {
+	return r.runQuery("SET GLOBAL SUPER_READ_ONLY = 1")
+}
+
+func (r *nodeSQLRunner) DisableSuperReadOnly() error {
+	return r.runQuery("SET GLOBAL READ_ONLY = 1; SET GLOBAL SUPER_READ_ONLY = 0;")
+}
+
+func (r *nodeSQLRunner) SetGtidPurged() error {
+	gtid, err := r.readFromInitTable(InitGtidPurgedKey)
+	if err != nil {
+		return err
+	}
+
+	if len(gtid) == 0 {
+		// nothing to set, skip
+		return nil
+	}
+
+	log.Info("RESET MASTER and setting GTID_PURGED", "gtid", gtid)
+
+	// TODO: continue
+	// if errQ := r.runQuery("RESET MASTER; SET GLOBAL GTID_PURGED=?", gtid); errQ != nil {
+	// 	return errQ
+	// }
+
+	return nil
+}
+
+// ChangeMasterTo changes the master host and starts slave.
+func (r *nodeSQLRunner) ChangeMasterTo(masterHost string) error {
 	// slave node
 	query := `
+      STOP SLAVE;
 	  CHANGE MASTER TO MASTER_AUTO_POSITION=1,
 		MASTER_HOST=?,
 		MASTER_USER=?,
@@ -129,31 +150,120 @@ func (r *nodeSQLRunner) ConfigureSlaveNode(masterHost string) error {
 }
 
 func (r *nodeSQLRunner) MarkConfigurationDone() error {
+	return r.writeToInitTable(initCompletedKey, r.Host())
+}
+
+func (r *nodeSQLRunner) IsConfigured() (bool, error) {
+	value, err := r.readFromInitTable(initCompletedKey)
+	if err != nil {
+		return false, err
+	}
+
+	return len(value) != 0, nil
+}
+
+func (r *nodeSQLRunner) Host() string {
+	return r.host
+}
+
+func (r *nodeSQLRunner) writeToInitTable(key, value string) error {
 	query := `
 	  SET @@SESSION.SQL_LOG_BIN = 0;
-	  BEGIN;
-	  CREATE DATABASE IF NOT EXISTS %[1]s;
-	      CREATE TABLE IF NOT EXISTS %[1]s.%[2]s  (
-		name varchar(255) NOT NULL,
-		value varchar(255) NOT NULL,
-		inserted_at datetime NOT NULL
-	      ) ENGINE=csv;
-
-	  INSERT INTO %[1]s.%[2]s VALUES ("init_completed", "?", now());
-	  COMMIT;
+	  INSERT INTO %[1]s.%[2]s VALUES (?, ?, now());
 	`
 
 	// insert tables and databases names. It's safe because is not user input.
 	// see: https://github.com/golang/go/issues/18478
 	query = fmt.Sprintf(query, constants.OperatorDbName, constants.OperatorInitTableName)
 
-	if err := r.runQuery(query, r.host); err != nil {
-		return fmt.Errorf("failed to mark configuration done, err: %s", err)
+	if err := r.runQuery(query, key, value); err != nil {
+		return fmt.Errorf("failed to write to init table, err: %s", err)
 	}
 
 	return nil
 }
 
-func (r *nodeSQLRunner) Host() string {
-	return r.host
+func (r *nodeSQLRunner) readFromInitTable(key string) (string, error) {
+	db, close, err := r.dbConn()
+	if err != nil {
+		return "", err
+	}
+	defer close()
+
+	query := "SELECT value FROM %s.%s WHERE name=?;"
+	query = fmt.Sprintf(query, constants.OperatorDbName, constants.OperatorInitTableName)
+
+	row := db.QueryRow(query, key)
+	if row == nil {
+		// nothing found send empty string
+		return "", nil
+	}
+
+	var value string
+	err = row.Scan(&value)
+	if err != nil {
+		return "", err
+	}
+	return value, nil
+}
+
+// runQuery executes a query
+func (r *nodeSQLRunner) runQuery(q string, args ...interface{}) error {
+	db, close, err := r.dbConn()
+	if err != nil {
+		return err
+	}
+	defer close()
+
+	log.V(1).Info("running query", "query", q)
+	if _, err := db.Exec(q, args...); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// readMysqlVariable reads the mysql variable
+func (r *nodeSQLRunner) readMysqlVariable(global bool, varName string) (string, error) {
+	db, close, err := r.dbConn()
+	if err != nil {
+		return "", err
+	}
+	defer close()
+
+	varType := "SESSION"
+	if global {
+		varType = "GLOBAL"
+	}
+
+	// nolint: gosec
+	q := fmt.Sprintf("SELECT @@%s.?;", varType)
+
+	log.V(1).Info("running query", "query", q, "variable", varName, "global", global)
+	row := db.QueryRow(q, varName)
+	if row == nil {
+		return "", fmt.Errorf("no row found")
+	}
+
+	var value string
+	err = row.Scan(&value)
+	if err != nil {
+		return "", err
+	}
+
+	return value, nil
+}
+
+func (r *nodeSQLRunner) dbConn() (*sql.DB, func(), error) {
+	db, err := sql.Open("mysql", r.dsn)
+	if err != nil {
+		return nil, func() {}, err
+	}
+	close := func() {
+		if cErr := db.Close(); cErr != nil {
+			log.Error(cErr, "failed closing the database connection")
+		}
+	}
+
+	return db, close, nil
 }
