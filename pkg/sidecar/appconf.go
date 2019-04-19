@@ -24,6 +24,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
+
 	"github.com/go-ini/ini"
 )
 
@@ -66,6 +68,12 @@ func RunConfigCommand(cfg *Config) error {
 	}
 	if err = initCFG.SaveTo(path.Join(confDPath, "10-init-file.cnf")); err != nil {
 		return fmt.Errorf("failed to configure init file: %s", err)
+	}
+
+	// docker entrypoint init sql files
+	initDBFilePath := path.Join(constants.InitDBVolumeMountPath, "op-init-db.sql")
+	if err = ioutil.WriteFile(initDBFilePath, initDBFileQuery(cfg), 0644); err != nil {
+		return fmt.Errorf("failed to write entrypoint sql init-file: %s", err)
 	}
 
 	// mysql client connect credentials
@@ -140,6 +148,9 @@ func initFileQuery(cfg *Config) []byte {
 		"SET @@SESSION.SQL_LOG_BIN = 0",
 	}
 
+	// create operator database because GRANTS need it
+	queries = append(queries, fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s;", toolsDbName))
+
 	// configure operator utility user
 	queries = append(queries, createUserQuery(cfg.OperatorUser, cfg.OperatorPassword, "%",
 		[]string{"SUPER", "SHOW DATABASES", "PROCESS", "RELOAD", "CREATE", "SELECT"}, "*.*",
@@ -199,4 +210,22 @@ func createUserQuery(name, pass, host string, rights ...interface{}) []string {
 	}
 
 	return append(queries, grants...)
+}
+
+func initDBFileQuery(cfg *Config) []byte {
+	queries := []string{
+		// "SET @@SESSION.SQL_LOG_BIN = 0;",
+	}
+
+	// create init table
+	queries = append(queries, fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s.%s (
+		name varchar(255) NOT NULL,
+		value varchar(255) NOT NULL,
+		inserted_at datetime NOT NULL
+    ) ENGINE=csv;
+    `, toolsDbName, "init"))
+
+	// queries = append(queries, fmt.Sprintf(`INSERT INTO %s.%s VALUES ("purged_gtid", "%s", now());`, toolsDbName, "init", "xxxxxx:xxx"))
+
+	return []byte(strings.Join(queries, "\n"))
 }

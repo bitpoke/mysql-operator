@@ -71,11 +71,12 @@ func isOwnedByMySQL(meta metav1.Object) bool {
 		return false
 	}
 
-	for _, o := range meta.GetOwnerReferences() {
-		if o.Kind == "MysqlCluster" {
-			return true
-		}
+	// TODO: add more checks here
+	labels := meta.GetLabels()
+	if val, ok := labels["app.kubernetes.io/managed-by"]; ok {
+		return val == "mysql.presslabs.org"
 	}
+
 	return false
 }
 
@@ -142,19 +143,20 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 
 	cluster, err := r.getNodeCluster(pod)
 	if err != nil {
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, err
 	}
 
 	var sql *nodeSQLRunner
 	sql, err = r.getMySQLConnection(cluster, pod)
 	if err != nil {
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, err
 	}
 
 	err = r.initializeMySQL(sql, cluster)
 	if err != nil {
 		updatePodStatusCondition(pod, mysqlcluster.NodeInitializedConditionType,
 			corev1.ConditionFalse, "mysqlInitializationFailed", err.Error())
+
 		if uErr := r.updatePod(pod); uErr != nil {
 			return reconcile.Result{}, uErr
 		}
@@ -174,16 +176,24 @@ func (r *ReconcileMysqlNode) initializeMySQL(sql *nodeSQLRunner, cluster *mysqlc
 		return err
 	}
 
+	if err := sql.DisableSuperReadOnly(); err != nil {
+		return err
+	}
+
 	// is slave node
 	if cluster.GetMasterHost() != sql.Host() {
 		log.Info("configure pod as slave", "pod", sql.Host(), "master", cluster.GetMasterHost())
-		if err := sql.ConfigureSlaveNode(cluster.GetMasterHost()); err != nil {
+		if err := sql.SetGtidPurged(); err != nil {
+			return err
+		}
+
+		if err := sql.ChangeMasterTo(cluster.GetMasterHost()); err != nil {
 			return err
 		}
 		// TODO: check if node should be set read-only or not (super)
-		if err := sql.SetReadOnly(); err != nil {
-			return err
-		}
+		// if err := sql.SetReadOnly(); err != nil {
+		// 	return err
+		// }
 	}
 
 	if err := sql.MarkConfigurationDone(); err != nil {
@@ -227,7 +237,7 @@ func (r *ReconcileMysqlNode) getNodeCluster(pod *corev1.Pod) (*mysqlcluster.Mysq
 		Namespace: pod.Namespace,
 	}
 	cluster := mysqlcluster.New(&api.MysqlCluster{})
-	err = r.Get(context.TODO(), clusterKey, cluster)
+	err = r.Get(context.TODO(), clusterKey, cluster.Unwrap())
 	return cluster, err
 }
 
@@ -257,7 +267,7 @@ func (r *ReconcileMysqlNode) getMySQLConnection(cluster *mysqlcluster.MysqlClust
 		user, pass, host, constants.MysqlPort,
 	)
 
-	return newNodeConn(dsn, pod.Spec.Hostname, repU, repP), nil
+	return newNodeConn(dsn, host, repU, repP), nil
 }
 
 func (r *ReconcileMysqlNode) updatePod(pod *corev1.Pod) error {
