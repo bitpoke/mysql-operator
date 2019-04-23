@@ -42,7 +42,7 @@ const (
 	OperatorDbName = "sys_operator"
 
 	// OperatorInitTableName represents the name of the table that is used to mark configuration complete
-	OperatorInitTableName = "init"
+	OperatorGtidsTableName = "gtids"
 
 	// ConfVolumeMountPath is the path where mysql configs will be mounted
 	ConfVolumeMountPath = "/etc/mysql"
