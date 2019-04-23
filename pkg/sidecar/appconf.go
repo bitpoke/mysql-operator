@@ -58,22 +58,24 @@ func RunConfigCommand(cfg *Config) error {
 	}
 
 	// write initialization sql file. This file is the init-file used by MySQL to configure itself
+	var gtidPurged string
+	gtidPurged, err = readPurgedGTID()
+	if err != nil {
+		// not a fatal error, log it and continue
+		log.Info("error while reading PURGE GTID from xtrabackup info file", "error", err)
+	}
+
 	initFilePath := path.Join(confDPath, "operator-init.sql")
-	if err = ioutil.WriteFile(initFilePath, initFileQuery(cfg), 0644); err != nil {
+	if err = ioutil.WriteFile(initFilePath, initFileQuery(cfg, gtidPurged), 0644); err != nil {
 		return fmt.Errorf("failed to write init-file: %s", err)
 	}
+
 	// mysql server utility user configs
 	if initCFG, err = getInitFileConfigs(initFilePath); err != nil {
 		return fmt.Errorf("failed to configure init file: %s", err)
 	}
 	if err = initCFG.SaveTo(path.Join(confDPath, "10-init-file.cnf")); err != nil {
 		return fmt.Errorf("failed to configure init file: %s", err)
-	}
-
-	// docker entrypoint init sql files
-	initDBFilePath := path.Join(constants.InitDBVolumeMountPath, "op-init-db.sql")
-	if err = ioutil.WriteFile(initDBFilePath, initDBFileQuery(cfg), 0644); err != nil {
-		return fmt.Errorf("failed to write entrypoint sql init-file: %s", err)
 	}
 
 	// mysql client connect credentials
@@ -143,7 +145,7 @@ func getInitFileConfigs(filePath string) (*ini.File, error) {
 	return cfg, nil
 }
 
-func initFileQuery(cfg *Config) []byte {
+func initFileQuery(cfg *Config, gtidPurged string) []byte {
 	queries := []string{
 		"SET @@SESSION.SQL_LOG_BIN = 0",
 	}
@@ -176,6 +178,18 @@ func initFileQuery(cfg *Config) []byte {
 	queries = append(queries, createUserQuery(cfg.HeartBeatUser, cfg.HeartBeatPassword, "127.0.0.1",
 		[]string{"CREATE", "SELECT", "DELETE", "UPDATE", "INSERT"}, fmt.Sprintf("%s.%s", toolsDbName, toolsHeartbeatTableName),
 		[]string{"REPLICATION CLIENT"}, "*.*")...)
+
+	if len(gtidPurged) != 0 {
+		queries = append(queries, fmt.Sprintf(`
+		CREATE TABLE IF NOT EXISTS %[1]s.%[2]s (
+            id int PRIMARY KEY,
+            gtid varchar(512) NOT NULL,
+            used BOOLEAN DEFAULT false
+		)`, constants.OperatorDbName, constants.OperatorGtidsTableName))
+
+		queries = append(queries, fmt.Sprintf(`REPLACE INTO %s.%s VALUES (1, '%s')`,
+			constants.OperatorDbName, constants.OperatorGtidsTableName, gtidPurged))
+	}
 
 	return []byte(strings.Join(queries, ";\n"))
 }
@@ -210,22 +224,4 @@ func createUserQuery(name, pass, host string, rights ...interface{}) []string {
 	}
 
 	return append(queries, grants...)
-}
-
-func initDBFileQuery(cfg *Config) []byte {
-	queries := []string{
-		// "SET @@SESSION.SQL_LOG_BIN = 0;",
-	}
-
-	// create init table
-	queries = append(queries, fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s.%s (
-		name varchar(255) NOT NULL,
-		value varchar(255) NOT NULL,
-		inserted_at datetime NOT NULL
-    ) ENGINE=csv;
-    `, toolsDbName, "init"))
-
-	// queries = append(queries, fmt.Sprintf(`INSERT INTO %s.%s VALUES ("purged_gtid", "%s", now());`, toolsDbName, "init", "xxxxxx:xxx"))
-
-	return []byte(strings.Join(queries, "\n"))
 }

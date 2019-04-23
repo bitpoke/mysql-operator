@@ -95,8 +95,16 @@ spec:
                   type: object
                 nodeSelector:
                   type: object
+                priorityClassName:
+                  type: string
                 resources:
                   type: object
+                serviceAccountName:
+                  type: string
+                tolerations:
+                  items:
+                    type: object
+                  type: array
               type: object
             queryLimits:
               description: QueryLimits represents limits for a query

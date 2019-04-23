@@ -40,13 +40,9 @@ VERBOSE="--debug"
 
 # exec command
 case "$1" in
-    files-config)
+    clone-and-init)
         shift 1
-        $SIDECAR_BIN $VERBOSE init-configs "$@"
-        ;;
-    clone)
-        shift 1
-        $SIDECAR_BIN $VERBOSE clone "$@"
+        $SIDECAR_BIN $VERBOSE clone-and-init "$@"
         ;;
     config-and-serve)
         shift 1

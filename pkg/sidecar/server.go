@@ -19,6 +19,7 @@ package sidecar
 import (
 	"context"
 	"fmt"
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 	"io"
 	"net/http"
 	"os"
@@ -27,7 +28,7 @@ import (
 
 const (
 	backupStatusTrailer = "X-Backup-Status"
-	backupSuccessfull   = "Success"
+	backupSuccessful    = "Success"
 	backupFailed        = "Failed"
 )
 
@@ -79,7 +80,7 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "Streamming unsupported!", http.StatusInternalServerError)
+		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 		return
 	}
 
@@ -89,7 +90,7 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 
 	// nolint: gosec
 	xtrabackup := exec.Command("xtrabackup", "--backup", "--slave-info", "--stream=xbstream",
-		fmt.Sprintf("--tables-exclude=%s.%s", toolsDbName, toolsInitTableName),
+		fmt.Sprintf("--tables-exclude=%s.%s", constants.OperatorDbName, constants.OperatorGtidsTableName),
 		"--host=127.0.0.1", fmt.Sprintf("--user=%s", s.cfg.ReplicationUser),
 		fmt.Sprintf("--password=%s", s.cfg.ReplicationPassword),
 		"--target-dir=/tmp/xtrabackup_backupfiles/")
@@ -109,7 +110,7 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	if err := xtrabackup.Start(); err != nil {
-		log.Error(err, "failed to start extrabackup command")
+		log.Error(err, "failed to start xtrabackup command")
 		http.Error(w, "xtrabackup failed", http.StatusInternalServerError)
 		return
 	}
@@ -128,7 +129,7 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// success
-	w.Header().Set(backupStatusTrailer, backupSuccessfull)
+	w.Header().Set(backupStatusTrailer, backupSuccessful)
 	flusher.Flush()
 }
 
@@ -160,7 +161,7 @@ func requestABackup(cfg *Config, host, endpoint string) (*http.Response, error) 
 		return nil, fmt.Errorf("fail to create request: %s", err)
 	}
 
-	// set authentification user and password
+	// set authentication user and password
 	req.SetBasicAuth(cfg.BackupUser, cfg.BackupPassword)
 
 	client := &http.Client{}
@@ -178,7 +179,7 @@ func requestABackup(cfg *Config, host, endpoint string) (*http.Response, error) 
 }
 
 func checkBackupTrailers(resp *http.Response) error {
-	if values, ok := resp.Trailer[backupStatusTrailer]; !ok || !stringInSlice(backupSuccessfull, values) {
+	if values, ok := resp.Trailer[backupStatusTrailer]; !ok || !stringInSlice(backupSuccessful, values) {
 		// backup is failed, remove from remote
 		return fmt.Errorf("backup failed to be taken: no 'Success' trailer found")
 	}

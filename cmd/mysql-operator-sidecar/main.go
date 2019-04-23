@@ -59,26 +59,16 @@ func main() {
 	// init configs
 	cfg := sidecar.NewConfig()
 
-	confCmd := &cobra.Command{
-		Use:   "init-configs",
-		Short: "Init subcommand, for init files.",
-		Run: func(cmd *cobra.Command, args []string) {
-			err := sidecar.RunConfigCommand(cfg)
-			if err != nil {
-				log.Error(err, "init command failed")
-				os.Exit(1)
-			}
-		},
-	}
-	cmd.AddCommand(confCmd)
-
 	cloneCmd := &cobra.Command{
-		Use:   "clone",
+		Use:   "clone-and-init",
 		Short: "Clone data from a bucket or prior node.",
 		Run: func(cmd *cobra.Command, args []string) {
-			err := sidecar.RunCloneCommand(cfg)
-			if err != nil {
+			if err := sidecar.RunCloneCommand(cfg); err != nil {
 				log.Error(err, "clone command failed")
+				os.Exit(1)
+			}
+			if err := sidecar.RunConfigCommand(cfg); err != nil {
+				log.Error(err, "init command failed")
 				os.Exit(1)
 			}
 		},

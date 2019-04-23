@@ -17,6 +17,7 @@ limitations under the License.
 package sidecar
 
 import (
+	"bufio"
 	"database/sql"
 	"fmt"
 	"io"
@@ -98,4 +99,42 @@ func shouldBootstrapNode() bool {
 
 	// maybe check csv init data and log it
 	return false
+}
+
+// readPurgedGTID returns the GTID from xtrabackup_binlog_info file
+func readPurgedGTID() (string, error) {
+	file, err := os.Open(fmt.Sprintf("%s/xtrabackup_binlog_info", dataDir))
+	if err != nil {
+		return "", err
+	}
+
+	defer func() {
+		if err1 := file.Close(); err1 != nil {
+			log.Error(err1, "failed to close file")
+		}
+	}()
+
+	return getGTIDFrom(file)
+}
+
+// getGTIDFrom parse the content from xtrabackup_binlog_info file passed as
+// io.Reader and extracts the GTID.
+func getGTIDFrom(reader io.Reader) (string, error) {
+	scanner := bufio.NewScanner(reader)
+	scanner.Split(bufio.ScanWords)
+
+	gtid := ""
+	for i := 0; scanner.Scan(); i++ {
+		if i >= 2 {
+			gtid += scanner.Text()
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", err
+	} else if len(gtid) == 0 {
+		return "", io.EOF
+	}
+
+	return gtid, nil
 }

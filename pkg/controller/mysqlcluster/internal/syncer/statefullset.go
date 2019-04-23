@@ -18,7 +18,6 @@ package mysqlcluster
 
 import (
 	"fmt"
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
 	"strings"
 
 	"github.com/imdario/mergo"
@@ -35,6 +34,7 @@ import (
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 // volumes names
@@ -47,13 +47,12 @@ const (
 
 // containers names
 const (
-	containerInitName      = "init-mysql"
-	containerCloneName     = "clone-mysql"
-	containerSidecarName   = "sidecar"
-	containerMysqlName     = "mysql"
-	containerExporterName  = "metrics-exporter"
-	containerHeartBeatName = "pt-heartbeat"
-	containerKillerName    = "pt-kill"
+	containerCloneAndInitName = "init-mysql"
+	containerSidecarName      = "sidecar"
+	containerMysqlName        = "mysql"
+	containerExporterName     = "metrics-exporter"
+	containerHeartBeatName    = "pt-heartbeat"
+	containerKillerName       = "pt-kill"
 )
 
 type sfsSyncer struct {
@@ -218,7 +217,7 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		Value: s.opt.OrchestratorURI,
 	})
 
-	if len(s.cluster.Spec.InitBucketURL) > 0 && name == containerCloneName {
+	if len(s.cluster.Spec.InitBucketURL) > 0 && name == containerCloneAndInitName {
 		env = append(env, core.EnvVar{
 			Name:  "INIT_BUCKET_URI",
 			Value: s.cluster.Spec.InitBucketURL,
@@ -240,7 +239,7 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_USER", "USER", true))
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_PASSWORD", "PASSWORD", true))
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_DATABASE", "DATABASE", true))
-	case containerCloneName:
+	case containerCloneAndInitName:
 		env = append(env, s.envVarFromSecret(sctOpName, "BACKUP_USER", "BACKUP_USER", true))
 		env = append(env, s.envVarFromSecret(sctOpName, "BACKUP_PASSWORD", "BACKUP_PASSWORD", true))
 	}
@@ -250,16 +249,10 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 
 func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
 	return []core.Container{
-		// init container for configs
-		s.ensureContainer(containerInitName,
+		// clone and init container
+		s.ensureContainer(containerCloneAndInitName,
 			s.opt.SidecarImage,
-			[]string{"files-config"},
-		),
-
-		// clone container
-		s.ensureContainer(containerCloneName,
-			s.opt.SidecarImage,
-			[]string{"clone"},
+			[]string{"clone-and-init"},
 		),
 	}
 }
@@ -292,7 +285,8 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 				"mysql",
 				fmt.Sprintf("--defaults-file=%s", confClientPath),
 				"-e",
-				"SELECT 1",
+				"SELECT 1", // TODO: ...
+				// fmt.Sprintf("SELECT * FROM %s.%s", constants.OperatorDbName, "readiness"),
 			},
 		},
 	})
@@ -465,7 +459,7 @@ func (s *sfsSyncer) ensureVolumeClaimTemplates(in []core.PersistentVolumeClaim) 
 
 func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 	envSources := []core.EnvFromSource{}
-	if name == containerCloneName && len(s.cluster.Spec.InitBucketSecretName) > 0 {
+	if name == containerCloneAndInitName && len(s.cluster.Spec.InitBucketSecretName) > 0 {
 		envSources = append(envSources, core.EnvFromSource{
 			SecretRef: &core.SecretEnvSource{
 				LocalObjectReference: core.LocalObjectReference{
@@ -474,7 +468,7 @@ func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 			},
 		})
 	}
-	if name == containerSidecarName || name == containerInitName {
+	if name == containerSidecarName || name == containerCloneAndInitName {
 		envSources = append(envSources, core.EnvFromSource{
 			SecretRef: &core.SecretEnvSource{
 				LocalObjectReference: core.LocalObjectReference{
@@ -488,7 +482,7 @@ func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 
 func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 	switch name {
-	case containerInitName:
+	case containerCloneAndInitName:
 		return []core.VolumeMount{
 			{
 				Name:      confVolumeName,
@@ -499,12 +493,12 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 				MountPath: ConfMapVolumeMountPath,
 			},
 			{
-				Name:      initDBVolumeName,
-				MountPath: constants.InitDBVolumeMountPath,
+				Name:      dataVolumeName,
+				MountPath: DataVolumeMountPath,
 			},
 		}
 
-	case containerCloneName, containerMysqlName, containerSidecarName:
+	case containerMysqlName, containerSidecarName:
 		return []core.VolumeMount{
 			{
 				Name:      confVolumeName,
@@ -513,10 +507,6 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 			{
 				Name:      dataVolumeName,
 				MountPath: DataVolumeMountPath,
-			},
-			{
-				Name:      initDBVolumeName,
-				MountPath: constants.InitDBVolumeMountPath,
 			},
 		}
 

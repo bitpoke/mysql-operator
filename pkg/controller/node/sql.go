@@ -29,31 +29,34 @@ import (
 
 const (
 	// mysqlReadyTries represents the number of tries with 1 second sleep between them to check if MySQL is ready
-	mysqlReadyTries = 5
+	mysqlReadyTries = 10
 	// connRetry represents the number of tries to connect to master server
 	connRetry = 10
 )
 
-const (
-	initCompletedKey = "init_completed"
-	// InitGtidPurgedKey represents the key from the init table where is gtid_purged should be purged
-	InitGtidPurgedKey = "gtid_purged"
-)
+type SQLInterface interface {
+	Wait() error
+	DisableSuperReadOnly() (func(), error)
+	ChangeMasterTo(string, string, string) error
+	MarkConfigurationDone() error
+	SetPurgedGtid() error
+	Host() string
+}
 
 type nodeSQLRunner struct {
 	dsn  string
 	host string
 
-	replicationUser     string
-	replicationPassword string
+	enableBinLog bool
 }
 
-func newNodeConn(dsn, host, repU, repP string) *nodeSQLRunner {
+type newSQLInterface func(dsn, host string) SQLInterface
+
+func newNodeConn(dsn, host string) SQLInterface {
 	return &nodeSQLRunner{
-		dsn:                 dsn,
-		host:                host,
-		replicationUser:     repU,
-		replicationPassword: repP,
+		dsn:          dsn,
+		host:         host,
+		enableBinLog: false,
 	}
 }
 
@@ -76,46 +79,18 @@ func (r *nodeSQLRunner) Wait() error {
 
 }
 
-func (r *nodeSQLRunner) SetReadOnly() error {
-	return r.runQuery("SET GLOBAL SUPER_READ_ONLY = 1")
-}
-
-// TODO: if not used remove it
-func (r *nodeSQLRunner) SetWritable() error {
-	return r.runQuery("SET GLOBAL SUPER_READ = 0")
-}
-
-func (r *nodeSQLRunner) EnableSuperReadOnly() error {
-	return r.runQuery("SET GLOBAL SUPER_READ_ONLY = 1")
-}
-
-func (r *nodeSQLRunner) DisableSuperReadOnly() error {
-	return r.runQuery("SET GLOBAL READ_ONLY = 1; SET GLOBAL SUPER_READ_ONLY = 0;")
-}
-
-func (r *nodeSQLRunner) SetGtidPurged() error {
-	gtid, err := r.readFromInitTable(InitGtidPurgedKey)
-	if err != nil {
-		return err
+func (r *nodeSQLRunner) DisableSuperReadOnly() (func(), error) {
+	enable := func() {
+		err := r.runQuery("SET GLOBAL SUPER_READ_ONLY = 0;")
+		if err != nil {
+			log.Error(err, "failed to set node super read only", "node", r.Host())
+		}
 	}
-
-	if len(gtid) == 0 {
-		// nothing to set, skip
-		return nil
-	}
-
-	log.Info("RESET MASTER and setting GTID_PURGED", "gtid", gtid)
-
-	// TODO: continue
-	// if errQ := r.runQuery("RESET MASTER; SET GLOBAL GTID_PURGED=?", gtid); errQ != nil {
-	// 	return errQ
-	// }
-
-	return nil
+	return enable, r.runQuery("SET GLOBAL READ_ONLY = 1; SET GLOBAL SUPER_READ_ONLY = 0;")
 }
 
 // ChangeMasterTo changes the master host and starts slave.
-func (r *nodeSQLRunner) ChangeMasterTo(masterHost string) error {
+func (r *nodeSQLRunner) ChangeMasterTo(masterHost, user, pass string) error {
 	// slave node
 	query := `
       STOP SLAVE;
@@ -126,7 +101,7 @@ func (r *nodeSQLRunner) ChangeMasterTo(masterHost string) error {
 		MASTER_CONNECT_RETRY=?;
 	`
 	if err := r.runQuery(query,
-		masterHost, r.replicationUser, r.replicationPassword, connRetry,
+		masterHost, user, pass, connRetry,
 	); err != nil {
 		return fmt.Errorf("failed to configure slave node, err: %s", err)
 	}
@@ -150,61 +125,23 @@ func (r *nodeSQLRunner) ChangeMasterTo(masterHost string) error {
 }
 
 func (r *nodeSQLRunner) MarkConfigurationDone() error {
-	return r.writeToInitTable(initCompletedKey, r.Host())
-}
+	query := `
+    CREATE TABLE IF NOT EXISTS %s.%s (
+		id int NOT NULL
+    ) ENGINE=MEMORY;
 
-func (r *nodeSQLRunner) IsConfigured() (bool, error) {
-	value, err := r.readFromInitTable(initCompletedKey)
-	if err != nil {
-		return false, err
+    INSERT INTO %[1]s.%[2]s VALUES (1);
+    `
+	query = fmt.Sprintf(query, constants.OperatorDbName, "readiness")
+
+	if err := r.runQuery(query); err != nil {
+		return fmt.Errorf("failed to mark configuration done, err: %s", err)
 	}
-
-	return len(value) != 0, nil
+	return nil
 }
 
 func (r *nodeSQLRunner) Host() string {
 	return r.host
-}
-
-func (r *nodeSQLRunner) writeToInitTable(key, value string) error {
-	query := `
-	  SET @@SESSION.SQL_LOG_BIN = 0;
-	  INSERT INTO %[1]s.%[2]s VALUES (?, ?, now());
-	`
-
-	// insert tables and databases names. It's safe because is not user input.
-	// see: https://github.com/golang/go/issues/18478
-	query = fmt.Sprintf(query, constants.OperatorDbName, constants.OperatorInitTableName)
-
-	if err := r.runQuery(query, key, value); err != nil {
-		return fmt.Errorf("failed to write to init table, err: %s", err)
-	}
-
-	return nil
-}
-
-func (r *nodeSQLRunner) readFromInitTable(key string) (string, error) {
-	db, close, err := r.dbConn()
-	if err != nil {
-		return "", err
-	}
-	defer close()
-
-	query := "SELECT value FROM %s.%s WHERE name=?;"
-	query = fmt.Sprintf(query, constants.OperatorDbName, constants.OperatorInitTableName)
-
-	row := db.QueryRow(query, key)
-	if row == nil {
-		// nothing found send empty string
-		return "", nil
-	}
-
-	var value string
-	err = row.Scan(&value)
-	if err != nil {
-		return "", err
-	}
-	return value, nil
 }
 
 // runQuery executes a query
@@ -216,6 +153,10 @@ func (r *nodeSQLRunner) runQuery(q string, args ...interface{}) error {
 	defer close()
 
 	log.V(1).Info("running query", "query", q)
+
+	if !r.enableBinLog {
+		q = "SET @@SESSION.SQL_LOG_BIN = 0;\n" + q
+	}
 	if _, err := db.Exec(q, args...); err != nil {
 		return err
 	}
@@ -223,35 +164,27 @@ func (r *nodeSQLRunner) runQuery(q string, args ...interface{}) error {
 	return nil
 }
 
-// readMysqlVariable reads the mysql variable
-func (r *nodeSQLRunner) readMysqlVariable(global bool, varName string) (string, error) {
+// readFromMysql executes the given query and loads the values into give variables
+func (r *nodeSQLRunner) readFromMysql(query string, values ...interface{}) error {
 	db, close, err := r.dbConn()
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer close()
 
-	varType := "SESSION"
-	if global {
-		varType = "GLOBAL"
-	}
-
 	// nolint: gosec
-	q := fmt.Sprintf("SELECT @@%s.?;", varType)
-
-	log.V(1).Info("running query", "query", q, "variable", varName, "global", global)
-	row := db.QueryRow(q, varName)
+	log.V(1).Info("running query", "query", query)
+	row := db.QueryRow(query)
 	if row == nil {
-		return "", fmt.Errorf("no row found")
+		return fmt.Errorf("no row found")
 	}
 
-	var value string
-	err = row.Scan(&value)
+	err = row.Scan(values...)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return value, nil
+	return nil
 }
 
 func (r *nodeSQLRunner) dbConn() (*sql.DB, func(), error) {
@@ -266,4 +199,35 @@ func (r *nodeSQLRunner) dbConn() (*sql.DB, func(), error) {
 	}
 
 	return db, close, nil
+}
+
+func (r *nodeSQLRunner) SetPurgedGtid() error {
+	qq := fmt.Sprintf("SELECT used FROM %[1]s.%[2]s WHERE id=1",
+		constants.OperatorDbName, constants.OperatorGtidsTableName)
+
+	var used bool
+	if err := r.readFromMysql(qq, &used); err != nil {
+		return err
+	}
+
+	if used {
+		log.Info("gtid purged set!")
+		return nil
+	}
+
+	query := fmt.Sprintf(`
+      SET @@SESSION.SQL_LOG_BIN = 0;
+      START TRANSACTION;
+        SELECT gtid INTO @gtid FROM %[1]s.%[2]s WHERE id=1 AND used=false;
+	    RESET MASTER;
+	    SET @@GLOBAL.GTID_PURGED = @gtid;
+	    REPLACE INTO %[1]s.%[2]s VALUES (1, @gtid, true);
+      COMMIT;
+    `, constants.OperatorDbName, constants.OperatorGtidsTableName)
+
+	if err := r.runQuery(query); err != nil {
+		return err
+	}
+
+	return nil
 }
