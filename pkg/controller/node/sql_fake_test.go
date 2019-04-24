@@ -16,6 +16,12 @@ limitations under the License.
 
 package node
 
+import (
+	"fmt"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
+
 type fakeSQLRunner struct {
 	dsn  string
 	host string
@@ -44,6 +50,14 @@ func (f *fakeSQLRunner) Host() string {
 	return ""
 }
 
-func (f *fakeSQLRunner) SetPurgedGtid() error {
+func (f *fakeSQLRunner) SetPurgedGTID() error {
 	return nil
 }
+
+var _ = Describe("SQL functions", func() {
+	It("should find not found error", func() {
+		err := fmt.Errorf("Error 1146: Table 'a.a' doesn't exist")
+		Expect(isMySQLError(err, 1146)).To(Equal(true))
+		Expect(isMySQLError(err, 1145)).To(Equal(false))
+	})
+})

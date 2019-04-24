@@ -91,6 +91,17 @@ func podIsReady(obj runtime.Object) bool {
 	return false
 }
 
+func isInitialized(obj runtime.Object) bool {
+	pod := obj.(*corev1.Pod)
+
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == mysqlcluster.NodeInitializedConditionType {
+			return cond.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}
+
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
@@ -102,10 +113,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to MysqlCluster
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
 		CreateFunc: func(evt event.CreateEvent) bool {
-			return isOwnedByMySQL(evt.Meta) && !podIsReady(evt.Object)
+			return isOwnedByMySQL(evt.Meta) && !podIsReady(evt.Object) && !isInitialized(evt.Object)
 		},
 		UpdateFunc: func(evt event.UpdateEvent) bool {
-			return isOwnedByMySQL(evt.MetaNew) && !podIsReady(evt.ObjectNew)
+			log.V(1).Info("pod update event", "meta", evt.MetaNew)
+			return isOwnedByMySQL(evt.MetaNew) && !podIsReady(evt.ObjectNew) && !isInitialized(evt.ObjectNew)
 		},
 		DeleteFunc: func(evt event.DeleteEvent) bool {
 			return false
@@ -133,6 +145,7 @@ type ReconcileMysqlNode struct {
 // Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
 // and what is in the MysqlCluster.Spec
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
+// +kubebuilder:rbac:groups=core,resources=pods/status,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	pod := &corev1.Pod{}
 	err := r.Get(context.TODO(), request.NamespacedName, pod)
@@ -148,14 +161,10 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 
 	log.Info("syncing MySQL Node", "pod", request.NamespacedName.String())
 
-	if isInitialized(pod) {
-		// if pod is initialized then don't do anything
-		log.Info("pod is initialized", "pod", pod.Spec.Hostname)
-		return reconcile.Result{}, nil
-	}
-
-	cluster, err := r.getNodeCluster(pod)
+	var cluster *mysqlcluster.MysqlCluster
+	cluster, err = r.getNodeCluster(pod)
 	if err != nil {
+		log.Info("cluster is not found")
 		return reconcile.Result{}, err
 	}
 
@@ -164,7 +173,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, nil
 	}
 
-	var creds *credentails
+	var creds *credentials
 	creds, err = r.getCredsSecret(cluster)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -194,7 +203,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	return reconcile.Result{}, r.updatePod(pod)
 }
 
-func (r *ReconcileMysqlNode) initializeMySQL(sql SQLInterface, cluster *mysqlcluster.MysqlCluster, c *credentails) error {
+func (r *ReconcileMysqlNode) initializeMySQL(sql SQLInterface, cluster *mysqlcluster.MysqlCluster, c *credentials) error {
 	// wait for mysql to be ready
 	if err := sql.Wait(); err != nil {
 		return err
@@ -206,10 +215,10 @@ func (r *ReconcileMysqlNode) initializeMySQL(sql SQLInterface, cluster *mysqlclu
 	}
 	defer enableSuperReadOnly()
 
-	// is slave node
+	// is slave node?
 	if cluster.GetMasterHost() != sql.Host() {
 		log.Info("configure pod as slave", "pod", sql.Host(), "master", cluster.GetMasterHost())
-		if err := sql.SetPurgedGtid(); err != nil {
+		if err := sql.SetPurgedGTID(); err != nil {
 			return err
 		}
 
@@ -243,7 +252,7 @@ func (r *ReconcileMysqlNode) getNodeCluster(pod *corev1.Pod) (*mysqlcluster.Mysq
 }
 
 // getMySQLConnectionString returns the DSN that contains credentials to connect to given pod from a MySQL cluster
-func (r *ReconcileMysqlNode) getMySQLConnection(cluster *mysqlcluster.MysqlCluster, pod *corev1.Pod, c *credentails) (SQLInterface, error) {
+func (r *ReconcileMysqlNode) getMySQLConnection(cluster *mysqlcluster.MysqlCluster, pod *corev1.Pod, c *credentials) (SQLInterface, error) {
 	host := fmt.Sprintf("%s.%s.%s", pod.Spec.Hostname,
 		cluster.GetNameForResource(mysqlcluster.HeadlessSVC), pod.Namespace)
 
@@ -254,7 +263,7 @@ func (r *ReconcileMysqlNode) getMySQLConnection(cluster *mysqlcluster.MysqlClust
 	return r.newSQLInterface(dsn, host), nil
 }
 
-type credentails struct {
+type credentials struct {
 	User     string
 	Password string
 
@@ -262,7 +271,7 @@ type credentails struct {
 	ReplicationPassword string
 }
 
-func (r *ReconcileMysqlNode) getCredsSecret(cluster *mysqlcluster.MysqlCluster) (*credentails, error) {
+func (r *ReconcileMysqlNode) getCredsSecret(cluster *mysqlcluster.MysqlCluster) (*credentials, error) {
 	secretKey := types.NamespacedName{
 		Name:      cluster.GetNameForResource(mysqlcluster.Secret),
 		Namespace: cluster.Namespace,
@@ -272,7 +281,7 @@ func (r *ReconcileMysqlNode) getCredsSecret(cluster *mysqlcluster.MysqlCluster) 
 		return nil, err
 	}
 
-	creds := &credentails{
+	creds := &credentials{
 		User:                string(secret.Data["OPERATOR_USER"]),
 		Password:            string(secret.Data["OPERATOR_PASSWORD"]),
 		ReplicationUser:     string(secret.Data["REPLICATION_USER"]),
@@ -283,19 +292,10 @@ func (r *ReconcileMysqlNode) getCredsSecret(cluster *mysqlcluster.MysqlCluster) 
 }
 
 func (r *ReconcileMysqlNode) updatePod(pod *corev1.Pod) error {
-	return r.Update(context.TODO(), pod)
+	return r.Status().Update(context.TODO(), pod)
 }
 
-func isInitialized(pod *corev1.Pod) bool {
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == mysqlcluster.NodeInitializedConditionType {
-			return cond.Status == corev1.ConditionTrue
-		}
-	}
-	return false
-}
-
-func (c *credentails) Validate() error {
+func (c *credentials) Validate() error {
 	if anyZero(c.User, c.Password, c.ReplicationUser, c.ReplicationPassword) {
 		return fmt.Errorf("validation error: some credentials are empty")
 	}
