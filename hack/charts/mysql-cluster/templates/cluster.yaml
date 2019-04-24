@@ -24,7 +24,7 @@ spec:
   backupURL: {{ required ".mysql.backupURL is missing" .Values.backupURL }}
   {{- end }}
 
-  {{- if .Values.mysqlConfig }}
+  {{- if .Values.mysqlConf }}
   mysqlConf:
     {{ toYaml .Values.mysqlConf | nindent 4 }}
   {{- end }}
