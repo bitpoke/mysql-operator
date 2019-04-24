@@ -23,10 +23,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 
 	// loggging
 	"github.com/go-logr/logr"
 
+	core "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -74,4 +77,17 @@ func StartTestManager(mgr manager.Manager) chan struct{} {
 		Expect(mgr.Start(stop)).NotTo(HaveOccurred())
 	}()
 	return stop
+}
+
+// PodHaveCondition is a helper func that returns a matcher to check for an
+// existing condition in condition list list
+func PodHaveCondition(condType core.PodConditionType, status core.ConditionStatus) gomegatypes.GomegaMatcher {
+	return PointTo(MatchFields(IgnoreExtras, Fields{
+		"Status": MatchFields(IgnoreExtras, Fields{
+			"Conditions": ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(condType),
+				"Status": Equal(status),
+			})),
+		}),
+	}))
 }

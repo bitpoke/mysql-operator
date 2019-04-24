@@ -38,7 +38,7 @@ type MysqlCluster struct {
 
 // NodeInitializedConditionType is the extended new pod condition that marks the pod as initialized from MySQL
 // point of view.
-const NodeInitializedConditionType core.PodConditionType = "mysql.presslabs.org/nodeInitialized"
+const NodeInitializedConditionType core.PodConditionType = "mysql.presslabs.org/NodeInitialized"
 
 // New returns a wrapper for mysqlcluster
 func New(mc *api.MysqlCluster) *MysqlCluster {
