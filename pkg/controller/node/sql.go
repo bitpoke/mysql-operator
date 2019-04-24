@@ -19,6 +19,7 @@ package node
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	// add mysql driver
@@ -39,7 +40,7 @@ type SQLInterface interface {
 	DisableSuperReadOnly() (func(), error)
 	ChangeMasterTo(string, string, string) error
 	MarkConfigurationDone() error
-	SetPurgedGtid() error
+	SetPurgedGTID() error
 	Host() string
 }
 
@@ -64,10 +65,11 @@ func (r *nodeSQLRunner) Wait() error {
 	log.V(1).Info("wait for mysql to be ready")
 
 	for i := 0; i < mysqlReadyTries; i++ {
-		time.Sleep(1 * time.Second)
 		if err := r.runQuery("SELECT 1"); err == nil {
 			break
 		}
+		// wait a second
+		time.Sleep(1 * time.Second)
 	}
 	if err := r.runQuery("SELECT 1"); err != nil {
 		log.V(1).Info("mysql is not ready", "error", err)
@@ -187,6 +189,8 @@ func (r *nodeSQLRunner) readFromMysql(query string, values ...interface{}) error
 	return nil
 }
 
+// dbConn this function returns a pointer to sql.DB. a function for closing the connection
+// or an error if the MySQL can not be reached
 func (r *nodeSQLRunner) dbConn() (*sql.DB, func(), error) {
 	db, err := sql.Open("mysql", r.dsn)
 	if err != nil {
@@ -201,20 +205,27 @@ func (r *nodeSQLRunner) dbConn() (*sql.DB, func(), error) {
 	return db, close, nil
 }
 
-func (r *nodeSQLRunner) SetPurgedGtid() error {
+func (r *nodeSQLRunner) SetPurgedGTID() error {
+	// first check if the GTID should be set, if the table exists or if the GTID was set before (used)
 	qq := fmt.Sprintf("SELECT used FROM %[1]s.%[2]s WHERE id=1",
 		constants.OperatorDbName, constants.OperatorGtidsTableName)
 
 	var used bool
 	if err := r.readFromMysql(qq, &used); err != nil {
+		// if it's a: "Table doesn't exist" error then GTID should not be set, it's a master case.
+		if isMySQLError(err, 1146) {
+			log.V(1).Info("GTID purged table does not exists", "host", r.Host())
+			return nil
+		}
 		return err
 	}
 
 	if used {
-		log.Info("gtid purged set!")
+		log.V(1).Info("GTID purged set", "host", r.Host())
 		return nil
 	}
 
+	// GTID exists and should be set in a transaction
 	query := fmt.Sprintf(`
       SET @@SESSION.SQL_LOG_BIN = 0;
       START TRANSACTION;
@@ -230,4 +241,12 @@ func (r *nodeSQLRunner) SetPurgedGtid() error {
 	}
 
 	return nil
+}
+
+// isMySQLError checks if a mysql error is of the given code.
+// more information about mysql error codes can be found here:
+// https://dev.mysql.com/doc/refman/8.0/en/server-error-reference.html
+func isMySQLError(err error, no int) bool {
+	errStr := fmt.Sprintf("Error %d:", no)
+	return strings.Contains(err.Error(), errStr)
 }

@@ -31,7 +31,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -128,40 +127,53 @@ var _ = Describe("MysqlNode controller", func() {
 			Expect(c.Create(context.TODO(), secret)).To(Succeed())
 			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
 
-			By("create the MySQL node")
+			By("create MySQL pod")
 			getOrCreatePod(c, cluster, 0)
-
+			Eventually(requests).Should(Receive(Equal(expectedRequest(0))))
 		})
 
 		AfterEach(func() {
+			// NOTE: at this moment the reconcile func is running and modifying a resource will trigger
+			// a reconcile event which will be logged and that can be confusing when debugging.
+			By("cleanup created resources")
+
 			// manually delete all created resources because GC isn't enabled in the test controller plane
 			Expect(c.Delete(context.TODO(), secret)).To(Succeed())
 			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
 			podList := &corev1.PodList{}
-			c.List(context.TODO(), nil, podList)
+			Expect(c.List(context.TODO(), nil, podList)).To(Succeed())
 			for _, pod := range podList.Items {
-				c.Delete(context.TODO(), &pod)
+				Expect(c.Delete(context.TODO(), &pod)).To(Succeed())
 			}
 
 		})
 
 		It("should receive pod update event", func() {
 			pod1 := getOrCreatePod(c, cluster, 0)
-			updatePodStatusCondition(pod1, corev1.PodReady, corev1.ConditionFalse, "", "")
-			Expect(c.Update(context.TODO(), pod1)).To(Succeed())
+			updatePodStatusCondition(pod1, mysqlcluster.NodeInitializedConditionType, corev1.ConditionFalse, "", "")
+			Expect(c.Status().Update(context.TODO(), pod1)).To(Succeed())
 			Eventually(requests).Should(Receive(Equal(expectedRequest(0))))
 
 		})
+
+		It("should not receive pod update when ready", func() {
+			pod1 := getOrCreatePod(c, cluster, 0)
+
+			// when pod is ready should not be triggered a reconcile event
+			updatePodStatusCondition(pod1, mysqlcluster.NodeInitializedConditionType, corev1.ConditionFalse, "", "")
+			updatePodStatusCondition(pod1, corev1.PodReady, corev1.ConditionTrue, "", "")
+			Expect(c.Status().Update(context.TODO(), pod1)).To(Succeed())
+			Consistently(requests).ShouldNot(Receive(Equal(expectedRequest(0))))
+		})
+
+		It("should have mysql initialized set when initialization succeed", func() {
+			pod1 := getOrCreatePod(c, cluster, 0)
+			Expect(pod1).To(testutil.PodHaveCondition(mysqlcluster.NodeInitializedConditionType, corev1.ConditionTrue))
+
+		})
+
 	})
 })
-
-func objToKey(o runtime.Object) types.NamespacedName {
-	obj, _ := o.(*corev1.Pod)
-	return types.NamespacedName{
-		Name:      obj.Name,
-		Namespace: obj.Namespace,
-	}
-}
 
 func podKey(cluster *mysqlcluster.MysqlCluster, index int) types.NamespacedName {
 	return types.NamespacedName{

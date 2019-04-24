@@ -35,9 +35,9 @@ import (
 var cfg *rest.Config
 var t *envtest.Environment
 
-func TestMysqlClusterController(t *testing.T) {
+func TestMysqlNodeController(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "MysqlCluster Controller Suite", []Reporter{envtest.NewlineReporter{}})
+	RunSpecsWithDefaultAndCustomReporters(t, "MysqlNode Controller Suite", []Reporter{envtest.NewlineReporter{}})
 }
 
 var _ = BeforeSuite(func() {
