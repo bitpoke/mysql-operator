@@ -41,14 +41,11 @@ const (
 	// SlaveLagQuery in hack/charts/mysql-operator/values.yaml.
 	OperatorDbName = "sys_operator"
 
-	// OperatorInitTableName represents the name of the table that is used to mark configuration complete
+	// OperatorGtidsTableName represents the name of the table that is used to store the GTID
 	OperatorGtidsTableName = "gtids"
 
 	// ConfVolumeMountPath is the path where mysql configs will be mounted
 	ConfVolumeMountPath = "/etc/mysql"
-
-	// InitDBVolumeMountPath the path where to put *.sql init files. Docker entrypoint runs the scripts from this path.
-	InitDBVolumeMountPath = "/docker-entrypoint-initdb.d/"
 
 	// DataVolumeMountPath is the path to mysql data
 	DataVolumeMountPath = "/var/lib/mysql"

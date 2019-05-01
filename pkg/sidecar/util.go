@@ -18,7 +18,6 @@ package sidecar
 
 import (
 	"bufio"
-	"database/sql"
 	"fmt"
 	"io"
 	"os"
@@ -29,31 +28,6 @@ import (
 )
 
 var log = logf.Log.WithName("sidecar")
-
-// runQuery executes a query
-func runQuery(cfg *Config, q string, args ...interface{}) error {
-	if len(cfg.MysqlDSN()) == -1 {
-		log.Info("could not get mysql connection DSN")
-		return fmt.Errorf("no DSN specified")
-	}
-
-	db, err := sql.Open("mysql", cfg.MysqlDSN())
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if cErr := db.Close(); cErr != nil {
-			log.Error(cErr, "failed closing the database connection")
-		}
-	}()
-
-	log.V(1).Info("running query", "query", q)
-	if _, err := db.Exec(q, args...); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // copyFile the src file to dst. Any existing file will be overwritten and will not
 // copy file attributes.

@@ -19,13 +19,9 @@ package node
 
 import (
 	"fmt"
-	"math/rand"
-	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
+	"math/rand"
 
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
@@ -41,11 +37,8 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
-const timeout = time.Second * 2
-
 var (
 	one = int32(1)
-	two = int32(2)
 )
 
 var _ = Describe("MysqlNode controller", func() {
@@ -182,6 +175,7 @@ func podKey(cluster *mysqlcluster.MysqlCluster, index int) types.NamespacedName 
 	}
 }
 
+// nolint: unparam
 func getOrCreatePod(c client.Client, cluster *mysqlcluster.MysqlCluster, index int) *corev1.Pod {
 	pod := &corev1.Pod{}
 	err := c.Get(context.TODO(), podKey(cluster, index), pod)
@@ -209,12 +203,4 @@ func getOrCreatePod(c client.Client, cluster *mysqlcluster.MysqlCluster, index i
 
 	Expect(err).To(BeNil())
 	return pod
-}
-
-func haveLabelWithValue(label, value string) gomegatypes.GomegaMatcher {
-	return PointTo(MatchFields(IgnoreExtras, Fields{
-		"ObjectMeta": MatchFields(IgnoreExtras, Fields{
-			"Labels": HaveKeyWithValue(label, value),
-		}),
-	}))
 }

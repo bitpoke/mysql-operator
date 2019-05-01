@@ -35,6 +35,7 @@ const (
 	connRetry = 10
 )
 
+// SQLInterface expose abstract operations that can be applied on a MySQL node
 type SQLInterface interface {
 	Wait() error
 	DisableSuperReadOnly() (func(), error)
@@ -207,6 +208,7 @@ func (r *nodeSQLRunner) dbConn() (*sql.DB, func(), error) {
 
 func (r *nodeSQLRunner) SetPurgedGTID() error {
 	// first check if the GTID should be set, if the table exists or if the GTID was set before (used)
+	// nolint: gosec
 	qq := fmt.Sprintf("SELECT used FROM %[1]s.%[2]s WHERE id=1",
 		constants.OperatorDbName, constants.OperatorGtidsTableName)
 
@@ -226,6 +228,7 @@ func (r *nodeSQLRunner) SetPurgedGTID() error {
 	}
 
 	// GTID exists and should be set in a transaction
+	// nolint: gosec
 	query := fmt.Sprintf(`
       SET @@SESSION.SQL_LOG_BIN = 0;
       START TRANSACTION;
