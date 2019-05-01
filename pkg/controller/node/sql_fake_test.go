@@ -22,10 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type fakeSQLRunner struct {
-	dsn  string
-	host string
-}
+type fakeSQLRunner struct{}
 
 // test if fakeer implements interface
 var _ SQLInterface = &fakeSQLRunner{}

@@ -179,11 +179,8 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	var sql SQLInterface
-	sql, err = r.getMySQLConnection(cluster, pod, creds)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+	// initialize SQL interface
+	sql := r.getMySQLConnection(cluster, pod, creds)
 
 	err = r.initializeMySQL(sql, cluster, creds)
 	if err != nil {
@@ -252,7 +249,7 @@ func (r *ReconcileMysqlNode) getNodeCluster(pod *corev1.Pod) (*mysqlcluster.Mysq
 }
 
 // getMySQLConnectionString returns the DSN that contains credentials to connect to given pod from a MySQL cluster
-func (r *ReconcileMysqlNode) getMySQLConnection(cluster *mysqlcluster.MysqlCluster, pod *corev1.Pod, c *credentials) (SQLInterface, error) {
+func (r *ReconcileMysqlNode) getMySQLConnection(cluster *mysqlcluster.MysqlCluster, pod *corev1.Pod, c *credentials) SQLInterface {
 	host := fmt.Sprintf("%s.%s.%s", pod.Spec.Hostname,
 		cluster.GetNameForResource(mysqlcluster.HeadlessSVC), pod.Namespace)
 
@@ -260,7 +257,7 @@ func (r *ReconcileMysqlNode) getMySQLConnection(cluster *mysqlcluster.MysqlClust
 		c.User, c.Password, host, constants.MysqlPort,
 	)
 
-	return r.newSQLInterface(dsn, host), nil
+	return r.newSQLInterface(dsn, host)
 }
 
 type credentials struct {
