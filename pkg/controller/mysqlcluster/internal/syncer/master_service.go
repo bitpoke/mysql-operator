@@ -38,7 +38,13 @@ func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 	return syncer.NewObjectSyncer("MasterSVC", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*core.Service)
 
+		// set service labels
+		out.Labels = cluster.GetLabels()
+		out.Labels["mysql.presslabs.org/service-type"] = "master"
+
 		out.Spec.Type = "ClusterIP"
+
+		// set selectors for master node
 		out.Spec.Selector = cluster.GetSelectorLabels()
 		out.Spec.Selector["role"] = "master"
 
