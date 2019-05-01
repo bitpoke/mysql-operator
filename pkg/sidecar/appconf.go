@@ -180,6 +180,8 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 		[]string{"REPLICATION CLIENT"}, "*.*")...)
 
 	if len(gtidPurged) != 0 {
+		// If the xtrabackup information has GTID_PURGED then insert it into a table
+		// nolint: gosec
 		queries = append(queries, fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %[1]s.%[2]s (
             id int PRIMARY KEY,
