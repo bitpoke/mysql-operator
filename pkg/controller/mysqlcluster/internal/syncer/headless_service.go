@@ -39,6 +39,13 @@ func NewHeadlessSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 	return syncer.NewObjectSyncer("HeadlessSVC", nil, obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*core.Service)
 
+		// add general labels to this service
+		out.Labels = map[string]string{
+			"app.kubernetes.io/name":       "mysql",
+			"app.kubernetes.io/managed-by": "mysql.presslabs.org",
+		}
+		out.Labels["mysql.presslabs.org/service-type"] = "common-headless"
+
 		out.Spec.ClusterIP = "None"
 		out.Spec.Selector = labels.Set{
 			"app.kubernetes.io/name":       "mysql",

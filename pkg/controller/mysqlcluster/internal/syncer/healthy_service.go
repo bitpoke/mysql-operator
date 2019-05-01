@@ -38,6 +38,10 @@ func NewHealthySVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysql
 	return syncer.NewObjectSyncer("HealthySVC", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*core.Service)
 
+		// set service labels
+		out.Labels = cluster.GetLabels()
+		out.Labels["mysql.presslabs.org/service-type"] = "healthy"
+
 		out.Spec.Type = "ClusterIP"
 		out.Spec.Selector = cluster.GetSelectorLabels()
 		out.Spec.Selector["healthy"] = "yes"
