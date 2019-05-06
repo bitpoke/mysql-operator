@@ -32,7 +32,7 @@ import (
 // RunConfigCommand generates my.cnf, client.cnf and 10-dynamic.cnf files.
 // nolint: gocyclo
 func RunConfigCommand(cfg *Config) error {
-	log.Info("configuring server", "host", cfg.Hostname, "role", cfg.NodeRole())
+	log.Info("configuring server", "host", cfg.Hostname)
 	var err error
 
 	if err = copyFile(mountConfigDir+"/my.cnf", configDir+"/my.cnf"); err != nil {

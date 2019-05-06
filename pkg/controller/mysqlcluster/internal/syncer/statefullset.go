@@ -212,10 +212,6 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		Name:  "MY_FQDN",
 		Value: "$(MY_POD_NAME).$(MY_SERVICE_NAME).$(MY_NAMESPACE)",
 	})
-	env = append(env, core.EnvVar{
-		Name:  "ORCHESTRATOR_URI",
-		Value: s.opt.OrchestratorURI,
-	})
 
 	if len(s.cluster.Spec.InitBucketURL) > 0 && name == containerCloneAndInitName {
 		env = append(env, core.EnvVar{

@@ -42,7 +42,8 @@ func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 		out.Labels = cluster.GetLabels()
 		out.Labels["mysql.presslabs.org/service-type"] = "master"
 
-		out.Spec.Type = "ClusterIP"
+		// make the master endpoint headless, it should always point to only one node
+		out.Spec.ClusterIP = "None"
 
 		// set selectors for master node
 		out.Spec.Selector = cluster.GetSelectorLabels()
