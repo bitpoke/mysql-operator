@@ -18,9 +18,11 @@ package sidecar
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	// add mysql driver
 	_ "github.com/go-sql-driver/mysql"
@@ -28,7 +30,6 @@ import (
 	"github.com/presslabs/controller-util/rand"
 
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 )
 
 // NodeRole represents the kind of the MySQL server
@@ -39,6 +40,8 @@ const (
 	MasterNode NodeRole = "master"
 	// SlaveNode represents the slave role for MySQL server
 	SlaveNode NodeRole = "slave"
+	// Unknown usually used for error, when the role can't be determined
+	Unknown NodeRole = "unknown"
 )
 
 // Config contains information related with the pod.
@@ -54,9 +57,6 @@ type Config struct {
 
 	// InitBucketURL represents the init bucket to initialize mysql
 	InitBucketURL string
-
-	// OrchestratorURL is the URL to connect to orchestrator
-	OrchestratorURL string
 
 	// OperatorUser represents the credentials that the operator will use to connect to the mysql
 	OperatorUser     string
@@ -89,15 +89,6 @@ func (cfg *Config) FQDNForServer(id int) string {
 	return fmt.Sprintf("%s-%d.%s.%s", base, id-MysqlServerIDOffset, cfg.ServiceName, cfg.Namespace)
 }
 
-func (cfg *Config) newOrcClient() orc.Interface {
-	if len(cfg.OrchestratorURL) == 0 {
-		log.Info("OrchestratorURL not set")
-		return nil
-	}
-
-	return orc.NewFromURI(cfg.OrchestratorURL)
-}
-
 // ClusterFQDN returns the cluster FQ Name of the cluster from which the node belongs
 func (cfg *Config) ClusterFQDN() string {
 	return fmt.Sprintf("%s.%s", cfg.ClusterName, cfg.Namespace)
@@ -105,25 +96,43 @@ func (cfg *Config) ClusterFQDN() string {
 
 // MasterFQDN the FQ Name of the cluster's master
 func (cfg *Config) MasterFQDN() string {
-	if client := cfg.newOrcClient(); client != nil {
-		if master, err := client.Master(cfg.ClusterFQDN()); err == nil {
-			return master.Key.Hostname
-		}
-	}
-
-	log.V(-1).Info("failed to obtain master from orchestrator, go for default master",
-		"master", cfg.FQDNForServer(MysqlServerIDOffset))
-	return cfg.FQDNForServer(MysqlServerIDOffset)
-
+	return mysqlcluster.GetNameForResource(mysqlcluster.MasterService, cfg.ClusterName)
 }
 
 // NodeRole returns the role of the current node
-func (cfg *Config) NodeRole() NodeRole {
-	if cfg.FQDNForServer(cfg.ServerID()) == cfg.MasterFQDN() {
-		return MasterNode
+func (cfg *Config) NodeRole() (NodeRole, error) {
+	pod := cfg.FQDNForServer(cfg.ServerID())
+	podIPs, err := retryLookupHost(pod)
+	if err != nil {
+		log.Info("can't lookup pod IP", "pod", pod, "err", err)
+		return Unknown, err
 	}
 
-	return SlaveNode
+	if len(podIPs) != 1 {
+		// no IPs for given pod
+		log.Info("no IPs for pod found", "pod", pod)
+		return Unknown, nil
+	}
+
+	masterSVC := mysqlcluster.GetNameForResource(mysqlcluster.MasterService, cfg.ClusterName)
+	masterIPs, err := retryLookupHost(masterSVC)
+	if err != nil {
+		log.Info("can't lookup master service IP", "svc", masterSVC, "err", err)
+		return MasterNode, nil
+	}
+
+	if len(masterIPs) != 1 {
+		log.Info("no IPs for master service", "svc", masterSVC)
+		return MasterNode, nil
+	}
+
+	if podIPs[0] == masterIPs[0] {
+		log.Info("this pod is MASTER")
+		return MasterNode, nil
+	}
+
+	log.Info("this pod is SLAVE")
+	return SlaveNode, nil
 }
 
 // ServerID returns the MySQL server id
@@ -152,8 +161,7 @@ func NewConfig() *Config {
 		Namespace:   getEnvValue("MY_NAMESPACE"),
 		ServiceName: getEnvValue("MY_SERVICE_NAME"),
 
-		InitBucketURL:   getEnvValue("INIT_BUCKET_URI"),
-		OrchestratorURL: getEnvValue("ORCHESTRATOR_URI"),
+		InitBucketURL: getEnvValue("INIT_BUCKET_URI"),
 
 		OperatorUser:     getEnvValue("OPERATOR_USER"),
 		OperatorPassword: getEnvValue("OPERATOR_PASSWORD"),
@@ -198,4 +206,18 @@ func getOrdinalFromHostname(hn string) int {
 	}
 
 	return 0
+}
+
+// retryLookupHost tries to figure out a host IPs with retries
+func retryLookupHost(host string) ([]string, error) {
+	// try to find the host IP
+	IPs, err := net.LookupHost(host)
+	for count := 0; count < 20 && err != nil; count++ {
+		// retry looking up for ip because first query failed
+		IPs, err = net.LookupHost(host)
+		// sleep 100 milliseconds
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return IPs, err
 }

@@ -43,7 +43,13 @@ func RunCloneCommand(cfg *Config) error {
 		return fmt.Errorf("removing lost+found: %s", err)
 	}
 
-	if cfg.NodeRole() == MasterNode {
+	role, err := cfg.NodeRole()
+	if err != nil {
+		return err
+	}
+
+	log.Info("configuring server as", "host", cfg.Hostname, "role", role)
+	if role == MasterNode {
 		if len(cfg.InitBucketURL) == 0 {
 			log.Info("skip cloning init bucket uri is not set.")
 			// let mysqld initialize data dir
