@@ -155,7 +155,7 @@ var mysqlMasterSlaveConfigs = map[string]string{
 	"relay-log-recovery":        "on",
 
 	// https://github.com/github/orchestrator/issues/323#issuecomment-338451838
-	"master_info_repository": "TABLE",
+	"master-info-repository": "TABLE",
 
 	"default-storage-engine":   "InnoDB",
 	"gtid-mode":                "on",
