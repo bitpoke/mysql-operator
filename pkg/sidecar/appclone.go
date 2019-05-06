@@ -26,7 +26,7 @@ import (
 // RunCloneCommand clone the data from source.
 // nolint: gocyclo
 func RunCloneCommand(cfg *Config) error {
-	log.Info("clonning command", "host", cfg.Hostname)
+	log.Info("cloning command", "host", cfg.Hostname)
 
 	// skip cloning if data exists.
 	if !shouldBootstrapNode() {
@@ -35,7 +35,7 @@ func RunCloneCommand(cfg *Config) error {
 	}
 
 	if checkIfDataExists() {
-		log.Info("data alerady exists! Remove manually PVC to cleanup or to reinitialize.")
+		log.Info("data already exists! Remove manually PVC to cleanup or to reinitialize.")
 		return nil
 	}
 
