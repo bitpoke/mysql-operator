@@ -31,5 +31,20 @@ func (c *MysqlCluster) Validate() error {
 		return fmt.Errorf("%s is not a valid MySQL version", c.Spec.MysqlVersion)
 	}
 
+	// volume spec should be specified on the cluster
+	vs := c.Spec.VolumeSpec
+	if anyNull(vs.PersistentVolumeClaim, vs.HostPath, vs.EmptyDir) {
+		return fmt.Errorf("no .spec.volumeSpec is specified")
+	}
+
 	return nil
+}
+
+// anyNull checks if any of the given parameters is null and returns true if so
+func anyNull(vars ...interface{}) bool {
+	isNull := false
+	for _, v := range vars {
+		isNull = isNull || v == nil
+	}
+	return isNull
 }
