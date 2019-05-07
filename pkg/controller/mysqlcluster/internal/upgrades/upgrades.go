@@ -142,6 +142,9 @@ func (u *upgrader) ShouldUpdate() bool {
 }
 
 func (u *upgrader) markUpgradeComplete() error {
+	if u.cluster.Annotations == nil {
+		u.cluster.Annotations = make(map[string]string)
+	}
 	u.cluster.Annotations[VersionAnnotation] = strconv.Itoa(u.version)
 	err := u.client.Update(context.TODO(), u.cluster.Unwrap())
 	if err != nil {
