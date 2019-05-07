@@ -11,6 +11,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
@@ -238,6 +239,15 @@ func NewCluster(name, ns string) *api.MysqlCluster {
 		Spec: api.MysqlClusterSpec{
 			Replicas:   &one,
 			SecretName: name,
+			VolumeSpec: api.VolumeSpec{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimSpec{
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceStorage: resource.MustParse("1Gi"),
+						},
+					},
+				},
+			},
 		},
 	}
 
