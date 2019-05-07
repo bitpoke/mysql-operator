@@ -25,9 +25,8 @@ The MySQL operator provides 3 services to access the nodes:
  * `<cluster_name>-mysql` is the service that routes traffic to all the _healthy_ nodes from the
    cluster. You should use this endpoint for reads.
 
- * `<cluster_name>-mysql-nodes` is the service used internally to access nodes. You can use this
-   service to access a specific node (e.g.
-   `<cluster_name>-mysql-0.<cluster-name>-mysql-nodes.default`)
+ * `mysql` is the service used internally to access all nodes within a namespace. You can use this
+   service to access a specific node (e.g. `<cluster_name>-mysql-0.mysql.<namespace>`)
 
 We use helm to deploy our application into Kubernetes, so we updated our charts to use the MySQL
 operator to provide one cluster per application.

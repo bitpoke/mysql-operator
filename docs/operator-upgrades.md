@@ -13,7 +13,7 @@ aliases: []
 toc: true
 ---
 
-In this section ayou can find the migration path when upgrading to a newer version of the MySQL operator.
+In this section you can find the migration path when upgrading to a newer version of the MySQL operator.
 
 ## v0.2.x upgrade
 
@@ -29,4 +29,17 @@ This upgrade requires a Kubernetes cluster upgrade because the `v0.2.x` works on
 5. Scale up the operator deployment 
 6. Now you can upgrade your nodes, as well.
 7. Enjoy!
+
+
+## v0.3.x upgrade
+
+This version works on Kubernetes grater or equal with `1.11`. The upgrade should be done on staging
+first because it's with downtime. It requires the deletion of the statefulset and recreation of it.
+The reason behind is that we changed the headless service name (which is an invariant statefulset
+field) to make it smaller that will prevent you from hitting this
+[bug](https://github.com/presslabs/mysql-operator/issues/170).
+
+
+The operator should do all the work for you but you have to make sure that you have the latest
+`0.2.x` version of the operator.
 
