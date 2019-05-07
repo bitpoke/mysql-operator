@@ -131,7 +131,7 @@ metadata:
 type: Opaque
 data:
   AWS_ACCESS_KEY_ID: #
-  AWS_SECRET_KEY: #
+  AWS_SECRET_ACCESS_KEY: #
   # Optional, the AWS region to connect
   # AWS_REGION: us-east1
   # Optional, specify the storage class
