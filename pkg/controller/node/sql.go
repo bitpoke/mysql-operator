@@ -125,14 +125,9 @@ func (r *nodeSQLRunner) ChangeMasterTo(ctx context.Context, masterHost, user, pa
 
 // MarkConfigurationDone write in a MEMORY table value. The readiness probe checks for that value to exist to succeed.
 func (r *nodeSQLRunner) MarkConfigurationDone(ctx context.Context) error {
-	query := `
-    CREATE TABLE IF NOT EXISTS %s.%s (
-		ok tinyint(1) NOT NULL
-    ) ENGINE=MEMORY;
-
-    INSERT INTO %[1]s.%[2]s VALUES (1);
-    `
-	query = fmt.Sprintf(query, constants.OperatorDbName, constants.OperatorReadinessTableName)
+	// nolint: gosec
+	query := fmt.Sprintf("REPLACE INTO %s.%s VALUES ('%s', '1');",
+		constants.OperatorDbName, constants.OperatorStatusTableName, "configured")
 
 	if err := r.runQuery(ctx, query); err != nil {
 		return fmt.Errorf("failed to mark configuration done, err: %s", err)
@@ -203,38 +198,35 @@ func (r *nodeSQLRunner) dbConn() (*sql.DB, func(), error) {
 }
 
 func (r *nodeSQLRunner) SetPurgedGTID(ctx context.Context) error {
-	// first check if the GTID should be set, if the table exists or if the GTID was set before (used)
+	// first check if the GTID should be set, if in the status table is a key with the GTID that was set
 	// nolint: gosec
-	qq := fmt.Sprintf("SELECT used FROM %[1]s.%[2]s WHERE id=1",
-		constants.OperatorDbName, constants.OperatorGtidsTableName)
+	qq := fmt.Sprintf("SELECT value FROM %s.%s WHERE name='%s'",
+		constants.OperatorDbName, constants.OperatorStatusTableName, "set_gtid_purged")
 
-	var used bool
-	if err := r.readFromMysql(ctx, qq, &used); err != nil {
-		// if it's a: "Table doesn't exist" error then GTID should not be set, it's a master case.
-		if isMySQLError(err, 1146) || err == sql.ErrNoRows {
-			log.V(1).Info("GTID purged table does not exists", "host", r.Host())
-			return nil
+	var value string
+	if err := r.readFromMysql(ctx, qq, &value); err != nil {
+		// if no rows found then continue to add GTID purged
+		if err != sql.ErrNoRows {
+			return err
 		}
-
-		return err
 	}
 
-	if used {
-		log.V(1).Info("GTID purged set", "host", r.Host())
+	if len(value) != 0 {
+		log.V(1).Info("GTID purged was already set", "host", r.Host(), "gtid_purged", value)
 		return nil
 	}
 
 	// GTID exists and should be set in a transaction
 	// nolint: gosec
 	query := fmt.Sprintf(`
-      SET @@SESSION.SQL_LOG_BIN = 0;
-      START TRANSACTION;
-        SELECT gtid INTO @gtid FROM %[1]s.%[2]s WHERE id=1 AND used=false;
-	    RESET MASTER;
-	    SET @@GLOBAL.GTID_PURGED = @gtid;
-	    REPLACE INTO %[1]s.%[2]s VALUES (1, @gtid, true);
-      COMMIT;
-    `, constants.OperatorDbName, constants.OperatorGtidsTableName)
+	  SET @@SESSION.SQL_LOG_BIN = 0;
+	  START TRANSACTION;
+		SELECT value INTO @gtid FROM %[1]s.%[2]s WHERE name='%s';
+		RESET MASTER;
+		SET @@GLOBAL.GTID_PURGED = @gtid;
+		REPLACE INTO %[1]s.%[2]s VALUES ('%s', @gtid);
+	  COMMIT;
+    `, constants.OperatorDbName, constants.OperatorStatusTableName, "backup_gtid_purged", "set_gtid_purged")
 
 	if err := r.runQuery(ctx, query); err != nil {
 		return err
