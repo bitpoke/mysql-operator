@@ -17,6 +17,7 @@ limitations under the License.
 package node
 
 import (
+	"context"
 	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,19 +28,19 @@ type fakeSQLRunner struct{}
 // test if fakeer implements interface
 var _ SQLInterface = &fakeSQLRunner{}
 
-func (f *fakeSQLRunner) Wait() error {
+func (f *fakeSQLRunner) Wait(ctx context.Context) error {
 	return nil
 }
 
-func (f *fakeSQLRunner) DisableSuperReadOnly() (func(), error) {
+func (f *fakeSQLRunner) DisableSuperReadOnly(ctx context.Context) (func(), error) {
 	return func() {}, nil
 }
 
-func (f *fakeSQLRunner) ChangeMasterTo(host, user, pass string) error {
+func (f *fakeSQLRunner) ChangeMasterTo(ctx context.Context, host, user, pass string) error {
 	return nil
 }
 
-func (f *fakeSQLRunner) MarkConfigurationDone() error {
+func (f *fakeSQLRunner) MarkConfigurationDone(ctx context.Context) error {
 	return nil
 }
 
@@ -47,7 +48,7 @@ func (f *fakeSQLRunner) Host() string {
 	return ""
 }
 
-func (f *fakeSQLRunner) SetPurgedGTID() error {
+func (f *fakeSQLRunner) SetPurgedGTID(ctx context.Context) error {
 	return nil
 }
 
