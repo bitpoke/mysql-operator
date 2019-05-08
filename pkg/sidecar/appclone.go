@@ -28,12 +28,6 @@ import (
 func RunCloneCommand(cfg *Config) error {
 	log.Info("cloning command", "host", cfg.Hostname)
 
-	// skip cloning if data exists.
-	if !shouldBootstrapNode() {
-		log.Info("data exists and is initialized, skipping cloning.")
-		return nil
-	}
-
 	if checkIfDataExists() {
 		log.Info("data already exists! Remove manually PVC to cleanup or to reinitialize.")
 		return nil

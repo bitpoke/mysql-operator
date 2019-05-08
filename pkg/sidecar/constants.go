@@ -52,8 +52,6 @@ var (
 
 	// ToolsDbName is the name of the tools table
 	toolsDbName = constants.OperatorDbName
-	// ToolsInitTableName is the name of the init table
-	toolsInitTableName = "init"
 
 	// toolsHeartbeatTableName is the name used for pt-heartbeat table
 	toolsHeartbeatTableName = "heartbeat"
