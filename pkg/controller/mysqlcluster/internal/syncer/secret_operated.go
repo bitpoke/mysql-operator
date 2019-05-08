@@ -32,11 +32,7 @@ const (
 	rStrLen = 18
 )
 
-// const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-// const ascii = letters + "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
-
 // NewOperatedSecretSyncer returns secret syncer
-// nolint: gocyclo
 func NewOperatedSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, opt *options.Options) syncer.Interface {
 	obj := &core.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -54,33 +50,20 @@ func NewOperatedSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *m
 
 		// the user used for operator to connect to the mysql node for configuration
 		out.Data["OPERATOR_USER"] = []byte("sys_operator")
-		if len(out.Data["OPERATOR_PASSWORD"]) == 0 {
-			// NOTE: use Alpha numeric string because ASCII can generate characters that are not escaped
-			random, err := rand.AlphaNumericString(rStrLen)
-			if err != nil {
-				return err
-			}
-			out.Data["OPERATOR_PASSWORD"] = []byte(random)
+		if err := addRandomPassword(out.Data, "OPERATOR_PASSWORD"); err != nil {
+			return err
 		}
 
 		// the user that is used to configure replication between nodes
 		out.Data["REPLICATION_USER"] = []byte("sys_replication")
-		if len(out.Data["REPLICATION_PASSWORD"]) == 0 {
-			random, err := rand.AlphaNumericString(rStrLen)
-			if err != nil {
-				return err
-			}
-			out.Data["REPLICATION_PASSWORD"] = []byte(random)
+		if err := addRandomPassword(out.Data, "REPLICATION_PASSWORD"); err != nil {
+			return err
 		}
 
 		// the user that is used by the metrics exporter sidecar to collect mysql metrics
 		out.Data["METRICS_EXPORTER_USER"] = []byte("sys_exporter")
-		if len(out.Data["METRICS_EXPORTER_PASSWORD"]) == 0 {
-			random, err := rand.AlphaNumericString(rStrLen)
-			if err != nil {
-				return err
-			}
-			out.Data["METRICS_EXPORTER_PASSWORD"] = []byte(random)
+		if err := addRandomPassword(out.Data, "METRICS_EXPORTER_PASSWORD"); err != nil {
+			return err
 		}
 
 		// the user that is used by orchestrator to manage topology and failover
@@ -89,14 +72,23 @@ func NewOperatedSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *m
 
 		// the user that is used to serve backups over HTTP
 		out.Data["BACKUP_USER"] = []byte("sys_backups")
-		if len(out.Data["BACKUP_PASSWORD"]) == 0 {
-			random, err := rand.AlphaNumericString(rStrLen)
-			if err != nil {
-				return err
-			}
-			out.Data["BACKUP_PASSWORD"] = []byte(random)
+		if err := addRandomPassword(out.Data, "BACKUP_PASSWORD"); err != nil {
+			return err
 		}
 
 		return nil
 	})
+}
+
+// addRandomPassword checks if a key exists and if not registers a random string for that key
+func addRandomPassword(data map[string][]byte, key string) error {
+	if len(data[key]) == 0 {
+		// NOTE: use only alpha-numeric string, this strings are used unescaped in MySQL queries (issue #314)
+		random, err := rand.AlphaNumericString(rStrLen)
+		if err != nil {
+			return err
+		}
+		data[key] = []byte(random)
+	}
+	return nil
 }
