@@ -17,6 +17,7 @@ limitations under the License.
 package node
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -29,19 +30,17 @@ import (
 )
 
 const (
-	// mysqlReadyTries represents the number of tries with 1 second sleep between them to check if MySQL is ready
-	mysqlReadyTries = 10
 	// connRetry represents the number of tries to connect to master server
 	connRetry = 10
 )
 
 // SQLInterface expose abstract operations that can be applied on a MySQL node
 type SQLInterface interface {
-	Wait() error
-	DisableSuperReadOnly() (func(), error)
-	ChangeMasterTo(string, string, string) error
-	MarkConfigurationDone() error
-	SetPurgedGTID() error
+	Wait(ctx context.Context) error
+	DisableSuperReadOnly(ctx context.Context) (func(), error)
+	ChangeMasterTo(ctx context.Context, host string, user string, pass string) error
+	MarkConfigurationDone(ctx context.Context) error
+	SetPurgedGTID(ctx context.Context) error
 	Host() string
 }
 
@@ -62,38 +61,35 @@ func newNodeConn(dsn, host string) SQLInterface {
 	}
 }
 
-func (r *nodeSQLRunner) Wait() error {
+// Wait method pings MySQL until it's ready (runs SELECT 1;). The timeout should be set in ctx context.Context
+func (r *nodeSQLRunner) Wait(ctx context.Context) error {
 	log.V(1).Info("wait for mysql to be ready")
 
-	for i := 0; i < mysqlReadyTries; i++ {
-		if err := r.runQuery("SELECT 1"); err == nil {
-			break
+	for {
+		select {
+		case <-ctx.Done():
+			// timeout expired
+			return fmt.Errorf("timeout: mysql is not ready")
+		case <-time.After(time.Second):
+			if err := r.runQuery(ctx, "SELECT 1"); err == nil {
+				return nil
+			}
 		}
-		// wait a second
-		time.Sleep(1 * time.Second)
 	}
-	if err := r.runQuery("SELECT 1"); err != nil {
-		log.V(1).Info("mysql is not ready", "error", err)
-		return err
-	}
-
-	log.V(1).Info("mysql is ready")
-	return nil
-
 }
 
-func (r *nodeSQLRunner) DisableSuperReadOnly() (func(), error) {
+func (r *nodeSQLRunner) DisableSuperReadOnly(ctx context.Context) (func(), error) {
 	enable := func() {
-		err := r.runQuery("SET GLOBAL SUPER_READ_ONLY = 0;")
+		err := r.runQuery(ctx, "SET GLOBAL SUPER_READ_ONLY = 0;")
 		if err != nil {
 			log.Error(err, "failed to set node super read only", "node", r.Host())
 		}
 	}
-	return enable, r.runQuery("SET GLOBAL READ_ONLY = 1; SET GLOBAL SUPER_READ_ONLY = 0;")
+	return enable, r.runQuery(ctx, "SET GLOBAL READ_ONLY = 1; SET GLOBAL SUPER_READ_ONLY = 0;")
 }
 
 // ChangeMasterTo changes the master host and starts slave.
-func (r *nodeSQLRunner) ChangeMasterTo(masterHost, user, pass string) error {
+func (r *nodeSQLRunner) ChangeMasterTo(ctx context.Context, masterHost, user, pass string) error {
 	// slave node
 	query := `
       STOP SLAVE;
@@ -103,14 +99,14 @@ func (r *nodeSQLRunner) ChangeMasterTo(masterHost, user, pass string) error {
 		MASTER_PASSWORD=?,
 		MASTER_CONNECT_RETRY=?;
 	`
-	if err := r.runQuery(query,
+	if err := r.runQuery(ctx, query,
 		masterHost, user, pass, connRetry,
 	); err != nil {
 		return fmt.Errorf("failed to configure slave node, err: %s", err)
 	}
 
 	query = "START SLAVE;"
-	if err := r.runQuery(query); err != nil {
+	if err := r.runQuery(ctx, query); err != nil {
 		log.Info("failed to start slave in the simple mode, trying a second method")
 		// TODO: https://bugs.mysql.com/bug.php?id=83713
 		query2 := `
@@ -120,14 +116,14 @@ func (r *nodeSQLRunner) ChangeMasterTo(masterHost, user, pass string) error {
 		  reset slave;
 		  start slave;
 		`
-		if err := r.runQuery(query2); err != nil {
+		if err := r.runQuery(ctx, query2); err != nil {
 			return fmt.Errorf("failed to start slave node, err: %s", err)
 		}
 	}
 	return nil
 }
 
-func (r *nodeSQLRunner) MarkConfigurationDone() error {
+func (r *nodeSQLRunner) MarkConfigurationDone(ctx context.Context) error {
 	query := `
     CREATE TABLE IF NOT EXISTS %s.%s (
 		ok tinyint(1) NOT NULL
@@ -137,7 +133,7 @@ func (r *nodeSQLRunner) MarkConfigurationDone() error {
     `
 	query = fmt.Sprintf(query, constants.OperatorDbName, "readiness")
 
-	if err := r.runQuery(query); err != nil {
+	if err := r.runQuery(ctx, query); err != nil {
 		return fmt.Errorf("failed to mark configuration done, err: %s", err)
 	}
 	return nil
@@ -148,7 +144,7 @@ func (r *nodeSQLRunner) Host() string {
 }
 
 // runQuery executes a query
-func (r *nodeSQLRunner) runQuery(q string, args ...interface{}) error {
+func (r *nodeSQLRunner) runQuery(ctx context.Context, q string, args ...interface{}) error {
 	db, close, err := r.dbConn()
 	if err != nil {
 		return err
@@ -160,7 +156,7 @@ func (r *nodeSQLRunner) runQuery(q string, args ...interface{}) error {
 	if !r.enableBinLog {
 		q = "SET @@SESSION.SQL_LOG_BIN = 0;\n" + q
 	}
-	if _, err := db.Exec(q, args...); err != nil {
+	if _, err := db.ExecContext(ctx, q, args...); err != nil {
 		return err
 	}
 
@@ -168,16 +164,15 @@ func (r *nodeSQLRunner) runQuery(q string, args ...interface{}) error {
 }
 
 // readFromMysql executes the given query and loads the values into give variables
-func (r *nodeSQLRunner) readFromMysql(query string, values ...interface{}) error {
+func (r *nodeSQLRunner) readFromMysql(ctx context.Context, query string, values ...interface{}) error {
 	db, close, err := r.dbConn()
 	if err != nil {
 		return err
 	}
 	defer close()
 
-	// nolint: gosec
 	log.V(1).Info("running query", "query", query)
-	row := db.QueryRow(query)
+	row := db.QueryRowContext(ctx, query)
 	if row == nil {
 		return fmt.Errorf("no row found")
 	}
@@ -206,14 +201,14 @@ func (r *nodeSQLRunner) dbConn() (*sql.DB, func(), error) {
 	return db, close, nil
 }
 
-func (r *nodeSQLRunner) SetPurgedGTID() error {
+func (r *nodeSQLRunner) SetPurgedGTID(ctx context.Context) error {
 	// first check if the GTID should be set, if the table exists or if the GTID was set before (used)
 	// nolint: gosec
 	qq := fmt.Sprintf("SELECT used FROM %[1]s.%[2]s WHERE id=1",
 		constants.OperatorDbName, constants.OperatorGtidsTableName)
 
 	var used bool
-	if err := r.readFromMysql(qq, &used); err != nil {
+	if err := r.readFromMysql(ctx, qq, &used); err != nil {
 		// if it's a: "Table doesn't exist" error then GTID should not be set, it's a master case.
 		if isMySQLError(err, 1146) {
 			log.V(1).Info("GTID purged table does not exists", "host", r.Host())
@@ -239,7 +234,7 @@ func (r *nodeSQLRunner) SetPurgedGTID() error {
       COMMIT;
     `, constants.OperatorDbName, constants.OperatorGtidsTableName)
 
-	if err := r.runQuery(query); err != nil {
+	if err := r.runQuery(ctx, query); err != nil {
 		return err
 	}
 

@@ -47,6 +47,7 @@ import (
 var log = logf.Log.WithName(controllerName)
 
 const controllerName = "controller.mysqlNode"
+const mysqlReconciliationTimeout = 30 * time.Second
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -136,8 +137,11 @@ type ReconcileMysqlNode struct {
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=core,resources=pods/status,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	ctx, cancel := context.WithTimeout(context.TODO(), mysqlReconciliationTimeout)
+	defer cancel()
+
 	pod := &corev1.Pod{}
-	err := r.Get(context.TODO(), request.NamespacedName, pod)
+	err := r.Get(ctx, request.NamespacedName, pod)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
@@ -151,7 +155,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	log.Info("syncing MySQL Node", "pod", request.NamespacedName.String())
 
 	var cluster *mysqlcluster.MysqlCluster
-	cluster, err = r.getNodeCluster(pod)
+	cluster, err = r.getNodeCluster(ctx, pod)
 	if err != nil {
 		log.Info("cluster is not found")
 		return reconcile.Result{}, err
@@ -163,7 +167,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	}
 
 	var creds *credentials
-	creds, err = r.getCredsSecret(cluster)
+	creds, err = r.getCredsSecret(ctx, cluster)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -171,12 +175,12 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	// initialize SQL interface
 	sql := r.getMySQLConnection(cluster, pod, creds)
 
-	err = r.initializeMySQL(sql, cluster, creds)
+	err = r.initializeMySQL(ctx, sql, cluster, creds)
 	if err != nil {
 		updatePodStatusCondition(pod, mysqlcluster.NodeInitializedConditionType,
 			corev1.ConditionFalse, "mysqlInitializationFailed", err.Error())
 
-		if uErr := r.updatePod(pod); uErr != nil {
+		if uErr := r.updatePod(ctx, pod); uErr != nil {
 			return reconcile.Result{}, uErr
 		}
 
@@ -186,16 +190,16 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	updatePodStatusCondition(pod, mysqlcluster.NodeInitializedConditionType,
 		corev1.ConditionTrue, "mysqlInitializationSucceeded", "success")
 
-	return reconcile.Result{}, r.updatePod(pod)
+	return reconcile.Result{}, r.updatePod(ctx, pod)
 }
 
-func (r *ReconcileMysqlNode) initializeMySQL(sql SQLInterface, cluster *mysqlcluster.MysqlCluster, c *credentials) error {
+func (r *ReconcileMysqlNode) initializeMySQL(ctx context.Context, sql SQLInterface, cluster *mysqlcluster.MysqlCluster, c *credentials) error {
 	// wait for mysql to be ready
-	if err := sql.Wait(); err != nil {
+	if err := sql.Wait(ctx); err != nil {
 		return err
 	}
 
-	enableSuperReadOnly, err := sql.DisableSuperReadOnly()
+	enableSuperReadOnly, err := sql.DisableSuperReadOnly(ctx)
 	if err != nil {
 		return err
 	}
@@ -204,16 +208,16 @@ func (r *ReconcileMysqlNode) initializeMySQL(sql SQLInterface, cluster *mysqlclu
 	// is slave node?
 	if cluster.GetMasterHost() != sql.Host() {
 		log.Info("configure pod as slave", "pod", sql.Host(), "master", cluster.GetMasterHost())
-		if err := sql.SetPurgedGTID(); err != nil {
+		if err := sql.SetPurgedGTID(ctx); err != nil {
 			return err
 		}
 
-		if err := sql.ChangeMasterTo(cluster.GetMasterHost(), c.ReplicationUser, c.ReplicationPassword); err != nil {
+		if err := sql.ChangeMasterTo(ctx, cluster.GetMasterHost(), c.ReplicationUser, c.ReplicationPassword); err != nil {
 			return err
 		}
 	}
 
-	if err := sql.MarkConfigurationDone(); err != nil {
+	if err := sql.MarkConfigurationDone(ctx); err != nil {
 		return err
 	}
 
@@ -221,7 +225,7 @@ func (r *ReconcileMysqlNode) initializeMySQL(sql SQLInterface, cluster *mysqlclu
 }
 
 // getNodeCluster returns the node related MySQL cluster
-func (r *ReconcileMysqlNode) getNodeCluster(pod *corev1.Pod) (*mysqlcluster.MysqlCluster, error) {
+func (r *ReconcileMysqlNode) getNodeCluster(ctx context.Context, pod *corev1.Pod) (*mysqlcluster.MysqlCluster, error) {
 	re := regexp.MustCompile(`^([\w-]+)-mysql-\d*$`)
 	indexStrs := re.FindStringSubmatch(pod.Name)
 	if len(indexStrs) != 2 {
@@ -233,7 +237,7 @@ func (r *ReconcileMysqlNode) getNodeCluster(pod *corev1.Pod) (*mysqlcluster.Mysq
 		Namespace: pod.Namespace,
 	}
 	cluster := mysqlcluster.New(&api.MysqlCluster{})
-	err := r.Get(context.TODO(), clusterKey, cluster.Unwrap())
+	err := r.Get(ctx, clusterKey, cluster.Unwrap())
 	return cluster, err
 }
 
@@ -257,13 +261,13 @@ type credentials struct {
 	ReplicationPassword string
 }
 
-func (r *ReconcileMysqlNode) getCredsSecret(cluster *mysqlcluster.MysqlCluster) (*credentials, error) {
+func (r *ReconcileMysqlNode) getCredsSecret(ctx context.Context, cluster *mysqlcluster.MysqlCluster) (*credentials, error) {
 	secretKey := types.NamespacedName{
 		Name:      cluster.GetNameForResource(mysqlcluster.Secret),
 		Namespace: cluster.Namespace,
 	}
 	secret := &corev1.Secret{}
-	if err := r.Get(context.TODO(), secretKey, secret); err != nil {
+	if err := r.Get(ctx, secretKey, secret); err != nil {
 		return nil, err
 	}
 
@@ -277,8 +281,8 @@ func (r *ReconcileMysqlNode) getCredsSecret(cluster *mysqlcluster.MysqlCluster) 
 	return creds, creds.Validate()
 }
 
-func (r *ReconcileMysqlNode) updatePod(pod *corev1.Pod) error {
-	return r.Status().Update(context.TODO(), pod)
+func (r *ReconcileMysqlNode) updatePod(ctx context.Context, pod *corev1.Pod) error {
+	return r.Status().Update(ctx, pod)
 }
 
 func (c *credentials) Validate() error {
@@ -297,6 +301,7 @@ func anyIsEmpty(ss ...string) bool {
 	return zero
 }
 
+// nolint: unparam
 func updatePodStatusCondition(pod *corev1.Pod, condType corev1.PodConditionType,
 	status corev1.ConditionStatus, reason, msg string) {
 	newCondition := corev1.PodCondition{
