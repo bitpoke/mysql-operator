@@ -188,7 +188,7 @@ func (c *MysqlCluster) GetMysqlImage() string {
 
 // UpdateSpec updates the cluster specs that need to be saved
 func (c *MysqlCluster) UpdateSpec() {
-	// TODO: remove this in next major release
+	// TODO: remove this in next major release (v0.4)
 	if len(c.Spec.InitBucketURL) == 0 {
 		c.Spec.InitBucketURL = c.Spec.InitBucketURI
 	}

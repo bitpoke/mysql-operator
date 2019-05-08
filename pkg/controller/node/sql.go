@@ -80,7 +80,7 @@ func (r *nodeSQLRunner) Wait(ctx context.Context) error {
 
 func (r *nodeSQLRunner) DisableSuperReadOnly(ctx context.Context) (func(), error) {
 	enable := func() {
-		err := r.runQuery(ctx, "SET GLOBAL SUPER_READ_ONLY = 0;")
+		err := r.runQuery(ctx, "SET GLOBAL SUPER_READ_ONLY = 1;")
 		if err != nil {
 			log.Error(err, "failed to set node super read only", "node", r.Host())
 		}
@@ -123,6 +123,7 @@ func (r *nodeSQLRunner) ChangeMasterTo(ctx context.Context, masterHost, user, pa
 	return nil
 }
 
+// MarkConfigurationDone write in a MEMORY table value. The readiness probe checks for that value to exist to succeed.
 func (r *nodeSQLRunner) MarkConfigurationDone(ctx context.Context) error {
 	query := `
     CREATE TABLE IF NOT EXISTS %s.%s (
@@ -131,7 +132,7 @@ func (r *nodeSQLRunner) MarkConfigurationDone(ctx context.Context) error {
 
     INSERT INTO %[1]s.%[2]s VALUES (1);
     `
-	query = fmt.Sprintf(query, constants.OperatorDbName, "readiness")
+	query = fmt.Sprintf(query, constants.OperatorDbName, constants.OperatorReadinessTableName)
 
 	if err := r.runQuery(ctx, query); err != nil {
 		return fmt.Errorf("failed to mark configuration done, err: %s", err)
@@ -210,10 +211,11 @@ func (r *nodeSQLRunner) SetPurgedGTID(ctx context.Context) error {
 	var used bool
 	if err := r.readFromMysql(ctx, qq, &used); err != nil {
 		// if it's a: "Table doesn't exist" error then GTID should not be set, it's a master case.
-		if isMySQLError(err, 1146) {
+		if isMySQLError(err, 1146) || err == sql.ErrNoRows {
 			log.V(1).Info("GTID purged table does not exists", "host", r.Host())
 			return nil
 		}
+
 		return err
 	}
 

@@ -151,7 +151,7 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 	}
 
 	// create operator database because GRANTS need it
-	queries = append(queries, fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s;", toolsDbName))
+	queries = append(queries, fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", toolsDbName))
 
 	// configure operator utility user
 	queries = append(queries, createUserQuery(cfg.OperatorUser, cfg.OperatorPassword, "%",
@@ -190,11 +190,11 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 		)`, constants.OperatorDbName, constants.OperatorGtidsTableName))
 
 		// nolint: gosec
-		queries = append(queries, fmt.Sprintf(`REPLACE INTO %s.%s VALUES (1, '%s')`,
+		queries = append(queries, fmt.Sprintf(`REPLACE INTO %s.%s (id, gtid) VALUES (1, '%s')`,
 			constants.OperatorDbName, constants.OperatorGtidsTableName, gtidPurged))
 	}
 
-	return []byte(strings.Join(queries, ";\n"))
+	return []byte(strings.Join(queries, ";\n") + ";\n")
 }
 
 func createUserQuery(name, pass, host string, rights ...interface{}) []string {

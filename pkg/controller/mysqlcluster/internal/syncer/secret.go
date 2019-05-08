@@ -31,7 +31,7 @@ import (
 
 // NewSecretSyncer returns secret syncer
 // nolint: gocyclo
-// TODO: this syncer is not needed anymore and can be removed in future version
+// TODO: this syncer is not needed anymore and can be removed in future version (v0.4)
 func NewSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, opt *options.Options) syncer.Interface {
 	obj := &core.Secret{
 		ObjectMeta: metav1.ObjectMeta{
