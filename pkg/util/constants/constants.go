@@ -44,6 +44,9 @@ const (
 	// OperatorGtidsTableName represents the name of the table that is used to store the GTID
 	OperatorGtidsTableName = "gtids"
 
+	// OperatorReadinessTableName is the name of the table that is used to store a readiness flag (boolean)
+	OperatorReadinessTableName = "readiness"
+
 	// ConfVolumeMountPath is the path where mysql configs will be mounted
 	ConfVolumeMountPath = "/etc/mysql"
 

@@ -391,7 +391,7 @@ func (ou *orcUpdater) updateNodeCondition(host string, cType api.NodeConditionTy
 }
 
 // removeNodeConditionNotInOrc marks nodes not in orc with unknown condition
-// TODO: this function should remove completly from cluster.Status.Nodes nodes
+// TODO: this function should remove completely from cluster.Status.Nodes nodes
 // that are no longer in orchestrator and in k8s
 func (ou *orcUpdater) removeNodeConditionNotInOrc(insts InstancesSet) {
 	for _, ns := range ou.cluster.Status.Nodes {

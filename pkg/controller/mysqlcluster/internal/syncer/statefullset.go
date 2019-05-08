@@ -281,8 +281,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 				"mysql",
 				fmt.Sprintf("--defaults-file=%s", confClientPath),
 				"-e",
-				"SELECT 1", // TODO: ...
-				// fmt.Sprintf("SELECT * FROM %s.%s", constants.OperatorDbName, "readiness"),
+				fmt.Sprintf("SELECT * FROM %s.%s", constants.OperatorDbName, constants.OperatorReadinessTableName),
 			},
 		},
 	})
