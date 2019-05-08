@@ -72,7 +72,6 @@ func isOwnedByMySQL(meta metav1.Object) bool {
 		return false
 	}
 
-	// TODO: add more checks here
 	labels := meta.GetLabels()
 	if val, ok := labels["app.kubernetes.io/managed-by"]; ok {
 		return val == "mysql.presslabs.org"
@@ -106,7 +105,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return isOwnedByMySQL(evt.Meta) && !isInitialized(evt.Object)
 		},
 		UpdateFunc: func(evt event.UpdateEvent) bool {
-			log.V(1).Info("pod update event", "meta", evt.MetaNew)
 			return isOwnedByMySQL(evt.MetaNew) && !isInitialized(evt.ObjectNew)
 		},
 		DeleteFunc: func(evt event.DeleteEvent) bool {
