@@ -179,19 +179,24 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 		[]string{"CREATE", "SELECT", "DELETE", "UPDATE", "INSERT"}, fmt.Sprintf("%s.%s", toolsDbName, toolsHeartbeatTableName),
 		[]string{"REPLICATION CLIENT"}, "*.*")...)
 
-	if len(gtidPurged) != 0 {
-		// If the xtrabackup information has GTID_PURGED then insert it into a table
-		// nolint: gosec
-		queries = append(queries, fmt.Sprintf(`
+	// create the status table used by the operator to configure or to mask MySQL node ready
+	// nolint: gosec
+	queries = append(queries, fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %[1]s.%[2]s (
-            id int PRIMARY KEY,
-            gtid varchar(512) NOT NULL,
-            used BOOLEAN DEFAULT false
-		)`, constants.OperatorDbName, constants.OperatorGtidsTableName))
+            name varchar(64) PRIMARY KEY,
+            value varchar(512) NOT NULL
+		)`, constants.OperatorDbName, constants.OperatorStatusTableName))
 
+	// mark node as not configured at startup, the operator will mark it configured
+	// nolint: gosec
+	queries = append(queries, fmt.Sprintf("REPLACE INTO %s.%s VALUES ('%s', '0')",
+		constants.OperatorDbName, constants.OperatorStatusTableName, "configured"))
+
+	if len(gtidPurged) != 0 {
+		// if gtid is found in the backup then set it in the status table to be processed by the operator
 		// nolint: gosec
-		queries = append(queries, fmt.Sprintf(`REPLACE INTO %s.%s (id, gtid) VALUES (1, '%s')`,
-			constants.OperatorDbName, constants.OperatorGtidsTableName, gtidPurged))
+		queries = append(queries, fmt.Sprintf(`REPLACE INTO %s.%s VALUES ('%s', '%s')`,
+			constants.OperatorDbName, constants.OperatorStatusTableName, "backup_gtid_purged", gtidPurged))
 	}
 
 	return []byte(strings.Join(queries, ";\n") + ";\n")
