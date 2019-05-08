@@ -52,7 +52,7 @@ type nodeSQLRunner struct {
 	enableBinLog bool
 }
 
-type newSQLInterface func(dsn, host string) SQLInterface
+type sqlFactoryFunc func(dsn, host string) SQLInterface
 
 func newNodeConn(dsn, host string) SQLInterface {
 	return &nodeSQLRunner{
@@ -130,7 +130,7 @@ func (r *nodeSQLRunner) ChangeMasterTo(masterHost, user, pass string) error {
 func (r *nodeSQLRunner) MarkConfigurationDone() error {
 	query := `
     CREATE TABLE IF NOT EXISTS %s.%s (
-		id int NOT NULL
+		ok tinyint(1) NOT NULL
     ) ENGINE=MEMORY;
 
     INSERT INTO %[1]s.%[2]s VALUES (1);

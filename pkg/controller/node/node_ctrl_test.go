@@ -149,12 +149,11 @@ var _ = Describe("MysqlNode controller", func() {
 
 		})
 
-		It("should not receive pod update when ready", func() {
+		It("should not receive pod update when initialized", func() {
 			pod1 := getOrCreatePod(c, cluster, 0)
 
 			// when pod is ready should not be triggered a reconcile event
-			updatePodStatusCondition(pod1, mysqlcluster.NodeInitializedConditionType, corev1.ConditionFalse, "", "")
-			updatePodStatusCondition(pod1, corev1.PodReady, corev1.ConditionTrue, "", "")
+			updatePodStatusCondition(pod1, mysqlcluster.NodeInitializedConditionType, corev1.ConditionTrue, "", "")
 			Expect(c.Status().Update(context.TODO(), pod1)).To(Succeed())
 			Consistently(requests).ShouldNot(Receive(Equal(expectedRequest(0))))
 		})

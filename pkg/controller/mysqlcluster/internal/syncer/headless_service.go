@@ -44,7 +44,7 @@ func NewHeadlessSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 			"app.kubernetes.io/name":       "mysql",
 			"app.kubernetes.io/managed-by": "mysql.presslabs.org",
 		}
-		out.Labels["mysql.presslabs.org/service-type"] = "common-headless"
+		out.Labels["mysql.presslabs.org/service-type"] = "namespace-nodes"
 
 		out.Spec.ClusterIP = "None"
 		out.Spec.Selector = labels.Set{
@@ -52,7 +52,7 @@ func NewHeadlessSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 			"app.kubernetes.io/managed-by": "mysql.presslabs.org",
 		}
 		// we want to be able to access pods even if the pod is not ready because the operator should update
-		// the in memory table to make the pod ready.
+		// the in memory table to mark the pod ready.
 		out.Spec.PublishNotReadyAddresses = true
 
 		if len(out.Spec.Ports) != 2 {
