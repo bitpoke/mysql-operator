@@ -56,9 +56,8 @@ RUN apt-get update \
 
 USER mysql
 
-USER mysql
-
 COPY ./hack/docker/sidecar-entrypoint.sh /usr/local/bin/sidecar-entrypoint.sh
 COPY --from=builder /go/src/github.com/presslabs/mysql-operator/mysql-operator-sidecar /usr/local/bin/mysql-operator-sidecar
 COPY --from=rclone /usr/local/bin/rclone /usr/local/bin/rclone
+
 ENTRYPOINT ["/usr/local/bin/sidecar-entrypoint.sh"]

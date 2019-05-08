@@ -23,31 +23,30 @@ import (
 
 var _ = Describe("Test sidecar appconf", func() {
 	It("should create the right query for users", func() {
-		Expect(createUserQuery("uName", "uPass", "%")).To(Equal(`
-DROP USER IF EXISTS uName@'%';
-CREATE USER uName@'%';
-ALTER USER uName@'%' IDENTIFIED BY 'uPass';
-
-`))
+		Expect(createUserQuery("uName", "uPass", "%")).To(ConsistOf(
+			"DROP USER IF EXISTS uName@'%'",
+			"CREATE USER uName@'%'",
+			"ALTER USER uName@'%' IDENTIFIED BY 'uPass'",
+		))
 	})
 
 	It("should create the right query for users with grants", func() {
-		Expect(createUserQuery("uName", "uPass", "%", []string{"SELECT", "SUPER"}, "*.*")).To(Equal(`
-DROP USER IF EXISTS uName@'%';
-CREATE USER uName@'%';
-ALTER USER uName@'%' IDENTIFIED BY 'uPass';
-GRANT SELECT, SUPER ON *.* TO uName@'%';
-`))
+		Expect(createUserQuery("uName", "uPass", "%", []string{"SELECT", "SUPER"}, "*.*")).To(ConsistOf(
+			"DROP USER IF EXISTS uName@'%'",
+			"CREATE USER uName@'%'",
+			"ALTER USER uName@'%' IDENTIFIED BY 'uPass'",
+			"GRANT SELECT, SUPER ON *.* TO uName@'%'",
+		))
 	})
 
 	It("should create the right query for users with grants", func() {
-		Expect(createUserQuery("uName", "uPass", "%", []string{"SELECT"}, "*.*", []string{"SUPER"}, "a.b")).To(Equal(`
-DROP USER IF EXISTS uName@'%';
-CREATE USER uName@'%';
-ALTER USER uName@'%' IDENTIFIED BY 'uPass';
-GRANT SELECT ON *.* TO uName@'%';
-GRANT SUPER ON a.b TO uName@'%';
-`))
+		Expect(createUserQuery("uName", "uPass", "%", []string{"SELECT"}, "*.*", []string{"SUPER"}, "a.b")).To(ConsistOf(
+			"DROP USER IF EXISTS uName@'%'",
+			"CREATE USER uName@'%'",
+			"ALTER USER uName@'%' IDENTIFIED BY 'uPass'",
+			"GRANT SELECT ON *.* TO uName@'%'",
+			"GRANT SUPER ON a.b TO uName@'%'",
+		))
 	})
 
 	It("should fail if bad parameters passed", func() {
