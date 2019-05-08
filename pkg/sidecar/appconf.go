@@ -45,7 +45,7 @@ func RunConfigCommand(cfg *Config) error {
 
 	reportHost := cfg.FQDNForServer(cfg.ServerID())
 
-	var identityCFG, initCFG, clientCFG *ini.File
+	var identityCFG, initCFG, clientCFG, heartbeatCFG *ini.File
 
 	// mysql server identity configs
 	if identityCFG, err = getIdentityConfigs(cfg.ServerID(), reportHost); err != nil {
@@ -55,7 +55,7 @@ func RunConfigCommand(cfg *Config) error {
 		return fmt.Errorf("failed to save configs: %s", err)
 	}
 
-	// make init-file
+	// write initialization sql file. This file is the init-file used by MySQL to configure itself
 	initFilePath := path.Join(confDPath, "operator-init.sql")
 	if err = ioutil.WriteFile(initFilePath, initFileQuery(cfg), 0644); err != nil {
 		return fmt.Errorf("failed to write init-file: %s", err)
@@ -77,12 +77,12 @@ func RunConfigCommand(cfg *Config) error {
 		return fmt.Errorf("failed to save configs: %s", err)
 	}
 
-	// mysql client connect credentials
-	if clientCFG, err = getClientConfigs(cfg.HeartBeatUser, cfg.HeartBeatPassword); err != nil {
+	// mysql heartbeat connect credentials
+	if heartbeatCFG, err = getClientConfigs(cfg.HeartBeatUser, cfg.HeartBeatPassword); err != nil {
 		return fmt.Errorf("failed to get heartbeat configs: %s", err)
 	}
 
-	if err = clientCFG.SaveTo(confHeartbeatPath); err != nil {
+	if err = heartbeatCFG.SaveTo(confHeartbeatPath); err != nil {
 		return fmt.Errorf("failed to save heartbeat configs: %s", err)
 	}
 
@@ -137,40 +137,46 @@ func getInitFileConfigs(filePath string) (*ini.File, error) {
 
 func initFileQuery(cfg *Config) []byte {
 	queries := []string{
-		"SET @@SESSION.SQL_LOG_BIN = 0;",
+		"SET @@SESSION.SQL_LOG_BIN = 0",
 	}
 
 	// configure operator utility user
 	queries = append(queries, createUserQuery(cfg.OperatorUser, cfg.OperatorPassword, "%",
 		[]string{"SUPER", "SHOW DATABASES", "PROCESS", "RELOAD", "CREATE", "SELECT"}, "*.*",
-		[]string{"ALL"}, fmt.Sprintf("%s.*", toolsDbName)))
+		[]string{"ALL"}, fmt.Sprintf("%s.*", toolsDbName))...)
 
 	// configure orchestrator user
 	queries = append(queries, createUserQuery(cfg.OrchestratorUser, cfg.OrchestratorPassword, "%",
 		[]string{"SUPER", "PROCESS", "REPLICATION SLAVE", "REPLICATION CLIENT", "RELOAD"}, "*.*",
-		[]string{"SELECT"}, "mysql.slave_master_info"))
+		[]string{"SELECT"}, "mysql.slave_master_info")...)
 
 	// configure replication user
 	queries = append(queries, createUserQuery(cfg.ReplicationUser, cfg.ReplicationPassword, "%",
-		[]string{"SELECT", "PROCESS", "RELOAD", "LOCK TABLES", "REPLICATION CLIENT", "REPLICATION SLAVE"}, "*.*"))
+		[]string{"SELECT", "PROCESS", "RELOAD", "LOCK TABLES", "REPLICATION CLIENT", "REPLICATION SLAVE"}, "*.*")...)
 
 	// configure metrics exporter user
 	queries = append(queries, createUserQuery(cfg.MetricsUser, cfg.MetricsPassword, "127.0.0.1",
-		[]string{"SELECT", "PROCESS", "REPLICATION CLIENT"}, "*.*"))
-	queries = append(queries, fmt.Sprintf("ALTER USER %s@'127.0.0.1' WITH MAX_USER_CONNECTIONS 3;", cfg.MetricsUser))
+		[]string{"SELECT", "PROCESS", "REPLICATION CLIENT"}, "*.*")...)
+	queries = append(queries, fmt.Sprintf("ALTER USER %s@'127.0.0.1' WITH MAX_USER_CONNECTIONS 3", cfg.MetricsUser))
 
 	// configure heartbeat user
 	// because of pt-heartbeat make sure not to have ALL or SUPER privileges:
 	// https://github.com/percona/percona-toolkit/blob/e85ce15ef24bc4614b4d2f13792fa73583d68f8e/bin/pt-heartbeat#L6433
 	queries = append(queries, createUserQuery(cfg.HeartBeatUser, cfg.HeartBeatPassword, "127.0.0.1",
 		[]string{"CREATE", "SELECT", "DELETE", "UPDATE", "INSERT"}, fmt.Sprintf("%s.%s", toolsDbName, toolsHeartbeatTableName),
-		[]string{"REPLICATION CLIENT"}, "*.*"))
+		[]string{"REPLICATION CLIENT"}, "*.*")...)
 
-	return []byte(strings.Join(queries, "\n"))
+	return []byte(strings.Join(queries, ";\n"))
 }
 
-func createUserQuery(name, pass, host string, rights ...interface{}) string {
+func createUserQuery(name, pass, host string, rights ...interface{}) []string {
 	user := fmt.Sprintf("%s@'%s'", name, host)
+
+	queries := []string{
+		fmt.Sprintf("DROP USER IF EXISTS %s", user),
+		fmt.Sprintf("CREATE USER %s", user),
+		fmt.Sprintf("ALTER USER %s IDENTIFIED BY '%s'", user, pass),
+	}
 
 	if len(rights)%2 != 0 {
 		panic("not a good number of parameters")
@@ -188,14 +194,9 @@ func createUserQuery(name, pass, host string, rights ...interface{}) string {
 		if on, ok = rights[i+1].(string); !ok {
 			panic("[on] not a good parameter")
 		}
-		grant := fmt.Sprintf("GRANT %s ON %s TO %s;", strings.Join(right, ", "), on, user)
+		grant := fmt.Sprintf("GRANT %s ON %s TO %s", strings.Join(right, ", "), on, user)
 		grants = append(grants, grant)
 	}
 
-	return fmt.Sprintf("\n"+
-		"DROP USER IF EXISTS %s;\n"+
-		"CREATE USER %s;\n"+
-		"ALTER USER %s IDENTIFIED BY '%s';\n"+
-		"%s\n", // GRANTs statements
-		user, user, user, pass, strings.Join(grants, "\n"))
+	return append(queries, grants...)
 }
