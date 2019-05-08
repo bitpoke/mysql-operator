@@ -80,7 +80,7 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		http.Error(w, "HTTP server does not support streaming!", http.StatusInternalServerError)
 		return
 	}
 

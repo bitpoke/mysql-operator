@@ -56,13 +56,13 @@ func Add(mgr manager.Manager) error {
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, sqlI newSQLInterface) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, sqlI sqlFactoryFunc) reconcile.Reconciler {
 	return &ReconcileMysqlNode{
-		Client:          mgr.GetClient(),
-		scheme:          mgr.GetScheme(),
-		recorder:        mgr.GetRecorder(controllerName),
-		opt:             options.GetOptions(),
-		newSQLInterface: sqlI,
+		Client:     mgr.GetClient(),
+		scheme:     mgr.GetScheme(),
+		recorder:   mgr.GetRecorder(controllerName),
+		opt:        options.GetOptions(),
+		sqlFactory: sqlI,
 	}
 }
 
@@ -77,17 +77,6 @@ func isOwnedByMySQL(meta metav1.Object) bool {
 		return val == "mysql.presslabs.org"
 	}
 
-	return false
-}
-
-func podIsReady(obj runtime.Object) bool {
-	pod := obj.(*corev1.Pod)
-
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady {
-			return cond.Status == corev1.ConditionTrue
-		}
-	}
 	return false
 }
 
@@ -113,11 +102,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to MysqlCluster
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
 		CreateFunc: func(evt event.CreateEvent) bool {
-			return isOwnedByMySQL(evt.Meta) && !podIsReady(evt.Object) && !isInitialized(evt.Object)
+			return isOwnedByMySQL(evt.Meta) && !isInitialized(evt.Object)
 		},
 		UpdateFunc: func(evt event.UpdateEvent) bool {
 			log.V(1).Info("pod update event", "meta", evt.MetaNew)
-			return isOwnedByMySQL(evt.MetaNew) && !podIsReady(evt.ObjectNew) && !isInitialized(evt.ObjectNew)
+			return isOwnedByMySQL(evt.MetaNew) && !isInitialized(evt.ObjectNew)
 		},
 		DeleteFunc: func(evt event.DeleteEvent) bool {
 			return false
@@ -139,7 +128,7 @@ type ReconcileMysqlNode struct {
 	recorder record.EventRecorder
 	opt      *options.Options
 
-	newSQLInterface newSQLInterface
+	sqlFactory sqlFactoryFunc
 }
 
 // Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
@@ -257,7 +246,7 @@ func (r *ReconcileMysqlNode) getMySQLConnection(cluster *mysqlcluster.MysqlClust
 		c.User, c.Password, host, constants.MysqlPort,
 	)
 
-	return r.newSQLInterface(dsn, host)
+	return r.sqlFactory(dsn, host)
 }
 
 type credentials struct {
@@ -293,14 +282,14 @@ func (r *ReconcileMysqlNode) updatePod(pod *corev1.Pod) error {
 }
 
 func (c *credentials) Validate() error {
-	if anyZero(c.User, c.Password, c.ReplicationUser, c.ReplicationPassword) {
+	if anyIsEmpty(c.User, c.Password, c.ReplicationUser, c.ReplicationPassword) {
 		return fmt.Errorf("validation error: some credentials are empty")
 	}
 
 	return nil
 }
 
-func anyZero(ss ...string) bool {
+func anyIsEmpty(ss ...string) bool {
 	zero := false
 	for _, s := range ss {
 		zero = zero || len(s) == 0
