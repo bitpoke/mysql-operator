@@ -60,21 +60,6 @@ func copyFile(src, dst string) error {
 	return nil
 }
 
-// shouldBootstrapNode checks if the mysql data is at the first initialization
-func shouldBootstrapNode() bool {
-	_, err := os.Open(fmt.Sprintf("%s/%s/%s.CSV", dataDir,
-		toolsDbName, toolsInitTableName))
-	if os.IsNotExist(err) {
-		return true
-	} else if err != nil {
-		log.Error(err, "first init check failed hard")
-		return true
-	}
-
-	// maybe check csv init data and log it
-	return false
-}
-
 // readPurgedGTID returns the GTID from xtrabackup_binlog_info file
 func readPurgedGTID() (string, error) {
 	file, err := os.Open(fmt.Sprintf("%s/xtrabackup_binlog_info", dataDir))
