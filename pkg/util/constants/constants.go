@@ -41,11 +41,9 @@ const (
 	// SlaveLagQuery in hack/charts/mysql-operator/values.yaml.
 	OperatorDbName = "sys_operator"
 
-	// OperatorGtidsTableName represents the name of the table that is used to store the GTID
-	OperatorGtidsTableName = "gtids"
-
-	// OperatorReadinessTableName is the name of the table that is used to store a readiness flag (boolean)
-	OperatorReadinessTableName = "readiness"
+	// OperatorStatusTableName represents the name of the table that contains information about MySQL status, like:
+	// if mysql is configure by the operator, if PURGE_GTID is set or not, etc
+	OperatorStatusTableName = "status"
 
 	// ConfVolumeMountPath is the path where mysql configs will be mounted
 	ConfVolumeMountPath = "/etc/mysql"
