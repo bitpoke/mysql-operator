@@ -189,6 +189,7 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
             used BOOLEAN DEFAULT false
 		)`, constants.OperatorDbName, constants.OperatorGtidsTableName))
 
+		// nolint: gosec
 		queries = append(queries, fmt.Sprintf(`REPLACE INTO %s.%s VALUES (1, '%s')`,
 			constants.OperatorDbName, constants.OperatorGtidsTableName, gtidPurged))
 	}
