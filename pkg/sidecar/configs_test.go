@@ -51,14 +51,4 @@ var _ = Describe("Test sidecar configs", func() {
 	It("should determine the host ip", func() {
 		Expect(retryLookupHost("localhost")).To(ContainElement("127.0.0.1"))
 	})
-
-	It("should determine the node role", func() {
-		_, err := cfg.NodeRole()
-		Expect(err).ToNot(Succeed())
-		// TODO: fix this test
-		// Expect().To(Equal(MasterNode))
-
-		// cfg.Hostname = "cluster-mysql-2"
-		// Expect(cfg.NodeRole()).To(Equal(SlaveNode))
-	})
 })

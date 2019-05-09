@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -154,6 +155,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 
 	log.Info("syncing MySQL Node", "pod", request.NamespacedName.String())
 
+	// try to get the related MySQL Cluster for current node
 	var cluster *mysqlcluster.MysqlCluster
 	cluster, err = r.getNodeCluster(ctx, pod)
 	if err != nil {
@@ -161,22 +163,29 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
+	// if cluster is deleted then don't do anything
 	if cluster.DeletionTimestamp != nil {
 		log.Info("cluster is deleted nothing to do", "pod", pod.Spec.Hostname)
 		return reconcile.Result{}, nil
 	}
 
+	// if it's a old version cluster then don't do anything
+	if shouldUpdateToVersion(cluster, 300) {
+		return reconcile.Result{}, nil
+	}
+
+	// get cluster credentials from k8s secret, like replication and operator credentials
 	var creds *credentials
-	creds, err = r.getCredsSecret(ctx, cluster)
-	if err != nil {
+	if creds, err = r.getCredsSecret(ctx, cluster); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// initialize SQL interface
 	sql := r.getMySQLConnection(cluster, pod, creds)
 
-	err = r.initializeMySQL(ctx, sql, cluster, creds)
-	if err != nil {
+	// run the initializer, this will connect to MySQL server and run init queries
+	if err = r.initializeMySQL(ctx, sql, cluster, creds); err != nil {
+		// initialization failed, mark node as not yet initialized (by updating pod init condition)
 		updatePodStatusCondition(pod, mysqlcluster.NodeInitializedConditionType,
 			corev1.ConditionFalse, "mysqlInitializationFailed", err.Error())
 
@@ -187,6 +196,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
+	// initialization complete
 	updatePodStatusCondition(pod, mysqlcluster.NodeInitializedConditionType,
 		corev1.ConditionTrue, "mysqlInitializationSucceeded", "success")
 
@@ -199,6 +209,7 @@ func (r *ReconcileMysqlNode) initializeMySQL(ctx context.Context, sql SQLInterfa
 		return err
 	}
 
+	// disable MySQL SUPER readonly to be able to modify settings in MySQL
 	enableSuperReadOnly, err := sql.DisableSuperReadOnly(ctx)
 	if err != nil {
 		return err
@@ -217,6 +228,7 @@ func (r *ReconcileMysqlNode) initializeMySQL(ctx context.Context, sql SQLInterfa
 		}
 	}
 
+	// write the configuration complete flag into MySQL, this will make the node ready
 	if err := sql.MarkConfigurationDone(ctx); err != nil {
 		return err
 	}
@@ -340,4 +352,22 @@ func podCondIndex(p *corev1.Pod, condType corev1.PodConditionType) (int, bool) {
 	}
 
 	return 0, false
+}
+
+func shouldUpdateToVersion(cluster *mysqlcluster.MysqlCluster, targetVersion int) bool {
+	var version string
+	var ok bool
+	if version, ok = cluster.ObjectMeta.Annotations["mysql.presslabs.org/version"]; !ok {
+		// no version annotation present, (it's a cluster older than 0.3.0) or it's a new cluster
+		log.Info("annotation not set on cluster")
+		return true
+	}
+
+	ver, err := strconv.ParseInt(version, 10, 32)
+	if err != nil {
+		log.Error(err, "annotation version can't be parsed", "value", version)
+		return true
+	}
+
+	return int(ver) < targetVersion
 }

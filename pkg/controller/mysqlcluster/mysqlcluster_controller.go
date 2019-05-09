@@ -155,10 +155,11 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 	log.Info("syncing cluster", "cluster", request.NamespacedName.String())
 
-	// run upgrader
+	// run upgrades
+	// TODO: this should be removed in next version (v0.4)
 	up := upgrades.NewUpgrader(r.Client, r.recorder, cluster, r.opt)
 	if up.ShouldUpdate() {
-		log.V(1).Info("running upgrader")
+		log.V(1).Info("running upgrades")
 		if err = up.Run(context.TODO()); err != nil {
 			return reconcile.Result{}, err
 		}
