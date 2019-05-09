@@ -35,7 +35,7 @@ import (
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 )
 
-var log = logf.Log.WithName("upgrader.cluster")
+var log = logf.Log.WithName("upgrades.cluster")
 
 const (
 	// VersionAnnotation represents the annotation used to annotate a cluster to it's version
@@ -74,8 +74,8 @@ func (u *upgrader) Run(ctx context.Context) error {
 		return err
 	}
 
-	// more than 1 replca so there is the case when node 0 is slave so mark all other nodes as
-	// in maintenance except node 0. When doint failover the node 0 will be promoted
+	// more than 1 replica so there is the case when node 0 is slave so mark all other nodes as
+	// in maintenance except node 0.
 	// TODO: or set promotion rules
 	if int(*sts.Spec.Replicas) > 1 {
 
@@ -86,6 +86,12 @@ func (u *upgrader) Run(ctx context.Context) error {
 		one := int32(1)
 		sts.Spec.Replicas = &one
 		if err = u.client.Update(ctx, sts); err != nil {
+			return err
+		}
+
+		// set ready nodes on cluster to 0
+		u.cluster.Status.ReadyNodes = 0
+		if err = u.client.Status().Update(ctx, u.cluster.Unwrap()); err != nil {
 			return err
 		}
 	}

@@ -37,13 +37,7 @@ func RunCloneCommand(cfg *Config) error {
 		return fmt.Errorf("removing lost+found: %s", err)
 	}
 
-	role, err := cfg.NodeRole()
-	if err != nil {
-		return err
-	}
-
-	log.Info("configuring server as", "host", cfg.Hostname, "role", role)
-	if role == MasterNode {
+	if cfg.ServerID() == 100 {
 		if len(cfg.InitBucketURL) == 0 {
 			log.Info("skip cloning init bucket uri is not set.")
 			// let mysqld initialize data dir
@@ -55,23 +49,10 @@ func RunCloneCommand(cfg *Config) error {
 		}
 	} else {
 		// clonging from prior node
-		if cfg.ServerID() > 100 {
-			sourceHost := cfg.FQDNForServer(cfg.ServerID() - 1)
-			err := cloneFromSource(cfg, sourceHost)
-			if err != nil {
-				return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)
-			}
-			// clone from master if no prior node and node is not master
-		} else if cfg.ServerID() == 100 {
-			sourceHost := cfg.MasterFQDN()
-			err := cloneFromSource(cfg, sourceHost)
-			if err != nil {
-				return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)
-			}
-		} else {
-			return fmt.Errorf(
-				"failed to initialize because no prior node exists, check orchestrator maybe",
-			)
+		sourceHost := cfg.FQDNForServer(cfg.ServerID() - 1)
+		err := cloneFromSource(cfg, sourceHost)
+		if err != nil {
+			return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)
 		}
 	}
 

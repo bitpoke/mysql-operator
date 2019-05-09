@@ -154,6 +154,7 @@ spec:
 
 For more configuration details regarding`hostPath` go [here](https://godoc.org/k8s.io/api/core/v1#HostPathVolumeSource), and more information about `emptyDir` can be found [here](https://godoc.org/k8s.io/api/core/v1#EmptyDirVolumeSource).
 
+> NOTE that EmptyDir is not fully supported from version `v0.3.x` of the operator. Please use `hostPath` instead. See information about the known [issue](https://github.com/presslabs/mysql-operator/issues/250).
 
 ## Cluster MySQL configuration
 
