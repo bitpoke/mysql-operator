@@ -22,7 +22,7 @@ The MySQL operator provides 3 services to access the nodes:
  * `<cluster_name>-mysql-master` is the service that points to the master node and this endpoint
    should be used for writes. This service is usually used to construct the DSN.
 
- * `<cluster_name>-mysql` is the service that routes traffic to all the _healthy_ nodes from the
+ * `<cluster_name>-mysql` is the service that routes traffic to _all healthy_ nodes from the
    cluster. You should use this endpoint for reads.
 
  * `mysql` is the service used internally to access all nodes within a namespace. You can use this

@@ -246,7 +246,6 @@ func (r *nodeSQLRunner) readStatusValue(ctx context.Context, key string) (string
 
 	var value string
 	if err := r.readFromMysql(ctx, qq, &value); err != nil {
-		// if no rows found then continue to add GTID purged
 		if err != sql.ErrNoRows {
 			return "", err
 		}

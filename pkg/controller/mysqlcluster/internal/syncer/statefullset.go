@@ -282,7 +282,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 				fmt.Sprintf("--defaults-file=%s", confClientPath),
 				"-e",
 				// nolint: gosec
-				fmt.Sprintf("SELECT * FROM %s.%s WHERE name='configured' AND value='1'",
+				fmt.Sprintf("SELECT true as 'ready' FROM %s.%s WHERE name='configured' AND value='1'",
 					constants.OperatorDbName, constants.OperatorStatusTableName),
 			},
 		},

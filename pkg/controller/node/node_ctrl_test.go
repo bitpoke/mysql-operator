@@ -119,6 +119,8 @@ var _ = Describe("MysqlNode controller", func() {
 			By("create the MySQL cluster")
 			Expect(c.Create(context.TODO(), secret)).To(Succeed())
 			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
+			// ensure that cluster is created, else test may be flaky
+			Eventually(testutil.RefreshFn(c, cluster.Unwrap())).ShouldNot(BeNil())
 
 			By("create MySQL pod")
 			getOrCreatePod(c, cluster, 0)

@@ -185,7 +185,7 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 		CREATE TABLE IF NOT EXISTS %[1]s.%[2]s (
             name varchar(64) PRIMARY KEY,
             value varchar(512) NOT NULL
-		)`, constants.OperatorDbName, constants.OperatorStatusTableName))
+		) ENGINE=CSV `, constants.OperatorDbName, constants.OperatorStatusTableName))
 
 	// mark node as not configured at startup, the operator will mark it configured
 	// nolint: gosec
