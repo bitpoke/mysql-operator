@@ -180,12 +180,14 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 		[]string{"REPLICATION CLIENT"}, "*.*")...)
 
 	// create the status table used by the operator to configure or to mask MySQL node ready
+	// CSV engine for this table can't be used because we use REPLACE statement that requires PRIMARY KEY or
+	// UNIQUE KEY index
 	// nolint: gosec
 	queries = append(queries, fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %[1]s.%[2]s (
             name varchar(64) PRIMARY KEY,
             value varchar(512) NOT NULL
-		) ENGINE=CSV `, constants.OperatorDbName, constants.OperatorStatusTableName))
+		)`, constants.OperatorDbName, constants.OperatorStatusTableName))
 
 	// mark node as not configured at startup, the operator will mark it configured
 	// nolint: gosec
