@@ -87,6 +87,9 @@ var _ = Describe("MysqlNode controller", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("cluster-%d", rand.Int31()),
 					Namespace: "default",
+					Annotations: map[string]string{
+						"mysql.presslabs.org/version": "300",
+					},
 				},
 				Spec: api.MysqlClusterSpec{
 					Replicas:   &one,

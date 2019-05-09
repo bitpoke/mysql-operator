@@ -32,18 +32,6 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
-// NodeRole represents the kind of the MySQL server
-type NodeRole string
-
-const (
-	// MasterNode represents the master role for MySQL server
-	MasterNode NodeRole = "master"
-	// SlaveNode represents the slave role for MySQL server
-	SlaveNode NodeRole = "slave"
-	// Unknown usually used for error, when the role can't be determined
-	Unknown NodeRole = "unknown"
-)
-
 // Config contains information related with the pod.
 type Config struct {
 	// Hostname represents the pod hostname
@@ -97,42 +85,6 @@ func (cfg *Config) ClusterFQDN() string {
 // MasterFQDN the FQ Name of the cluster's master
 func (cfg *Config) MasterFQDN() string {
 	return mysqlcluster.GetNameForResource(mysqlcluster.MasterService, cfg.ClusterName)
-}
-
-// NodeRole returns the role of the current node
-func (cfg *Config) NodeRole() (NodeRole, error) {
-	pod := cfg.FQDNForServer(cfg.ServerID())
-	podIPs, err := retryLookupHost(pod)
-	if err != nil {
-		log.Info("can't lookup pod IP", "pod", pod, "err", err)
-		return Unknown, err
-	}
-
-	if len(podIPs) != 1 {
-		// no IPs for given pod
-		log.Info("no IPs for pod found", "pod", pod)
-		return Unknown, nil
-	}
-
-	masterSVC := mysqlcluster.GetNameForResource(mysqlcluster.MasterService, cfg.ClusterName)
-	masterIPs, err := retryLookupHost(masterSVC)
-	if err != nil {
-		log.Info("can't lookup master service IP", "svc", masterSVC, "err", err)
-		return MasterNode, nil
-	}
-
-	if len(masterIPs) != 1 {
-		log.Info("no IPs for master service", "svc", masterSVC)
-		return MasterNode, nil
-	}
-
-	if podIPs[0] == masterIPs[0] {
-		log.Info("this pod is MASTER")
-		return MasterNode, nil
-	}
-
-	log.Info("this pod is SLAVE")
-	return SlaveNode, nil
 }
 
 // ServerID returns the MySQL server id
