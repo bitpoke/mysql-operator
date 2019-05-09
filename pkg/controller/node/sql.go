@@ -40,6 +40,7 @@ type SQLInterface interface {
 	DisableSuperReadOnly(ctx context.Context) (func(), error)
 	ChangeMasterTo(ctx context.Context, host string, user string, pass string) error
 	MarkConfigurationDone(ctx context.Context) error
+	IsConfigured(ctx context.Context) (bool, error)
 	SetPurgedGTID(ctx context.Context) error
 	Host() string
 }
@@ -125,14 +126,13 @@ func (r *nodeSQLRunner) ChangeMasterTo(ctx context.Context, masterHost, user, pa
 
 // MarkConfigurationDone write in a MEMORY table value. The readiness probe checks for that value to exist to succeed.
 func (r *nodeSQLRunner) MarkConfigurationDone(ctx context.Context) error {
-	// nolint: gosec
-	query := fmt.Sprintf("REPLACE INTO %s.%s VALUES ('%s', '1');",
-		constants.OperatorDbName, constants.OperatorStatusTableName, "configured")
+	return r.writeStatusValue(ctx, "configured", "1")
+}
 
-	if err := r.runQuery(ctx, query); err != nil {
-		return fmt.Errorf("failed to mark configuration done, err: %s", err)
-	}
-	return nil
+// IsConfigured returns true if MySQL was configured, a key was set in the status table
+func (r *nodeSQLRunner) IsConfigured(ctx context.Context) (bool, error) {
+	val, err := r.readStatusValue(ctx, "configured")
+	return val == "1", err
 }
 
 func (r *nodeSQLRunner) Host() string {
@@ -239,6 +239,7 @@ func (r *nodeSQLRunner) SetPurgedGTID(ctx context.Context) error {
 	return nil
 }
 
+// readStatusValue read from status table the value under the given key
 func (r *nodeSQLRunner) readStatusValue(ctx context.Context, key string) (string, error) {
 	// nolint: gosec
 	qq := fmt.Sprintf("SELECT value FROM %s.%s WHERE name='%s'",
@@ -252,6 +253,19 @@ func (r *nodeSQLRunner) readStatusValue(ctx context.Context, key string) (string
 	}
 
 	return value, nil
+}
+
+// writeStatusValue updates the value at the provided key
+func (r *nodeSQLRunner) writeStatusValue(ctx context.Context, key, value string) error {
+	// nolint: gosec
+	query := fmt.Sprintf("REPLACE INTO %s.%s VALUES ('%s', '%s');",
+		constants.OperatorDbName, constants.OperatorStatusTableName, key, value)
+
+	if err := r.runQuery(ctx, query); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // isMySQLError checks if a mysql error is of the given code.

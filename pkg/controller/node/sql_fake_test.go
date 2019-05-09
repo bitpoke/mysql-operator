@@ -52,6 +52,10 @@ func (f *fakeSQLRunner) SetPurgedGTID(ctx context.Context) error {
 	return nil
 }
 
+func (f *fakeSQLRunner) IsConfigured(ctx context.Context) (bool, error) {
+	return false, nil
+}
+
 var _ = Describe("SQL functions", func() {
 	It("should find not found error", func() {
 		err := fmt.Errorf("Error 1146: Table 'a.a' doesn't exist")

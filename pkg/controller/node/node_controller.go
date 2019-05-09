@@ -171,7 +171,10 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 
 	// if it's a old version cluster then don't do anything
 	if shouldUpdateToVersion(cluster, 300) {
-		return reconcile.Result{}, nil
+		// if the cluster is upgraded then set on the cluster an annotations that skips the GTID configuration
+		// TODO: this should be removed in the next versions
+		cluster.Annotations["mysql.presslabs.org/SkipGTIDPurged"] = "true"
+		return reconcile.Result{}, r.Update(ctx, cluster.Unwrap())
 	}
 
 	// get cluster credentials from k8s secret, like replication and operator credentials
@@ -209,6 +212,15 @@ func (r *ReconcileMysqlNode) initializeMySQL(ctx context.Context, sql SQLInterfa
 		return err
 	}
 
+	// check if MySQL was configured before to avoid multiple times reconfiguration
+	if configured, err := sql.IsConfigured(ctx); err != nil {
+		return err
+	} else if configured {
+		// already configured. For example this can be reached if the pod status update fails
+		log.V(1).Info("MySQL is already configure - skip")
+		return nil
+	}
+
 	// disable MySQL SUPER readonly to be able to modify settings in MySQL
 	enableSuperReadOnly, err := sql.DisableSuperReadOnly(ctx)
 	if err != nil {
@@ -219,8 +231,12 @@ func (r *ReconcileMysqlNode) initializeMySQL(ctx context.Context, sql SQLInterfa
 	// is slave node?
 	if cluster.GetMasterHost() != sql.Host() {
 		log.Info("configure pod as slave", "pod", sql.Host(), "master", cluster.GetMasterHost())
-		if err := sql.SetPurgedGTID(ctx); err != nil {
-			return err
+
+		// check if the skip annotation is set on the cluster first
+		if _, ok := cluster.Annotations["mysql.presslabs.org/SkipGTIDPurged"]; !ok {
+			if err := sql.SetPurgedGTID(ctx); err != nil {
+				return err
+			}
 		}
 
 		if err := sql.ChangeMasterTo(ctx, cluster.GetMasterHost(), c.ReplicationUser, c.ReplicationPassword); err != nil {

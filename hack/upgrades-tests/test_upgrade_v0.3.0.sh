@@ -156,60 +156,18 @@ function wait_cluster_ready {
 
 }
 
-function read_endpoint {
-    name=${1:-my-cluster}
+function run_query {
+    pod=${1}-mysql-${2}
+    query=${3}
 
-    echo "${name}-mysql.${CL_NAMESPACE}"
+    kubectl exec $pod -- mysql --defaults-file=/etc/mysql/client.conf -NB -e "$query"
 }
 
-function start_check_job {
-    name=${1:-my-cluster}
-    root_pass=${2:-not-so-secure}
+function run_query_old {
+    pod=${1}-mysql-${2}
+    query=${3}
 
-    msg "Create check job ($name) ..."
-    cat <<EOF | kubectl apply -f -
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: check-mysql-cluster
-spec:
-  backoffLimit: 0
-  template:
-    spec:
-      restartPolicy: Never
-      containers:
-      - name: check
-        image: percona:5.7
-        command: ["/bin/bash", "-c"]
-        args:
-          - |
-            set -e
-            while true; do
-            mysql --host=$(read_endpoint ${name}) --user=root --password=${root_pass} -e 'SELECT 1'
-            sleep 5
-            done
-EOF
-}
-
-function check_job_ok {
-    JSONPATH='{range @.status.conditions[*]}{@.type}={@.status};{end}'
-
-    msg "Check job status ..."
-    sleep 10
-    out=$(kubectl get jobs check-mysql-cluster -o jsonpath="$JSONPATH")
-    if [[ "$out" == *"Failed=True"* ]]; then
-        msg "Cluser was down!!" error
-        return 1
-    else
-        msg "Cluster was ok!!" success
-    fi
-}
-
-function apply_new_crds {
-    file=${1:-02x-crds.yaml}
-
-    msg "Apply new crds ($file)..."
-    kubectl apply -f ${file}
+    kubectl exec $pod -- mysql --defaults-file=/etc/mysql/client.cnf -NB -e "$query"
 }
 
 
@@ -259,12 +217,8 @@ function cmd_test {
     # wait for cluster to be ready
     wait_cluster_ready $CL_NAME
 
-    # start a job that checks for mysql to be up
-    # start_check_job $CL_NAME
-
-    # check job
-    # check_job_ok
-    # [ $? -ne 0 ] && exit 1
+    run_query_old $CL_NAME 0 "CREATE DATABASE IF NOT EXISTS test; CREATE TABLE IF NOT EXISTS test.test (name varchar(10) PRIMARY KEY)"
+    run_query_old $CL_NAME 0 "INSERT INTO test.test VALUES ('test1')"
 
     # trigger failover
     kubectl delete pod $CL_NAME-mysql-0
@@ -284,10 +238,12 @@ function cmd_test {
 
     check_cluster_version $CL_NAME 300
 
-    # check the job status to determine if the cluster was down
-    # check_job_ok
-    # [ $? -ne 0 ] && exit 1
-
+    current=$(run_query $CL_NAME 0 "SELECT 'ok' FROM test.test WHERE name='test1'")
+    if [ "$current" == "ok" ]; then
+        msg "Ok sql test" success
+    else
+        msg "Bad sql test" error
+    fi
 }
 
 
