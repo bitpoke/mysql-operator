@@ -41,6 +41,7 @@ field) to make it smaller that will prevent you from hitting this
 
 
 The operator should do all the work for you but you have to make sure that you have the latest
-`0.2.x` version of the operator.
+`0.2.x` version of the operator. For a smooth upgrade, it's recommended to have clusters with only
+one node or the master node to be node 0. Doing so will prevent the operator to wait for a failover.
 
 This release drop support for `emptyDir` volume source.

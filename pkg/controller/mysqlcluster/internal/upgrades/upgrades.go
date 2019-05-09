@@ -78,11 +78,6 @@ func (u *upgrader) Run(ctx context.Context) error {
 	// in maintenance except node 0.
 	// TODO: or set promotion rules
 	if int(*sts.Spec.Replicas) > 1 {
-
-		if err = u.setNodesInMaintenaceExcept(insts, 0); err != nil {
-			return err
-		}
-
 		one := int32(1)
 		sts.Spec.Replicas = &one
 		if err = u.client.Update(ctx, sts); err != nil {
@@ -219,35 +214,6 @@ func (u *upgrader) getPodOldHostname(node int) string {
 	return fmt.Sprintf("%s-%d.%s.%s", u.cluster.GetNameForResource(mysqlcluster.StatefulSet), node,
 		u.cluster.GetNameForResource(mysqlcluster.OldHeadlessSVC),
 		u.cluster.Namespace)
-}
-
-func (u *upgrader) setNodesInMaintenaceExcept(insts []orc.Instance, node int) error {
-	maintenances, err := u.orcClient.Maintenance()
-	if err != nil {
-		return err
-	}
-
-	for _, inst := range insts {
-		if inst.Key.Hostname == u.getPodOldHostname(node) {
-			// execept given node
-			continue
-		}
-
-		inMaintenance := false
-		for _, m := range maintenances {
-			if m.Key.Hostname == inst.Key.Hostname {
-				inMaintenance = true
-			}
-		}
-
-		if !inMaintenance {
-			if err := u.orcClient.BeginMaintenance(inst.Key, "upgrader", "upgrade"); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 }
 
 func (u *upgrader) forgetFromOrc() error {
