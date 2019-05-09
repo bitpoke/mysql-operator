@@ -47,7 +47,9 @@ import (
 var log = logf.Log.WithName(controllerName)
 
 const controllerName = "controller.mysqlNode"
-const mysqlReconciliationTimeout = 30 * time.Second
+
+// mysqlReconciliationTimeout the time that should last a reconciliation (this is used as a MySQL timout too)
+const mysqlReconciliationTimeout = 10 * time.Second
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
