@@ -33,9 +33,9 @@ This upgrade requires a Kubernetes cluster upgrade because the `v0.2.x` works on
 
 ## v0.3.x upgrade
 
-This version works on Kubernetes grater or equal with `1.11`. The upgrade should be done on staging
+This version requires at list Kubernetes `1.11`. The upgrade should be tried on staging environment
 first because it's with downtime. It requires the deletion of the statefulset and recreation of it.
-The reason behind is that we changed the headless service name (which is an invariant statefulset
+The reason behind is that we changed the headless service name (which is an immutable statefulset
 field) to make it smaller that will prevent you from hitting this
 [bug](https://github.com/presslabs/mysql-operator/issues/170).
 

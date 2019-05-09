@@ -131,15 +131,6 @@ var _ = Describe("Mysql cluster tests", func() {
 	It("scale down a cluster", func() {
 		// configure MySQL cluster to have 2 replicas and to use PV for data storage
 		cluster.Spec.Replicas = &two
-		// cluster.Spec.VolumeSpec.EmptyDir = nil
-		// cluster.Spec.VolumeSpec.HostPath = nil
-		// cluster.Spec.VolumeSpec.PersistentVolumeClaim = &core.PersistentVolumeClaimSpec{
-		// 	Resources: core.ResourceRequirements{
-		// 		Requests: core.ResourceList{
-		// 			core.ResourceStorage: resource.MustParse("1Gi"),
-		// 		},
-		// 	},
-		// }
 		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
 
 		// test cluster to be ready
