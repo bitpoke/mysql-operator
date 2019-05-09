@@ -198,21 +198,25 @@ func (r *nodeSQLRunner) dbConn() (*sql.DB, func(), error) {
 }
 
 func (r *nodeSQLRunner) SetPurgedGTID(ctx context.Context) error {
-	// first check if the GTID should be set, if in the status table is a key with the GTID that was set
-	// nolint: gosec
-	qq := fmt.Sprintf("SELECT value FROM %s.%s WHERE name='%s'",
-		constants.OperatorDbName, constants.OperatorStatusTableName, "set_gtid_purged")
+	var (
+		err        error
+		setGTID    string
+		backupGTID string
+	)
 
-	var value string
-	if err := r.readFromMysql(ctx, qq, &value); err != nil {
-		// if no rows found then continue to add GTID purged
-		if err != sql.ErrNoRows {
-			return err
-		}
+	// first check if the GTID was set before
+	if setGTID, err = r.readStatusValue(ctx, "set_gtid_purged"); err != nil {
+		return err
+	} else if len(setGTID) != 0 {
+		log.V(1).Info("GTID purged was already set", "host", r.Host(), "gtid_purged", setGTID)
+		return nil
 	}
 
-	if len(value) != 0 {
-		log.V(1).Info("GTID purged was already set", "host", r.Host(), "gtid_purged", value)
+	// check if there is any GTID to set
+	if backupGTID, err = r.readStatusValue(ctx, "backup_gtid_purged"); err != nil {
+		return err
+	} else if len(backupGTID) == 0 {
+		log.V(1).Info("no GTID to set", "host", r.Host())
 		return nil
 	}
 
@@ -233,6 +237,22 @@ func (r *nodeSQLRunner) SetPurgedGTID(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (r *nodeSQLRunner) readStatusValue(ctx context.Context, key string) (string, error) {
+	// nolint: gosec
+	qq := fmt.Sprintf("SELECT value FROM %s.%s WHERE name='%s'",
+		constants.OperatorDbName, constants.OperatorStatusTableName, key)
+
+	var value string
+	if err := r.readFromMysql(ctx, qq, &value); err != nil {
+		// if no rows found then continue to add GTID purged
+		if err != sql.ErrNoRows {
+			return "", err
+		}
+	}
+
+	return value, nil
 }
 
 // isMySQLError checks if a mysql error is of the given code.
