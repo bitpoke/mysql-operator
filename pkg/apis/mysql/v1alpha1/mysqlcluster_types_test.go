@@ -19,7 +19,6 @@ package v1alpha1
 
 import (
 	"context"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,12 +70,20 @@ var _ = Describe("MysqlCluster CRUD", func() {
 		})
 	})
 
-	Context("defaulting functions", func() {
+	Context("defaulting functions on MySQLCluster", func() {
+		var (
+			cluster *MysqlCluster
+		)
+
+		BeforeEach(func() {
+			cluster = &MysqlCluster{ObjectMeta: metav1.ObjectMeta{Name: "foo1", Namespace: "default"}}
+		})
+
 		It("should populate fields defaults", func() {
-			cluster := &MysqlCluster{ObjectMeta: metav1.ObjectMeta{Name: "foo1", Namespace: "default"}}
 			SetDefaults_MysqlCluster(cluster)
 
 			Expect(cluster.Spec.MysqlConf).NotTo(BeNil())
 		})
 	})
+
 })
