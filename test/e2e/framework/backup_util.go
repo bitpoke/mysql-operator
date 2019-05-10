@@ -18,6 +18,7 @@ package framework
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -46,6 +47,10 @@ func (f *Framework) NewGCSBackupSecret() *corev1.Secret {
 		Logf("GOOGLE_CREDENTIALS is not set! Backups tests will not work")
 	}
 
+	jk := make(map[string]string)
+	if err := json.Unmarshal([]byte(json_key), &jk); err != nil {
+		panic("Failed to unmarshal GOOGLE_CREDENTIALS env value")
+	}
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("backup-secret-%s", f.BaseName),
@@ -53,6 +58,7 @@ func (f *Framework) NewGCSBackupSecret() *corev1.Secret {
 		},
 		StringData: map[string]string{
 			"GCS_SERVICE_ACCOUNT_JSON_KEY": json_key,
+			"GCS_PROJECT_ID":               jk["project_id"],
 		},
 	}
 }
@@ -83,7 +89,7 @@ func (f *Framework) RefreshBackupFn(backup *api.MysqlBackup) func() *api.MysqlBa
 	}
 }
 
-// BackupCompleted a matcher to check cluster complition
+// BackupCompleted a matcher to check cluster completion
 func BackupCompleted() gomegatypes.GomegaMatcher {
 	return PointTo(MatchFields(IgnoreExtras, Fields{
 		"Status": MatchFields(IgnoreExtras, Fields{
