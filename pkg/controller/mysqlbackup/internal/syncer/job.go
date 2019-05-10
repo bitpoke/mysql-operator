@@ -135,24 +135,24 @@ func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 
 	boolTrue := true
 	in.Containers[0].Env = []core.EnvVar{
-		core.EnvVar{
-			Name: "MYSQL_BACKUP_USER",
+		{
+			Name: "BACKUP_USER",
 			ValueFrom: &core.EnvVarSource{
 				SecretKeyRef: &core.SecretKeySelector{
 					LocalObjectReference: core.LocalObjectReference{
-						Name: s.cluster.Spec.SecretName,
+						Name: s.cluster.GetNameForResource(mysqlcluster.Secret),
 					},
 					Key:      "BACKUP_USER",
 					Optional: &boolTrue,
 				},
 			},
 		},
-		core.EnvVar{
-			Name: "MYSQL_BACKUP_PASSWORD",
+		{
+			Name: "BACKUP_PASSWORD",
 			ValueFrom: &core.EnvVarSource{
 				SecretKeyRef: &core.SecretKeySelector{
 					LocalObjectReference: core.LocalObjectReference{
-						Name: s.cluster.Spec.SecretName,
+						Name: s.cluster.GetNameForResource(mysqlcluster.Secret),
 					},
 					Key:      "BACKUP_PASSWORD",
 					Optional: &boolTrue,
