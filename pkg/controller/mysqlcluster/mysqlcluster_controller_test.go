@@ -59,6 +59,8 @@ var _ = Describe("MysqlCluster controller", func() {
 		stop chan struct{}
 		// controller k8s client
 		c client.Client
+		// k8s runtime scheme
+		scheme *runtime.Scheme
 	)
 
 	BeforeEach(func() {
@@ -67,6 +69,7 @@ var _ = Describe("MysqlCluster controller", func() {
 		mgr, err := manager.New(cfg, manager.Options{})
 		Expect(err).NotTo(HaveOccurred())
 		c = mgr.GetClient()
+		scheme = mgr.GetScheme()
 
 		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr))
 		Expect(add(mgr, recFn)).To(Succeed())
@@ -375,6 +378,7 @@ var _ = Describe("MysqlCluster controller", func() {
 
 				Expect(s.OwnerReferences).To(HaveLen(0), "should have no owner reference set")
 			})
+
 		})
 	})
 
@@ -448,6 +452,13 @@ var _ = Describe("MysqlCluster controller", func() {
 			)))
 		})
 
+	})
+	Context("testing defaults", func() {
+		It("should set the defaults", func() {
+			newCl := &api.MysqlCluster{}
+			scheme.Default(newCl)
+			Expect(newCl.Spec.Replicas).To(PointTo(Equal(int32(1))))
+		})
 	})
 })
 

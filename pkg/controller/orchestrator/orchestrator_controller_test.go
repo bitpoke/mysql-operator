@@ -119,7 +119,8 @@ var _ = Describe("Orchestrator controller", func() {
 					Namespace: clusterKey.Namespace,
 				},
 				Spec: api.MysqlClusterSpec{
-					Replicas:   &one,
+					// use .replicas as nil for testing propose
+					// Replicas:   &one,
 					SecretName: secret.Name,
 				},
 			})

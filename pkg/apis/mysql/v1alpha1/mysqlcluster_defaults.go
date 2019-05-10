@@ -31,7 +31,11 @@ var (
 	resourceRequestMemory = resource.MustParse("1Gi")
 )
 
-// SetDefaults_MysqlCluster sets the defaults for a mysqlcluster object
+var (
+	one int32 = 1
+)
+
+// SetDefaults_MysqlCluster sets the defaults for a MySQLCLuster object
 // nolint
 func SetDefaults_MysqlCluster(c *MysqlCluster) {
 
@@ -42,7 +46,6 @@ func SetDefaults_MysqlCluster(c *MysqlCluster) {
 	}
 
 	if c.Spec.Replicas == nil {
-		one := int32(1)
 		c.Spec.Replicas = &one
 	}
 
@@ -53,7 +56,6 @@ func SetDefaults_MysqlCluster(c *MysqlCluster) {
 	if len(c.Spec.MinAvailable) == 0 && *c.Spec.Replicas > 1 {
 		c.Spec.MinAvailable = defaultMinAvailable
 	}
-
 }
 
 // SetDefaults for PodSpec
@@ -66,7 +68,6 @@ func (c *MysqlCluster) setPodSpecDefaults(spec *PodSpec) {
 			},
 		}
 	}
-
 }
 
 // SetDefaults for VolumeSpec
