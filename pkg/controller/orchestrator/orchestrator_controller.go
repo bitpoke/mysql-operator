@@ -186,26 +186,27 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	log.Info("reconciling cluster", "cluster", cluster)
-
 	// save old status
 	status := *cluster.Status.DeepCopy()
+	log.Info("reconciling cluster", "cluster", cluster)
 
-	syncers := []syncer.Interface{
-		// this syncer mutuates the cluster and updates it. Should be the first syncer
-		newFinalizerSyncer(r.Client, r.scheme, cluster, r.orcClient),
-		NewOrcUpdater(cluster, r.recorder, r.orcClient),
+	// this syncer mutates the cluster and updates it. Should be the first syncer
+	finSyncer := newFinalizerSyncer(r.Client, r.scheme, cluster, r.orcClient)
+	if err := syncer.Sync(context.TODO(), finSyncer, r.recorder); err != nil {
+		return reconcile.Result{}, err
 	}
 
-	// run the syncers
-	for _, s := range syncers {
-		if err := syncer.Sync(context.TODO(), s, r.recorder); err != nil {
-			return reconcile.Result{}, err
-		}
+	// Set defaults on cluster, should be set here because the syncer from above fetch a new copy of the cluster
+	// Some filed like .spec.replicas can be nil and throw a panic error.
+	// By setting defaults will ensure that all fields are set at least with a default value.
+	r.scheme.Default(cluster.Unwrap())
+
+	orcSyncer := NewOrcUpdater(cluster, r.recorder, r.orcClient)
+	if err := syncer.Sync(context.TODO(), orcSyncer, r.recorder); err != nil {
+		return reconcile.Result{}, err
 	}
 
-	// update cluster
-	// TODO: make orcUpdater to update cluster
+	// update cluster because newOrcUpdater syncer updates the .Status
 	if !reflect.DeepEqual(status, cluster.Unwrap().Status) && cluster.DeletionTimestamp == nil {
 		log.V(1).Info("update cluster", "diff", deep.Equal(status, cluster.Unwrap().Status))
 
