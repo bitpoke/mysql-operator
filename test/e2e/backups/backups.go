@@ -146,8 +146,8 @@ var _ = Describe("Mysql backups tests", func() {
 		})
 	})
 
-	It("should failed the backup if bucket does not exists", func() {
-		backup := framework.NewBackup(cluster, "gs://does_not_exist")
+	It("should failed the backup if bucket is not specified", func() {
+		backup := framework.NewBackup(cluster, "gs://")
 		Expect(f.Client.Create(context.TODO(), backup)).To(Succeed())
 
 		localTimeout := 150 * time.Second
