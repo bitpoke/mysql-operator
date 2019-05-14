@@ -173,6 +173,9 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	if shouldUpdateToVersion(cluster, 300) {
 		// if the cluster is upgraded then set on the cluster an annotations that skips the GTID configuration
 		// TODO: this should be removed in the next versions
+		if cluster.Annotations == nil {
+			cluster.Annotations = make(map[string]string)
+		}
 		cluster.Annotations["mysql.presslabs.org/SkipGTIDPurged"] = "true"
 		return reconcile.Result{}, r.Update(ctx, cluster.Unwrap())
 	}
