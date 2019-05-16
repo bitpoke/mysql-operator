@@ -69,6 +69,9 @@ type Config struct {
 	// heartbeat credentials
 	HeartBeatUser     string
 	HeartBeatPassword string
+
+	// ExistsMySQLData checks if MySQL data is initialized by checking if the mysql dir exists
+	ExistsMySQLData bool
 }
 
 // FQDNForServer returns the pod hostname for given MySQL server id
@@ -100,10 +103,24 @@ func (cfg *Config) MysqlDSN() string {
 	)
 }
 
+// ShouldCloneFromBucket returns true if it's time to initialize from a bucket URL provided
+func (cfg *Config) ShouldCloneFromBucket() bool {
+	return !cfg.ExistsMySQLData && cfg.ServerID() == 100 && len(cfg.InitBucketURL) != 0
+}
+
 // NewConfig returns a pointer to Config configured from environment variables
 func NewConfig() *Config {
-	hbPass, err := rand.AlphaNumericString(10)
-	if err != nil {
+	var (
+		err    error
+		hbPass string
+		eData  bool
+	)
+
+	if hbPass, err = rand.AlphaNumericString(10); err != nil {
+		panic(err)
+	}
+
+	if eData, err = checkIfDataExists(); err != nil {
 		panic(err)
 	}
 
@@ -132,6 +149,8 @@ func NewConfig() *Config {
 
 		HeartBeatUser:     heartBeatUserName,
 		HeartBeatPassword: hbPass,
+
+		ExistsMySQLData: eData,
 	}
 
 	return cfg
@@ -172,4 +191,19 @@ func retryLookupHost(host string) ([]string, error) {
 	}
 
 	return IPs, err
+}
+
+// nolint: gosec
+func checkIfDataExists() (bool, error) {
+	path := fmt.Sprintf("%s/mysql", dataDir)
+	_, err := os.Open(path)
+
+	if os.IsNotExist(err) {
+		return false, nil
+	} else if err != nil {
+		log.Error(err, "failed to open file", "file", path)
+		return false, err
+	}
+
+	return true, nil
 }

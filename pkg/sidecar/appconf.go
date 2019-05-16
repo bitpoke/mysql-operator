@@ -186,11 +186,11 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 	// CSV engine for this table can't be used because we use REPLACE statement that requires PRIMARY KEY or
 	// UNIQUE KEY index
 	// nolint: gosec
-	queries = append(queries, fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %[1]s.%[2]s (
-            name varchar(64) PRIMARY KEY,
-            value varchar(512) NOT NULL
-		)`, constants.OperatorDbName, constants.OperatorStatusTableName))
+	queries = append(queries, fmt.Sprintf(
+		"CREATE TABLE IF NOT EXISTS %[1]s.%[2]s ("+
+			"  name varchar(64) PRIMARY KEY,"+
+			"  value varchar(512) NOT NULL\n)",
+		constants.OperatorDbName, constants.OperatorStatusTableName))
 
 	// mark node as not configured at startup, the operator will mark it configured
 	// nolint: gosec
@@ -202,6 +202,12 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 		// nolint: gosec
 		queries = append(queries, fmt.Sprintf(`REPLACE INTO %s.%s VALUES ('%s', '%s')`,
 			constants.OperatorDbName, constants.OperatorStatusTableName, "backup_gtid_purged", gtidPurged))
+	}
+
+	// if just recently the node was initialized from a backup then a RESET SLAVE ALL query should be ran
+	// to avoid not replicate from previous master.
+	if cfg.ShouldCloneFromBucket() {
+		queries = append(queries, "RESET SLAVE ALL")
 	}
 
 	return []byte(strings.Join(queries, ";\n") + ";\n")

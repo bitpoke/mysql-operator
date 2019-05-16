@@ -19,11 +19,12 @@ package sidecar
 import (
 	"context"
 	"fmt"
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
+
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 const (
