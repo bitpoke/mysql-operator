@@ -69,24 +69,9 @@ func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 		master       *orc.Instance
 	)
 
-	// get all related instances from orchestrator
-	if allInstances, err = ou.orcClient.Cluster(ou.cluster.GetClusterAlias()); err != nil {
-		log.V(-1).Info("can't get instances from orchestrator", "alias", ou.cluster.GetClusterAlias(), "error", err.Error())
-		if !orc.IsNotFound(err) {
-			log.Error(err, "orchestrator is not reachable", "cluster_alias", ou.cluster.GetClusterAlias())
-			return syncer.SyncResult{}, err
-		}
-	}
-
-	// get master node for the cluster
-	if master, err = ou.orcClient.Master(ou.cluster.GetClusterAlias()); err != nil {
-		log.V(-1).Info("can't get master from orchestrator", "alias", ou.cluster.GetClusterAlias(), "error", err.Error())
-		if !orc.IsNotFound(err) {
-			log.Error(err, "orchestrator is not reachable", "cluster_alias", ou.cluster.GetClusterAlias())
-			return syncer.SyncResult{}, err
-		}
-	} else if master != nil {
-		log.V(1).Info("cluster master", "master", master.Key.Hostname, "cluster", ou.cluster.GetClusterAlias())
+	// query orchestrator for information
+	if allInstances, master, err = ou.getFromOrchestrator(); err != nil {
+		return syncer.SyncResult{}, err
 	}
 
 	// register nodes in orchestrator if needed, or remove nodes from status
@@ -127,6 +112,39 @@ func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 	}
 
 	return syncer.SyncResult{}, nil
+}
+
+func (ou *orcUpdater) getFromOrchestrator() (instances []orc.Instance, master *orc.Instance, err error) {
+
+	// get all related instances from orchestrator
+	if instances, err = ou.orcClient.Cluster(ou.cluster.GetClusterAlias()); err != nil {
+		if !orc.IsNotFound(err) {
+			log.Error(err, "Orchestrator is not reachable", "cluster_alias", ou.cluster.GetClusterAlias())
+			return instances, master, err
+		}
+		log.V(-1).Info("can't get instances from Orchestrator", "msg", "not found", "alias", ou.cluster.GetClusterAlias())
+		return instances, master, nil
+	}
+
+	// get master node for the cluster
+	if master, err = ou.orcClient.Master(ou.cluster.GetClusterAlias()); err != nil {
+		if !orc.IsNotFound(err) {
+			log.Error(err, "Orchestrator is not reachable", "cluster_alias", ou.cluster.GetClusterAlias())
+			return instances, master, err
+		}
+		log.V(-1).Info("can't get master from Orchestrator", "msg", "not found", "alias", ou.cluster.GetClusterAlias())
+	}
+
+	// check if it's the same master with one that is determined from all instances
+	insts := InstancesSet(instances)
+	m := insts.DetermineMaster()
+	if master == nil || m == nil || master.Key.Hostname != m.Key.Hostname {
+		log.V(1).Info("master clash, between what is determined and what is in Orc", "fromOrc", instSummary(master), "determined", instSummary(m))
+		return instances, nil, nil
+	}
+
+	log.V(1).Info("cluster master", "master", master.Key.Hostname, "cluster", ou.cluster.GetClusterAlias())
+	return instances, master, nil
 }
 
 func (ou *orcUpdater) updateClusterReadyStatus() {
@@ -250,9 +268,6 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) (InstancesSet, []
 		readyInstances InstancesSet
 	)
 
-	log.V(1).Info("nodes (un)registrations", "readyNodes", ou.cluster.Status.ReadyNodes)
-	log.V(2).Info("instances", "instances", instances)
-
 	for i := 0; i < int(*ou.cluster.Spec.Replicas); i++ {
 		host := ou.cluster.GetPodHostname(i)
 		if inst := instances.GetInstance(host); inst == nil {
@@ -292,6 +307,9 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) (InstancesSet, []
 }
 
 func (ou *orcUpdater) forgetNodesFromOrc(keys []orc.InstanceKey) {
+	if len(keys) != 0 {
+		log.Info("forget nodes in Orchestrator", "keys", keys)
+	}
 	// the only state in which a node can be removed from orchestrator
 	// if cluster is ready or if cluster is deleted
 	ready := ou.cluster.GetClusterCondition(api.ClusterConditionReady)
@@ -308,7 +326,9 @@ func (ou *orcUpdater) forgetNodesFromOrc(keys []orc.InstanceKey) {
 }
 
 func (ou *orcUpdater) discoverNodesInOrc(keys []orc.InstanceKey) {
-	log.Info("discovering hosts", "keys", keys)
+	if len(keys) != 0 {
+		log.Info("discovering nodes in Orchestrator", "keys", keys)
+	}
 	for _, key := range keys {
 		if err := ou.orcClient.Discover(key.Hostname, key.Port); err != nil {
 			log.Error(err, "failed to discover host with orchestrator", "key", key)
@@ -476,7 +496,7 @@ func (is InstancesSet) GetInstance(host string) *orc.Instance {
 }
 
 func (is InstancesSet) getMasterForNode(node *orc.Instance) *orc.Instance {
-	if len(node.MasterKey.Hostname) != 0 && !node.IsCoMaster {
+	if len(node.MasterKey.Hostname) != 0 && !node.IsCoMaster && !node.IsDetachedMaster {
 		// get the master hostname from MasterKey if MasterKey is set
 		master := is.GetInstance(node.MasterKey.Hostname)
 		if master != nil {
@@ -501,7 +521,7 @@ func (is InstancesSet) DetermineMaster() *orc.Instance {
 	for _, node := range is {
 		master := is.getMasterForNode(&node)
 		if master == nil {
-			log.V(1).Info("DetermineMaster: master not found for node", "node", node)
+			log.V(1).Info("DetermineMaster: master not found for node", "node", node.Key.Hostname)
 			return nil
 		}
 		masterForNode = append(masterForNode, *master)
@@ -511,7 +531,7 @@ func (is InstancesSet) DetermineMaster() *orc.Instance {
 		masterHostName := masterForNode[0]
 		for _, node := range masterForNode {
 			if node.Key.Hostname != masterHostName.Key.Hostname {
-				log.V(1).Info("DetermineMaster: a node has different master", "node", node,
+				log.V(1).Info("DetermineMaster: a node has different master", "node", node.Key.Hostname,
 					"master", masterForNode)
 				return nil
 			}
@@ -532,4 +552,15 @@ func makeRecoveryMessage(acks []orc.TopologyRecovery) string {
 	}
 
 	return strings.Join(texts, " ")
+}
+
+func instSummary(inst *orc.Instance) string {
+	if inst == nil {
+		return "nil"
+	}
+
+	masterInfo := fmt.Sprintf(",master=%s:%d", inst.MasterKey.Hostname, inst.MasterKey.Port)
+
+	return fmt.Sprintf("key=%s:%d,%s", inst.Key.Hostname, inst.Key.Port,
+		masterInfo)
 }

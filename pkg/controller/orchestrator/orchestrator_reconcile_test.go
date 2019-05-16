@@ -318,6 +318,22 @@ var _ = Describe("Orchestrator reconciler", func() {
 		})
 	})
 
+	It("should not determine the master when master is not in orc", func() {
+		orcClient.AddInstance(orc.Instance{
+			ClusterName: cluster.GetClusterAlias(),
+			Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
+			MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+		})
+
+		var insts InstancesSet
+		insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+		Expect(insts).To(HaveLen(1))
+
+		// should not determine any master because there are two masters
+		master := insts.DetermineMaster()
+		Expect(master).To(BeNil())
+	})
+
 	When("there is no node registered in orchestrator", func() {
 		It("should be unable to find a master", func() {
 			var insts InstancesSet
