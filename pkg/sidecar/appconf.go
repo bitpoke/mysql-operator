@@ -161,7 +161,8 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 	// configure orchestrator user
 	queries = append(queries, createUserQuery(cfg.OrchestratorUser, cfg.OrchestratorPassword, "%",
 		[]string{"SUPER", "PROCESS", "REPLICATION SLAVE", "REPLICATION CLIENT", "RELOAD"}, "*.*",
-		[]string{"SELECT"}, "mysql.slave_master_info")...)
+		[]string{"SELECT"}, "mysql.slave_master_info",
+		[]string{"SELECT", "CREATE"}, fmt.Sprintf("%s.%s", toolsDbName, toolsHeartbeatTableName))...)
 
 	// configure replication user
 	queries = append(queries, createUserQuery(cfg.ReplicationUser, cfg.ReplicationPassword, "%",
@@ -169,7 +170,9 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 
 	// configure metrics exporter user
 	queries = append(queries, createUserQuery(cfg.MetricsUser, cfg.MetricsPassword, "127.0.0.1",
-		[]string{"SELECT", "PROCESS", "REPLICATION CLIENT"}, "*.*")...)
+		[]string{"SELECT", "PROCESS", "REPLICATION CLIENT"}, "*.*",
+		[]string{"SELECT", "CREATE"}, fmt.Sprintf("%s.%s", toolsDbName, toolsHeartbeatTableName))...)
+
 	queries = append(queries, fmt.Sprintf("ALTER USER %s@'127.0.0.1' WITH MAX_USER_CONNECTIONS 3", cfg.MetricsUser))
 
 	// configure heartbeat user
