@@ -231,16 +231,17 @@ func (r *ReconcileMysqlNode) initializeMySQL(ctx context.Context, sql SQLInterfa
 	}
 	defer enableSuperReadOnly()
 
+	// check if the skip annotation is set on the cluster first
+	if _, ok := cluster.Annotations["mysql.presslabs.org/SkipGTIDPurged"]; !ok {
+		// set GTID_PURGED if the the node is initialized from a backup
+		if err := sql.SetPurgedGTID(ctx); err != nil {
+			return err
+		}
+	}
+
 	// is slave node?
 	if cluster.GetMasterHost() != sql.Host() {
 		log.Info("configure pod as slave", "pod", sql.Host(), "master", cluster.GetMasterHost())
-
-		// check if the skip annotation is set on the cluster first
-		if _, ok := cluster.Annotations["mysql.presslabs.org/SkipGTIDPurged"]; !ok {
-			if err := sql.SetPurgedGTID(ctx); err != nil {
-				return err
-			}
-		}
 
 		if err := sql.ChangeMasterTo(ctx, cluster.GetMasterHost(), c.ReplicationUser, c.ReplicationPassword); err != nil {
 			return err
