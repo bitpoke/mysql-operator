@@ -24,11 +24,10 @@ import (
 )
 
 // RunCloneCommand clone the data from source.
-// nolint: gocyclo
 func RunCloneCommand(cfg *Config) error {
 	log.Info("cloning command", "host", cfg.Hostname)
 
-	if checkIfDataExists() {
+	if cfg.ExistsMySQLData {
 		log.Info("data already exists! Remove manually PVC to cleanup or to reinitialize.")
 		return nil
 	}
@@ -37,23 +36,22 @@ func RunCloneCommand(cfg *Config) error {
 		return fmt.Errorf("removing lost+found: %s", err)
 	}
 
-	if cfg.ServerID() == 100 {
-		if len(cfg.InitBucketURL) == 0 {
-			log.Info("skip cloning init bucket uri is not set.")
-			// let mysqld initialize data dir
-			return nil
-		}
-		err := cloneFromBucket(cfg.InitBucketURL)
-		if err != nil {
-			return fmt.Errorf("failed to clone from bucket, err: %s", err)
-		}
-	} else {
-		// clonging from prior node
+	if cfg.ServerID() > 100 {
+		// cloning from prior node
 		sourceHost := cfg.FQDNForServer(cfg.ServerID() - 1)
 		err := cloneFromSource(cfg, sourceHost)
 		if err != nil {
 			return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)
 		}
+	} else if cfg.ShouldCloneFromBucket() {
+		// cloning from provided initBucketURL
+		err := cloneFromBucket(cfg.InitBucketURL)
+		if err != nil {
+			return fmt.Errorf("failed to clone from bucket, err: %s", err)
+		}
+	} else {
+		log.Info("nothing to clone or init from")
+		return nil
 	}
 
 	// prepare backup
@@ -171,20 +169,6 @@ func xtrabackupPreperData() error {
 	xtbkCmd.Stderr = os.Stderr
 
 	return xtbkCmd.Run()
-}
-
-// nolint: gosec
-func checkIfDataExists() bool {
-	path := fmt.Sprintf("%s/mysql", dataDir)
-	_, err := os.Open(path)
-
-	if os.IsNotExist(err) {
-		return false
-	} else if err != nil {
-		log.Error(err, "failed to open file", "file", path)
-	}
-
-	return true
 }
 
 func deleteLostFound() error {
