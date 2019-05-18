@@ -52,6 +52,10 @@ const controllerName = "controller.mysqlNode"
 // mysqlReconciliationTimeout the time that should last a reconciliation (this is used as a MySQL timout too)
 const mysqlReconciliationTimeout = 10 * time.Second
 
+// skipGTIDPurgedAnnotations, if this annotations is set on the cluster then the node controller skip setting GTID_PURGED variable.
+// this is the case for the upgrade when the old cluster has already set GTID_PURGED
+const skipGTIDPurgedAnnotation = "mysql.presslabs.org/skip-gtid-purged"
+
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 // USER ACTION REQUIRED: update cmd/manager/main.go to call this mysql.Add(mgr) to install this Controller
@@ -176,7 +180,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 		if cluster.Annotations == nil {
 			cluster.Annotations = make(map[string]string)
 		}
-		cluster.Annotations["mysql.presslabs.org/SkipGTIDPurged"] = "true"
+		cluster.Annotations[skipGTIDPurgedAnnotation] = "true"
 		return reconcile.Result{}, r.Update(ctx, cluster.Unwrap())
 	}
 
@@ -209,6 +213,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	return reconcile.Result{}, r.updatePod(ctx, pod)
 }
 
+// nolint: gocyclo
 func (r *ReconcileMysqlNode) initializeMySQL(ctx context.Context, sql SQLInterface, cluster *mysqlcluster.MysqlCluster, c *credentials) error {
 	// wait for mysql to be ready
 	if err := sql.Wait(ctx); err != nil {
@@ -231,17 +236,22 @@ func (r *ReconcileMysqlNode) initializeMySQL(ctx context.Context, sql SQLInterfa
 	}
 	defer enableSuperReadOnly()
 
-	// check if the skip annotation is set on the cluster first
-	if _, ok := cluster.Annotations["mysql.presslabs.org/SkipGTIDPurged"]; !ok {
-		// set GTID_PURGED if the the node is initialized from a backup
-		if err := sql.SetPurgedGTID(ctx); err != nil {
+	// check if the skip GTID_PURGED annotation is set on the cluster first
+	// and if it's set then mark the GTID_PURGED set in status table
+	if _, ok := cluster.Annotations[skipGTIDPurgedAnnotation]; ok {
+		if err := sql.MarkSetGTIDPurged(ctx); err != nil {
 			return err
 		}
 	}
 
-	// is slave node?
+	// set GTID_PURGED if the the node is initialized from a backup
+	if err := sql.SetPurgedGTID(ctx); err != nil {
+		return err
+	}
+
+	// is this a slave node?
 	if cluster.GetMasterHost() != sql.Host() {
-		log.Info("configure pod as slave", "pod", sql.Host(), "master", cluster.GetMasterHost())
+		log.Info("run CHANGE MASTER TO on pod", "pod", sql.Host(), "master", cluster.GetMasterHost())
 
 		if err := sql.ChangeMasterTo(ctx, cluster.GetMasterHost(), c.ReplicationUser, c.ReplicationPassword); err != nil {
 			return err
