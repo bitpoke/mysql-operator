@@ -137,7 +137,7 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 	if cluster, err = r.getRelatedCluster(backup); err != nil {
 		// if the remote delete policy is delete then run the deletion syncer
 		s := backupSyncer.NewDeleteJobSyncer(r.Client, r.scheme, backup, nil, r.opt, r.recorder)
-		if sErr := syncer.Sync(context.TODO(), s, r.recorder); err != nil {
+		if sErr := syncer.Sync(context.TODO(), s, r.recorder); sErr != nil {
 			return reconcile.Result{}, sErr
 		}
 		return reconcile.Result{}, fmt.Errorf("cluster not found: %s", err)

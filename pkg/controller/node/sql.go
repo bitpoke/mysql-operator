@@ -42,6 +42,7 @@ type SQLInterface interface {
 	MarkConfigurationDone(ctx context.Context) error
 	IsConfigured(ctx context.Context) (bool, error)
 	SetPurgedGTID(ctx context.Context) error
+	MarkSetGTIDPurged(ctx context.Context) error
 	Host() string
 }
 
@@ -133,6 +134,10 @@ func (r *nodeSQLRunner) MarkConfigurationDone(ctx context.Context) error {
 func (r *nodeSQLRunner) IsConfigured(ctx context.Context) (bool, error) {
 	val, err := r.readStatusValue(ctx, "configured")
 	return val == "1", err
+}
+
+func (r *nodeSQLRunner) MarkSetGTIDPurged(ctx context.Context) error {
+	return r.writeStatusValue(ctx, "set_gtid_purged", "skipped")
 }
 
 func (r *nodeSQLRunner) Host() string {
