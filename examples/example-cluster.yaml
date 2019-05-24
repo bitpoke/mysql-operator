@@ -17,6 +17,7 @@ spec:
   # backupURL: s3://bucket_name/
   # backupSecretName:
   # backupScheduleJobsHistoryLimit:
+  # backupRemoteDeletePolicy:
 
 
   ## Configs that will be added to my.cnf for cluster
