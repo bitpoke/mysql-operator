@@ -37,6 +37,7 @@ type job struct {
 	c client.Client
 
 	BackupScheduleJobsHistoryLimit *int
+	BackupRemoteDeletePolicy       api.DeletePolicy
 }
 
 func (j *job) Run() {
@@ -84,7 +85,8 @@ func (j *job) createBackup() (*api.MysqlBackup, error) {
 			Labels:    j.recurrentBackupLabels(),
 		},
 		Spec: api.MysqlBackupSpec{
-			ClusterName: j.ClusterName,
+			ClusterName:        j.ClusterName,
+			RemoteDeletePolicy: j.BackupRemoteDeletePolicy,
 		},
 	}
 	return backup, j.c.Create(context.TODO(), backup)

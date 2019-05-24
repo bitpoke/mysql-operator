@@ -187,6 +187,7 @@ func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.Mysq
 		Namespace:                      cluster.Namespace,
 		c:                              r.Client,
 		BackupScheduleJobsHistoryLimit: cluster.Spec.BackupScheduleJobsHistoryLimit,
+		BackupRemoteDeletePolicy:       cluster.Spec.BackupRemoteDeletePolicy,
 	}, cluster.Name)
 
 	return nil

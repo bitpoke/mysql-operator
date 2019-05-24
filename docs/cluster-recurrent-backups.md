@@ -36,6 +36,7 @@ spec:
   backupSchedule: "0 0 0 * * *"  # daily
   backupURL: gs://bucket_name/path/
   backupSecretName: backup-secret
+  backupRemoteDeletePolicy: retain|delete
 ```
 
 Some crontab examples and their predefined schedulers:
