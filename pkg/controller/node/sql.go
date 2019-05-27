@@ -230,10 +230,10 @@ func (r *nodeSQLRunner) SetPurgedGTID(ctx context.Context) error {
 	query := fmt.Sprintf(`
 	  SET @@SESSION.SQL_LOG_BIN = 0;
 	  START TRANSACTION;
-		SELECT value INTO @gtid FROM %[1]s.%[2]s WHERE name='%s';
+		SELECT value INTO @gtid FROM %[1]s.%[2]s WHERE name='%[3]s';
 		RESET MASTER;
 		SET @@GLOBAL.GTID_PURGED = @gtid;
-		REPLACE INTO %[1]s.%[2]s VALUES ('%s', @gtid);
+		REPLACE INTO %[1]s.%[2]s VALUES ('%[4]s', @gtid);
 	  COMMIT;
     `, constants.OperatorDbName, constants.OperatorStatusTableName, "backup_gtid_purged", "set_gtid_purged")
 
