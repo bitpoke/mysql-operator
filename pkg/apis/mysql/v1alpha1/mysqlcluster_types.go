@@ -220,12 +220,18 @@ const (
 	// ClusterConditionReady represents the readiness of the cluster. This
 	// condition is the same sa statefulset Ready condition.
 	ClusterConditionReady ClusterConditionType = "Ready"
+
 	// ClusterConditionFailoverAck represents if the cluster has pending ack in
 	// orchestrator or not.
 	ClusterConditionFailoverAck ClusterConditionType = "PendingFailoverAck"
+
 	// ClusterConditionReadOnly describe cluster state if it's in read only or
 	// writable.
 	ClusterConditionReadOnly ClusterConditionType = "ReadOnly"
+
+	// ClusterConditionFailoverInProgress indicates if there is a current failover in progress
+	// done by the Orchestrator
+	ClusterConditionFailoverInProgress ClusterConditionType = "FailoverInProgress"
 )
 
 // NodeStatus defines type for status of a node into cluster.
