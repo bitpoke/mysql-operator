@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "mysql-operator.orc-service-name" . }}
+  labels:
+    app: {{ template "mysql-operator.name" . }}
+    chart: {{ template "mysql-operator.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  clusterIP: None
+  # orchestrator nodes are ready only when the raft is ready and if the service doesn't publish
+  # unready pods, pods will never get ready (deadlock)
+  publishNotReadyAddresses: true
+  ports:
+    - name: raft
+      port: 10008
+      targetPort: 10008
+  selector:
+    app: {{ template "mysql-operator.name" . }}

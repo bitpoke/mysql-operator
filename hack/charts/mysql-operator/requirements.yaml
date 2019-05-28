@@ -1,4 +1,0 @@
-dependencies:
-- name: orchestrator
-  version: "0.1.5"
-  repository: "https://presslabs.github.io/charts/"

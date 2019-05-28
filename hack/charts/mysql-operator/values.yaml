@@ -2,14 +2,18 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 1
+replicas: 1
 image: quay.io/presslabs/mysql-operator:latest
-imagePullPolicy: IfNotPresent
 sidecarImage: quay.io/presslabs/mysql-operator-sidecar:latest
+imagePullPolicy: IfNotPresent
 
+# whether or not to install CRDs
 installCRDs: true
+# in which namespace to watch for resource, leave empty to watch in all namespaces
 watchNamespace:
 
+nodeSelector: {}
+tolerations: []
 resources: {}
   # limits:
   #  cpu: 100m
@@ -18,13 +22,28 @@ resources: {}
   #  cpu: 100m
   #  memory: 128Mi
 
-nodeSelector: {}
+## nodeAffinity settings
+# nodeAffinity:
+#   requiredDuringSchedulingIgnoredDuringExecution:
+#     nodeSelectorTerms:
+#     - matchExpressions:
+#       - key: cloud.google.com/gke-preemptible
+#         operator: NotIn
+#         values:
+#         - true
 
-tolerations: []
-
-affinity: {}
+## Anti-Affinity setting. The default "hard" will use pod anti-affinity that is
+## requiredDuringSchedulingIgnoredDuringExecution to ensure 2 services don't
+## end up on the same node. Setting this to "soft" will use
+## preferredDuringSchedulingIgnoredDuringExecution. If set to anything else,
+## no anti-affinity rules will be configured.
+antiAffinity: "hard"
 
 extraArgs: []
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
 
 podSecurityPolicy:
   enabled: false
@@ -34,11 +53,51 @@ podSecurityPolicy:
 
 rbac:
   create: true
+  # if rbac is false this service account is used
   serviceAccountName: default
 
 orchestrator:
-  replicas: 1
-  orchestratorConf:
+  # TODO: set the tag to latest and update it in the same way as operator image is updated
+  image: quay.io/presslabs/orchestrator:v3.0.14-r46
+
+  # orchestrator user and password to manage MySQL clusters
+  topologyUser: sys_orchestrator
+  topologyPassword:  # this is empty and will be random generated if not specified
+
+  resources:
+    # For example
+    # limits:
+    #  cpu: 100m
+    #  memory: 128Mi
+    # requests:
+    #  cpu: 100m
+    #  memory: 128Mi
+
+  persistence:
+    enabled: true
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    # storageClass: "-"
+    accessMode: "ReadWriteOnce"
+    size: 1Gi
+
+  # key value map of orchestrator conf directives.
+  # see: https://github.com/github/orchestrator/blob/master/conf/orchestrator-sample.conf.json
+  # the following keys are manages and thus cannot be ovewritten:
+  #   - ListenAddress :3000
+  #   - MySQLTopologyCredentialsConfigFile /orchestrator/conf/orc-topology.cnf
+  #   - BackendDB sqlite
+  #   - SQLite3DataFile /var/lib/orchestrator/orc.db
+  #   - RaftEnabled true
+  #   - RaftDataDir /var/lib/orchestrator
+  #   - RaftBind $HOSTNAME
+  #   - RaftNodes The statefullset members
+  config:
+    Debug: false
     # the operator is handling the registries, do not auto discover
     DiscoverByShowSlaveHosts: false
     # forget missing instances automatically
