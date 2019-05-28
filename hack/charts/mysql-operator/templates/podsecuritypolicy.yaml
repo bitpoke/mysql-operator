@@ -30,15 +30,13 @@ spec:
   - 'projected'
   - 'secret'
   - 'downwardAPI'
+  - 'persistentVolumeClaim'
   hostNetwork: false
   hostIPC: false
   hostPID: false
   runAsUser:
     # Require the container to run without root privileges.
-    rule: 'MustRunAs'
-    ranges:
-    - min: 1
-      max: 99999
+    rule: 'MustRunAsNonRoot'
   seLinux:
     rule: 'RunAsAny'
   supplementalGroups:

@@ -1,0 +1,31 @@
+{{- $fullname := include "mysql-operator.fullname" . }}
+{{- $replicas := int .Values.replicas }}
+{{- $raftNodes := include "mysql-operator.raftlist" . | splitList "," }}
+{{- $conf := .Values.orchestrator.config }}
+{{- $_ := set $conf "ListenAddress" ":3000" }}
+{{- $_ := set $conf "MySQLTopologyCredentialsConfigFile" "/etc/orchestrator/orc-topology.cnf" }}
+{{- $_ := set $conf "BackendDB" "sqlite" }}
+{{- $_ := set $conf "SQLite3DataFile" "/var/lib/orchestrator/orc.db" }}
+{{- $_ := set $conf "RaftEnabled" true }}
+{{- $_ := set $conf "RaftDataDir" "/var/lib/orchestrator" }}
+{{- $_ := set $conf "RaftBind" (printf "{{ .Env.HOSTNAME }}.%s-orc" $fullname) }}
+{{- if eq 1 $replicas -}}
+{{- $_ := set $conf "RaftNodes" (list) }}
+{{- else -}}
+{{- $_ := set $conf "RaftNodes" $raftNodes }}
+{{- end -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "mysql-operator.orc-config-name" . }}
+  labels:
+    app: {{ template "mysql-operator.name" . }}
+    chart: {{ template "mysql-operator.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  orchestrator.conf.json: {{ toPrettyJson $conf | quote }}
+  orc-topology.cnf: |
+    [client]
+    user = {{ printf "{{ .Env.ORC_TOPOLOGY_USER }}" }}
+    password = {{ printf "{{ .Env.ORC_TOPOLOGY_PASSWORD }}" }}

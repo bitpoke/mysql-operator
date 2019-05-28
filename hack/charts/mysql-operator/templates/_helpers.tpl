@@ -32,18 +32,6 @@ Create chart name and version as used by the chart label.
 {{- end -}}
 
 {{/*
-Redefine orchestrator.fullname so that we can properly address it
-*/}}
-{{- define "mysql-operator.orchestrator.fullname" -}}
-{{- $name := default "orchestrator" .Values.orchestrator.nameOverride -}}
-{{- if .Values.orchestrator.fullnameOverride -}}
-{{- .Values.orchestrator.fullnameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
 Create the name of the service account to use
 */}}
 {{- define "mysql-operator.serviceAccountName" -}}
@@ -54,9 +42,22 @@ Create the name of the service account to use
 {{- end -}}
 {{- end -}}
 
-{{/*
-Get the sha256 of the orchestrator user and password to annotate deployments that depends on them.
-*/}}
-{{- define "mysql-operator.orchestrator.topology-secret-hash" -}}
-{{- print .Values.orchestrator.topologyUser .Values.orchestrator.topologyPassword | sha256sum -}}
+{{- define "mysql-operator.raftlist" -}}
+{{- $fullname := include "mysql-operator.fullname" . -}}
+{{- $replicas := int .Values.replicas -}}
+{{- range $i := until $replicas -}}
+{{ $fullname }}-{{ $i }}.{{ $fullname }}-orc{{- if lt $i (sub $replicas 1) }},{{ end }}
+{{- end -}}
+{{- end -}}
+
+{{- define "mysql-operator.orc-config-name" -}}
+{{ include "mysql-operator.fullname" . }}-orc
+{{- end -}}
+
+{{- define "mysql-operator.orc-secret-name" -}}
+{{ include "mysql-operator.fullname" . }}-orc
+{{- end -}}
+
+{{- define "mysql-operator.orc-service-name" -}}
+{{ include "mysql-operator.fullname" . }}-orc
 {{- end -}}

@@ -1,6 +1,0 @@
-dependencies:
-- name: orchestrator
-  repository: https://presslabs.github.io/charts/
-  version: 0.1.5
-digest: sha256:332041dc99229045ed0d31fd6a1cbb8b8d76666901a06d2c0368d30488a56c8e
-generated: 2018-11-21T12:50:30.090077793+02:00
