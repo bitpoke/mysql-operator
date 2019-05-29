@@ -1,4 +1,4 @@
-apiVersion: skaffold/v1alpha5
+apiVersion: skaffold/v1beta7
 kind: Config
 build:
   artifacts:
@@ -8,6 +8,9 @@ build:
   - image: quay.io/presslabs/mysql-operator-sidecar
     docker:
       dockerfile: hack/development/Dockerfile.sidecar
+  - image: quay.io/presslabs/orchestrator
+    docker:
+      dockerfile: hack/development/Dockerfile.orchestrator
   local:
     push: true
 deploy:
@@ -20,3 +23,4 @@ deploy:
       values:
         image: quay.io/presslabs/mysql-operator
         sidecarImage: quay.io/presslabs/mysql-operator-sidecar
+        orchestrator.image: quay.io/presslabs/orchestrator

@@ -20,5 +20,6 @@ echo "Updating chart images tag to: ${version}"
 sed -i.bak -E "
     s#image: (.*):.*#image: \\1:${version}#
     s#sidecarImage: (.*):.*#sidecarImage: \\1:${version}#
+    s#  image: (.*): (.*):.*#  image: \\1:${version}#
 " ${CHART_PATH}/values.yaml
 rm ${CHART_PATH}/values.yaml.bak

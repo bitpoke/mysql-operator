@@ -1,0 +1,7 @@
+{
+  "Debug": {{ default .Env.ORC_DEBUG "false" | lower }},
+  "ListenAddress": ":3000",
+  "BackendDB": "sqlite",
+  "SQLite3DataFile": "/var/lib/orchestrator/orc.db",
+  "MySQLTopologyCredentialsConfigFile": "/etc/orchestrator/orc-topology.cnf"
+}
