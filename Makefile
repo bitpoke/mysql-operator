@@ -33,6 +33,7 @@ test: generate fmt vet manifests
 build: generate fmt vet
 	go build -o bin/mysql-operator github.com/presslabs/mysql-operator/cmd/mysql-operator
 	go build -o bin/mysql-operator-sidecar github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
+	go build -o bin/orc-helper github.com/presslabs/mysql-operator/cmd/orchestrator-helper
 
 # skaffold build
 bin/mysql-operator_linux_amd64: $(shell hack/development/related-go-files.sh $(PKG_NAME) cmd/mysql-operator/main.go)
@@ -41,7 +42,10 @@ bin/mysql-operator_linux_amd64: $(shell hack/development/related-go-files.sh $(P
 bin/mysql-operator-sidecar_linux_amd64: $(shell hack/development/related-go-files.sh $(PKG_NAME) cmd/mysql-operator-sidecar/main.go)
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o bin/mysql-operator-sidecar_linux_amd64 github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
 
-skaffold-build: bin/mysql-operator_linux_amd64 bin/mysql-operator-sidecar_linux_amd64
+bin/orchestrator-helper_linux_amd64: $(shell hack/development/related-go-files.sh $(PKG_NAME) cmd/orchestrator-helper/main.go)
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o bin/orchestrator-helper_linux_amd64 github.com/presslabs/mysql-operator/cmd/orchestrator-helper
+
+skaffold-build: bin/mysql-operator_linux_amd64 bin/mysql-operator-sidecar_linux_amd64 bin/orchestrator-helper_linux_amd64
 
 skaffold-run: skaffold-build
 	skaffold run

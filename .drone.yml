@@ -100,6 +100,33 @@ pipeline:
     when:
       event: tag
 
+  publish-orchestrator:
+    group: publish
+    image: plugins/docker
+    registry: quay.io
+    repo: quay.io/presslabs/orchestrator
+    username: presslabs+drone
+    dockerfile: Dockerfile.orchestrator
+    tags: ["${DRONE_BRANCH/master/latest}"]
+    secrets:
+      - source: QUAY_TOKEN
+        target: DOCKER_PASSWORD
+    when:
+      event: push
+
+  publish-orchestrator:
+    group: publish
+    image: plugins/docker
+    registry: quay.io
+    repo: quay.io/presslabs/orchestrator
+    username: presslabs+drone
+    dockerfile: Dockerfile.orchestrator
+    auto_tag: true
+    secrets:
+      - source: QUAY_TOKEN
+        target: DOCKER_PASSWORD
+    when:
+
   publish-helm-chart:
     image: quay.io/presslabs/kluster-toolbox
     pull: true
