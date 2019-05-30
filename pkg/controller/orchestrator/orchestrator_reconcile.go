@@ -254,6 +254,13 @@ func (ou *orcUpdater) updateStatusFromOrc(insts InstancesSet, master *orc.Instan
 		ou.cluster.UpdateStatusCondition(api.ClusterConditionReadOnly,
 			core.ConditionFalse, "ClusterReadOnlyFalse", "cluster is writable")
 	}
+
+	// check if the master is up to date and is not downtime to remove in progress failover condition
+	if master != nil && !master.IsDowntimed && master.IsUpToDate {
+		log.Info("cluster failover finished", "master", master.Key.Hostname)
+		ou.cluster.UpdateStatusCondition(api.ClusterConditionFailoverInProgress, core.ConditionFalse,
+			"ClusterMasterHealthy", "Master is healthy in orchestrator")
+	}
 }
 
 // updateNodesInOrc is the functions that tries to register

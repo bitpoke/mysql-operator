@@ -19,13 +19,18 @@ package orchelper
 import (
 	"context"
 	"fmt"
+	"github.com/presslabs/controller-util/rand"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/reference"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
+	"time"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // parse the orchestrator cluster name as NamespacedName
@@ -62,6 +67,53 @@ func UpdateClusterFailoverCond(c client.Client, clusterName, reason, msg string,
 
 	// update cluster status
 	if err := c.Status().Update(context.TODO(), cluster.Unwrap()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateEventForCluster records an event on MySQL cluster resource
+func UpdateEventForCluster(c client.Client, s *runtime.Scheme, clusterName, evReason, evMsg string, warning bool) error {
+	key, err := orcNameToKey(clusterName)
+	if err != nil {
+		return err
+	}
+
+	cluster := mysqlcluster.New(&api.MysqlCluster{})
+
+	// get cluster from k8s
+	if err = c.Get(context.TODO(), key, cluster.Unwrap()); err != nil {
+		return err
+	}
+
+	evType := core.EventTypeNormal
+	if warning {
+		evType = core.EventTypeWarning
+	}
+
+	ref, err := reference.GetReference(s, cluster.Unwrap())
+	if err != nil {
+		return err
+	}
+
+	randStr, err := rand.AlphaNumericString(5)
+	if err != nil {
+		return err
+	}
+	event := &core.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%s.%d", cluster.Name, randStr, time.Now().Unix()),
+			Namespace: cluster.Namespace,
+		},
+		FirstTimestamp: metav1.Now(),
+		Type:           evType,
+		Reason:         evReason,
+		Message:        evMsg,
+		Source:         core.EventSource{Component: "orchestrator"},
+		InvolvedObject: *ref,
+	}
+	if err := c.Create(context.TODO(), event); err != nil {
 		return err
 	}
 
