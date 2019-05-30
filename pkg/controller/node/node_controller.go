@@ -66,6 +66,7 @@ func Add(mgr manager.Manager) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, sqlI sqlFactoryFunc) reconcile.Reconciler {
 	return &ReconcileMysqlNode{
+		// TODO(amecea): use client without cache here
 		Client:     mgr.GetClient(),
 		scheme:     mgr.GetScheme(),
 		recorder:   mgr.GetRecorder(controllerName),
@@ -141,6 +142,7 @@ type ReconcileMysqlNode struct {
 // and what is in the MysqlCluster.Spec
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=core,resources=pods/status,verbs=get;list;watch;create;update;patch;delete
+// nolint: gocyclo
 func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), mysqlReconciliationTimeout)
 	defer cancel()
@@ -170,6 +172,13 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	// if cluster is deleted then don't do anything
 	if cluster.DeletionTimestamp != nil {
 		log.Info("cluster is deleted nothing to do", "pod", pod.Spec.Hostname)
+		return reconcile.Result{}, nil
+	}
+
+	// check if there is an in progress failover. K8s cluster resource may be inconsistent with what exists in k8s
+	fip := cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
+	if fip != nil && fip.Status == corev1.ConditionTrue {
+		log.Info("cluster has failover in progress, given up to sync new node", "pod", pod.Spec.Hostname, "time", fip.LastTransitionTime)
 		return reconcile.Result{}, nil
 	}
 

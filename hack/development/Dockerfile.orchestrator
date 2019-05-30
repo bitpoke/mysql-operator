@@ -1,4 +1,6 @@
+###############################################################################
 FROM golang:1.9-alpine as builder
+
 RUN set -ex \
     && apk add --no-cache \
         bash gcc git musl-dev openssl rsync
@@ -16,7 +18,6 @@ RUN set -ex \
     && ./script/build
 
 ###############################################################################
-
 FROM alpine:3.7
 
 # Create a group and user
