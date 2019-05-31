@@ -50,7 +50,7 @@ var log = logf.Log.WithName(controllerName)
 const controllerName = "controller.mysqlNode"
 
 // mysqlReconciliationTimeout the time that should last a reconciliation (this is used as a MySQL timout too)
-const mysqlReconciliationTimeout = 10 * time.Second
+const mysqlReconciliationTimeout = 5 * time.Second
 
 // skipGTIDPurgedAnnotations, if this annotations is set on the cluster then the node controller skip setting GTID_PURGED variable.
 // this is the case for the upgrade when the old cluster has already set GTID_PURGED
@@ -65,13 +65,18 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, sqlI sqlFactoryFunc) reconcile.Reconciler {
+	newClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme()})
+	if err != nil {
+		panic(err)
+	}
+
 	return &ReconcileMysqlNode{
-		// TODO(amecea): use client without cache here
-		Client:     mgr.GetClient(),
-		scheme:     mgr.GetScheme(),
-		recorder:   mgr.GetRecorder(controllerName),
-		opt:        options.GetOptions(),
-		sqlFactory: sqlI,
+		Client:         mgr.GetClient(),
+		unCachedClient: newClient,
+		scheme:         mgr.GetScheme(),
+		recorder:       mgr.GetRecorder(controllerName),
+		opt:            options.GetOptions(),
+		sqlFactory:     sqlI,
 	}
 }
 
@@ -99,6 +104,12 @@ func isInitialized(obj runtime.Object) bool {
 	return false
 }
 
+func isRunning(obj runtime.Object) bool {
+	pod := obj.(*corev1.Pod)
+
+	return pod.Status.Phase == corev1.PodRunning
+}
+
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
@@ -110,11 +121,18 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to MysqlCluster
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
 		CreateFunc: func(evt event.CreateEvent) bool {
-			return isOwnedByMySQL(evt.Meta) && !isInitialized(evt.Object)
+			log.Info("pod create event", "event", evt)
+			return false
 		},
+
+		// trigger node initialization only on pod update, after pod is created for a while
+		// also the pod should not be initialized before and should be running because the init
+		// timeout is ~5s (see above) and the cluster status can become obsolete
 		UpdateFunc: func(evt event.UpdateEvent) bool {
-			return isOwnedByMySQL(evt.MetaNew) && !isInitialized(evt.ObjectNew)
+			log.Info("pod update event", "event", evt.ObjectNew)
+			return isOwnedByMySQL(evt.MetaNew) && !isInitialized(evt.ObjectNew) && isRunning(evt.ObjectNew)
 		},
+
 		DeleteFunc: func(evt event.DeleteEvent) bool {
 			return false
 		},
@@ -131,9 +149,11 @@ var _ reconcile.Reconciler = &ReconcileMysqlNode{}
 // ReconcileMysqlNode reconciles a MysqlCluster object
 type ReconcileMysqlNode struct {
 	client.Client
-	scheme   *runtime.Scheme
-	recorder record.EventRecorder
-	opt      *options.Options
+
+	unCachedClient client.Client
+	scheme         *runtime.Scheme
+	recorder       record.EventRecorder
+	opt            *options.Options
 
 	sqlFactory sqlFactoryFunc
 }
@@ -179,7 +199,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	fip := cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
 	if fip != nil && fip.Status == corev1.ConditionTrue {
 		log.Info("cluster has a failover in progress, delaying new node sync", "pod", pod.Spec.Hostname, "since", fip.LastTransitionTime)
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, fmt.Errorf("delay node sync because a failover is in progress")
 	}
 
 	// if it's a old version cluster then don't do anything
@@ -288,7 +308,7 @@ func (r *ReconcileMysqlNode) getNodeCluster(ctx context.Context, pod *corev1.Pod
 		Namespace: pod.Namespace,
 	}
 	cluster := mysqlcluster.New(&api.MysqlCluster{})
-	err := r.Get(ctx, clusterKey, cluster.Unwrap())
+	err := r.unCachedClient.Get(ctx, clusterKey, cluster.Unwrap())
 	return cluster, err
 }
 
