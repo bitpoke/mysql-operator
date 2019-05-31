@@ -1,4 +1,6 @@
-# Build the manager binary
+###############################################################################
+#  Build the mysql-oerator related binaries
+###############################################################################
 FROM golang:1.11.2 as builder
 
 # Copy in the go src
@@ -10,8 +12,11 @@ COPY vendor/ vendor/
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator github.com/presslabs/mysql-operator/cmd/mysql-operator
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator-sidecar github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o orc-helper github.com/presslabs/mysql-operator/cmd/orc-helper
 
-# rclone download
+###############################################################################
+#  Build rclone
+###############################################################################
 FROM debian:stretch as rclone
 
 RUN apt-get update \
@@ -29,7 +34,9 @@ RUN wget -nv https://github.com/ncw/rclone/releases/download/v1.46/rclone-v1.46-
     && mv rclone-*-linux-amd64/rclone /usr/local/bin/ \
     && chmod 755 /usr/local/bin/rclone
 
-# Copy the mysql-operator-sidecar into it's own image
+###############################################################################
+#  Docker image for sidecar containers
+###############################################################################
 FROM debian:stretch-slim as sidecar
 
 RUN groupadd -g 999 mysql
@@ -56,6 +63,7 @@ RUN apt-get update \
 
 USER mysql
 
+# Copy the mysql-operator-sidecar into it's own image
 COPY ./hack/docker/sidecar-entrypoint.sh /usr/local/bin/sidecar-entrypoint.sh
 COPY --from=builder /go/src/github.com/presslabs/mysql-operator/mysql-operator-sidecar /usr/local/bin/mysql-operator-sidecar
 COPY --from=rclone /usr/local/bin/rclone /usr/local/bin/rclone

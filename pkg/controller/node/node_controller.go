@@ -178,7 +178,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	// check if there is an in progress failover. K8s cluster resource may be inconsistent with what exists in k8s
 	fip := cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
 	if fip != nil && fip.Status == corev1.ConditionTrue {
-		log.Info("cluster has failover in progress, given up to sync new node", "pod", pod.Spec.Hostname, "time", fip.LastTransitionTime)
+		log.Info("cluster has a failover in progress, delaying new node sync", "pod", pod.Spec.Hostname, "since", fip.LastTransitionTime)
 		return reconcile.Result{}, nil
 	}
 

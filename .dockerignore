@@ -2,4 +2,4 @@
 bin/*
 !bin/mysql-operator_linux_amd64
 !bin/mysql-operator-sidecar_linux_amd64
-!bin/orchestrator-helper_linux_amd64
+!bin/orc-helper_linux_amd64

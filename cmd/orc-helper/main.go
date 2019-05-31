@@ -17,19 +17,20 @@ limitations under the License.
 package main
 
 import (
-	"github.com/presslabs/mysql-operator/pkg/orc-helper"
+	"log"
+
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"log"
-	kclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/presslabs/mysql-operator/pkg/apis"
+	"github.com/presslabs/mysql-operator/pkg/orc-helper"
 )
 
 var (
-	client kclient.Client
+	c client.Client
 )
 
 func main() {
@@ -56,7 +57,7 @@ func main() {
 	}
 
 	// initialize k8s client
-	client, err = kclient.New(cfg, kclient.Options{Scheme: s})
+	c, err = client.New(cfg, client.Options{Scheme: s})
 	if err != nil {
 		log.Fatal("unable to get the k8s client: ", err)
 	}
@@ -70,7 +71,7 @@ func main() {
 				log.Fatal("see usage: <cluster.name> <message>")
 			}
 
-			err = orchelper.UpdateClusterFailoverCond(client, args[0], "OrcFailoverInProgress", args[1], true)
+			err = orchelper.UpdateClusterFailoverCond(c, args[0], "OrcFailoverInProgress", args[1], true)
 			if err != nil {
 				log.Fatal("error in updating cluster: ", err)
 			}
@@ -88,7 +89,7 @@ func main() {
 				log.Fatal("see usage: <cluster.name> <event-name> <message> [-warning]")
 			}
 
-			err = orchelper.UpdateEventForCluster(client, s, args[0], args[1], args[2], evWarningType)
+			err = orchelper.UpdateEventForCluster(c, s, args[0], args[1], args[2], evWarningType)
 			if err != nil {
 				log.Fatal("error in updating cluster: ", err)
 			}
