@@ -80,7 +80,7 @@ type MysqlClusterSpec struct {
 	// BackupRemoteDeletePolicy the deletion policy that specify how to treat the data from remote storage. By
 	// default it's used softDelete.
 	// +optional
-	BackupRemoteDeletePolicy DeletePolicy `json:"remoteDeletePolicy,omitempty"`
+	BackupRemoteDeletePolicy DeletePolicy `json:"backupRemoteDeletePolicy,omitempty"`
 
 	// Represents the name of the secret that contains credentials to connect to
 	// the storage provider to store backups.
