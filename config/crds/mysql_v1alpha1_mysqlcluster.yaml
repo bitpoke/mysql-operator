@@ -33,6 +33,10 @@ spec:
           type: object
         spec:
           properties:
+            backupRemoteDeletePolicy:
+              description: BackupRemoteDeletePolicy the deletion policy that specify
+                how to treat the data from remote storage. By default it's used softDelete.
+              type: string
             backupSchedule:
               description: Specify under crontab format interval to take backups leave
                 it empty to deactivate the backup process Defaults to ""
@@ -47,10 +51,6 @@ spec:
               type: string
             backupURL:
               description: Represents an URL to the location where to put backups.
-              type: string
-            backupRemoteDeletePolicy:
-              description: RemoteDeletePolicy the deletion policy that specify how
-                to treat the data from remote storage. By default it's used softDelete.
               type: string
             image:
               description: To specify the image that will be used for mysql server
