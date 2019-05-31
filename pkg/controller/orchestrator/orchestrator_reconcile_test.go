@@ -226,10 +226,8 @@ var _ = Describe("Orchestrator reconciler", func() {
 			_, err = orcSyncer.Sync(context.TODO())
 			Expect(err).To(Succeed())
 
-			// check for conditions on node 1 to be unknown
-			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(1))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionUnknown))
-			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(1))).To(haveNodeCondWithStatus(api.NodeConditionLagged, core.ConditionUnknown))
-			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(1))).To(haveNodeCondWithStatus(api.NodeConditionReadOnly, core.ConditionUnknown))
+			// check the node 1 should not be in the list
+			Expect(cluster.Status.Nodes).To(HaveLen(1))
 
 			// node 0 should be ok
 			Expect(cluster.GetNodeStatusFor(cluster.GetPodHostname(0))).To(haveNodeCondWithStatus(api.NodeConditionMaster, core.ConditionTrue))

@@ -19,6 +19,8 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -418,20 +420,40 @@ func (ou *orcUpdater) updateNodeCondition(host string, cType api.NodeConditionTy
 }
 
 // removeNodeConditionNotInOrc marks nodes not in orc with unknown condition
-// TODO: this function should remove completely from cluster.Status.Nodes nodes
 // that are no longer in orchestrator and in k8s
 func (ou *orcUpdater) removeNodeConditionNotInOrc(insts InstancesSet) {
 	for _, ns := range ou.cluster.Status.Nodes {
 		node := insts.GetInstance(ns.Name)
 		if node == nil {
 			// node is NOT updated so all conditions will be marked as unknown
-
 			ou.updateNodeCondition(ns.Name, api.NodeConditionLagged, core.ConditionUnknown)
 			ou.updateNodeCondition(ns.Name, api.NodeConditionReplicating, core.ConditionUnknown)
 			ou.updateNodeCondition(ns.Name, api.NodeConditionMaster, core.ConditionUnknown)
 			ou.updateNodeCondition(ns.Name, api.NodeConditionReadOnly, core.ConditionUnknown)
 		}
 	}
+
+	// remove nodes status for nodes that are not desired, nodes that are left behind from scale down
+	validIndex := 0
+	for _, ns := range ou.cluster.Status.Nodes {
+		// save only the nodes that are desired [0, 1, ..., replicas-1]
+		if indexInSts(ns.Name) < *ou.cluster.Spec.Replicas {
+			ou.cluster.Status.Nodes[validIndex] = ns
+			validIndex++
+		}
+	}
+
+	// remove old nodes
+	ou.cluster.Status.Nodes = ou.cluster.Status.Nodes[:validIndex]
+}
+
+// indexInSts is a helper function that returns the index of the pod in statefulset
+func indexInSts(name string) int32 {
+	re := regexp.MustCompile(`^[\w-]+-mysql-(\d*)\.mysql\.[\w-]+$`)
+	values := re.FindStringSubmatch(name)
+
+	i, _ := strconv.Atoi(values[1])
+	return int32(i)
 }
 
 // set a host writable just if needed
