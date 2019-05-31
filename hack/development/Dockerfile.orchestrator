@@ -37,7 +37,7 @@ RUN set -ex \
 
 COPY --chown=777:777 ./hack/docker/orchestrator/ /
 COPY --from=builder /go/src/github.com/github/orchestrator/bin/ /usr/local/orchestrator/
-COPY ./bin/orchestrator-helper_linux_amd64 /usr/local/bin/orchestrator-helper
+COPY ./bin/orc-helper_linux_amd64 /usr/local/bin/orc-helper
 
 USER 777
 EXPOSE 3000 10008

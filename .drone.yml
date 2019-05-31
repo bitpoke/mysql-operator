@@ -104,7 +104,7 @@ pipeline:
     group: publish
     image: plugins/docker
     registry: quay.io
-    repo: quay.io/presslabs/orchestrator
+    repo: quay.io/presslabs/mysql-operator-orchestrator
     username: presslabs+drone
     dockerfile: Dockerfile.orchestrator
     tags: ["${DRONE_BRANCH/master/latest}"]
@@ -118,7 +118,7 @@ pipeline:
     group: publish
     image: plugins/docker
     registry: quay.io
-    repo: quay.io/presslabs/orchestrator
+    repo: quay.io/presslabs/mysql-operator-orchestrator
     username: presslabs+drone
     dockerfile: Dockerfile.orchestrator
     auto_tag: true

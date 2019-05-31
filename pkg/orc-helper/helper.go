@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/presslabs/controller-util/rand"
-	core "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -57,9 +57,9 @@ func UpdateClusterFailoverCond(c client.Client, clusterName, reason, msg string,
 		return err
 	}
 
-	s := core.ConditionFalse
+	s := corev1.ConditionFalse
 	if status {
-		s = core.ConditionTrue
+		s = corev1.ConditionTrue
 	}
 
 	// update cluster failover in progress condition
@@ -87,9 +87,9 @@ func UpdateEventForCluster(c client.Client, s *runtime.Scheme, clusterName, evRe
 		return err
 	}
 
-	evType := core.EventTypeNormal
+	evType := corev1.EventTypeNormal
 	if warning {
-		evType = core.EventTypeWarning
+		evType = corev1.EventTypeWarning
 	}
 
 	ref, err := reference.GetReference(s, cluster.Unwrap())
@@ -101,7 +101,7 @@ func UpdateEventForCluster(c client.Client, s *runtime.Scheme, clusterName, evRe
 	if err != nil {
 		return err
 	}
-	event := &core.Event{
+	event := &corev1.Event{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s.%d", cluster.Name, randStr, time.Now().Unix()),
 			Namespace: cluster.Namespace,
@@ -110,7 +110,7 @@ func UpdateEventForCluster(c client.Client, s *runtime.Scheme, clusterName, evRe
 		Type:           evType,
 		Reason:         evReason,
 		Message:        evMsg,
-		Source:         core.EventSource{Component: "orchestrator"},
+		Source:         corev1.EventSource{Component: "orchestrator"},
 		InvolvedObject: *ref,
 	}
 	if err := c.Create(context.TODO(), event); err != nil {

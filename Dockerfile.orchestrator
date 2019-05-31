@@ -1,5 +1,7 @@
 ###############################################################################
-FROM golang:1.11.2 as builder-oper
+#  Build the mysql-oerator related binaries
+###############################################################################
+FROM golang:1.11.2 as builder
 
 # Copy in the go src
 WORKDIR /go/src/github.com/presslabs/mysql-operator
@@ -7,11 +9,15 @@ COPY pkg/    pkg/
 COPY cmd/    cmd/
 COPY vendor/ vendor/
 
-# Build orchestrator helper
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o orchestrator-helper github.com/presslabs/mysql-operator/cmd/orchestrator-helper
+# Build
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator github.com/presslabs/mysql-operator/cmd/mysql-operator
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator-sidecar github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o orc-helper github.com/presslabs/mysql-operator/cmd/orc-helper
 
+##############################################################################
+#  Build Orchestrator
 ###############################################################################
-FROM golang:1.9-alpine as builder
+FROM golang:1.9-alpine as builder-orc
 
 RUN set -ex \
     && apk add --no-cache \
@@ -33,6 +39,8 @@ RUN set -ex \
     && ./script/build
 
 ###############################################################################
+#  Docker image for orchestrator
+###############################################################################
 FROM alpine:3.7
 
 # Create a group and user
@@ -51,8 +59,8 @@ RUN set -ex \
         tar -C /usr/local/bin -xzv
 
 COPY --chown=777:777 hack/docker/orchestrator/ /
-COPY --from=builder /go/src/github.com/github/orchestrator/bin/ /usr/local/orchestrator/
-COPY --from=builder-oper /go/src/github.com/presslabs/mysql-operator/orchestrator-helper /usr/local/bin/
+COPY --from=builder-orc /go/src/github.com/github/orchestrator/bin/ /usr/local/orchestrator/
+COPY --from=builder /go/src/github.com/presslabs/mysql-operator/orc-helper /usr/local/bin/
 
 USER 777
 EXPOSE 3000 10008

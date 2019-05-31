@@ -133,23 +133,23 @@ orchestrator:
     ProcessesShellCommand: "sh"
 
     OnFailureDetectionProcesses: 
-      - "/usr/local/bin/orchestrator-helper event -w '{failureClusterAlias}' 'OrcFailureDetection' 'Failure: {failureType}, failed host: {failedHost}, lost replcas: {lostReplicas}' || true"
-      - "/usr/local/bin/orchestrator-helper failover-in-progress '{failureClusterAlias}' '{failureDescription}' || true"
+      - "/usr/local/bin/orc-helper event -w '{failureClusterAlias}' 'OrcFailureDetection' 'Failure: {failureType}, failed host: {failedHost}, lost replcas: {lostReplicas}' || true"
+      - "/usr/local/bin/orc-helper failover-in-progress '{failureClusterAlias}' '{failureDescription}' || true"
 
     # PreGracefulTakeoverProcesses:
     PreFailoverProcesses:
       # as backup in case the first request fails
-      - "/usr/local/bin/orchestrator-helper failover-in-progress '{failureClusterAlias}' '{failureDescription}' || true"
+      - "/usr/local/bin/orc-helper failover-in-progress '{failureClusterAlias}' '{failureDescription}' || true"
     # PostFailoverProcesses:
     #   - "/usr/local/bin/orchestrator-helper event '{failureClusterAlias}' 'Orc{command}' 'Failure type: {failureType}, failed hosts: {failedHost}, slaves: {countSlaves}' || true"
 
     PostUnsuccessfulFailoverProcesses:
-      - "/usr/local/bin/orchestrator-helper event -w '{failureClusterAlias}' 'OrcPostUnsuccessfulFailover' 'Failure: {failureType}, failed host: {failedHost} with {countSlaves} slaves' || true"
+      - "/usr/local/bin/orc-helper event -w '{failureClusterAlias}' 'OrcPostUnsuccessfulFailover' 'Failure: {failureType}, failed host: {failedHost} with {countSlaves} slaves' || true"
 
     PostMasterFailoverProcesses:
-      - "/usr/local/bin/orchestrator-helper event '{failureClusterAlias}' 'OrcPostMasterFailover' 'Failure type: {failureType}, new master: {successorHost}, slaves: {slaveHosts}' || true"
+      - "/usr/local/bin/orc-helper event '{failureClusterAlias}' 'OrcPostMasterFailover' 'Failure type: {failureType}, new master: {successorHost}, slaves: {slaveHosts}' || true"
 
     PostIntermediateMasterFailoverProcesses:
-      - "/usr/local/bin/orchestrator-helper event '{failureClusterAlias}' 'OrcPostIntermediateMasterFailover' 'Failure type: {failureType}, failed hosts: {failedHost}, slaves: {countSlaves}' || true"
+      - "/usr/local/bin/orc-helper event '{failureClusterAlias}' 'OrcPostIntermediateMasterFailover' 'Failure type: {failureType}, failed hosts: {failedHost}, slaves: {countSlaves}' || true"
 
     # PostGracefulTakeoverProcesses:
