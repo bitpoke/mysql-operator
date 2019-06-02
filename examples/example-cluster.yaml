@@ -27,6 +27,9 @@ spec:
 
   ## Specify additional pod specification
   # podSpec:
+  #   imagePullSecrets: []
+  #   labels: {}
+  #   annotations: {}
   #   affinity:
   #     podAntiAffinity:
   #       preferredDuringSchedulingIgnoredDuringExecution:
@@ -35,6 +38,7 @@ spec:
   #           topologyKey: "kubernetes.io/hostname"
   #           labelSelector:
   #             matchlabels: <cluster-labels>
+  #   nodeSelector: {}
   #   resources:
   #     requests:
   #       memory: 1G
