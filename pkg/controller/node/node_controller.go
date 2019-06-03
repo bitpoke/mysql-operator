@@ -104,6 +104,17 @@ func isInitialized(obj runtime.Object) bool {
 	return false
 }
 
+func isReady(obj runtime.Object) bool {
+	pod := obj.(*corev1.Pod)
+
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady {
+			return cond.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}
+
 func isRunning(obj runtime.Object) bool {
 	pod := obj.(*corev1.Pod)
 
@@ -120,8 +131,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch for changes to MysqlCluster
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
+		// no need to init nodes when are created
 		CreateFunc: func(evt event.CreateEvent) bool {
-			log.Info("pod create event", "event", evt)
 			return false
 		},
 
@@ -129,8 +140,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		// also the pod should not be initialized before and should be running because the init
 		// timeout is ~5s (see above) and the cluster status can become obsolete
 		UpdateFunc: func(evt event.UpdateEvent) bool {
-			log.Info("pod update event", "event", evt.ObjectNew)
-			return isOwnedByMySQL(evt.MetaNew) && !isInitialized(evt.ObjectNew) && isRunning(evt.ObjectNew)
+			return isOwnedByMySQL(evt.MetaNew) && isRunning(evt.ObjectNew) && !isReady(evt.ObjectNew)
 		},
 
 		DeleteFunc: func(evt event.DeleteEvent) bool {
@@ -185,7 +195,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	var cluster *mysqlcluster.MysqlCluster
 	cluster, err = r.getNodeCluster(ctx, pod)
 	if err != nil {
-		log.Info("cluster is not found")
+		log.Info("cluster is not found", "pod", pod)
 		return reconcile.Result{}, err
 	}
 
@@ -193,13 +203,6 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	if cluster.DeletionTimestamp != nil {
 		log.Info("cluster is deleted nothing to do", "pod", pod.Spec.Hostname)
 		return reconcile.Result{}, nil
-	}
-
-	// check if there is an in progress failover. K8s cluster resource may be inconsistent with what exists in k8s
-	fip := cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
-	if fip != nil && fip.Status == corev1.ConditionTrue {
-		log.Info("cluster has a failover in progress, delaying new node sync", "pod", pod.Spec.Hostname, "since", fip.LastTransitionTime)
-		return reconcile.Result{}, fmt.Errorf("delay node sync because a failover is in progress")
 	}
 
 	// if it's a old version cluster then don't do anything
@@ -221,6 +224,23 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 
 	// initialize SQL interface
 	sql := r.getMySQLConnection(cluster, pod, creds)
+
+	// wait for mysql to be ready
+	if err := sql.Wait(ctx); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// get fresh information about the cluster, cluster might have an in progress failover
+	if err = refreshCluster(ctx, r.unCachedClient, cluster.Unwrap()); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// check if there is an in progress failover. K8s cluster resource may be inconsistent with what exists in k8s
+	fip := cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
+	if fip != nil && fip.Status == corev1.ConditionTrue {
+		log.Info("cluster has a failover in progress, delaying new node sync", "pod", pod.Spec.Hostname, "since", fip.LastTransitionTime)
+		return reconcile.Result{}, fmt.Errorf("delay node sync because a failover is in progress")
+	}
 
 	// run the initializer, this will connect to MySQL server and run init queries
 	if err = r.initializeMySQL(ctx, sql, cluster, creds); err != nil {
@@ -244,11 +264,6 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 
 // nolint: gocyclo
 func (r *ReconcileMysqlNode) initializeMySQL(ctx context.Context, sql SQLInterface, cluster *mysqlcluster.MysqlCluster, c *credentials) error {
-	// wait for mysql to be ready
-	if err := sql.Wait(ctx); err != nil {
-		return err
-	}
-
 	// check if MySQL was configured before to avoid multiple times reconfiguration
 	if configured, err := sql.IsConfigured(ctx); err != nil {
 		return err
@@ -308,7 +323,7 @@ func (r *ReconcileMysqlNode) getNodeCluster(ctx context.Context, pod *corev1.Pod
 		Namespace: pod.Namespace,
 	}
 	cluster := mysqlcluster.New(&api.MysqlCluster{})
-	err := r.unCachedClient.Get(ctx, clusterKey, cluster.Unwrap())
+	err := r.Get(ctx, clusterKey, cluster.Unwrap())
 	return cluster, err
 }
 
@@ -429,4 +444,16 @@ func shouldUpdateToVersion(cluster *mysqlcluster.MysqlCluster, targetVersion int
 	}
 
 	return int(ver) < targetVersion
+}
+
+func refreshCluster(ctx context.Context, c client.Client, cluster *api.MysqlCluster) error {
+	cKey := types.NamespacedName{
+		Name:      cluster.Name,
+		Namespace: cluster.Namespace,
+	}
+	if err := c.Get(ctx, cKey, cluster); err != nil {
+		return err
+	}
+
+	return nil
 }
