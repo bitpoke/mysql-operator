@@ -93,17 +93,6 @@ func isOwnedByMySQL(meta metav1.Object) bool {
 	return false
 }
 
-func isInitialized(obj runtime.Object) bool {
-	pod := obj.(*corev1.Pod)
-
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == mysqlcluster.NodeInitializedConditionType {
-			return cond.Status == corev1.ConditionTrue
-		}
-	}
-	return false
-}
-
 func isReady(obj runtime.Object) bool {
 	pod := obj.(*corev1.Pod)
 
@@ -140,6 +129,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		// also the pod should not be initialized before and should be running because the init
 		// timeout is ~5s (see above) and the cluster status can become obsolete
 		UpdateFunc: func(evt event.UpdateEvent) bool {
+			log.Info("update event", "pod", evt.ObjectNew)
 			return isOwnedByMySQL(evt.MetaNew) && isRunning(evt.ObjectNew) && !isReady(evt.ObjectNew)
 		},
 
