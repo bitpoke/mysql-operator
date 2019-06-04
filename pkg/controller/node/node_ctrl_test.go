@@ -19,9 +19,10 @@ package node
 
 import (
 	"fmt"
+	"math/rand"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"math/rand"
 
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
@@ -220,7 +221,7 @@ func getOrCreatePod(c client.Client, cluster *mysqlcluster.MysqlCluster, index i
 	return pod
 }
 
-func setPodPhase(c client.Client, pod *corev1.Pod, phase corev1.PodPhase) {
+func setPodPhase(c client.StatusClient, pod *corev1.Pod, phase corev1.PodPhase) {
 	pod.Status.Phase = phase
 	Expect(c.Status().Update(context.TODO(), pod)).To(Succeed())
 }
