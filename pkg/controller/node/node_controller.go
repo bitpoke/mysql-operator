@@ -216,7 +216,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	sql := r.getMySQLConnection(cluster, pod, creds)
 
 	// wait for mysql to be ready
-	if err := sql.Wait(ctx); err != nil {
+	if err = sql.Wait(ctx); err != nil {
 		return reconcile.Result{}, err
 	}
 
