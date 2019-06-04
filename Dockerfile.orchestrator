@@ -16,6 +16,7 @@ FROM golang:1.9-alpine as builder
 RUN set -ex \
     && apk add --no-cache \
         bash gcc git musl-dev openssl rsync
+
 ARG ORCHESTRATOR_VERSION=v3.0.14
 ARG ORCHESTRATOR_REPO=https://github.com/github/orchestrator.git
 RUN set -ex \
@@ -24,7 +25,9 @@ RUN set -ex \
     && git init && git remote add origin $ORCHESTRATOR_REPO \
     && git fetch --tags \
     && git checkout $ORCHESTRATOR_VERSION
+
 WORKDIR $GOPATH/src/github.com/github/orchestrator
+
 RUN set -ex \
     && ls -l \
     && ./script/build
