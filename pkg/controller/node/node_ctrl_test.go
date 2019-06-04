@@ -126,7 +126,9 @@ var _ = Describe("MysqlNode controller", func() {
 			Eventually(testutil.RefreshFn(c, cluster.Unwrap())).ShouldNot(BeNil())
 
 			By("create MySQL pod")
-			getOrCreatePod(c, cluster, 0)
+			pod := getOrCreatePod(c, cluster, 0)
+			setPodPhase(c, pod, corev1.PodRunning)
+			Eventually(requests).Should(Receive(Equal(expectedRequest(0))))
 			Eventually(requests).Should(Receive(Equal(expectedRequest(0))))
 		})
 
@@ -143,11 +145,11 @@ var _ = Describe("MysqlNode controller", func() {
 			for _, pod := range podList.Items {
 				Expect(c.Delete(context.TODO(), &pod)).To(Succeed())
 			}
-
 		})
 
 		It("should receive pod update event", func() {
 			pod1 := getOrCreatePod(c, cluster, 0)
+			setPodPhase(c, pod1, corev1.PodRunning)
 			updatePodStatusCondition(pod1, mysqlcluster.NodeInitializedConditionType, corev1.ConditionFalse, "", "")
 			Expect(c.Status().Update(context.TODO(), pod1)).To(Succeed())
 			Eventually(requests).Should(Receive(Equal(expectedRequest(0))))
@@ -158,13 +160,22 @@ var _ = Describe("MysqlNode controller", func() {
 			pod1 := getOrCreatePod(c, cluster, 0)
 
 			// when pod is ready should not be triggered a reconcile event
-			updatePodStatusCondition(pod1, mysqlcluster.NodeInitializedConditionType, corev1.ConditionTrue, "", "")
+			setPodPhase(c, pod1, corev1.PodPending)
+			Consistently(requests).ShouldNot(Receive(Equal(expectedRequest(0))))
+
+			// mark pod running, should init node
+			setPodPhase(c, pod1, corev1.PodRunning)
+			Eventually(requests).Should(Receive(Equal(expectedRequest(0))))
+
+			// mark pod ready, should not init node anymore
+			updatePodStatusCondition(pod1, corev1.PodReady, corev1.ConditionTrue, "", "")
 			Expect(c.Status().Update(context.TODO(), pod1)).To(Succeed())
 			Consistently(requests).ShouldNot(Receive(Equal(expectedRequest(0))))
 		})
 
 		It("should have mysql initialized set when initialization succeed", func() {
 			pod1 := getOrCreatePod(c, cluster, 0)
+			setPodPhase(c, pod1, corev1.PodRunning)
 			Expect(pod1).To(testutil.PodHaveCondition(mysqlcluster.NodeInitializedConditionType, corev1.ConditionTrue))
 
 		})
@@ -207,4 +218,9 @@ func getOrCreatePod(c client.Client, cluster *mysqlcluster.MysqlCluster, index i
 
 	Expect(err).To(BeNil())
 	return pod
+}
+
+func setPodPhase(c client.Client, pod *corev1.Pod, phase corev1.PodPhase) {
+	pod.Status.Phase = phase
+	Expect(c.Status().Update(context.TODO(), pod)).To(Succeed())
 }
