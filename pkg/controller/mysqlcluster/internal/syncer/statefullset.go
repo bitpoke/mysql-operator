@@ -274,16 +274,16 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		},
 	})
 
+	// nolint: gosec
+	mysqlTestCmd := fmt.Sprintf(`mysql --defaults-file=%s -NB -e 'SELECT COUNT(*) FROM %s.%s WHERE name="configured" AND value="1"'`,
+		confClientPath, constants.OperatorDbName, constants.OperatorStatusTableName)
+
 	// we have to know ASAP when server is not ready to remove it from endpoints
 	mysql.ReadinessProbe = ensureProbe(5, 5, 2, core.Handler{
 		Exec: &core.ExecAction{
 			Command: []string{
-				"mysql",
-				fmt.Sprintf("--defaults-file=%s", confClientPath),
-				"-e",
-				// nolint: gosec
-				fmt.Sprintf("SELECT true as 'ready' FROM %s.%s WHERE name='configured' AND value='1'",
-					constants.OperatorDbName, constants.OperatorStatusTableName),
+				"/bin/sh", "-c",
+				fmt.Sprintf(`test $(%s) -eq 1`, mysqlTestCmd),
 			},
 		},
 	})
