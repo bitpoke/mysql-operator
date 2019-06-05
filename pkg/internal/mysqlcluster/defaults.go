@@ -53,10 +53,6 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 		}
 	}
 
-	if len(cluster.Spec.MysqlVersion) == 0 {
-		cluster.Spec.MysqlVersion = "5.7"
-	}
-
 	// set pod antiaffinity to nodes stay away from other nodes.
 	if cluster.Spec.PodSpec.Affinity == nil {
 		cluster.Spec.PodSpec.Affinity = &core.Affinity{
