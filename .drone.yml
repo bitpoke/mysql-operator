@@ -20,7 +20,7 @@ pipeline:
 
   lint:
     group: lint
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.1
     commands:
       - make lint
 
