@@ -18,9 +18,9 @@ package mysqlcluster
 
 import (
 	"fmt"
-	"github.com/blang/semver"
 	"strings"
 
+	"github.com/blang/semver"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -213,5 +213,5 @@ func (c *MysqlCluster) UpdateSpec() {
 func (c *MysqlCluster) ShouldHaveInitContainerForMysql() bool {
 	expectedRange := semver.MustParseRange(">=5.7.26 <8.0.0 || >=8.0.15")
 
-	return strings.HasPrefix("percona", c.GetMysqlImage()) && expectedRange(c.GetMySQLSemVer())
+	return strings.HasPrefix(c.GetMysqlImage(), "percona") && expectedRange(c.GetMySQLSemVer())
 }

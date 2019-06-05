@@ -49,7 +49,7 @@ const (
 const (
 	// init containers
 	containerCloneAndInitName = "init"
-	containerMySQLInit        = "mysql-init-only"
+	containerMySQLInitName    = "mysql-init-only"
 
 	// containers
 	containerSidecarName   = "sidecar"
@@ -228,7 +228,7 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 			Name:  "DATA_SOURCE_NAME",
 			Value: fmt.Sprintf("$(USER):$(PASSWORD)@(127.0.0.1:%d)/", MysqlPort),
 		})
-	case containerMySQLInit:
+	case containerMySQLInitName:
 		// set MySQL init only flag for init container
 		env = append(env, core.EnvVar{
 			Name:  "MYSQL_INIT_ONLY",
@@ -240,7 +240,7 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 	}
 
 	// set MySQL root and application credentials
-	if name == containerMySQLInit || !s.cluster.ShouldHaveInitContainerForMysql() && name == containerMySQLInit {
+	if name == containerMySQLInitName || !s.cluster.ShouldHaveInitContainerForMysql() && name == containerMySQLInitName {
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_ROOT_PASSWORD", "ROOT_PASSWORD", false))
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_USER", "USER", true))
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_PASSWORD", "PASSWORD", true))
@@ -261,7 +261,7 @@ func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
 
 	// add init container for MySQL if docker image supports this
 	if s.cluster.ShouldHaveInitContainerForMysql() {
-		initCs = append(initCs, s.ensureContainer(containerMySQLInit,
+		initCs = append(initCs, s.ensureContainer(containerMySQLInitName,
 			s.cluster.GetMysqlImage(),
 			[]string{},
 		))
@@ -503,7 +503,7 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 			{Name: dataVolumeName, MountPath: DataVolumeMountPath},
 		}
 
-	case containerMysqlName, containerSidecarName, containerMySQLInit:
+	case containerMysqlName, containerSidecarName, containerMySQLInitName:
 		return []core.VolumeMount{
 			{Name: confVolumeName, MountPath: ConfVolumeMountPath},
 			{Name: dataVolumeName, MountPath: DataVolumeMountPath},

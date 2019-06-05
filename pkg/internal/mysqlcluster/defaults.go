@@ -26,6 +26,7 @@ import (
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/options"
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 // nolint: megacheck, deadcode, varcheck
@@ -51,6 +52,11 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 				{Name: opt.ImagePullSecretName},
 			}
 		}
+	}
+
+	// set mysql version if not set to avoid spamming logs
+	if len(cluster.Spec.MysqlVersion) == 0 {
+		cluster.Spec.MysqlVersion = constants.MySQLDefaultVersion.String()
 	}
 
 	// set pod antiaffinity to nodes stay away from other nodes.
