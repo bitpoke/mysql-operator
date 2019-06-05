@@ -57,8 +57,7 @@ rbac:
   serviceAccountName: default
 
 orchestrator:
-  # TODO: set the tag to latest and update it in the same way as operator image is updated
-  image: quay.io/presslabs/orchestrator:v3.0.14-r46
+  image: quay.io/presslabs/mysql-operator-orchestrator:latest
 
   # orchestrator user and password to manage MySQL clusters
   topologyUser: sys_orchestrator

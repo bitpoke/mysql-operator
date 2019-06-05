@@ -58,7 +58,7 @@ RUN set -ex \
     && wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz -O- | \
         tar -C /usr/local/bin -xzv
 
-COPY --chown=777:777 hack/docker/orchestrator/ /
+COPY --chown=777:777 ./hack/docker/orchestrator/ /
 COPY --from=builder-orc /go/src/github.com/github/orchestrator/bin/ /usr/local/orchestrator/
 COPY --from=builder /go/src/github.com/presslabs/mysql-operator/orc-helper /usr/local/bin/
 
