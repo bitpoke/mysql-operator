@@ -59,7 +59,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	ginkgo.By("Port-forward orchestrator")
 	client := core.NewForConfigOrDie(kubeCfg).RESTClient()
 	orcTunnel = pf.NewTunnel(client, kubeCfg, operatorNamespace,
-		fmt.Sprintf("%s-orchestrator-0", releaseName),
+		fmt.Sprintf("%s-mysql-operator-0", releaseName),
 		orchestratorPort,
 	)
 	if err := orcTunnel.ForwardPort(); err != nil {

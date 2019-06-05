@@ -126,6 +126,7 @@ pipeline:
       - source: QUAY_TOKEN
         target: DOCKER_PASSWORD
     when:
+      event: tag
 
   publish-helm-chart:
     image: quay.io/presslabs/kluster-toolbox
