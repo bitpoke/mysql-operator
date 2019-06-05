@@ -18,6 +18,8 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"github.com/blang/semver"
+	"strings"
 
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -60,11 +62,6 @@ func (c *MysqlCluster) GetLabels() labels.Set {
 		instance = inst
 	}
 
-	version := "5.7"
-	if len(c.Spec.MysqlVersion) != 0 {
-		version = c.Spec.MysqlVersion
-	}
-
 	component := "database"
 	if comp, ok := c.Annotations["app.kubernetes.io/component"]; ok {
 		component = comp
@@ -75,7 +72,7 @@ func (c *MysqlCluster) GetLabels() labels.Set {
 
 		"app.kubernetes.io/name":       "mysql",
 		"app.kubernetes.io/instance":   instance,
-		"app.kubernetes.io/version":    version,
+		"app.kubernetes.io/version":    c.GetMySQLSemVer().String(),
 		"app.kubernetes.io/component":  component,
 		"app.kubernetes.io/managed-by": "mysql.presslabs.org",
 	}
@@ -170,19 +167,37 @@ func (c *MysqlCluster) GetMasterHost() string {
 	return masterHost
 }
 
+// GetMySQLSemVer returns the MySQL server version in semver format, or the default one
+func (c *MysqlCluster) GetMySQLSemVer() semver.Version {
+	version := c.Spec.MysqlVersion
+	// lookup for an alias, usually this will solve 5.7 to 5.7.x
+	if v, ok := constants.MySQLTagsToSemVer[version]; ok {
+		version = v
+	}
+
+	sv, err := semver.Make(version)
+	if err != nil {
+		log.Error(err, "failed to parse given MySQL version",
+			"input", version, "default", constants.MySQLDefaultVersion)
+		return constants.MySQLDefaultVersion
+	}
+
+	return sv
+}
+
 // GetMysqlImage returns the mysql image for current mysql cluster
 func (c *MysqlCluster) GetMysqlImage() string {
 	if len(c.Spec.Image) != 0 {
 		return c.Spec.Image
 	}
 
-	if len(c.Spec.MysqlVersion) != 0 {
-		if img, ok := constants.MysqlImageVersions[c.Spec.MysqlVersion]; ok {
-			return img
-		}
+	if img, ok := constants.MysqlImageVersions[c.GetMySQLSemVer().String()]; ok {
+		return img
 	}
 
 	// this means the cluster has a wrong MysqlVersion set
+	log.Error(nil, "no image found with given MySQL version, the image can manually be set by setting .spec.mysqlImage on cluster",
+		"version", c.GetMySQLSemVer())
 	return ""
 }
 
@@ -192,4 +207,11 @@ func (c *MysqlCluster) UpdateSpec() {
 	if len(c.Spec.InitBucketURL) == 0 {
 		c.Spec.InitBucketURL = c.Spec.InitBucketURI
 	}
+}
+
+// ShouldHaveInitContainerForMysql checks the MySQL version and returns true or false if the docker image supports or not init only
+func (c *MysqlCluster) ShouldHaveInitContainerForMysql() bool {
+	expectedRange := semver.MustParseRange(">=5.7.26 <8.0.0 || >=8.0.15")
+
+	return strings.HasPrefix("percona", c.GetMysqlImage()) && expectedRange(c.GetMySQLSemVer())
 }

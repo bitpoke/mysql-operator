@@ -47,12 +47,16 @@ const (
 
 // containers names
 const (
-	containerCloneAndInitName = "init-mysql"
-	containerSidecarName      = "sidecar"
-	containerMysqlName        = "mysql"
-	containerExporterName     = "metrics-exporter"
-	containerHeartBeatName    = "pt-heartbeat"
-	containerKillerName       = "pt-kill"
+	// init containers
+	containerCloneAndInitName = "init"
+	containerMySQLInit        = "mysql-init-only"
+
+	// containers
+	containerSidecarName   = "sidecar"
+	containerMysqlName     = "mysql"
+	containerExporterName  = "metrics-exporter"
+	containerHeartBeatName = "pt-heartbeat"
+	containerKillerName    = "pt-kill"
 )
 
 type sfsSyncer struct {
@@ -133,12 +137,6 @@ func (s *sfsSyncer) ensurePodSpec() core.PodSpec {
 		PriorityClassName:  s.cluster.Spec.PodSpec.PriorityClassName,
 		Tolerations:        s.cluster.Spec.PodSpec.Tolerations,
 		ServiceAccountName: s.cluster.Spec.PodSpec.ServiceAccountName,
-		// TODO: uncomment this when limiting operator for k8s version > 1.13
-		// ReadinessGates: []core.PodReadinessGate{
-		// 	{
-		// 		ConditionType: mysqlcluster.NodeInitializedConditionType,
-		// 	},
-		// },
 	}
 }
 
@@ -230,27 +228,46 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 			Name:  "DATA_SOURCE_NAME",
 			Value: fmt.Sprintf("$(USER):$(PASSWORD)@(127.0.0.1:%d)/", MysqlPort),
 		})
-	case containerMysqlName:
+	case containerMySQLInit:
+		// set MySQL init only flag for init container
+		env = append(env, core.EnvVar{
+			Name:  "MYSQL_INIT_ONLY",
+			Value: "1",
+		})
+	case containerCloneAndInitName:
+		env = append(env, s.envVarFromSecret(sctOpName, "BACKUP_USER", "BACKUP_USER", true))
+		env = append(env, s.envVarFromSecret(sctOpName, "BACKUP_PASSWORD", "BACKUP_PASSWORD", true))
+	}
+
+	// set MySQL root and application credentials
+	if name == containerMySQLInit || !s.cluster.ShouldHaveInitContainerForMysql() && name == containerMySQLInit {
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_ROOT_PASSWORD", "ROOT_PASSWORD", false))
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_USER", "USER", true))
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_PASSWORD", "PASSWORD", true))
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_DATABASE", "DATABASE", true))
-	case containerCloneAndInitName:
-		env = append(env, s.envVarFromSecret(sctOpName, "BACKUP_USER", "BACKUP_USER", true))
-		env = append(env, s.envVarFromSecret(sctOpName, "BACKUP_PASSWORD", "BACKUP_PASSWORD", true))
 	}
 
 	return env
 }
 
 func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
-	return []core.Container{
+	initCs := []core.Container{
 		// clone and init container
 		s.ensureContainer(containerCloneAndInitName,
 			s.opt.SidecarImage,
 			[]string{"clone-and-init"},
 		),
 	}
+
+	// add init container for MySQL if docker image supports this
+	if s.cluster.ShouldHaveInitContainerForMysql() {
+		initCs = append(initCs, s.ensureContainer(containerMySQLInit,
+			s.cluster.GetMysqlImage(),
+			[]string{},
+		))
+	}
+
+	return initCs
 }
 
 func (s *sfsSyncer) ensureContainersSpec() []core.Container {
@@ -481,49 +498,24 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 	switch name {
 	case containerCloneAndInitName:
 		return []core.VolumeMount{
-			{
-				Name:      confVolumeName,
-				MountPath: ConfVolumeMountPath,
-			},
-			{
-				Name:      confMapVolumeName,
-				MountPath: ConfMapVolumeMountPath,
-			},
-			{
-				Name:      dataVolumeName,
-				MountPath: DataVolumeMountPath,
-			},
+			{Name: confVolumeName, MountPath: ConfVolumeMountPath},
+			{Name: confMapVolumeName, MountPath: ConfMapVolumeMountPath},
+			{Name: dataVolumeName, MountPath: DataVolumeMountPath},
 		}
 
-	case containerMysqlName, containerSidecarName:
+	case containerMysqlName, containerSidecarName, containerMySQLInit:
 		return []core.VolumeMount{
-			{
-				Name:      confVolumeName,
-				MountPath: ConfVolumeMountPath,
-			},
-			{
-				Name:      dataVolumeName,
-				MountPath: DataVolumeMountPath,
-			},
+			{Name: confVolumeName, MountPath: ConfVolumeMountPath},
+			{Name: dataVolumeName, MountPath: DataVolumeMountPath},
 		}
 
 	case containerHeartBeatName, containerKillerName:
 		return []core.VolumeMount{
-			{
-				Name:      confVolumeName,
-				MountPath: ConfVolumeMountPath,
-			},
+			{Name: confVolumeName, MountPath: ConfVolumeMountPath},
 		}
 	}
 
 	return nil
-}
-
-func ensureVolume(name string, source core.VolumeSource) core.Volume {
-	return core.Volume{
-		Name:         name,
-		VolumeSource: source,
-	}
 }
 
 func (s *sfsSyncer) getLabels(extra map[string]string) map[string]string {
@@ -532,6 +524,13 @@ func (s *sfsSyncer) getLabels(extra map[string]string) map[string]string {
 		defaultsLabels[k] = v
 	}
 	return defaultsLabels
+}
+
+func ensureVolume(name string, source core.VolumeSource) core.Volume {
+	return core.Volume{
+		Name:         name,
+		VolumeSource: source,
+	}
 }
 
 func getCliOptionsFromQueryLimits(ql *api.QueryLimits) []string {
