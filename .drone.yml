@@ -1,8 +1,10 @@
 branches:
   - master
   - 1.x
-  # TODO: remove this branch when version 0.3.0 is released
-  - dev3.0
+  - 2.x
+  # This is very useful when debugging drone related issues. Just prefix your branch with "drone-"
+  # to trigger a drone build.
+  - drone-*
 
 workspace:
   base: /root/go
