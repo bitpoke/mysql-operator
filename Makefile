@@ -142,3 +142,4 @@ e2e-remote:
 		--report-dir ../../e2e-reports \
 		--operator-image quay.io/presslabs/mysql-operator:$(E2E_IMG_TAG) \
 		--sidecar-image  quay.io/presslabs/mysql-operator-sidecar:$(E2E_IMG_TAG)
+		--orchestrator-image  quay.io/presslabs/mysql-operator-orchestrator:$(E2E_IMG_TAG)
