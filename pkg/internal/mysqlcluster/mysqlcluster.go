@@ -177,11 +177,10 @@ func (c *MysqlCluster) GetMySQLSemVer() semver.Version {
 
 	sv, err := semver.Make(version)
 	if err != nil {
-		log.Error(err, "failed to parse given MySQL version",
-			"input", version, "default", constants.MySQLDefaultVersion)
-		return constants.MySQLDefaultVersion
+		log.Error(err, "failed to parse given MySQL version", "input", version)
 	}
 
+	// if there is an error will return 0.0.0
 	return sv
 }
 
