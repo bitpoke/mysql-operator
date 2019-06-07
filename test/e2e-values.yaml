@@ -1,6 +1,8 @@
 extraArgs:
   - --debug
 
+imagePullPolicy: Always
+
 orchestrator:
   topologyPassword: password1
   antiAffinity: soft
