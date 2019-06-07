@@ -74,4 +74,24 @@ var _ = Describe("Test MySQL cluster wrapper", func() {
 	It("should use init MySQL container", func() {
 		Expect(cluster.ShouldHaveInitContainerForMysql()).To(Equal(true))
 	})
+
+	It("should return 0.0.0 version if wrong mysql version was given", func() {
+		cluster.Spec.MysqlVersion = "wrong"
+
+		Expect(cluster.GetMySQLSemVer().String()).To(Equal("0.0.0"))
+		// no image for version 0.0.0
+		Expect(cluster.GetMysqlImage()).To(Equal(""))
+		// should not use mysql init only container
+		Expect(cluster.ShouldHaveInitContainerForMysql()).To(Equal(false))
+	})
+
+	It("should return the given version", func() {
+		version := "5.7.24"
+		cluster.Spec.MysqlVersion = version
+
+		Expect(cluster.GetMySQLSemVer().String()).To(Equal(version))
+		Expect(cluster.GetMysqlImage()).To(Equal(constants.MysqlImageVersions[version]))
+		// should not use mysql init only container
+		Expect(cluster.ShouldHaveInitContainerForMysql()).To(Equal(false))
+	})
 })
