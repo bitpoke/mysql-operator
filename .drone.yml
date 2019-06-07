@@ -42,6 +42,12 @@ pipeline:
     commands:
       - make test
 
+  verify-generate:
+    image: quay.io/presslabs/bfc:latest
+    commands:
+      - make -s fmt generate manifests
+      - git diff --exit-code
+
   build-chart:
     group: build
     image: quay.io/presslabs/bfc
