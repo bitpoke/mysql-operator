@@ -1,0 +1,119 @@
+{
+  "$schema": "http:\/\/json-schema.org\/draft-04\/schema#",
+  "$ref": "#\/definitions\/TestUser",
+  "definitions": {
+    "GrandfatherType": {
+      "properties": {},
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "TestUser": {
+      "required": [
+        "some_base_property",
+        "some_base_property_yaml",
+        "grand",
+        "SomeUntaggedBaseProperty",
+        "PublicNonExported",
+        "id",
+        "name",
+        "TestFlag",
+        "age",
+        "email"
+      ],
+      "properties": {
+        "PublicNonExported": {
+          "type": "integer"
+        },
+        "SomeUntaggedBaseProperty": {
+          "type": "boolean"
+        },
+        "TestFlag": {
+          "type": "boolean"
+        },
+        "age": {
+          "maximum": 120,
+          "exclusiveMaximum": true,
+          "minimum": 18,
+          "exclusiveMinimum": true,
+          "type": "integer"
+        },
+        "birth_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "feeling": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "friends": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array",
+          "description": "list of IDs, omitted when empty"
+        },
+        "grand": {
+          "$schema": "http:\/\/json-schema.org\/draft-04\/schema#",
+          "$ref": "#\/definitions\/GrandfatherType"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": ".*",
+          "type": "string",
+          "title": "the name",
+          "description": "this is a property",
+          "default": "alex",
+          "examples": [
+            "joe",
+            "lucy"
+          ]
+        },
+        "network_address": {
+          "type": "string",
+          "format": "ipv4"
+        },
+        "photo": {
+          "type": "string",
+          "media": {
+            "binaryEncoding": "base64"
+          }
+        },
+        "some_base_property": {
+          "type": "integer"
+        },
+        "some_base_property_yaml": {
+          "type": "integer"
+        },
+        "tags": {
+          "patternProperties": {
+            ".*": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "website": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    }
+  }
+}

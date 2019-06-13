@@ -21,6 +21,14 @@
   revision = "54c4f2530ddeb742ce9c9ee26f5fa758d6c1b3b6"
 
 [[projects]]
+  branch = "master"
+  digest = "1:ef51957b5ec6b38ec5e110aec3e148da9640e1895b2b17bd1389cb3a06caa62c"
+  name = "github.com/alecthomas/jsonschema"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "fd8d96416671e33ef79358139312e88557a8aaab"
+
+[[projects]]
   digest = "1:464aef731a5f82ded547c62e249a2e9ec59fbbc9ddab53cda7b9857852630a61"
   name = "github.com/appscode/jsonpatch"
   packages = ["."]
@@ -1022,6 +1030,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/alecthomas/jsonschema",
     "github.com/emicklei/go-restful",
     "github.com/go-ini/ini",
     "github.com/go-logr/logr",
@@ -1039,6 +1048,7 @@
     "github.com/onsi/gomega/gstruct",
     "github.com/onsi/gomega/types",
     "github.com/pivotal-cf/brokerapi",
+    "github.com/pivotal-cf/brokerapi/domain",
     "github.com/presslabs/controller-util/log",
     "github.com/presslabs/controller-util/log/adapters/lager",
     "github.com/presslabs/controller-util/mergo/transformers",
