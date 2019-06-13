@@ -16,210 +16,62 @@
 package brokerapi
 
 import (
-	"encoding/json"
 	"reflect"
-	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/pivotal-cf/brokerapi/domain"
 )
 
-type Service struct {
-	ID                   string                  `json:"id"`
-	Name                 string                  `json:"name"`
-	Description          string                  `json:"description"`
-	Bindable             bool                    `json:"bindable"`
-	InstancesRetrievable bool                    `json:"instances_retrievable,omitempty"`
-	BindingsRetrievable  bool                    `json:"bindings_retrievable,omitempty"`
-	Tags                 []string                `json:"tags,omitempty"`
-	PlanUpdatable        bool                    `json:"plan_updateable"`
-	Plans                []ServicePlan           `json:"plans"`
-	Requires             []RequiredPermission    `json:"requires,omitempty"`
-	Metadata             *ServiceMetadata        `json:"metadata,omitempty"`
-	DashboardClient      *ServiceDashboardClient `json:"dashboard_client,omitempty"`
-}
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
+type Service = domain.Service
 
-type ServiceDashboardClient struct {
-	ID          string `json:"id"`
-	Secret      string `json:"secret"`
-	RedirectURI string `json:"redirect_uri"`
-}
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
+type ServiceDashboardClient = domain.ServiceDashboardClient
 
-type ServicePlan struct {
-	ID              string               `json:"id"`
-	Name            string               `json:"name"`
-	Description     string               `json:"description"`
-	Free            *bool                `json:"free,omitempty"`
-	Bindable        *bool                `json:"bindable,omitempty"`
-	Metadata        *ServicePlanMetadata `json:"metadata,omitempty"`
-	Schemas         *ServiceSchemas      `json:"schemas,omitempty"`
-	MaintenanceInfo *MaintenanceInfo     `json:"maintenance_info,omitempty"`
-}
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
+type ServicePlan = domain.ServicePlan
 
-type ServiceSchemas struct {
-	Instance ServiceInstanceSchema `json:"service_instance,omitempty"`
-	Binding  ServiceBindingSchema  `json:"service_binding,omitempty"`
-}
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
+type ServiceSchemas = domain.ServiceSchemas
 
-type ServiceInstanceSchema struct {
-	Create Schema `json:"create,omitempty"`
-	Update Schema `json:"update,omitempty"`
-}
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
+type ServiceInstanceSchema = domain.ServiceInstanceSchema
 
-type ServiceBindingSchema struct {
-	Create Schema `json:"create,omitempty"`
-}
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
+type ServiceBindingSchema = domain.ServiceBindingSchema
 
-type Schema struct {
-	Parameters map[string]interface{} `json:"parameters"`
-}
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
+type Schema = domain.Schema
 
-type ServicePlanMetadata struct {
-	DisplayName        string            `json:"displayName,omitempty"`
-	Bullets            []string          `json:"bullets,omitempty"`
-	Costs              []ServicePlanCost `json:"costs,omitempty"`
-	AdditionalMetadata map[string]interface{}
-}
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
+type ServicePlanMetadata = domain.ServicePlanMetadata
 
-type ServicePlanCost struct {
-	Amount map[string]float64 `json:"amount"`
-	Unit   string             `json:"unit"`
-}
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
+type ServicePlanCost = domain.ServicePlanCost
 
-type ServiceMetadata struct {
-	DisplayName         string `json:"displayName,omitempty"`
-	ImageUrl            string `json:"imageUrl,omitempty"`
-	LongDescription     string `json:"longDescription,omitempty"`
-	ProviderDisplayName string `json:"providerDisplayName,omitempty"`
-	DocumentationUrl    string `json:"documentationUrl,omitempty"`
-	SupportUrl          string `json:"supportUrl,omitempty"`
-	Shareable           *bool  `json:"shareable,omitempty"`
-	AdditionalMetadata  map[string]interface{}
-}
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
+type ServiceMetadata = domain.ServiceMetadata
 
-type MaintenanceInfo struct {
-	Public  map[string]string `json:"public,omitempty"`
-	Private string            `json:"private,omitempty"`
-}
-
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
 func FreeValue(v bool) *bool {
-	return &v
+	return domain.FreeValue(v)
 }
 
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
 func BindableValue(v bool) *bool {
-	return &v
+	return domain.BindableValue(v)
 }
 
-type RequiredPermission string
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
+type RequiredPermission = domain.RequiredPermission
 
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
 const (
-	PermissionRouteForwarding = RequiredPermission("route_forwarding")
-	PermissionSyslogDrain     = RequiredPermission("syslog_drain")
-	PermissionVolumeMount     = RequiredPermission("volume_mount")
-
-	additionalMetadataName = "AdditionalMetadata"
+	PermissionRouteForwarding = domain.PermissionRouteForwarding
+	PermissionSyslogDrain     = domain.PermissionSyslogDrain
+	PermissionVolumeMount     = domain.PermissionVolumeMount
 )
 
-func (spm ServicePlanMetadata) MarshalJSON() ([]byte, error) {
-	type Alias ServicePlanMetadata
-
-	b, err := json.Marshal(Alias(spm))
-	if err != nil {
-		return []byte{}, errors.Wrap(err, "unmarshallable content in AdditionalMetadata")
-	}
-
-	var m map[string]interface{}
-	json.Unmarshal(b, &m)
-	delete(m, additionalMetadataName)
-
-	for k, v := range spm.AdditionalMetadata {
-		m[k] = v
-	}
-
-	return json.Marshal(m)
-}
-
-func (spm *ServicePlanMetadata) UnmarshalJSON(data []byte) error {
-	type Alias ServicePlanMetadata
-
-	if err := json.Unmarshal(data, (*Alias)(spm)); err != nil {
-		return err
-	}
-
-	additionalMetadata := map[string]interface{}{}
-	if err := json.Unmarshal(data, &additionalMetadata); err != nil {
-		return err
-	}
-
-	s := reflect.ValueOf(spm).Elem()
-	for _, jsonName := range GetJsonNames(s) {
-		if jsonName == additionalMetadataName {
-			continue
-		}
-		delete(additionalMetadata, jsonName)
-	}
-
-	if len(additionalMetadata) > 0 {
-		spm.AdditionalMetadata = additionalMetadata
-	}
-	return nil
-}
-
+//Deprecated: Use github.com/pivotal-cf/brokerapi/domain
 func GetJsonNames(s reflect.Value) (res []string) {
-	valType := s.Type()
-	for i := 0; i < s.NumField(); i++ {
-		field := valType.Field(i)
-		tag := field.Tag
-		jsonVal := tag.Get("json")
-		if jsonVal != "" {
-			components := strings.Split(jsonVal, ",")
-			jsonName := components[0]
-			res = append(res, jsonName)
-		} else {
-			res = append(res, field.Name)
-		}
-	}
-	return res
-}
-
-func (sm ServiceMetadata) MarshalJSON() ([]byte, error) {
-	type Alias ServiceMetadata
-
-	b, err := json.Marshal(Alias(sm))
-	if err != nil {
-		return []byte{}, errors.Wrap(err, "unmarshallable content in AdditionalMetadata")
-	}
-
-	var m map[string]interface{}
-	json.Unmarshal(b, &m)
-	delete(m, additionalMetadataName)
-
-	for k, v := range sm.AdditionalMetadata {
-		m[k] = v
-	}
-	return json.Marshal(m)
-}
-
-func (sm *ServiceMetadata) UnmarshalJSON(data []byte) error {
-	type Alias ServiceMetadata
-
-	if err := json.Unmarshal(data, (*Alias)(sm)); err != nil {
-		return err
-	}
-
-	additionalMetadata := map[string]interface{}{}
-	if err := json.Unmarshal(data, &additionalMetadata); err != nil {
-		return err
-	}
-
-	for _, jsonName := range GetJsonNames(reflect.ValueOf(sm).Elem()) {
-		if jsonName == additionalMetadataName {
-			continue
-		}
-		delete(additionalMetadata, jsonName)
-	}
-
-	if len(additionalMetadata) > 0 {
-		sm.AdditionalMetadata = additionalMetadata
-	}
-	return nil
+	return domain.GetJsonNames(s)
 }

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package originating_identity_header
+package middlewares
 
 import (
 	"context"
@@ -24,11 +24,10 @@ const (
 	originatingIdentityKey = "originatingIdentity"
 )
 
-func AddToContext(next http.Handler) http.Handler {
+func AddOriginatingIdentityToContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		originatingIdentity := req.Header.Get("X-Broker-API-Originating-Identity")
 		newCtx := context.WithValue(req.Context(), originatingIdentityKey, originatingIdentity)
 		next.ServeHTTP(w, req.WithContext(newCtx))
 	})
 }
-

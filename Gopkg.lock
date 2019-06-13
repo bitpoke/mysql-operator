@@ -393,16 +393,20 @@
   version = "v2.0.1"
 
 [[projects]]
-  digest = "1:a3aab69c64e13abb111db55a5ca2a67cc76a723f52f3d856efb687f2ae532b6d"
+  digest = "1:0d6625087a76cb30526f3da8029d0c718970d3514397a6caf28d778f08ccf12a"
   name = "github.com/pivotal-cf/brokerapi"
   packages = [
     ".",
     "auth",
-    "middlewares/originating_identity_header",
+    "domain",
+    "domain/apiresponses",
+    "handlers",
+    "middlewares",
+    "utils",
   ]
   pruneopts = "T"
-  revision = "644cda48aed126142816ea9fdf0c676e7d66032e"
-  version = "v4.2.1"
+  revision = "8d8c98578aae5f3aca54f6e4968659de0ff4decb"
+  version = "v5.0.0"
 
 [[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
@@ -1024,6 +1028,7 @@
     "github.com/go-sql-driver/mysql",
     "github.com/go-test/deep",
     "github.com/golang/glog",
+    "github.com/gorilla/mux",
     "github.com/imdario/mergo",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/config",

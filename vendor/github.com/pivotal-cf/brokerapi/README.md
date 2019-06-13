@@ -50,6 +50,27 @@ use the `NewFailureResponseBuilder()` to add a custom `Error:` value in the
 response, or indicate that the broker should return an empty response rather
 than the error message.
 
+## Request Context
+
+When provisioning a service `brokerapi` validates the `service_id` and `plan_id`
+in the request, attaching the found instances to the request Context. These
+values can be retrieved in a `brokerapi.ServiceBroker` implementation using 
+utility methods `RetrieveServiceFromContext` and `RetrieveServicePlanFromContext`
+as shown below.
+
+```golang
+func (sb *ServiceBrokerImplementation) Provision(ctx context.Context,
+  instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) {
+
+  service := brokerapi.RetrieveServiceFromContext(ctx)
+  if service == nil {
+    // Lookup service
+  }
+
+  // [..]
+}
+```
+
 ## Originating Identity
 
 The request context for every request contains the unparsed

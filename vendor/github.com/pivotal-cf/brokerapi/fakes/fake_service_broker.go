@@ -33,6 +33,7 @@ type FakeServiceBroker struct {
 	UnbindError        error
 	DeprovisionError   error
 	LastOperationError error
+	LastBindingOperationError error
 	UpdateError        error
 	GetInstanceError   error
 	GetBindingError    error
@@ -412,8 +413,8 @@ func (fakeBroker *FakeServiceBroker) LastBindingOperation(context context.Contex
 		fakeBroker.ReceivedContext = val
 	}
 
-	if fakeBroker.LastOperationError != nil {
-		return brokerapi.LastOperation{}, fakeBroker.LastOperationError
+	if fakeBroker.LastBindingOperationError != nil {
+		return brokerapi.LastOperation{}, fakeBroker.LastBindingOperationError
 	}
 
 	return brokerapi.LastOperation{State: fakeBroker.LastOperationState, Description: fakeBroker.LastOperationDescription}, nil
