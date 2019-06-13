@@ -18,23 +18,30 @@ package broker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
-	"github.com/pivotal-cf/brokerapi"
-	"go.uber.org/zap"
+	broker "github.com/pivotal-cf/brokerapi"
+	brokerapi "github.com/pivotal-cf/brokerapi/domain"
 
+	"github.com/gorilla/mux"
+	logf "github.com/presslabs/controller-util/log"
+	"github.com/presslabs/controller-util/log/adapters/lager"
+	"github.com/presslabs/controller-util/rand"
+	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	logf "github.com/presslabs/controller-util/log"
-
-	"github.com/presslabs/controller-util/log/adapters/lager"
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 var log = logf.Log.WithName("service-broker")
 
-type BrokerServer struct { //nolint: golint
+// Server for service broker
+type Server struct {
 	HTTPServer *http.Server
 }
 
@@ -45,11 +52,21 @@ type serviceBroker struct {
 func (sb *serviceBroker) Services(ctx context.Context) (services []brokerapi.Service, err error) {
 	services = []brokerapi.Service{
 		{
-			Name: "mysql",
-			ID:   "79f8df87-658d-4056-803b-d66c17b6e437",
+			Name:        MysqlServiceName,
+			ID:          MysqlServiceID,
+			Description: MysqlServiceDescription,
+			Plans:       sb.plans(MysqlServiceID),
 		},
 	}
 	return services, nil
+}
+
+type MySQLProvisionParameters struct {
+	// Name of the MySQL cluster resource
+	Name string
+
+	Replicas     int32
+	MySQLVersion string
 }
 
 func (sb *serviceBroker) Provision(
@@ -58,6 +75,56 @@ func (sb *serviceBroker) Provision(
 	details brokerapi.ProvisionDetails,
 	asyncAllowed bool,
 ) (spec brokerapi.ProvisionedServiceSpec, err error) {
+	// create a MySQL cluster resource
+	spec.IsAsync = true
+
+	// Get the provision parameters
+	namespace := getNamespaceFromContext(details.RawContext)
+	params := MySQLProvisionParameters{}
+	err = json.Unmarshal(details.GetRawParameters(), &params)
+	if err != nil {
+		return spec, err
+	}
+	random, err := rand.AlphaNumericString(16)
+	if err != nil {
+		return spec, err
+	}
+
+	// create the secret for MySQL cluster with the root password random generated
+	secretName := fmt.Sprintf("%s-credentials", params.Name)
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"ROOT_PASSWORD": []byte(random),
+		},
+	}
+
+	err = sb.Client.Create(ctx, secret)
+	if err != nil {
+		return spec, err
+	}
+
+	clSpec := api.MysqlClusterSpec{}
+	clSpec.SecretName = secretName
+	clSpec.Replicas = &params.Replicas
+	clSpec.MysqlVersion = params.MySQLVersion
+
+	// create the cluster
+	cluster := &api.MysqlCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      params.Name,
+			Namespace: namespace,
+			Annotations: map[string]string{
+				"openservicebroker.presslabs.org/instanceID": instanceID,
+			},
+		},
+		Spec: clSpec,
+	}
+
+	err = sb.Client.Create(ctx, cluster)
 	return spec, err
 }
 
@@ -129,36 +196,41 @@ func (sb *serviceBroker) LastBindingOperation(
 
 var _ brokerapi.ServiceBroker = &serviceBroker{}
 
-func NewBrokerServer(addr string, mgr manager.Manager) *BrokerServer { // nolint: golint
-	h := brokerapi.New(
-		&serviceBroker{Client: mgr.GetClient()},
-		lager.NewZapAdapter("broker", zap.L()),
-		brokerapi.BrokerCredentials{
-			Username: "calin",
-			Password: "lemon",
-		},
-	)
+// NewBrokerServer returns a HTTP server with service broker API implemented
+func NewBrokerServer(addr string, mgr manager.Manager) *Server {
+	// h := brokerapi.New(
+	// 	&serviceBroker{Client: mgr.GetClient()},
+	// 	lager.NewZapAdapter("broker", zap.L()),
+	// 	brokerapi.BrokerCredentials{
+	// 		Username: "",
+	// 		Password: "",
+	// 	},
+	// )
 
-	broker := &BrokerServer{}
+	router := mux.NewRouter()
+	broker.AttachRoutes(router, &serviceBroker{Client: mgr.GetClient()}, lager.NewZapAdapter("broker", zap.L()))
+
+	broker := &Server{}
 
 	httpServer := &http.Server{
 		Addr:    addr,
-		Handler: broker.Log(h.ServeHTTP),
+		Handler: broker.log(router.ServeHTTP),
 	}
 
-	return &BrokerServer{
+	return &Server{
 		HTTPServer: httpServer,
 	}
 }
 
-func (s *BrokerServer) Log(h http.HandlerFunc) http.HandlerFunc { // nolint: golint
+func (s *Server) log(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf(">>>>>>>>>>>>>>>>>>> %#v\n", r)
 		h(w, r)
 	}
 }
 
-func (s *BrokerServer) Start(stop <-chan struct{}) error { // nolint: golint
+// Start starts the broker http server
+func (s *Server) Start(stop <-chan struct{}) error {
 	errChan := make(chan error, 1)
 	go func() {
 		log.Info("Web Server listening", "address", s.HTTPServer.Addr)
@@ -178,7 +250,8 @@ func (s *BrokerServer) Start(stop <-chan struct{}) error { // nolint: golint
 	return nil
 }
 
-func AddToManager(mgr manager.Manager) error { // nolint: golint
+// AddToManager registers the new mysql broker to manager
+func AddToManager(mgr manager.Manager) error {
 	srv := NewBrokerServer(":8080", mgr)
 	return mgr.Add(srv)
 }

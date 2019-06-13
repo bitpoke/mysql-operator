@@ -58,6 +58,7 @@ type Options struct {
 	// nodes. This field is set in cluster secret as well.
 	OrchestratorTopologyUser string
 
+	// LeaderElection if or not to enable controller leader election
 	LeaderElection bool
 
 	// LeaderElectionNamespace the namespace where the lock resource will be created
@@ -98,8 +99,6 @@ const (
 
 	defaultOrchestratorTopologyUser     = ""
 	defaultOrchestratorTopologyPassword = ""
-
-	defaultHTTPServerAddr = ":80"
 
 	defaultLeaderElection          = true
 	defaultLeaderElectionNamespace = "default"
