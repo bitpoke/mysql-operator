@@ -74,8 +74,7 @@ func cloneFromBucket(initBucket string) error {
 	// rclone --config={conf file} cat {bucket uri}
 	// writes to stdout the content of the bucket uri
 	// nolint: gosec
-	rclone := exec.Command("rclone", "-vv",
-		fmt.Sprintf("--config=%s", rcloneConfigFile), "cat", initBucket)
+	rclone := exec.Command("rclone", "-vv", rcloneConfigArg, "cat", initBucket)
 
 	// gzip reads from stdin decompress and then writes to stdout
 	// nolint: gosec

@@ -68,8 +68,9 @@ var (
 )
 
 const (
-	// RcloneConfigFile represents the path to the file that contains rclon
+	// RcloneConfigFile represents the path to the file that contains rclone
 	// configs. This path should be the same as defined in docker entrypoint
-	// script from mysql-operator-sidecar/docker-entrypoint.sh. /etc/rclone.conf
-	rcloneConfigFile = "/tmp/rclone.conf"
+	// script from mysql-operator-sidecar/docker-entrypoint.sh. /tmp/rclone.conf
+	rcloneConfigFile = constants.RcloneConfigFile
+	rcloneConfigArg  = constants.RcloneConfigArg
 )
