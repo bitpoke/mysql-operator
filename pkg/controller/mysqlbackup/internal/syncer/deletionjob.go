@@ -35,6 +35,7 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlbackup"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 const (
@@ -154,7 +155,9 @@ func (s *deletionJobSyncer) ensureContainers() []core.Container {
 			Image:           s.opt.SidecarImage,
 			ImagePullPolicy: s.opt.ImagePullPolicy,
 			Args: []string{
-				"rclone", "--config=/etc/rclone.conf", "delete",
+				"rclone",
+				constants.RcloneConfigArg,
+				"delete",
 				bucketForRclone(s.backup.Spec.BackupURL),
 			},
 			EnvFrom: []core.EnvFromSource{

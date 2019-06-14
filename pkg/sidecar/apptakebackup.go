@@ -42,8 +42,7 @@ func pushBackupFromTo(cfg *Config, srcHost, destBucket string) error {
 	gzip := exec.Command("gzip", "-c")
 
 	// nolint: gosec
-	rclone := exec.Command("rclone",
-		fmt.Sprintf("--config=%s", rcloneConfigFile), "rcat", tmpDestBucket)
+	rclone := exec.Command("rclone", rcloneConfigArg, "rcat", tmpDestBucket)
 
 	gzip.Stdin = response.Body
 	gzip.Stderr = os.Stderr
@@ -83,8 +82,7 @@ func pushBackupFromTo(cfg *Config, srcHost, destBucket string) error {
 	// the backup was a success
 	// remove .tmp extension
 	// nolint: gosec
-	rcMove := exec.Command("rclone",
-		fmt.Sprintf("--config=%s", rcloneConfigFile), "moveto", tmpDestBucket, destBucket)
+	rcMove := exec.Command("rclone", rcloneConfigArg, "moveto", tmpDestBucket, destBucket)
 
 	if err = rcMove.Start(); err != nil {
 		return fmt.Errorf("final move failed: %s", err)
