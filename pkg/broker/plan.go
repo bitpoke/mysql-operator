@@ -24,10 +24,10 @@ import (
 	brokerapi "github.com/pivotal-cf/brokerapi/domain"
 )
 
-func (sb *serviceBroker) plans(serviceId string) []brokerapi.ServicePlan {
+func (sb *serviceBroker) plans(serviceID string) []brokerapi.ServicePlan {
 	trueValue := true
 
-	switch serviceId {
+	switch serviceID {
 	case MysqlServiceID:
 		return []brokerapi.ServicePlan{
 			{
@@ -41,11 +41,11 @@ func (sb *serviceBroker) plans(serviceId string) []brokerapi.ServicePlan {
 				},
 				Schemas: &brokerapi.ServiceSchemas{
 					Instance: brokerapi.ServiceInstanceSchema{
-						Create: MustGetJSONSchema(&MySQLProvisionParameters{}),
+						Create: mustGetJSONSchema(&MySQLProvisionParameters{}),
 					},
-					// Binding: brokerapi.ServiceBindingSchema{
-					// 	Create: bk,
-					// },
+					Binding: brokerapi.ServiceBindingSchema{
+						Create: mustGetJSONSchema(&MySQLBindParameters{}),
+					},
 				},
 			},
 		}
@@ -53,7 +53,8 @@ func (sb *serviceBroker) plans(serviceId string) []brokerapi.ServicePlan {
 	return []brokerapi.ServicePlan{}
 }
 
-func MustGetJSONSchema(obj interface{}) brokerapi.Schema {
+// mustGetJSONSchema takes an struct{} and returns the related JSON schema
+func mustGetJSONSchema(obj interface{}) brokerapi.Schema {
 	var reflector = jsonschema.Reflector{
 		ExpandedStruct: true,
 	}

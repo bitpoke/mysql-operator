@@ -16,7 +16,18 @@ limitations under the License.
 
 package broker
 
-import "encoding/json"
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+)
 
 func getNamespaceFromContext(rawCtx json.RawMessage) string {
 	c := struct {
@@ -33,4 +44,43 @@ func getNamespaceFromContext(rawCtx json.RawMessage) string {
 	}
 
 	return c.Namespace
+}
+
+func (sb *serviceBroker) getClusterForID(ctx context.Context, instanceID string) (*mysqlcluster.MysqlCluster, error) {
+	cList := &api.MysqlClusterList{}
+	optList := client.MatchingLabels(map[string]string{
+		instanceIDLabel: instanceID,
+	})
+	err := sb.Client.List(ctx, optList, cList)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(cList.Items) != 1 {
+		return nil, fmt.Errorf("no cluster found or id conflict")
+	}
+
+	return mysqlcluster.New(&cList.Items[0]), nil
+}
+
+func (sb *serviceBroker) getUtilityUserPassword(ctx context.Context, cluster *mysqlcluster.MysqlCluster) (string, string, error) {
+	sct := &corev1.Secret{}
+	err := sb.Client.Get(ctx, types.NamespacedName{
+		Name:      cluster.Spec.SecretName,
+		Namespace: cluster.Namespace,
+	}, sct)
+
+	if err != nil {
+		return "", "", err
+	}
+
+	var (
+		ok   bool
+		pass []byte
+	)
+	if pass, ok = sct.Data["ROOT_PASSWORD"]; !ok {
+		return "", "", fmt.Errorf("no field ROOT_PASSWORD found in secret")
+	}
+
+	return "root", string(pass), nil
 }

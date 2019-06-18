@@ -28,7 +28,8 @@ var (
 	DefaultPlanID = "d488e51c-8de1-11e9-bc42-526af7764f64"
 	// DefaultPlanName is the name of the default plan
 	DefaultPlanName = "default"
-	// DefaultPlanDescription
+
+	// DefaultPlanDescription service default plan
 	DefaultPlanDescription = `MySQL cluster default plan`
 
 	// DefaultNamespace where objects such as Secrets will be created

@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqldsl"
 	"net/http"
 
 	broker "github.com/pivotal-cf/brokerapi"
@@ -31,6 +32,7 @@ import (
 	"github.com/presslabs/controller-util/rand"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -39,6 +41,8 @@ import (
 )
 
 var log = logf.Log.WithName("service-broker")
+
+const instanceIDLabel = "openservicebroker.presslabs.org/instanceID"
 
 // Server for service broker
 type Server struct {
@@ -61,12 +65,19 @@ func (sb *serviceBroker) Services(ctx context.Context) (services []brokerapi.Ser
 	return services, nil
 }
 
+// MySQLProvisionParameters represents the parameters that can be tuned on a cluster
 type MySQLProvisionParameters struct {
 	// Name of the MySQL cluster resource
 	Name string
 
-	Replicas     int32
+	// Replicas represents the number of nodes for MySQL cluster
+	Replicas int32
+
+	//MySQLVersion is the MySQL server version
 	MySQLVersion string
+
+	// Size represents the size. Example: 1Gi
+	Size string
 }
 
 func (sb *serviceBroker) Provision(
@@ -75,7 +86,7 @@ func (sb *serviceBroker) Provision(
 	details brokerapi.ProvisionDetails,
 	asyncAllowed bool,
 ) (spec brokerapi.ProvisionedServiceSpec, err error) {
-	// create a MySQL cluster resource
+	// this action is async
 	spec.IsAsync = true
 
 	// Get the provision parameters
@@ -107,18 +118,32 @@ func (sb *serviceBroker) Provision(
 		return spec, err
 	}
 
+	size, err := resource.ParseQuantity(params.Size)
+	if err != nil {
+		return spec, err
+	}
+
 	clSpec := api.MysqlClusterSpec{}
 	clSpec.SecretName = secretName
 	clSpec.Replicas = &params.Replicas
 	clSpec.MysqlVersion = params.MySQLVersion
+	clSpec.VolumeSpec = api.VolumeSpec{
+		PersistentVolumeClaim: &corev1.PersistentVolumeClaimSpec{
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: size,
+				},
+			},
+		},
+	}
 
 	// create the cluster
 	cluster := &api.MysqlCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      params.Name,
 			Namespace: namespace,
-			Annotations: map[string]string{
-				"openservicebroker.presslabs.org/instanceID": instanceID,
+			Labels: map[string]string{
+				instanceIDLabel: instanceID,
 			},
 		},
 		Spec: clSpec,
@@ -134,6 +159,23 @@ func (sb *serviceBroker) Deprovision(
 	details brokerapi.DeprovisionDetails,
 	asyncAllowed bool,
 ) (spec brokerapi.DeprovisionServiceSpec, err error) {
+	// this action is async
+	spec.IsAsync = true
+
+	// Get the provision parameters
+	cluster, err := sb.getClusterForID(ctx, instanceID)
+	if err != nil {
+		return spec, err
+	}
+
+	// cluster is deleting
+	if cluster.DeletionTimestamp != nil {
+		return spec, nil
+	}
+
+	// delete the cluster
+	err = sb.Client.Delete(ctx, cluster)
+
 	return spec, err
 }
 
@@ -141,6 +183,10 @@ func (sb *serviceBroker) GetInstance(
 	ctx context.Context,
 	instanceID string,
 ) (spec brokerapi.GetInstanceDetailsSpec, err error) {
+
+	// get the cluster and set the cluster spec to the parameters list
+	cluster, err := sb.getClusterForID(ctx, instanceID)
+	spec.Parameters = cluster.Spec
 	return spec, err
 }
 
@@ -161,12 +207,71 @@ func (sb *serviceBroker) LastOperation(
 	return op, err
 }
 
+// MySQLBindParameters represents the parameters that are passed when binding a new instance
+type MySQLBindParameters struct {
+	// Database: the database name
+	Database string
+
+	// User: the username
+	User string
+}
+
 func (sb *serviceBroker) Bind(
 	ctx context.Context,
 	instanceID, bindingID string,
 	details brokerapi.BindDetails,
 	asyncAllowed bool,
 ) (binding brokerapi.Binding, err error) {
+
+	// get the MySQL cluster
+	cluster, err := sb.getClusterForID(ctx, instanceID)
+	if err != nil {
+		return binding, err
+	}
+
+	// establish a mysql connection
+	user, pass, err := sb.getUtilityUserPassword(ctx, cluster)
+	conn := newConnection(cluster, user, pass)
+	err = conn.Open()
+	if err != nil {
+		return binding, err
+	}
+	defer func() {
+		if cErr := conn.Close(); cErr != nil {
+			log.Error(cErr, "mysql can't close connection")
+		}
+	}()
+
+	// get bind details, parameters
+	params := MySQLBindParameters{}
+	err = json.Unmarshal(details.GetRawParameters(), &params)
+	if err != nil {
+		return binding, err
+	}
+
+	// generate a new password for new user
+	uPass, err := rand.AlphaNumericString(15)
+	if err != nil {
+		return binding, err
+	}
+
+	// create database
+	err = conn.RunQueries(ctx, []string{
+		fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", params.Database),
+	})
+	if err != nil {
+		return binding, err
+	}
+
+	// create user
+	err = conn.RunQueries(ctx,
+		mysqldsl.CreateUserQuery(params.Database, uPass, "%",
+			[]string{"ALL"}, fmt.Sprintf("%s.*", params.Database)),
+	)
+	if err != nil {
+		return binding, err
+	}
+
 	return binding, err
 }
 

@@ -24,9 +24,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
-
 	"github.com/go-ini/ini"
+
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqldsl"
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 // RunConfigCommand generates my.cnf, client.cnf and 10-dynamic.cnf files.
@@ -154,22 +155,22 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 	queries = append(queries, fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", toolsDbName))
 
 	// configure operator utility user
-	queries = append(queries, createUserQuery(cfg.OperatorUser, cfg.OperatorPassword, "%",
+	queries = append(queries, mysqldsl.CreateUserQuery(cfg.OperatorUser, cfg.OperatorPassword, "%",
 		[]string{"SUPER", "SHOW DATABASES", "PROCESS", "RELOAD", "CREATE", "SELECT"}, "*.*",
 		[]string{"ALL"}, fmt.Sprintf("%s.*", toolsDbName))...)
 
 	// configure orchestrator user
-	queries = append(queries, createUserQuery(cfg.OrchestratorUser, cfg.OrchestratorPassword, "%",
+	queries = append(queries, mysqldsl.CreateUserQuery(cfg.OrchestratorUser, cfg.OrchestratorPassword, "%",
 		[]string{"SUPER", "PROCESS", "REPLICATION SLAVE", "REPLICATION CLIENT", "RELOAD"}, "*.*",
 		[]string{"SELECT"}, "mysql.slave_master_info",
 		[]string{"SELECT", "CREATE"}, fmt.Sprintf("%s.%s", toolsDbName, toolsHeartbeatTableName))...)
 
 	// configure replication user
-	queries = append(queries, createUserQuery(cfg.ReplicationUser, cfg.ReplicationPassword, "%",
+	queries = append(queries, mysqldsl.CreateUserQuery(cfg.ReplicationUser, cfg.ReplicationPassword, "%",
 		[]string{"SELECT", "PROCESS", "RELOAD", "LOCK TABLES", "REPLICATION CLIENT", "REPLICATION SLAVE"}, "*.*")...)
 
 	// configure metrics exporter user
-	queries = append(queries, createUserQuery(cfg.MetricsUser, cfg.MetricsPassword, "127.0.0.1",
+	queries = append(queries, mysqldsl.CreateUserQuery(cfg.MetricsUser, cfg.MetricsPassword, "127.0.0.1",
 		[]string{"SELECT", "PROCESS", "REPLICATION CLIENT"}, "*.*",
 		[]string{"SELECT", "CREATE"}, fmt.Sprintf("%s.%s", toolsDbName, toolsHeartbeatTableName))...)
 
@@ -178,7 +179,7 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 	// configure heartbeat user
 	// because of pt-heartbeat make sure not to have ALL or SUPER privileges:
 	// https://github.com/percona/percona-toolkit/blob/e85ce15ef24bc4614b4d2f13792fa73583d68f8e/bin/pt-heartbeat#L6433
-	queries = append(queries, createUserQuery(cfg.HeartBeatUser, cfg.HeartBeatPassword, "127.0.0.1",
+	queries = append(queries, mysqldsl.CreateUserQuery(cfg.HeartBeatUser, cfg.HeartBeatPassword, "127.0.0.1",
 		[]string{"CREATE", "SELECT", "DELETE", "UPDATE", "INSERT"}, fmt.Sprintf("%s.%s", toolsDbName, toolsHeartbeatTableName),
 		[]string{"REPLICATION CLIENT"}, "*.*")...)
 
@@ -211,36 +212,4 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 	}
 
 	return []byte(strings.Join(queries, ";\n") + ";\n")
-}
-
-func createUserQuery(name, pass, host string, rights ...interface{}) []string {
-	user := fmt.Sprintf("%s@'%s'", name, host)
-
-	queries := []string{
-		fmt.Sprintf("DROP USER IF EXISTS %s", user),
-		fmt.Sprintf("CREATE USER %s", user),
-		fmt.Sprintf("ALTER USER %s IDENTIFIED BY '%s'", user, pass),
-	}
-
-	if len(rights)%2 != 0 {
-		panic("not a good number of parameters")
-	}
-	grants := []string{}
-	for i := 0; i < len(rights); i += 2 {
-		var (
-			right []string
-			on    string
-			ok    bool
-		)
-		if right, ok = rights[i].([]string); !ok {
-			panic("[right] not a good parameter")
-		}
-		if on, ok = rights[i+1].(string); !ok {
-			panic("[on] not a good parameter")
-		}
-		grant := fmt.Sprintf("GRANT %s ON %s TO %s", strings.Join(right, ", "), on, user)
-		grants = append(grants, grant)
-	}
-
-	return append(queries, grants...)
 }
