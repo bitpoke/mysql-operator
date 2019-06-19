@@ -84,3 +84,21 @@ func (sb *serviceBroker) getUtilityUserPassword(ctx context.Context, cluster *my
 
 	return "root", string(pass), nil
 }
+
+func (sb *serviceBroker) getMySQLClusterConn(ctx context.Context, instanceID string) (*mysqlcluster.MysqlCluster, connection, error) {
+	// get the MySQL cluster
+	cluster, err := sb.getClusterForID(ctx, instanceID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// establish a mysql connection
+	user, pass, err := sb.getUtilityUserPassword(ctx, cluster)
+	conn := newConnection(cluster, user, pass)
+
+	return cluster, conn, nil
+}
+
+func getBindUserAnnotation(bindID string) string {
+	return fmt.Sprintf("%s/%s", bindingUserAnnotationPath, bindID)
+}

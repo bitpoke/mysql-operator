@@ -20,8 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqldsl"
 	"net/http"
+	"strings"
 
 	broker "github.com/pivotal-cf/brokerapi"
 	brokerapi "github.com/pivotal-cf/brokerapi/domain"
@@ -32,17 +32,20 @@ import (
 	"github.com/presslabs/controller-util/rand"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqldsl"
 )
 
 var log = logf.Log.WithName("service-broker")
 
 const instanceIDLabel = "openservicebroker.presslabs.org/instanceID"
+const bindingUserAnnotationPath = "binding.openservicebroker.presslabs.org"
 
 // Server for service broker
 type Server struct {
@@ -71,7 +74,7 @@ type MySQLProvisionParameters struct {
 	Name string
 
 	// Replicas represents the number of nodes for MySQL cluster
-	Replicas int32
+	Replicas *int32
 
 	//MySQLVersion is the MySQL server version
 	MySQLVersion string
@@ -114,10 +117,13 @@ func (sb *serviceBroker) Provision(
 	}
 
 	err = sb.Client.Create(ctx, secret)
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		return spec, err
 	}
 
+	if len(params.Size) == 0 {
+		params.Size = "1Gi"
+	}
 	size, err := resource.ParseQuantity(params.Size)
 	if err != nil {
 		return spec, err
@@ -125,7 +131,7 @@ func (sb *serviceBroker) Provision(
 
 	clSpec := api.MysqlClusterSpec{}
 	clSpec.SecretName = secretName
-	clSpec.Replicas = &params.Replicas
+	clSpec.Replicas = params.Replicas
 	clSpec.MysqlVersion = params.MySQLVersion
 	clSpec.VolumeSpec = api.VolumeSpec{
 		PersistentVolumeClaim: &corev1.PersistentVolumeClaimSpec{
@@ -165,6 +171,10 @@ func (sb *serviceBroker) Deprovision(
 	// Get the provision parameters
 	cluster, err := sb.getClusterForID(ctx, instanceID)
 	if err != nil {
+		// if the cluster is not found then the deprovision is completed
+		if !strings.Contains(err.Error(), "no cluster found") {
+			return spec, nil
+		}
 		return spec, err
 	}
 
@@ -204,6 +214,17 @@ func (sb *serviceBroker) LastOperation(
 	instanceID string,
 	details brokerapi.PollDetails,
 ) (op brokerapi.LastOperation, err error) {
+
+	op.State = brokerapi.InProgress
+	cluster, err := sb.getClusterForID(ctx, instanceID)
+	if err != nil {
+		return op, err
+	}
+	ready := cluster.GetClusterCondition(api.ClusterConditionReady)
+	if ready != nil && ready.Status == corev1.ConditionTrue {
+		op.State = brokerapi.Succeeded
+		op.Description = ready.Message
+	}
 	return op, err
 }
 
@@ -223,24 +244,17 @@ func (sb *serviceBroker) Bind(
 	asyncAllowed bool,
 ) (binding brokerapi.Binding, err error) {
 
-	// get the MySQL cluster
-	cluster, err := sb.getClusterForID(ctx, instanceID)
+	// get the MySQL connection
+	cluster, conn, err := sb.getMySQLClusterConn(ctx, instanceID)
 	if err != nil {
 		return binding, err
 	}
 
-	// establish a mysql connection
-	user, pass, err := sb.getUtilityUserPassword(ctx, cluster)
-	conn := newConnection(cluster, user, pass)
-	err = conn.Open()
-	if err != nil {
+	// open the connection
+	if err = conn.Open(); err != nil {
 		return binding, err
 	}
-	defer func() {
-		if cErr := conn.Close(); cErr != nil {
-			log.Error(cErr, "mysql can't close connection")
-		}
-	}()
+	defer conn.Close()
 
 	// get bind details, parameters
 	params := MySQLBindParameters{}
@@ -265,12 +279,26 @@ func (sb *serviceBroker) Bind(
 
 	// create user
 	err = conn.RunQueries(ctx,
-		mysqldsl.CreateUserQuery(params.Database, uPass, "%",
+		mysqldsl.CreateUserQuery(params.User, uPass, "%",
 			[]string{"ALL"}, fmt.Sprintf("%s.*", params.Database)),
 	)
 	if err != nil {
 		return binding, err
 	}
+
+	binding.Credentials = map[string]string{
+		"USER":     params.User,
+		"PASSWORD": uPass,
+		"DATABASE": params.Database,
+	}
+
+	if cluster.Annotations == nil {
+		cluster.Annotations = map[string]string{}
+	}
+
+	// update cluster annotation
+	cluster.Annotations[getBindUserAnnotation(bindingID)] = params.User
+	err = sb.Client.Update(ctx, cluster.Unwrap())
 
 	return binding, err
 }
@@ -281,6 +309,39 @@ func (sb *serviceBroker) Unbind(
 	details brokerapi.UnbindDetails,
 	asyncAllowed bool,
 ) (spec brokerapi.UnbindSpec, err error) {
+
+	// bind operation is not async
+	spec.IsAsync = false
+
+	// get the MySQL connection
+	cluster, conn, err := sb.getMySQLClusterConn(ctx, instanceID)
+	if err != nil {
+		return spec, err
+	}
+
+	// open the connection
+	if err = conn.Open(); err != nil {
+		return spec, err
+	}
+	defer conn.Close()
+
+	user, ok := cluster.Annotations[getBindUserAnnotation(bindingID)]
+	if !ok {
+		log.Info("no bind user annotation find on cluster", "cluster", cluster.Name)
+		return spec, nil
+	}
+
+	err = conn.RunQueries(ctx, []string{
+		fmt.Sprintf("DROP USER %s", user),
+	})
+	if err != nil {
+		return spec, err
+	}
+
+	// remove cluster annotation
+	delete(cluster.Annotations, getBindUserAnnotation(bindingID))
+	err = sb.Client.Update(ctx, cluster.Unwrap())
+
 	return spec, err
 }
 
@@ -303,15 +364,6 @@ var _ brokerapi.ServiceBroker = &serviceBroker{}
 
 // NewBrokerServer returns a HTTP server with service broker API implemented
 func NewBrokerServer(addr string, mgr manager.Manager) *Server {
-	// h := brokerapi.New(
-	// 	&serviceBroker{Client: mgr.GetClient()},
-	// 	lager.NewZapAdapter("broker", zap.L()),
-	// 	brokerapi.BrokerCredentials{
-	// 		Username: "",
-	// 		Password: "",
-	// 	},
-	// )
-
 	router := mux.NewRouter()
 	broker.AttachRoutes(router, &serviceBroker{Client: mgr.GetClient()}, lager.NewZapAdapter("broker", zap.L()))
 
@@ -329,7 +381,7 @@ func NewBrokerServer(addr string, mgr manager.Manager) *Server {
 
 func (s *Server) log(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf(">>>>>>>>>>>>>>>>>>> %#v\n", r)
+		log.Info("new request", "request", r)
 		h(w, r)
 	}
 }

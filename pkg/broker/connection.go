@@ -27,7 +27,7 @@ import (
 
 type connection interface {
 	Open() error
-	Close() error
+	Close()
 	RunQueries(ctx context.Context, queries []string) error
 }
 
@@ -57,8 +57,10 @@ func (mc *mysqlConn) Open() error {
 	return nil
 }
 
-func (mc *mysqlConn) Close() error {
-	return mc.db.Close()
+func (mc *mysqlConn) Close() {
+	if err := mc.db.Close(); err != nil {
+		log.Error(err, "mysql can't close connection")
+	}
 }
 
 func (mc *mysqlConn) RunQueries(ctx context.Context, queries []string) error {
