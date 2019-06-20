@@ -140,7 +140,12 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 		if sErr := syncer.Sync(context.TODO(), s, r.recorder); sErr != nil {
 			return reconcile.Result{}, sErr
 		}
-		return reconcile.Result{}, fmt.Errorf("cluster not found: %s", err)
+
+		if uErr := r.updateBackup(savedBackup, backup); uErr != nil {
+			return reconcile.Result{}, uErr
+		}
+
+		return reconcile.Result{}, err
 	}
 
 	// set defaults for the backup base on the related cluster
