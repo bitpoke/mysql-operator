@@ -68,6 +68,13 @@ type Options struct {
 
 	// Namespace where to look after objects. This will limit the operator action range.
 	Namespace string
+
+	// ServiceBroker if or not to enable service broker API
+	ServiceBroker bool
+	// ServiceBrokerUser the basic auth user
+	ServiceBrokerUser string
+	// ServiceBrokerPassword the basic auth password
+	ServiceBrokerPassword string
 }
 
 type pullpolicy corev1.PullPolicy
@@ -140,6 +147,8 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&o.Namespace, "namespace", defaultNamespace,
 		"The namespace to restrict the client to watch objects.")
+
+	fs.BoolVar(&o.ServiceBroker, "service-broker", false, "Enable or disable service broker API.")
 }
 
 var instance *Options
@@ -174,5 +183,9 @@ func (o *Options) Validate() error {
 	if len(o.OrchestratorTopologyPassword) == 0 {
 		o.OrchestratorTopologyPassword = getFromEnvOrDefault("ORC_TOPOLOGY_PASSWORD", "")
 	}
+
+	o.ServiceBrokerUser = getFromEnvOrDefault("SERVICE_BROKER_USER", "")
+	o.ServiceBrokerPassword = getFromEnvOrDefault("SERVICE_BROKER_PASSWORD", "")
+
 	return nil
 }

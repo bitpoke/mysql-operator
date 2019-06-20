@@ -61,3 +61,15 @@ Create the name of the service account to use
 {{- define "mysql-operator.orc-service-name" -}}
 {{ include "mysql-operator.fullname" . }}-orc
 {{- end -}}
+
+{{- define "mysql-operator.service" -}}
+{{ include "mysql-operator.fullname" . }}
+{{- end -}}
+
+{{- define "mysql-operator.serviceBrokerURL" -}}
+http://{{ include "mysql-operator.fullname" . }}.{{ .Release.Namespace }}:{{ .Values.serviceBroker.port }}/
+{{- end -}}
+
+{{- define "mysql-operator.sb-secret-name" -}}
+{{ include "mysql-operator.fullname" . }}-broker
+{{- end -}}

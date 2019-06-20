@@ -1,0 +1,20 @@
+{{- if .Values.serviceBroker.enabled }}
+apiVersion: servicecatalog.k8s.io/v1beta1
+kind: ClusterServiceBroker
+metadata:
+  name: {{ template "mysql-operator.fullname" . }}-broker
+  labels:
+    app: {{ template "mysql-operator.name" . }}
+    chart: {{ template "mysql-operator.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  relistBehavior: Duration
+  relistRequests: 0
+  url: {{ template "mysql-operator.serviceBrokerURL" . }}
+  authInfo:
+    basic:
+      secretRef:
+        namespace: {{ .Release.Namespace }}
+        name: {{ template "mysql-operator.sb-secret-name" . }}
+{{- end }}

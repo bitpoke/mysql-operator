@@ -7,3 +7,7 @@ orchestrator:
   topologyPassword: password1
   antiAffinity: soft
   replicas: 1
+
+
+serviceBroker:
+  enabled: true

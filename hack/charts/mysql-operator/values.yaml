@@ -152,3 +152,11 @@ orchestrator:
       - "/usr/local/bin/orc-helper event '{failureClusterAlias}' 'OrcPostIntermediateMasterFailover' 'Failure type: {failureType}, failed hosts: {failedHost}, slaves: {countSlaves}' || true"
 
     # PostGracefulTakeoverProcesses:
+
+
+serviceBroker:
+  enabled: false
+  port: 8080
+
+  user: serviceBroker
+  # password: <random string>

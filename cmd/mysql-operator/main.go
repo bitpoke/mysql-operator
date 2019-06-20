@@ -98,9 +98,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := broker.AddToManager(mgr); err != nil {
-		log.Error(err, "unable to setup service broker server")
-		os.Exit(1)
+	if opt.ServiceBroker {
+		if err := broker.AddToManager(mgr); err != nil {
+			log.Error(err, "unable to setup service broker server")
+			os.Exit(1)
+		}
 	}
 
 	// Start the Cmd

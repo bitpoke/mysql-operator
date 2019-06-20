@@ -20,13 +20,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/presslabs/mysql-operator/pkg/options"
 	"net/http"
 	"strings"
 
 	broker "github.com/pivotal-cf/brokerapi"
 	brokerapi "github.com/pivotal-cf/brokerapi/domain"
 
-	"github.com/gorilla/mux"
 	logf "github.com/presslabs/controller-util/log"
 	"github.com/presslabs/controller-util/log/adapters/lager"
 	"github.com/presslabs/controller-util/rand"
@@ -364,25 +364,22 @@ var _ brokerapi.ServiceBroker = &serviceBroker{}
 
 // NewBrokerServer returns a HTTP server with service broker API implemented
 func NewBrokerServer(addr string, mgr manager.Manager) *Server {
-	router := mux.NewRouter()
-	broker.AttachRoutes(router, &serviceBroker{Client: mgr.GetClient()}, lager.NewZapAdapter("broker", zap.L()))
+	opt := options.GetOptions()
 
-	broker := &Server{}
-
-	httpServer := &http.Server{
-		Addr:    addr,
-		Handler: broker.log(router.ServeHTTP),
-	}
+	router := broker.New(
+		&serviceBroker{Client: mgr.GetClient()},
+		lager.NewZapAdapter("broker", zap.L()),
+		broker.BrokerCredentials{
+			Username: opt.ServiceBrokerUser,
+			Password: opt.ServiceBrokerPassword,
+		},
+	)
 
 	return &Server{
-		HTTPServer: httpServer,
-	}
-}
-
-func (s *Server) log(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info("new request", "request", r)
-		h(w, r)
+		HTTPServer: &http.Server{
+			Addr:    addr,
+			Handler: router,
+		},
 	}
 }
 

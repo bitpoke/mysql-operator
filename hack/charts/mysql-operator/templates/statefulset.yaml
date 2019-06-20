@@ -53,6 +53,9 @@ spec:
             {{- range $arg := .Values.extraArgs }}
             - {{ $arg }}
             {{- end }}
+            {{- if .Values.serviceBroker.enabled }}
+            - --service-broker
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           # TODO: add livenessProbe to controller
@@ -60,6 +63,17 @@ spec:
           #   httpGet:
           #     path: /health
           #     port: 80
+          {{- if .Values.serviceBroker.enabled }}
+          readinessProbe:
+            timeoutSeconds: 10
+            periodSeconds: 30
+            httpGet:
+              path: /v2/catalog
+              httpHeaders:
+                - name: X-Broker-API-Version
+                  value: "2.13"
+              port: {{ .Values.serviceBroker.port }}
+          {{- end }}
         - name: orchestrator
           image: {{ .Values.orchestrator.image }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
@@ -75,10 +89,22 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            - name: SERVICE_BROKER_USER
+              valueFrom:
+                secretKeyRef:
+                  key: username
+                  name: {{ template "mysql-operator.sb-secret-name" . }}
+            - name: SERVICE_BROKER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: {{ template "mysql-operator.sb-secret-name" . }}
           envFrom:
             - prefix: ORC_
               secretRef:
                 name: {{ template "mysql-operator.orc-secret-name" . }}
+            - secretRef:
+                name: {{ template "mysql-operator.sb-secret-name" . }}
           volumeMounts:
             - name: data
               mountPath: /var/lib/orchestrator/
