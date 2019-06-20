@@ -368,7 +368,10 @@ func NewBrokerServer(addr string, mgr manager.Manager) *Server {
 
 	router := broker.New(
 		&serviceBroker{Client: mgr.GetClient()},
+
+		// TODO: pass here the same logger
 		lager.NewZapAdapter("broker", zap.L()),
+
 		broker.BrokerCredentials{
 			Username: opt.ServiceBrokerUser,
 			Password: opt.ServiceBrokerPassword,

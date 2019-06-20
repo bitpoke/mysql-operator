@@ -94,6 +94,10 @@ func (sb *serviceBroker) getMySQLClusterConn(ctx context.Context, instanceID str
 
 	// establish a mysql connection
 	user, pass, err := sb.getUtilityUserPassword(ctx, cluster)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	conn := newConnection(cluster, user, pass)
 
 	return cluster, conn, nil
