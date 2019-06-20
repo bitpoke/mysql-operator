@@ -1,0 +1,11 @@
+[[constraint]]
+  branch = "master"
+  name = "github.com/bmizerany/assert"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/bmizerany/pat"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/net"

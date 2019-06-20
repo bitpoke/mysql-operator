@@ -64,6 +64,14 @@
   revision = "6480d4af844c189cf5dd913db24ddd339d3a4f85"
 
 [[projects]]
+  digest = "1:d93d3e39da3e961fd9451b3c70971ae9699db0fade147a0b7f4dd1296ef9f87e"
+  name = "github.com/drewolson/testflight"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "ab2d9a74b97eda058004c8deef80ac624432f408"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:0ffd93121f3971aea43f6a26b3eaaa64c8af20fb0ff0731087d8dab7164af5a8"
   name = "github.com/emicklei/go-restful"
   packages = [
@@ -1031,13 +1039,13 @@
   analyzer-version = 1
   input-imports = [
     "github.com/alecthomas/jsonschema",
+    "github.com/drewolson/testflight",
     "github.com/emicklei/go-restful",
     "github.com/go-ini/ini",
     "github.com/go-logr/logr",
     "github.com/go-sql-driver/mysql",
     "github.com/go-test/deep",
     "github.com/golang/glog",
-    "github.com/gorilla/mux",
     "github.com/imdario/mergo",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/config",

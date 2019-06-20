@@ -1,0 +1,7 @@
+language: go
+go:
+  - "1.10"
+before_script:
+  - go get -u golang.org/x/vgo
+script:
+  - $GOPATH/bin/vgo test -v ./...
