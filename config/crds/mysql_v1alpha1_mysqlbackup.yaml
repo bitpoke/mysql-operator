@@ -51,7 +51,8 @@ spec:
         status:
           properties:
             completed:
-              description: Complete marks the backup in final state
+              description: Completed indicates whether the backup is in a final state,
+                no matter whether its' corresponding job failed or succeeded
               type: boolean
             conditions:
               description: Conditions represents the backup resource conditions list.
