@@ -85,7 +85,8 @@ const (
 
 // MysqlBackupStatus defines the observed state of MysqlBackup
 type MysqlBackupStatus struct {
-	// Complete marks the backup in final state
+	// Completed indicates whether the backup is in a final state,
+	// no matter whether its' corresponding job failed or succeeded
 	Completed bool `json:"completed,omitempty"`
 	// Conditions represents the backup resource conditions list.
 	Conditions []BackupCondition `json:"conditions,omitempty"`
