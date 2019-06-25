@@ -8,7 +8,9 @@
 {{- $_ := set $conf "SQLite3DataFile" "/var/lib/orchestrator/orc.db" }}
 {{- $_ := set $conf "RaftEnabled" true }}
 {{- $_ := set $conf "RaftDataDir" "/var/lib/orchestrator" }}
-{{- $_ := set $conf "RaftBind" (printf "{{ .Env.HOSTNAME }}.%s-orc" $fullname) }}
+{{- $_ := set $conf "RaftAdvertise" "{{ .Env.HOSTNAME }}-svc" }}
+{{- $_ := set $conf "RaftBind" "{{ .Env.HOSTNAME }}"}}
+{{- $_ := set $conf "HTTPAdvertise" "http://{{ .Env.HOSTNAME }}-svc:80" }}
 {{- if eq 1 $replicas -}}
 {{- $_ := set $conf "RaftNodes" (list) }}
 {{- else -}}

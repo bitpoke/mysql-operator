@@ -46,7 +46,7 @@ Create the name of the service account to use
 {{- $fullname := include "mysql-operator.fullname" . -}}
 {{- $replicas := int .Values.replicas -}}
 {{- range $i := until $replicas -}}
-{{ $fullname }}-{{ $i }}.{{ $fullname }}-orc{{- if lt $i (sub $replicas 1) }},{{ end }}
+{{ $fullname }}-{{ $i }}-svc{{- if lt $i (sub $replicas 1) }},{{ end }}
 {{- end -}}
 {{- end -}}
 
@@ -60,4 +60,17 @@ Create the name of the service account to use
 
 {{- define "mysql-operator.orc-service-name" -}}
 {{ include "mysql-operator.fullname" . }}-orc
+{{- end -}}
+
+{{/*
+Common labels
+*/}}
+{{- define "mysql-operator.labels" -}}
+app.kubernetes.io/name: {{ include "mysql-operator.name" . }}
+helm.sh/chart: {{ include "mysql-operator.chart" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}

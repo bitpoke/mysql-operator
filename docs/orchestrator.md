@@ -17,10 +17,11 @@ The MySQL operator uses [orchestrator](https://github.com/github/orchestrator), 
 
 ## Access the orchestrator
 
-To connect to the orchestrator dashboard you have to point the orchestrator port 3000 to your local machine. Ensure it's a healthy pod if using raft:
+The service `<release-name>-mysql-operator` exposes port 80. Via this port you will be able to talk to the orchestrator leader.
+You can either port fowrwad this service to localhost, or use a service of type load balancer or enable the ingress.
 
 ```shell
-kubectl port-forward mysql-operator-orchestrator-0 3000
+kubectl port-forward service/<release-name>-mysql-operator 8080:80
 ```
 
 Then type `localhost:3000` in a browser.
