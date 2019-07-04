@@ -217,8 +217,6 @@ var mysqlCommonConfigs = map[string]string{
 	// CACHES AND LIMITS
 	"tmp-table-size":         "32M",
 	"max-heap-table-size":    "32M",
-	"query-cache-type":       "0",
-	"query-cache-size":       "0",
 	"max-connections":        "500",
 	"thread-cache-size":      "50",
 	"open-files-limit":       "65535",
