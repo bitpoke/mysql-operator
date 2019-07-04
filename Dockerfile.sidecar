@@ -55,7 +55,7 @@ RUN echo 'deb https://repo.percona.com/apt stretch main' > /etc/apt/sources.list
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        percona-toolkit percona-xtrabackup-24 unzip \
+        percona-toolkit percona-xtrabackup-80 unzip \
     && wget https://github.com/maxbube/mydumper/releases/download/v0.9.5/mydumper_0.9.5-2.stretch_amd64.deb \
     && dpkg -i mydumper_0.9.5-2.stretch_amd64.deb \
     && rm -rf mydumper_0.9.5-2.stretch_amd64.deb /var/lib/apt/lists/* \
