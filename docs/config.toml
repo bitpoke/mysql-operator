@@ -65,8 +65,13 @@ pygmentsStyle = "github"
   weight = 150
 
 [[menu.docs]]
-  name = "MySQL Cluster Backups"
+  name = "Getting started"
   weight = 1
+  url = "/getting-started/"
+
+[[menu.docs]]
+  name = "MySQL Cluster Backups"
+  weight = 2
   url = "/mysql-cluster-backups/"
 
 [[menu.docs]]
@@ -90,16 +95,11 @@ pygmentsStyle = "github"
   url = "/integrate-operator/"
 
 [[menu.docs]]
-  name = "Getting started"
-  weight = 2
-  url = "/getting-started/"
-
-[[menu.docs]]
   name = "MySQL Operator Upgrades"
   weight = 2
   url = "/operator-upgrades/"
 
 [[menu.docs]]
   name = "Accessing the Orchestrator"
-  weight = 2
+  weight = 3
   url = "/orchestrator/"

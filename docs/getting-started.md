@@ -6,7 +6,7 @@ categories: [mysql operator]
 keywords: [mysql operator, cluster, getting-started]
 toc: true
 related: true
-slug: mysql-operator
+slug: getting-started
 ---
 
 Deploying and using the MySQL operator requires for it to have access to a Kubernetes cluster and to
