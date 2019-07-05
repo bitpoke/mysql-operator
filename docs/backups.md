@@ -4,28 +4,21 @@ linktitle: Backups of a cluster
 description: MySQL operator provides effortless backups while keeping the cluster highly-available.
 categories: [mysql operator]
 keywords: [mysql operator]
-menu:
-  docs:
-    parent: "mysqloperator"
-weight: 2
-draft: false
-aliases: []
 toc: true
+related: true
+slug: mysql-cluster-backups
 ---
 
 Backups are stored on object storage services like S3 or Google Cloud Storage.
 
 In order to be able to store a backup, the secret defined under `backupBucketSecretName` must have
-the credentials to store those backups. The backups are uploaded using
-[Rclone](https://rclone.org/). The contents of the secret are used to generate a rclone.conf in
-[docker-entrypoint.sh](https://github.com/presslabs/mysql-operator/blob/master/hack/docker/sidecar-entrypoint.sh#L5).
+the credentials to store those backups. The backups are uploaded using [Rclone](https://rclone.org/). The contents of the secret are used to generate a rclone.conf in [docker-entrypoint.sh](https://github.com/presslabs/mysql-operator/blob/master/hack/docker/sidecar-entrypoint.sh#L5).
 
 ### Setup a backup on S3
 
 You need to specify the `backupBucketURL` for the cluster to an URL like `s3://BUCKET_NAME`, and a secret.
 
 Create a file named `example-backup-secret.yaml` and copy into it the following YAML code:
-
 
 ``` yaml
 apiVersion: v1
@@ -55,6 +48,7 @@ $ kubectl apply -f example-backup-secret.yaml
 ```
 
 ### Setup a backup to Google Cloud
+
 You need to specify the `backupBucketURL` for the cluster to an URL like `gs://BUCKET_NAME`, and a secret.
 
 Create a file named `example-backup-secret.yaml` and copy into it the following YAML code:
@@ -76,11 +70,12 @@ Then run this command:
 $ kubectl apply -f example-backup-secret.yaml
 ```
 
-{{% note %}}
-`GCS_SERVICE_ACCOUNT_JSON_KEY` and `GCS_PROJECT_ID` must be base64 encoded.
-{{% /note %}}
+> ###### NOTE
+>
+> `GCS_SERVICE_ACCOUNT_JSON_KEY` and `GCS_PROJECT_ID` must be base64 encoded.
 
 ### Setup a backup to Azure Blob Storage
+
 You need to specify the `backupBucketURL` for the cluster to an URL like `azure://STORAGE_ACCOUNT`, and a secret.
 
 Create a file named `example-backup-secret.yaml` and copy into it the following YAML code:
@@ -102,9 +97,9 @@ Then run this command:
 $ kubectl apply -f example-backup-secret.yaml
 ```
 
-{{% note %}}
-`AZUREBLOB_ACCOUNT` and `AZUREBLOB_KEY` must be base64 encoded.
-{{% /note %}}
+> ###### NOTE
+>
+> `AZUREBLOB_ACCOUNT` and `AZUREBLOB_KEY` must be base64 encoded.
 
 ### Requesting a backup
 
@@ -151,7 +146,8 @@ $ kubectl apply -f example-cluster.yaml
 ``` shell
 $ kubectl get mysqlbackup
 ```
->``` shell
+
+``` shell
 NAME                                  AGE
 my-cluster-backup                     1m
 my-cluster-auto-backup-20180402-1604  1d
@@ -162,7 +158,8 @@ my-cluster-auto-backup-20180402-1604  1d
 ``` shell
 $ kubectl describe backup my-cluster-backup
 ```
->``` shell
+
+``` shell
 ...
 Status:
   Completed:  true

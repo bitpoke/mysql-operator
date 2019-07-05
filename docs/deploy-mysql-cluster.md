@@ -4,13 +4,9 @@ linktitle: Deploy a MySQL cluster
 description: How to setup a cluster with MySQL operator.
 categories: [mysql operator, cluster]
 keywords: [mysql operator, cluster]
-menu:
-  docs:
-    parent: "mysqloperator"
-weight: 2
-draft: false
-aliases: []
 toc: true
+related: true
+slug: deploy-mysql-cluster
 ---
 
 How to deploy a MySQL cluster using the operator, after the operator is deployed as described in [getting started]({{< ref "./_index.md" >}}).
@@ -44,6 +40,8 @@ data:
 This secret contains information about the credentials used to connect to the cluster, like `ROOT_PASSWORD`, `USER`,
 `PASSWORD`, `DATABASE`. Note that once those fields are set, changing them will not reflect in the MySQL server because they are used only at cluster bootstrap.
 
+> ###### NOTE
+>
 > All secret fields must be base64 encoded.
 
 Moreover, the controller will add some extra fields into this secret with other internal credentials that are used, such as the orchestrator user, metrics exporter used, and so on.
@@ -66,6 +64,8 @@ spec:
 A more comprehensive YAML example can be found at
 [examples/examples-cluster.yaml](https://github.com/presslabs/mysql-operator/blob/master/examples/example-cluster.yaml).
 
+> ###### NOTE
+>
 > Make sure that the cluster name is not too long, otherwise the cluster will fail to register with the orchestrator. See issue [#170](https://github.com/presslabs/mysql-operator/issues/170) to learn more.
 
 To deploy the cluster, run the commands below which will generate a secret with credentials and the `MySQLCluster` resources into Kubernetes.
@@ -100,9 +100,10 @@ For more detailed information about cluster structure and configuration fields c
 ## Cluster data volume configuration
 
 Currently, for a cluster generated with the MySQL operator you can set one of the following volume sources for MySQL data:
- * Persistent Volume Claim
- * Host Path (represents an existing directory on the host)
- * Empty Dir (represents a temporary directory that shares a pod's lifetime).
+
+* Persistent Volume Claim
+* Host Path (represents an existing directory on the host)
+* Empty Dir (represents a temporary directory that shares a pod's lifetime).
 
 ### Persistent volume claim
 
@@ -121,7 +122,7 @@ spec:
       resources:
         requests:
           storage: 1Gi
-          
+
 ```
 
 If nothing is specified under the `volumeSpec` field, the cluster is created by default with a PVC of
@@ -131,6 +132,8 @@ Note that the Kubernetes cluster needs to have a default storage class configure
 documentation](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/),
 or just create a new storage class and specify it under `storageClassName` field in PVC specs.
 
+> ###### NOTE
+>
 > Some additional information related to this topic can be found on issue
 > [#168](https://github.com/presslabs/mysql-operator/issues/168).
 
@@ -154,7 +157,9 @@ spec:
 
 For more configuration details regarding`hostPath` go [here](https://godoc.org/k8s.io/api/core/v1#HostPathVolumeSource), and more information about `emptyDir` can be found [here](https://godoc.org/k8s.io/api/core/v1#EmptyDirVolumeSource).
 
-> NOTE that EmptyDir is not fully supported from version `v0.3.x` of the operator. Please use `hostPath` instead. See information about the known [issue](https://github.com/presslabs/mysql-operator/issues/250).
+> ###### NOTE
+>
+> Note that EmptyDir is not fully supported from version `v0.3.x` of the operator. Please use `hostPath` instead. See information about the known [issue](https://github.com/presslabs/mysql-operator/issues/250).
 
 ## Cluster MySQL configuration
 

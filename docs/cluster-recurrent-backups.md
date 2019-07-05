@@ -4,20 +4,14 @@ linktitle: Recurrent Backups for MySQL cluster
 description: MySQL operator provides effortless recurrent backups while keeping the cluster highly available.
 categories: [mysql operator]
 keywords: [mysql operator]
-menu:
-  docs:
-    parent: "mysqloperator"
-weight: 3
-draft: false
-aliases: []
 toc: true
+related: true
+slug: cluster-recurrent-backups
 ---
 
-
-In the [Backups]({{< ref "./backups.md" >}}) section we take backups on demand. However, a cluster can be configured to take recurrent backups. Also, a cluster can be initialized from an existing backup.
+In the [Backups](./backups.md) section we take backups on demand. However, a cluster can be configured to take recurrent backups. Also, a cluster can be initialized from an existing backup.
 
 To be able to store backups, the secret defined under `backupBucketSecretName` must contain the credentials needed to access the storage provider(e.g GCS, AWS, etc.)
-
 
 ### Setup recurrent backups for MySQL cluster
 
