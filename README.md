@@ -23,7 +23,13 @@ We welcome all contributions in the form of new issues for feature requests, bug
 
 ## Documentation
 
-More documentation can be found in [docs](docs/README.md)
+* [Getting started](docs/getting-started.md) provides an overview over deploying and using the MySQL operator
+* [Deploy a MySQL cluster](docs/deploy-mysql-cluster.md) describes in detail how a cluster can be installed and configured
+* [Configure backups](docs/backups.md) shows how to configure and take backups of a cluster
+* [Recurrent backups](docs/cluster-recurrent-backups.md) describes how to setup recurrent backups for the cluster
+* [Restore a cluster](docs/cluster-recover.md) explains how to restore a cluster from a backup
+* [How to integrate](docs/integrate-operator.md) the operator with your deployment setup. This presents a simple way of using the MySQL operator and helm to deploy your application
+* [Orchestrator](docs/orchestrator.md) shows you how to access the orchestrator for more details.
 
 ## Controller deploy
 
@@ -50,7 +56,7 @@ kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/mast
 kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/examples/example-cluster.yaml
 ```
 
-## Roadmap to v1.0 
+## Roadmap to v1.0
  - [ ] Integration with Google Cloud Marketplace, OperatorHub.io, AWS Marketplace
  - [ ] CRD Validation and webhooks
  - [ ] SSL support
@@ -58,11 +64,11 @@ kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/mast
  - [ ] Proxy SQL integration
  - [ ] Backup policies
  - [x] Physical backups
- - [x] HA [Orchestrator](https://github.com/github/orchestrator) integration 
+ - [x] HA [Orchestrator](https://github.com/github/orchestrator) integration
  - [x] [Prometheus](https://github.com/prometheus/prometheus) metrics exporter
  - [x] Lag mitigation
  - [x] Query limits
- 
+
 
 ## Tech considerations
 

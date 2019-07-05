@@ -4,13 +4,9 @@ linktitle: MySQL Operator Integration
 description: How to integrate the MySQL operator with your application.
 categories: [mysql operator]
 keywords: [mysql operator]
-menu:
-  docs:
-    parent: "mysqloperator"
-weight: 3
-draft: false
-aliases: []
 toc: true
+related: true
+slug: integrate-operator
 ---
 
 After cluster creation, you can update the provided secret with a new field named `DB_CONNECT_URL`
@@ -19,18 +15,15 @@ cluster endpoint. You can check the `_helper.tpl` file for more insights.
 
 The MySQL operator provides 3 services to access the nodes:
 
- * `<cluster_name>-mysql-master` is the service that points to the master node and this endpoint
-   should be used for writes. This service is usually used to construct the DSN.
-
- * `<cluster_name>-mysql` is the service that routes traffic to _all healthy_ nodes from the
-   cluster. You should use this endpoint for reads.
-
- * `mysql` is the service used internally to access all nodes within a namespace. You can use this
-   service to access a specific node (e.g. `<cluster_name>-mysql-0.mysql.<namespace>`)
+* `<cluster_name>-mysql-master` is the service that points to the master node and this endpoint
+ should be used for writes. This service is usually used to construct the DSN.
+* `<cluster_name>-mysql` is the service that routes traffic to _all healthy_ nodes from the
+ cluster. You should use this endpoint for reads.
+* `mysql` is the service used internally to access all nodes within a namespace. You can use this
+ service to access a specific node (e.g. `<cluster_name>-mysql-0.mysql.<namespace>`)
 
 We use helm to deploy our application into Kubernetes, so we updated our charts to use the MySQL
 operator to provide one cluster per application.
-
 
 ## Using Helm
 
@@ -39,9 +32,10 @@ chart for easy deployment of a MySQL cluster. The chart can be found in `pressla
 installed like the operator. Below is illustrated how this chart can be integrated with your
 application to provision a MySQL cluster.
 
-
 ### Add MySQL Cluster chart as dependency
+
 In your chart add in `requirements.yaml` under `dependencies` section the following:
+
 ```yaml
 dependencies:
   - name: mysql-cluster
@@ -54,13 +48,12 @@ dependencies:
 
 Once dependencies are configured run `helm dependency update` to fetch related charts.
 
-More information about chart requirements can be found in the official
-[documentation](https://docs.helm.sh/developing_charts/#managing-dependencies-with-requirements-yaml).
+More information about chart requirements can be found in the official [documentation](https://docs.helm.sh/developing_charts/#managing-dependencies-with-requirements-yaml).
 
 ### Configure your chart's values.yaml file
+
 You can configure the cluster by providing values under the `mysql` key. A comprehensive description
-can be found in the chart
-[`values.yaml`](https://github.com/presslabs/mysql-operator/blob/master/hack/charts/mysql-cluster/values.yaml)
+can be found in the chart [`values.yaml`](https://github.com/presslabs/mysql-operator/blob/master/hack/charts/mysql-cluster/values.yaml)
 file.
 
 ```yaml
@@ -73,10 +66,11 @@ mysql:
 ```
 
 ### Use into your application
-In your deployment add an environment variable that point to the `DB_CONNECT_URL` field from cluster
-secret named `{{ include "mysql-cluster.secretName" . }}`.
+
+In your deployment add an environment variable that point to the `DB_CONNECT_URL` field from cluster secret named `{{ include "mysql-cluster.secretName" . }}`.
 
 For example in the `deployment.yaml`:
+
 ```yaml
 spec:
   replicas: {{ .Values.replicaCount }}
@@ -93,5 +87,4 @@ spec:
                   key: DB_CONNECT_URL
 ```
 
-Now just modify your app to connect to the DSN that is provided into `DB_CONNECT_URL` environment
-variable.
+Now just modify your app to connect to the DSN that is provided into `DB_CONNECT_URL` environment variable.
