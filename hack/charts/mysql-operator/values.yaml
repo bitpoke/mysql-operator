@@ -2,7 +2,7 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicas: 3
+replicas: 1
 image: quay.io/presslabs/mysql-operator:latest
 sidecarImage: quay.io/presslabs/mysql-operator-sidecar:latest
 imagePullPolicy: IfNotPresent
