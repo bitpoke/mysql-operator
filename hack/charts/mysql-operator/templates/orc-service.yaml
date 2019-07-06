@@ -9,12 +9,12 @@ and for routing/proxying to the leader.
 apiVersion: v1
 kind: Service
 metadata:
-  name: "{{$fullName}}-{{$i}}-svc"
+  name: {{ $fullName }}-{{ $i }}-svc
   labels:
-    app: "{{$fullName}}"
-    chart: {{$chart}}
-    release: "{{ $.Release.Name }}"
-    heritage: "{{ $.Release.Service }}"
+    app: {{ $fullName }}
+    chart: {{ $chart }}
+    release: {{ $.Release.Name }}
+    heritage: {{ $.Release.Service }}
   annotations:
     service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
 spec:
@@ -27,14 +27,14 @@ spec:
     port: 10008
     targetPort: 10008
   selector:
-    statefulset.kubernetes.io/pod-name: {{$fullName}}-{{$i}}
+    statefulset.kubernetes.io/pod-name: {{ $fullName }}-{{ $i }}
 ---
 {{end}}
 {{/*{orchestrator will make sure that this service always talks to the leader}*/}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: "{{ template "mysql-operator.fullname" . }}"
+  name: {{ template "mysql-operator.fullname" . }}
   labels:
     app: {{ template "mysql-operator.name" . }}
     chart: {{ template "mysql-operator.chart" . }}
@@ -49,6 +49,6 @@ spec:
     port: {{ .Values.orchestrator.service.port }}
     protocol: TCP
     targetPort: 3000
-          {{- if .Values.orchestrator.service.nodePort }}
+    {{- if .Values.orchestrator.service.nodePort }}
     nodePort: {{ .Values.orchestrator.service.nodePort }}
-        {{- end }}
+    {{- end }}
