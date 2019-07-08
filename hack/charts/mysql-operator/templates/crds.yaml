@@ -32,6 +32,14 @@ metadata:
   annotations:
     helm.sh/hook: crd-install
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.replicas
+    description: The number of desired nodes
+    name: Replicas
+    type: integer
+  - JSONPath: .metadata.creationTimestamp
+    name: Age
+    type: date
   group: mysql.presslabs.org
   names:
     kind: MysqlCluster

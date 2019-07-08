@@ -48,7 +48,7 @@ bin/orc-helper_linux_amd64: $(shell hack/development/related-go-files.sh $(PKG_N
 skaffold-build: bin/mysql-operator_linux_amd64 bin/mysql-operator-sidecar_linux_amd64 bin/orc-helper_linux_amd64
 
 skaffold-run: skaffold-build
-	skaffold run
+	skaffold run --cache-artifacts=true
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet
