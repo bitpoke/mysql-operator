@@ -18,6 +18,7 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"github.com/presslabs/mysql-operator/pkg/options"
 	"strings"
 
 	"github.com/blang/semver"
@@ -190,6 +191,12 @@ func (c *MysqlCluster) GetMysqlImage() string {
 		return c.Spec.Image
 	}
 
+	// check if the user set some overrides
+	opt := options.GetOptions()
+	if img, ok := opt.MySQLVersionImageOverride[c.GetMySQLSemVer().String()]; ok {
+		return img
+	}
+
 	if img, ok := constants.MysqlImageVersions[c.GetMySQLSemVer().String()]; ok {
 		return img
 	}
@@ -212,5 +219,5 @@ func (c *MysqlCluster) UpdateSpec() {
 func (c *MysqlCluster) ShouldHaveInitContainerForMysql() bool {
 	expectedRange := semver.MustParseRange(">=5.7.26 <8.0.0 || >=8.0.15")
 
-	return strings.HasPrefix(c.GetMysqlImage(), "percona") && expectedRange(c.GetMySQLSemVer())
+	return strings.Contains(c.GetMysqlImage(), "percona") && expectedRange(c.GetMySQLSemVer())
 }

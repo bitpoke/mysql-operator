@@ -65,6 +65,10 @@ type Options struct {
 
 	// Namespace where to look after objects. This will limit the operator action range.
 	Namespace string
+
+	// MySQLVersionImageOverride define a map between MySQL version and image.
+	// This overrides the default versions and has priority.
+	MySQLVersionImageOverride map[string]string
 }
 
 type pullpolicy corev1.PullPolicy
@@ -89,7 +93,7 @@ func newPullPolicyValue(defaultValue corev1.PullPolicy, v *corev1.PullPolicy) *p
 }
 
 const (
-	defaultExporterImage = "prom/mysqld-exporter:latest"
+	defaultExporterImage = "prom/mysqld-exporter:v0.11.0"
 
 	defaultImagePullPolicy     = corev1.PullIfNotPresent
 	defaultImagePullSecretName = ""
@@ -134,6 +138,9 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&o.Namespace, "namespace", defaultNamespace,
 		"The namespace to restrict the client to watch objects.")
+
+	fs.StringToStringVar(&o.MySQLVersionImageOverride, "mysql-versions-to-image", map[string]string{},
+		"A map to override default image for different mysql versions.")
 }
 
 var instance *Options
