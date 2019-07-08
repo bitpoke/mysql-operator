@@ -140,7 +140,7 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 		"The namespace to restrict the client to watch objects.")
 
 	fs.StringToStringVar(&o.MySQLVersionImageOverride, "mysql-versions-to-image", map[string]string{},
-		"A map to override default image for different mysql versions.")
+		"A map to override default image for different mysql versions. Example: 5.7.23=mysql:5.7,5.7.24=mysql:5.7")
 }
 
 var instance *Options
