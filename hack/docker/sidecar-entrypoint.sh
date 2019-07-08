@@ -15,7 +15,12 @@ acl = ${AWS_ACL}
 storage_class = ${AWS_STORAGE_CLASS}
 [gs]
 type = google cloud storage
+project_number = ${GCS_PROJECT_ID}
+service_account_file = /tmp/google-credentials.json
 object_acl = ${GCS_OBJECT_ACL}
+bucket_acl = ${GCS_BUCKET_ACL}
+location =  ${GCS_LOCATION}
+storage_class = ${GCS_STORAGE_CLASS:-"MULTI_REGIONAL"}
 [http]
 type = http
 url = ${HTTP_URL}
@@ -25,10 +30,14 @@ account = ${AZUREBLOB_ACCOUNT}
 key = ${AZUREBLOB_KEY}
 EOF
 
-echo "Create google-credentials.json file."
-cat <<EOF > /tmp/google-credentials.json
-${GCS_SERVICE_ACCOUNT_JSON_KEY}
+if [[ -n "${GCS_SERVICE_ACCOUNT_JSON_KEY:-}" ]]; then 
+    echo "Create google-credentials.json file."
+    cat <<EOF > /tmp/google-credentials.json
+    ${GCS_SERVICE_ACCOUNT_JSON_KEY}
 EOF
+else 
+    touch /tmp/google-credentials.json
+fi
 
 SIDECAR_BIN=mysql-operator-sidecar
 VERBOSE="--debug"
