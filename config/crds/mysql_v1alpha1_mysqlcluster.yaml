@@ -7,6 +7,10 @@ metadata:
   name: mysqlclusters.mysql.presslabs.org
 spec:
   additionalPrinterColumns:
+  - JSONPath: .status.conditions[?(@.type == "Ready")].status
+    description: The cluster status
+    name: Ready
+    type: string
   - JSONPath: .spec.replicas
     description: The number of desired nodes
     name: Replicas
