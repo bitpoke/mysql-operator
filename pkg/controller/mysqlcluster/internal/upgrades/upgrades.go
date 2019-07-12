@@ -181,7 +181,7 @@ func (u *upgrader) checkNode0Ok(insts []orc.Instance) error {
 	node0 := u.getNodeFrom(insts, 0)
 	if node0 == nil {
 		// continue
-		log.Info("no node found in orchestraotr")
+		log.Info("no node found in orchestrator")
 		return fmt.Errorf("node-0 not found in orchestarotr")
 	}
 

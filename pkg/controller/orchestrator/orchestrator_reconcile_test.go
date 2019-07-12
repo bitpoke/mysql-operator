@@ -435,6 +435,18 @@ var _ = Describe("Orchestrator reconciler", func() {
 			Expect(insts).To(HaveLen(1))
 		})
 
+		It("should remove nodes from cluster status at scale down", func() {
+			// scale down the cluster
+			cluster.Spec.Replicas = &one
+			cluster.Status.ReadyNodes = 1
+
+			// call the function
+			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+			updater.removeNodeConditionNotInOrc(insts)
+
+			Expect(cluster.Status.Nodes).To(ConsistOf(hasNodeWithStatus(cluster.GetPodHostname(0))))
+		})
+
 		When("cluster is not ready", func() {
 			BeforeEach(func() {
 				cluster.Spec.Replicas = &two
@@ -488,6 +500,53 @@ var _ = Describe("Orchestrator reconciler", func() {
 		})
 
 	})
+
+	// NOTE: this test sute should be deleted in next major version
+	Describe("status updater unit tests at upgrade", func() {
+		var (
+			updater *orcUpdater
+		)
+
+		BeforeEach(func() {
+			updater = &orcUpdater{
+				cluster:   cluster,
+				recorder:  rec,
+				orcClient: orcClient,
+			}
+			// set cluster on readonly, master should be in read only state
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: oldPodHostname(cluster, 0)},
+				ReadOnly:    false, // mark node as master
+				// mark instance as uptodate
+				IsUpToDate:       true,
+				IsLastCheckValid: true,
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: oldPodHostname(cluster, 1)},
+				MasterKey:   orc.InstanceKey{Hostname: oldPodHostname(cluster, 0)},
+			})
+
+			// update cluster nodes status
+			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+			master, _ := orcClient.Master(cluster.GetClusterAlias())
+			updater.updateStatusFromOrc(insts, master)
+		})
+
+		It("should not remove nodes from cluster when upgrading", func() {
+			// scale down the cluster
+			cluster.Spec.Replicas = &one
+			cluster.Status.ReadyNodes = 1
+
+			// call the function
+			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+			updater.removeNodeConditionNotInOrc(insts)
+
+			// nothing should be remove
+			Expect(cluster.Status.Nodes).To(ConsistOf(hasNodeWithStatus(oldPodHostname(cluster, 0))))
+		})
+	})
 })
 
 // haveNodeCondWithStatus is a helper func that returns a matcher to check for an existing condition in a ClusterCondition list.
@@ -510,5 +569,15 @@ func haveCondWithStatus(condType api.ClusterConditionType, status core.Condition
 			"Reason": Equal(reason),
 		})),
 	})
+}
 
+func hasNodeWithStatus(host string) gomegatypes.GomegaMatcher {
+	return MatchFields(IgnoreExtras, Fields{
+		"Name": Equal(host),
+	})
+}
+
+func oldPodHostname(cluster *mysqlcluster.MysqlCluster, index int) string {
+	return fmt.Sprintf("%s-mysql-%d.%s.%s", cluster.Name, index, cluster.GetNameForResource(mysqlcluster.OldHeadlessSVC),
+		cluster.Namespace)
 }
