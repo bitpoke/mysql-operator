@@ -129,7 +129,10 @@ var _ = Describe("MysqlNode controller", func() {
 			By("create MySQL pod")
 			pod := getOrCreatePod(c, cluster, 0)
 			setPodPhase(c, pod, corev1.PodRunning)
+			// no event for create
+			// pod update as running
 			Eventually(requests).Should(Receive(Equal(expectedRequest(0))))
+			// pod update for pod conditions (NodeInitializedConditionType)
 			Eventually(requests).Should(Receive(Equal(expectedRequest(0))))
 		})
 
@@ -161,10 +164,12 @@ var _ = Describe("MysqlNode controller", func() {
 			pod1 := getOrCreatePod(c, cluster, 0)
 
 			// when pod is ready should not be triggered a reconcile event
+			By("update pod status to Pending")
 			setPodPhase(c, pod1, corev1.PodPending)
 			Consistently(requests).ShouldNot(Receive(Equal(expectedRequest(0))))
 
 			// mark pod running, should init node
+			By("update pod status to Running")
 			setPodPhase(c, pod1, corev1.PodRunning)
 			Eventually(requests).Should(Receive(Equal(expectedRequest(0))))
 
