@@ -208,7 +208,7 @@ function cmd_teardown {
 function cmd_test {
 
     # operator install
-    install_operator 0.2.7 presslabs/mysql-operator
+    install_operator 0.2.10 presslabs/mysql-operator
 
     # install a cluster with 2 replica
     CL_NAME=my-cluster

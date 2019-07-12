@@ -436,8 +436,12 @@ func (ou *orcUpdater) removeNodeConditionNotInOrc(insts InstancesSet) {
 	// remove nodes status for nodes that are not desired, nodes that are left behind from scale down
 	validIndex := 0
 	for _, ns := range ou.cluster.Status.Nodes {
-		// save only the nodes that are desired [0, 1, ..., replicas-1]
-		if indexInSts(ns.Name) < *ou.cluster.Spec.Replicas {
+		// save only the nodes that are desired [0, 1, ..., replicas-1] or if index can't be extracted
+		index, err := indexInSts(ns.Name)
+		if err != nil {
+			log.Info("failed to parse hostname for index - won't be removed", "error", err)
+		}
+		if index < *ou.cluster.Spec.Replicas || err != nil {
 			ou.cluster.Status.Nodes[validIndex] = ns
 			validIndex++
 		}
@@ -448,12 +452,15 @@ func (ou *orcUpdater) removeNodeConditionNotInOrc(insts InstancesSet) {
 }
 
 // indexInSts is a helper function that returns the index of the pod in statefulset
-func indexInSts(name string) int32 {
-	re := regexp.MustCompile(`^[\w-]+-mysql-(\d*)\.mysql\.[\w-]+$`)
+func indexInSts(name string) (int32, error) {
+	re := regexp.MustCompile(`^[\w-]+-mysql-(\d*)\.[\w-]*mysql(?:-nodes)?\.[\w-]+$`)
 	values := re.FindStringSubmatch(name)
+	if len(values) != 2 {
+		return 0, fmt.Errorf("no match found")
+	}
 
-	i, _ := strconv.Atoi(values[1])
-	return int32(i)
+	i, err := strconv.Atoi(values[1])
+	return int32(i), err
 }
 
 // set a host writable just if needed
