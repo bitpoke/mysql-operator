@@ -102,7 +102,7 @@ const (
 	defaultOrchestratorTopologyPassword = ""
 
 	defaultLeaderElectionNamespace = "default"
-	defaultLeaderElectionID        = ""
+	defaultLeaderElectionID        = "mysql-operator-leader-election"
 
 	defaultNamespace = ""
 )

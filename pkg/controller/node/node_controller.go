@@ -129,7 +129,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		// also the pod should not be initialized before and should be running because the init
 		// timeout is ~5s (see above) and the cluster status can become obsolete
 		UpdateFunc: func(evt event.UpdateEvent) bool {
-			log.Info("update event", "pod", evt.ObjectNew)
 			return isOwnedByMySQL(evt.MetaNew) && isRunning(evt.ObjectNew) && !isReady(evt.ObjectNew)
 		},
 
