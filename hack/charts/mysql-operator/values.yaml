@@ -60,7 +60,7 @@ orchestrator:
   image: quay.io/presslabs/mysql-operator-orchestrator:latest
 
   # orchestrator user and password to manage MySQL clusters
-  topologyUser: sys_orchestrator
+  topologyUser: orchestrator
   topologyPassword:  # this is empty and will be random generated if not specified
 
   resources:
@@ -105,7 +105,7 @@ orchestrator:
 
   # key value map of orchestrator conf directives.
   # see: https://github.com/github/orchestrator/blob/master/conf/orchestrator-sample.conf.json
-  # the following keys are manages and thus cannot be ovewritten:
+  # the following keys are manages and thus cannot be overwritten:
   #   - ListenAddress :3000
   #   - MySQLTopologyCredentialsConfigFile /orchestrator/conf/orc-topology.cnf
   #   - BackendDB sqlite

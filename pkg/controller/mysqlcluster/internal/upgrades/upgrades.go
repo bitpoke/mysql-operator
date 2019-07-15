@@ -33,6 +33,7 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 var log = logf.Log.WithName("upgrades.cluster")
@@ -69,14 +70,20 @@ func (u *upgrader) Run(ctx context.Context) error {
 		return err
 	}
 
+	// register old nodes in new orchestrator
+	for _, ns := range u.cluster.Status.Nodes {
+		if err = u.orcClient.Discover(ns.Name, constants.MysqlPort); err != nil {
+			log.Error(err, "failed to discover old hosts in new orchestrator - continue", "host", ns.Name)
+		}
+	}
+
+	// retrieve instances from orchestrator
 	insts, err := u.instancesFromOrc()
 	if err != nil {
 		return err
 	}
 
-	// more than 1 replica so there is the case when node 0 is slave so mark all other nodes as
-	// in maintenance except node 0.
-	// TODO: or set promotion rules
+	// more than 1 replica so there is the case when node 0 is slave so scale down to 1
 	if int(*sts.Spec.Replicas) > 1 {
 		one := int32(1)
 		sts.Spec.Replicas = &one
