@@ -10,6 +10,7 @@ pygmentsOptions = ""
 pygmentsUseClasses = true
 pygmentsUseClassic = false
 pygmentsStyle = "github"
+dataDir = "/site/data"
 
 [params]
   site_url = "https://www.presslabs.com/"

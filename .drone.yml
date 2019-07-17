@@ -158,33 +158,75 @@ pipeline:
     when:
       event: tag
 
+#
+# Documentation
+#
 
-  publish-documentation:
-    image: quay.io/presslabs/kluster-toolbox
-    pull: true
+  build-documentation:
+    image: gcr.io/pl-infra/hugo:latest
     environment:
-      - GH_USER=presslabs-bot
-      - GH_EMAIL=ping@presslabs.com
-      - CODE_DIR=/code
+      - HUGO_ENV=production
     commands:
-      - setup-github-credentials.sh
-      - git clone https://github.com/presslabs/code.git $CODE_DIR
-      # remove old docs and copy the new docs
-      - rm -rf $CODE_DIR/content/mysqloperator/*
-      - cp docs/* $CODE_DIR/content/mysqloperator/
-      # remove README.md because hugo does not ignore it and fails. This files contains github
-      # links.
-      - rm $CODE_DIR/content/mysqloperator/README.md
-      # commit changes if something to commit
-      - cd $CODE_DIR
-      - git add -A
-      - git diff-index --quiet HEAD || git commit -m "Update MySQL Operator documentation"
-      - git push origin master
+      - >
+        /hugo --config=/root/go/src/github.com/presslabs/mysql-operator/docs/config.toml
+        --themesDir=/site/themes
+        --contentDir=/root/go/src/github.com/presslabs/mysql-operator/docs
+        --destination=/root/go/docs/public
+      - cp /site/package.json /root/go/docs
+    when:
+      branch: master
+      event: push
+
+  site-clone-documentation:
+    image: quay.io/presslabs/kluster-toolbox
+    commands:
+      - /usr/local/bin/setup-github-credentials.sh
+      - git clone https://github.com/presslabs/presslabs.com /root/go/site
+      - cd /root/go/site
+      - git checkout prod
+      - git pull origin prod
     secrets:
       - GH_PASSWORD
+    environment:
+      - GH_USER=presslabs-bot
     when:
-      event: push
       branch: master
+      event: push
+
+  build-search-documentation:
+    image: node:10.13.0
+    secrets: [ALGOLIA_INDEX_NAME, ALGOLIA_APP_ID, ALGOLIA_ADMIN_KEY, ALGOLIA_SEARCH_KEY]
+    commands:
+      - node -v
+      - npm -v
+      - yarn --version
+      - cd /root/go/docs
+      - yarn config set cache-folder .yarn-cache
+      - yarn install --pure-lockfile
+      - yarn algolia
+      - mkdir -p /root/go/site/wp-content/root/docs/mysql-operator
+      - cp -r /root/go/docs/public/* /root/go/site/wp-content/root/docs/mysql-operator
+    when:
+      branch: master
+      event: push
+
+  deploy-documentation:
+    image: appleboy/drone-git-push
+    branch: prod
+    commit: true
+    commit.author.name: "Igor Debot MysqlOperator"
+    commit.author.email: "bot@presslabs.com"
+    path: /root/go/site
+    commit_message: >
+                    [docs] ${DRONE_COMMIT_MESSAGE}
+    remote: https://github.com/presslabs/presslabs.com
+    netrc.username: presslabs-bot
+    secrets:
+      - source: GH_TOKEN
+        target: DRONE_NETRC_PASSWORD
+    when:
+      branch: master
+      event: push
 
 #
 # end to end testing
