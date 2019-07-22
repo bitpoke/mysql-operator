@@ -18,12 +18,12 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"strings"
 
 	"github.com/imdario/mergo"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -261,10 +261,11 @@ func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
 
 	// add init container for MySQL if docker image supports this
 	if s.cluster.ShouldHaveInitContainerForMysql() {
-		initCs = append(initCs, s.ensureContainer(containerMySQLInitName,
+		mysqlInit := s.ensureContainer(containerMySQLInitName,
 			s.cluster.GetMysqlImage(),
-			[]string{},
-		))
+			[]string{})
+		mysqlInit.Resources = s.ensureResources(containerMySQLInitName)
+		initCs = append(initCs, mysqlInit)
 	}
 
 	return initCs
@@ -280,7 +281,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		Name:          MysqlPortName,
 		ContainerPort: MysqlPort,
 	})
-	mysql.Resources = s.cluster.Spec.PodSpec.Resources
+	mysql.Resources = s.ensureResources(containerMysqlName)
 	mysql.LivenessProbe = ensureProbe(60, 5, 5, core.Handler{
 		Exec: &core.ExecAction{
 			Command: []string{
@@ -314,7 +315,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		Name:          SidecarServerPortName,
 		ContainerPort: SidecarServerPort,
 	})
-	sidecar.Resources = ensureResources(containerSidecarName)
+	sidecar.Resources = s.ensureResources(containerSidecarName)
 	sidecar.ReadinessProbe = ensureProbe(30, 5, 5, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   SidecarServerProbePath,
@@ -338,7 +339,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		ContainerPort: ExporterPort,
 	})
 
-	exporter.Resources = ensureResources(containerExporterName)
+	exporter.Resources = s.ensureResources(containerExporterName)
 
 	exporter.LivenessProbe = ensureProbe(30, 30, 30, core.Handler{
 		HTTPGet: &core.HTTPGetAction{
@@ -364,7 +365,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			"--fail-successive-errors=20",
 		},
 	)
-	heartbeat.Resources = ensureResources(containerHeartBeatName)
+	heartbeat.Resources = s.ensureResources(containerHeartBeatName)
 
 	containers := []core.Container{
 		mysql,
@@ -388,7 +389,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			command,
 		)
 
-		killer.Resources = ensureResources(containerKillerName)
+		killer.Resources = s.ensureResources(containerKillerName)
 
 		containers = append(containers, killer)
 	}
@@ -410,7 +411,7 @@ func (s *sfsSyncer) ensureVolumes() []core.Volume {
 	} else if s.cluster.Spec.VolumeSpec.EmptyDir != nil {
 		dataVolume.EmptyDir = s.cluster.Spec.VolumeSpec.EmptyDir
 	} else {
-		log.Error(nil, "no volume spec is specified", ".spec.volumeSpec", s.cluster.Spec.VolumeSpec)
+		log.Info("no volume spec is specified", ".spec.volumeSpec", s.cluster.Spec.VolumeSpec)
 	}
 
 	return []core.Volume{
@@ -526,6 +527,30 @@ func (s *sfsSyncer) getLabels(extra map[string]string) map[string]string {
 	return defaultsLabels
 }
 
+func (s *sfsSyncer) ensureResources(name string) core.ResourceRequirements {
+	limits := core.ResourceList{
+		core.ResourceCPU:    resource.MustParse("100m"),
+		core.ResourceMemory: resource.MustParse("1Gi"),
+	}
+	requests := core.ResourceList{
+		core.ResourceCPU: resource.MustParse("30m"),
+	}
+
+	switch name {
+	case containerExporterName:
+		limits = core.ResourceList{
+			core.ResourceCPU: resource.MustParse("100m"),
+		}
+	case containerMySQLInitName, containerMysqlName:
+		return s.cluster.Spec.PodSpec.Resources
+	}
+
+	return core.ResourceRequirements{
+		Limits:   limits,
+		Requests: requests,
+	}
+}
+
 func ensureVolume(name string, source core.VolumeSource) core.Volume {
 	return core.Volume{
 		Name:         name,
@@ -588,25 +613,4 @@ func ensureProbe(delay, timeout, period int32, handler core.Handler) *core.Probe
 
 func ensurePorts(ports ...core.ContainerPort) []core.ContainerPort {
 	return ports
-}
-
-func ensureResources(name string) core.ResourceRequirements {
-	limits := core.ResourceList{
-		core.ResourceCPU: resource.MustParse("50m"),
-	}
-	requests := core.ResourceList{
-		core.ResourceCPU: resource.MustParse("10m"),
-	}
-
-	switch name {
-	case containerExporterName:
-		limits = core.ResourceList{
-			core.ResourceCPU: resource.MustParse("100m"),
-		}
-	}
-
-	return core.ResourceRequirements{
-		Limits:   limits,
-		Requests: requests,
-	}
 }
