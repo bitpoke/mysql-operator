@@ -12,7 +12,7 @@ yq d -d'*' -i ${CHART_PATH}/templates/_crds.yaml status
 yq d -d'*' -i ${CHART_PATH}/templates/_crds.yaml spec.validation
 
 # add shortName to CRD until https://github.com/kubernetes-sigs/kubebuilder/issues/404 is solved
-yq w -d1 -i ${CHART_PATH}/templates/_crds.yaml 'spec.names.shortNames[0]' mysql
+yq w -d1 -i ${CHART_PATH}/templates/_crds.yaml 'spec.names.shortNames[+]' mysql
 
 
 echo '{{- if (and .Values.installCRDs (not (.Capabilities.APIVersions.Has "mysql.presslabs.org/v1alpha1"))) }}' > ${CHART_PATH}/templates/crds.yaml
