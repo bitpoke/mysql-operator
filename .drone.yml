@@ -162,68 +162,14 @@ pipeline:
 # Documentation
 #
 
-  build-documentation:
-    image: gcr.io/pl-infra/hugo:latest
-    environment:
-      - HUGO_ENV=production
-    commands:
-      - >
-        /hugo --config=/root/go/src/github.com/presslabs/mysql-operator/docs/config.toml
-        --themesDir=/site/themes
-        --contentDir=/root/go/src/github.com/presslabs/mysql-operator/docs
-        --destination=/root/go/docs/public
-      - cp /site/package.json /root/go/docs
-    when:
-      branch: master
-      event: push
-
-  site-clone-documentation:
-    image: quay.io/presslabs/kluster-toolbox
-    commands:
-      - /usr/local/bin/setup-github-credentials.sh
-      - git clone https://github.com/presslabs/presslabs.com /root/go/site
-      - cd /root/go/site
-      - git checkout prod
-      - git pull origin prod
+  trigger-docs-build:
+    image: plugins/downstream
+    server: https://drone.presslabs.net
+    fork: true
     secrets:
-      - GH_PASSWORD
-    environment:
-      - GH_USER=presslabs-bot
-    when:
-      branch: master
-      event: push
-
-  build-search-documentation:
-    image: node:10.13.0
-    secrets: [ALGOLIA_INDEX_NAME, ALGOLIA_APP_ID, ALGOLIA_ADMIN_KEY, ALGOLIA_SEARCH_KEY]
-    commands:
-      - node -v
-      - npm -v
-      - yarn --version
-      - cd /root/go/docs
-      - yarn config set cache-folder .yarn-cache
-      - yarn install --pure-lockfile
-      - yarn algolia
-      - mkdir -p /root/go/site/wp-content/root/docs/mysql-operator
-      - cp -r /root/go/docs/public/* /root/go/site/wp-content/root/docs/mysql-operator
-    when:
-      branch: master
-      event: push
-
-  deploy-documentation:
-    image: appleboy/drone-git-push
-    branch: prod
-    commit: true
-    commit.author.name: "Igor Debot MysqlOperator"
-    commit.author.email: "bot@presslabs.com"
-    path: /root/go/site
-    commit_message: >
-                    [docs] ${DRONE_COMMIT_MESSAGE}
-    remote: https://github.com/presslabs/presslabs.com
-    netrc.username: presslabs-bot
-    secrets:
-      - source: GH_TOKEN
-        target: DRONE_NETRC_PASSWORD
+      - DRONE_TOKEN
+    repositories:
+      - presslabs/docs
     when:
       branch: master
       event: push
