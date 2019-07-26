@@ -529,8 +529,7 @@ func (s *sfsSyncer) getLabels(extra map[string]string) map[string]string {
 
 func (s *sfsSyncer) ensureResources(name string) core.ResourceRequirements {
 	limits := core.ResourceList{
-		core.ResourceCPU:    resource.MustParse("100m"),
-		core.ResourceMemory: resource.MustParse("1Gi"),
+		core.ResourceCPU: resource.MustParse("100m"),
 	}
 	requests := core.ResourceList{
 		core.ResourceCPU: resource.MustParse("30m"),
