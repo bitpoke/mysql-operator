@@ -32,8 +32,18 @@ Create chart name and version as used by the chart label.
 {{- end -}}
 
 {{- define "mysql-cluster.dbConnectURL" -}}
-mysql://{{- urlquery .Values.appUser -}}:{{- urlquery .Values.appPassword -}}@
-{{- include "mysql-cluster.clusterName" . -}}-mysql-master:3306/{{- .Values.appDatabase -}}
+mysql://
+{{- if .Values.appUser -}}
+    {{ urlquery .Values.appUser -}}
+    {{- if .Values.appPassword -}}
+        :{{ urlquery .Values.appPassword }}
+    {{- end -}}
+@
+{{- end -}}
+{{- include "mysql-cluster.clusterName" . -}}-mysql-master:3306
+{{- if .Values.appDatabase -}}
+/{{- .Values.appDatabase -}}
+{{- end -}}
 {{- end -}}
 
 {{- define "mysql-cluster.clusterName" -}}

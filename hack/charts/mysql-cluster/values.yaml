@@ -5,11 +5,11 @@
 ## The cluster number of nodes
 replicas: 1
 
-## MySQL connect credentials, thoses credentials will be provisioned in the cluster
-# rootPassword:
-# appUser:
-# appPassword:
-# appDatabase:
+## MySQL connect credentials, those credentials will be provisioned in the cluster
+rootPassword: ""
+appUser: ""
+appPassword: ""
+appDatabase: ""
 
 podSpec:
 mysqlConf:
