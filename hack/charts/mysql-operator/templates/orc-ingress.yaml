@@ -5,7 +5,7 @@ kind: Ingress
 metadata:
   name: {{ $fullName }}
   labels:
-    {{ include "mysql-operator.labels" . | indent 4 }}
+{{ include "mysql-operator.labels" . | indent 4 }}
     {{- with .Values.orchestrator.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
