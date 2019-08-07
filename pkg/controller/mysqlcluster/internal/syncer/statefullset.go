@@ -240,7 +240,7 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 	}
 
 	// set MySQL root and application credentials
-	if name == containerMySQLInitName || !s.cluster.ShouldHaveInitContainerForMysql() && name == containerMySQLInitName {
+	if name == containerMySQLInitName || (!s.cluster.ShouldHaveInitContainerForMysql() && name == containerMysqlName) {
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_ROOT_PASSWORD", "ROOT_PASSWORD", false))
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_USER", "USER", true))
 		env = append(env, s.envVarFromSecret(sctName, "MYSQL_PASSWORD", "PASSWORD", true))
