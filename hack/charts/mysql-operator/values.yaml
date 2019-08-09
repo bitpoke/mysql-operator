@@ -3,8 +3,8 @@
 # Declare variables to be passed into your templates.
 
 replicas: 1
-image: quay.io/presslabs/mysql-operator:latest
-sidecarImage: quay.io/presslabs/mysql-operator-sidecar:latest
+image: quay.io/presslabs/mysql-operator:0.3.2
+sidecarImage: quay.io/presslabs/mysql-operator-sidecar:0.3.2
 imagePullPolicy: IfNotPresent
 
 # whether or not to install CRDs
@@ -57,7 +57,7 @@ rbac:
   serviceAccountName: default
 
 orchestrator:
-  image: quay.io/presslabs/mysql-operator-orchestrator:latest
+  image: quay.io/presslabs/mysql-operator-orchestrator:0.3.2
 
   # orchestrator user and password to manage MySQL clusters
   topologyUser: orchestrator
@@ -150,7 +150,7 @@ orchestrator:
     # for more information about template: https://github.com/github/orchestrator/blob/master/go/logic/topology_recovery.go#L256
     ProcessesShellCommand: "sh"
 
-    OnFailureDetectionProcesses: 
+    OnFailureDetectionProcesses:
       - "/usr/local/bin/orc-helper event -w '{failureClusterAlias}' 'OrcFailureDetection' 'Failure: {failureType}, failed host: {failedHost}, lost replcas: {lostReplicas}' || true"
       - "/usr/local/bin/orc-helper failover-in-progress '{failureClusterAlias}' '{failureDescription}' || true"
 
