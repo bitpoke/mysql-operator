@@ -26,16 +26,14 @@ var _ = Describe("Test sidecar appconf", func() {
 	It("should create the right query for users", func() {
 		Expect(createUserQuery("uName", "uPass", "%")).To(ConsistOf(
 			"DROP USER IF EXISTS uName@'%'",
-			"CREATE USER uName@'%'",
-			"ALTER USER uName@'%' IDENTIFIED BY 'uPass'",
+			"CREATE USER uName@'%' IDENTIFIED BY 'uPass'",
 		))
 	})
 
 	It("should create the right query for users with grants", func() {
 		Expect(createUserQuery("uName", "uPass", "%", []string{"SELECT", "SUPER"}, "*.*")).To(ConsistOf(
 			"DROP USER IF EXISTS uName@'%'",
-			"CREATE USER uName@'%'",
-			"ALTER USER uName@'%' IDENTIFIED BY 'uPass'",
+			"CREATE USER uName@'%' IDENTIFIED BY 'uPass'",
 			"GRANT SELECT, SUPER ON *.* TO uName@'%'",
 		))
 	})
@@ -43,8 +41,7 @@ var _ = Describe("Test sidecar appconf", func() {
 	It("should create the right query for users with grants", func() {
 		Expect(createUserQuery("uName", "uPass", "%", []string{"SELECT"}, "*.*", []string{"SUPER"}, "a.b")).To(ConsistOf(
 			"DROP USER IF EXISTS uName@'%'",
-			"CREATE USER uName@'%'",
-			"ALTER USER uName@'%' IDENTIFIED BY 'uPass'",
+			"CREATE USER uName@'%' IDENTIFIED BY 'uPass'",
 			"GRANT SELECT ON *.* TO uName@'%'",
 			"GRANT SUPER ON a.b TO uName@'%'",
 		))
