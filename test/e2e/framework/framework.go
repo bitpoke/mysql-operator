@@ -88,11 +88,11 @@ func (f *Framework) BeforeEach() {
 	Expect(err).NotTo(HaveOccurred())
 
 	if !f.SkipNamespaceCreation {
-		By("create a namespace api object")
 		namespace, err := f.CreateNamespace(map[string]string{
 			"e2e-framework": f.BaseName,
 		})
 		Expect(err).NotTo(HaveOccurred())
+		By(fmt.Sprintf("create a namespace api object (%s)", namespace.Name))
 
 		f.Namespace = namespace
 	}

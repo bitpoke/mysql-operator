@@ -218,8 +218,7 @@ func createUserQuery(name, pass, host string, rights ...interface{}) []string {
 
 	queries := []string{
 		fmt.Sprintf("DROP USER IF EXISTS %s", user),
-		fmt.Sprintf("CREATE USER %s", user),
-		fmt.Sprintf("ALTER USER %s IDENTIFIED BY '%s'", user, pass),
+		fmt.Sprintf("CREATE USER %s IDENTIFIED BY '%s'", user, pass),
 	}
 
 	if len(rights)%2 != 0 {
