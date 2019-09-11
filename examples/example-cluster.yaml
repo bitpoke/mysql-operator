@@ -21,9 +21,7 @@ spec:
 
 
   ## Configs that will be added to my.cnf for cluster
-  mysqlConf:
-    query-cache-type: "0"
-    query-cache-size: "0"
+  # mysqlConf:
   #   innodb-buffer-size: 128M
 
 
