@@ -166,7 +166,7 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 
 	// configure replication user
 	queries = append(queries, createUserQuery(cfg.ReplicationUser, cfg.ReplicationPassword, "%",
-		[]string{"SELECT", "PROCESS", "RELOAD", "LOCK TABLES", "REPLICATION CLIENT", "REPLICATION SLAVE", "BACKUP_ADMIN"}, "*.*")...)
+		[]string{"SELECT", "PROCESS", "RELOAD", "LOCK TABLES", "REPLICATION CLIENT", "REPLICATION SLAVE"}, "*.*")...)
 
 	// configure metrics exporter user
 	queries = append(queries, createUserQuery(cfg.MetricsUser, cfg.MetricsPassword, "127.0.0.1",
