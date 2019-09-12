@@ -46,8 +46,7 @@ RUN echo 'deb https://repo.percona.com/apt buster main' > /etc/apt/sources.list.
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        percona-toolkit percona-xtrabackup-24 unzip default-mysql-client
-
+        percona-toolkit percona-xtrabackup-80 unzip default-mysql-client
 
 USER mysql
 
