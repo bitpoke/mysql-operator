@@ -96,7 +96,15 @@ func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
 	cfg := ini.Empty()
 	sec := cfg.Section("mysqld")
 
-	addKVConfigsToSection(sec, getMysqlMasterSlaveConfigs(), cluster.Spec.MysqlConf)
+	// common configs
+	addKVConfigsToSection(sec, convertMapToKVConfig(mysqlCommonConfigs), cluster.Spec.MysqlConf)
+	if cluster.GetMySQLSemVer().Major == 5 {
+		addKVConfigsToSection(sec, convertMapToKVConfig(mysql5xConfigs))
+	} else if cluster.GetMySQLSemVer().Major == 8 {
+		addKVConfigsToSection(sec, convertMapToKVConfig(mysql8xConfigs))
+	}
+
+	// boolean configs
 	addBConfigsToSection(sec, mysqlMasterSlaveBooleanConfigs)
 
 	// include configs from /etc/mysql/conf.d/*.cnf
@@ -114,10 +122,10 @@ func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
 
 }
 
-func getMysqlMasterSlaveConfigs() map[string]intstr.IntOrString {
+func convertMapToKVConfig(m map[string]string) map[string]intstr.IntOrString {
 	config := make(map[string]intstr.IntOrString)
 
-	for key, value := range mysqlMasterSlaveConfigs {
+	for key, value := range m {
 		config[key] = intstr.Parse(value)
 	}
 
@@ -171,8 +179,8 @@ func writeConfigs(cfg *ini.File) (string, error) {
 	return buf.String(), nil
 }
 
-// mysqlMasterSlaveConfigs represents the configuration that mysql-operator needs by default
-var mysqlMasterSlaveConfigs = map[string]string{
+// mysqlCommonConfigs represents the configuration that mysql-operator needs by default
+var mysqlCommonConfigs = map[string]string{
 	"log-bin":           "/var/lib/mysql/mysql-bin",
 	"log-slave-updates": "on",
 
@@ -197,14 +205,12 @@ var mysqlMasterSlaveConfigs = map[string]string{
 	// Safety
 	"max-allowed-packet": "16M",
 	"max-connect-errors": "1000000",
-	"sql-mode": "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER," +
-		"NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
-	"sysdate-is-now": "1",
+
+	"sysdate-is-now":     "1",
 
 	// Binary logging
-	"expire-logs-days": "14",
-	"sync-binlog":      "1",
-	"binlog-format":    "ROW",
+	"sync-binlog":   "1",
+	"binlog-format": "ROW",
 
 	// CACHES AND LIMITS
 	"tmp-table-size":         "32M",
@@ -225,6 +231,25 @@ var mysqlMasterSlaveConfigs = map[string]string{
 
 	"character-set-server": "utf8mb4",
 	"collation-server":     "utf8mb4_unicode_ci",
+}
+
+var mysql5xConfigs = map[string]string{
+	"query-cache-type": "0",
+	"query-cache-size": "0",
+	"sql-mode": "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER," +
+		"NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
+
+	"expire-logs-days": "14",
+}
+
+var mysql8xConfigs = map[string]string{
+	"sql-mode": "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION," +
+		"NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
+
+	"binlog_expire_logs_seconds": "1209600", // 14 days = 14 * 24 * 60 * 60
+
+	// use 5.7 auth plugin to be backward compatible
+	"default-authentication-plugin": "mysql_native_password",
 }
 
 var mysqlMasterSlaveBooleanConfigs = []string{

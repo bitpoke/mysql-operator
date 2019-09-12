@@ -27,6 +27,7 @@ import (
 	// add mysql driver
 	_ "github.com/go-sql-driver/mysql"
 
+	"github.com/blang/semver"
 	"github.com/presslabs/controller-util/rand"
 
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
@@ -98,6 +99,9 @@ type Config struct {
 
 	// InitFileExtraSQL is a list of extra sql commands to append to init_file.
 	InitFileExtraSQL []string
+
+	// MySQLVersion represents the current mysql version
+	MySQLVersion semver.Version
 }
 
 // FQDNForServer returns the pod hostname for given MySQL server id
@@ -252,6 +256,8 @@ func NewConfig() *Config {
 		XtrabackupTargetDir:        getEnvValue("XTRABACKUP_TARGET_DIR"),
 
 		InitFileExtraSQL: strings.Split(getEnvValue("INITFILE_EXTRA_SQL"), ";"),
+
+		MySQLVersion: semver.MustParse(getEnvValue("MY_MYSQL_VERSION")),
 	}
 
 	return cfg
