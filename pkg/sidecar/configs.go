@@ -27,6 +27,7 @@ import (
 	// add mysql driver
 	_ "github.com/go-sql-driver/mysql"
 
+	"github.com/blang/semver"
 	"github.com/presslabs/controller-util/rand"
 
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
@@ -72,6 +73,9 @@ type Config struct {
 
 	// ExistsMySQLData checks if MySQL data is initialized by checking if the mysql dir exists
 	ExistsMySQLData bool
+
+	// MySQLVersion represents the current mysql version
+	MySQLVersion semver.Version
 }
 
 // FQDNForServer returns the pod hostname for given MySQL server id
@@ -151,6 +155,8 @@ func NewConfig() *Config {
 		HeartBeatPassword: hbPass,
 
 		ExistsMySQLData: eData,
+
+		MySQLVersion: semver.MustParse(getEnvValue("MY_MYSQL_VERSION")),
 	}
 
 	return cfg

@@ -165,8 +165,13 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 		[]string{"SELECT", "CREATE"}, fmt.Sprintf("%s.%s", toolsDbName, toolsHeartbeatTableName))...)
 
 	// configure replication user
+	replPermissions := []string{"SELECT", "PROCESS", "RELOAD", "LOCK TABLES", "REPLICATION CLIENT", "REPLICATION SLAVE"}
+	if cfg.MySQLVersion.Major == 8 {
+		// if it's a mysql 8 then the backup user needs BACKUP_ADMIN permissions to take backups
+		replPermissions = append(replPermissions, "BACKUP_ADMIN")
+	}
 	queries = append(queries, createUserQuery(cfg.ReplicationUser, cfg.ReplicationPassword, "%",
-		[]string{"SELECT", "PROCESS", "RELOAD", "LOCK TABLES", "REPLICATION CLIENT", "REPLICATION SLAVE", "BACKUP_ADMIN"}, "*.*")...)
+		replPermissions, "*.*")...)
 
 	// configure metrics exporter user
 	queries = append(queries, createUserQuery(cfg.MetricsUser, cfg.MetricsPassword, "127.0.0.1",
@@ -189,7 +194,7 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 	queries = append(queries, fmt.Sprintf(
 		"CREATE TABLE IF NOT EXISTS %[1]s.%[2]s ("+
 			"  name varchar(64) PRIMARY KEY,"+
-			"  value varchar(512) NOT NULL\n)",
+			"  value varchar(512) NOT NULL )",
 		constants.OperatorDbName, constants.OperatorStatusTableName))
 
 	// mark node as not configured at startup, the operator will mark it configured
