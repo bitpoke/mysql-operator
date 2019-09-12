@@ -24,9 +24,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
-
 	"github.com/go-ini/ini"
+
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 // RunConfigCommand generates my.cnf, client.cnf and 10-dynamic.cnf files.
@@ -169,8 +169,13 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 		[]string{"SELECT", "CREATE"}, fmt.Sprintf("%s.%s", toolsDbName, toolsHeartbeatTableName))...)
 
 	// configure replication user
+	replPermissions := []string{"SELECT", "PROCESS", "RELOAD", "LOCK TABLES", "REPLICATION CLIENT", "REPLICATION SLAVE"}
+	if cfg.MySQLVersion.Major == 8 {
+		// if it's a mysql 8 then the backup user needs BACKUP_ADMIN permissions to take backups
+		replPermissions = append(replPermissions, "BACKUP_ADMIN")
+	}
 	queries = append(queries, createUserQuery(cfg.ReplicationUser, cfg.ReplicationPassword, "%",
-		[]string{"SELECT", "PROCESS", "RELOAD", "LOCK TABLES", "REPLICATION CLIENT", "REPLICATION SLAVE"}, "*.*")...)
+		replPermissions, "*.*")...)
 
 	// configure metrics exporter user
 	queries = append(queries, createUserQuery(cfg.MetricsUser, cfg.MetricsPassword, "127.0.0.1",
