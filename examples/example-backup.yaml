@@ -8,7 +8,7 @@ spec:
   clusterName: my-cluster
 
   ## if backupURL is specified then the backup will be put
-  ## at this path, else the backup UR will be filled with
+  ## at this path, else the backup URL will be filled with
   ## the cluster preset backupURL and a random name
   # backupURL: gs://bucket_name/path/to/backup.xtrabackup.gz
 
