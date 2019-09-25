@@ -1,4 +1,4 @@
-# Copy the mysql-operator-sidecar into it's own image
+# Copy the mysql-operator-sidecar into its own image
 # NOTE: this image is for development only
 FROM debian:stretch-slim as sidecar
 

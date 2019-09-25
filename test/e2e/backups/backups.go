@@ -146,7 +146,7 @@ var _ = Describe("Mysql backups tests", func() {
 		})
 	})
 
-	It("should failed the backup if bucket is not specified", func() {
+	It("should fail the backup if bucket is not specified", func() {
 		backup := framework.NewBackup(cluster, "gs://")
 		Expect(f.Client.Create(context.TODO(), backup)).To(Succeed())
 
