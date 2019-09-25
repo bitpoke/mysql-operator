@@ -19,7 +19,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o orc-helper github.com/p
 ###############################################################################
 FROM scratch
 
-# Copy the mysql-operator into it's own image
+# Copy the mysql-operator into its own image
 COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 COPY --from=builder /go/src/github.com/presslabs/mysql-operator/mysql-operator /mysql-operator
 

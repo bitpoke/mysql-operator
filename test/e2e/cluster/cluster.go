@@ -151,7 +151,7 @@ var _ = Describe("Mysql cluster tests", func() {
 		By("test cluster is ready after scale down")
 		testClusterReadiness(f, cluster)
 
-		By("check pvc get's deleted")
+		By("check pvc gets deleted")
 		Eventually(f.GetClusterPVCsFn(cluster), "5s", POLLING).Should(HaveLen(1))
 
 		// scale down the cluster to zero

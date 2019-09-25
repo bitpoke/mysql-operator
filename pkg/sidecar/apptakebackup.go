@@ -77,7 +77,7 @@ func pushBackupFromTo(cfg *Config, srcHost, destBucket string) error {
 		return err
 	}
 
-	log.Info("backup was taken successfully now move, now move it to permanent URL")
+	log.Info("backup was taken successfully, now move it to permanent URL")
 
 	// the backup was a success
 	// remove .tmp extension
