@@ -20,4 +20,4 @@ You can either port fowrwad this service to localhost, or use a service of type 
 kubectl port-forward service/<release-name>-mysql-operator 8080:80
 ```
 
-Then type `localhost:3000` in a browser.
+Then type `localhost:8080` in a browser.
