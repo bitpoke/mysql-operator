@@ -42,6 +42,9 @@ var _ = Describe("Test sidecar configs", func() {
 
 		cfg.Hostname = "cluster-mysql-3"
 		Expect(cfg.ServerID()).To(Equal(MysqlServerIDOffset + 3))
+
+		cfg.MyServerIDOffset = 200
+		Expect(cfg.ServerID()).To(Equal(203))
 	})
 
 	It("should get the default master", func() {
