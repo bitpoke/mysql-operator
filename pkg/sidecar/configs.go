@@ -72,12 +72,15 @@ type Config struct {
 
 	// ExistsMySQLData checks if MySQL data is initialized by checking if the mysql dir exists
 	ExistsMySQLData bool
+
+	// Offset for assigning MySQL Server ID
+	MyServerIDOffset int
 }
 
 // FQDNForServer returns the pod hostname for given MySQL server id
 func (cfg *Config) FQDNForServer(id int) string {
 	base := mysqlcluster.GetNameForResource(mysqlcluster.StatefulSet, cfg.ClusterName)
-	return fmt.Sprintf("%s-%d.%s.%s", base, id-MysqlServerIDOffset, cfg.ServiceName, cfg.Namespace)
+	return fmt.Sprintf("%s-%d.%s.%s", base, id-cfg.MyServerIDOffset, cfg.ServiceName, cfg.Namespace)
 }
 
 // ClusterFQDN returns the cluster FQ Name of the cluster from which the node belongs
@@ -93,7 +96,7 @@ func (cfg *Config) MasterFQDN() string {
 // ServerID returns the MySQL server id
 func (cfg *Config) ServerID() int {
 	ordinal := getOrdinalFromHostname(cfg.Hostname)
-	return ordinal + MysqlServerIDOffset
+	return ordinal + cfg.MyServerIDOffset
 }
 
 // MysqlDSN returns the connection string to MySQL server
@@ -111,9 +114,11 @@ func (cfg *Config) ShouldCloneFromBucket() bool {
 // NewConfig returns a pointer to Config configured from environment variables
 func NewConfig() *Config {
 	var (
-		err    error
-		hbPass string
-		eData  bool
+		err           error
+		hbPass        string
+		eData         bool
+		offset        int
+		custom_offset string
 	)
 
 	if hbPass, err = rand.AlphaNumericString(10); err != nil {
@@ -122,6 +127,14 @@ func NewConfig() *Config {
 
 	if eData, err = checkIfDataExists(); err != nil {
 		panic(err)
+	}
+
+	offset = MysqlServerIDOffset
+	custom_offset = getEnvValue("MY_SERVER_ID_OFFSET")
+	if len(custom_offset) != 0 {
+		if offset, err = strconv.Atoi(custom_offset); err != nil {
+			offset = MysqlServerIDOffset
+		}
 	}
 
 	cfg := &Config{
@@ -151,6 +164,8 @@ func NewConfig() *Config {
 		HeartBeatPassword: hbPass,
 
 		ExistsMySQLData: eData,
+
+		MyServerIDOffset: offset,
 	}
 
 	return cfg
