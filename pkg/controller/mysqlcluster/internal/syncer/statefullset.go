@@ -380,7 +380,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			"pt-kill",
 			// host need to be specified, see pt-kill bug: https://jira.percona.com/browse/PT-1223
 			"--host=127.0.0.1",
-			fmt.Sprintf("--defaults-file=%s/client.cnf", ConfVolumeMountPath),
+			fmt.Sprintf("--defaults-file=%s/client.conf", ConfVolumeMountPath),
 		}
 		command = append(command, getCliOptionsFromQueryLimits(s.cluster.Spec.QueryLimits)...)
 
