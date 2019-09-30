@@ -252,6 +252,11 @@ func (in *MysqlClusterSpec) DeepCopyInto(out *MysqlClusterSpec) {
 		*out = new(QueryLimits)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ServerIDOffset != nil {
+		in, out := &in.ServerIDOffset, &out.ServerIDOffset
+		*out = new(int)
+		**out = **in
+	}
 	return
 }
 

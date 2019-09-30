@@ -19,6 +19,8 @@ spec:
   # backupScheduleJobsHistoryLimit:
   # backupRemoteDeletePolicy:
 
+  ## Custom Server ID Offset for replication
+  # serverIDOffset: 100
 
   ## Configs that will be added to my.cnf for cluster
   # mysqlConf:

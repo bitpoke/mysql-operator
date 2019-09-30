@@ -190,10 +190,9 @@ spec:
               minLength: 1
               type: string
             serverIDOffset:
-              description: Initial Server ID to assign for MySQL replication.  Each pod
-                in the stateful set's Server ID will be set to the pod index + offset.
-                The default offset is 100.
-              format: int32
+              description: Set a custom offset for Server IDs.  ServerID for each
+                node will be the index of the statefulset, plus offset
+              format: int64
               type: integer
             volumeSpec:
               description: PVC extra specifiaction

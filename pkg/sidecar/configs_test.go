@@ -28,12 +28,13 @@ var _ = Describe("Test sidecar configs", func() {
 
 	BeforeEach(func() {
 		cfg = &Config{
-			Hostname:       "cluster-mysql-0",
-			ClusterName:    "cluster",
-			Namespace:      "default",
-			ServiceName:    "mysql",
-			BackupUser:     "backup-user",
-			BackupPassword: "backup-password",
+			Hostname:         "cluster-mysql-0",
+			ClusterName:      "cluster",
+			Namespace:        "default",
+			ServiceName:      "mysql",
+			BackupUser:       "backup-user",
+			BackupPassword:   "backup-password",
+			MyServerIDOffset: MysqlServerIDOffset,
 		}
 	})
 

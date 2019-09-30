@@ -19,6 +19,7 @@ package mysqlcluster
 import (
 	"fmt"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"strconv"
 	"strings"
 
 	"github.com/imdario/mergo"
@@ -218,10 +219,10 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		})
 	}
 
-	if len(s.cluster.Spec.ServerIDOffset) > 0 {
+	if s.cluster.Spec.ServerIDOffset != nil {
 		env = append(env, core.EnvVar{
 			Name:  "MY_SERVER_ID_OFFSET",
-			Value: s.cluster.Spec.ServerIDOffset,
+			Value: strconv.FormatInt(int64(*s.cluster.Spec.ServerIDOffset), 10),
 		})
 	}
 
