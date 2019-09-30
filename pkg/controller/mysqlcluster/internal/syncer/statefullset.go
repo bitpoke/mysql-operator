@@ -218,6 +218,13 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		})
 	}
 
+	if len(s.cluster.Spec.ServerIDOffset) > 0 {
+		env = append(env, core.EnvVar{
+			Name:  "MY_SERVER_ID_OFFSET",
+			Value: s.cluster.Spec.ServerIDOffset,
+		})
+	}
+
 	sctName := s.cluster.Spec.SecretName
 	sctOpName := s.cluster.GetNameForResource(mysqlcluster.Secret)
 	switch name {
