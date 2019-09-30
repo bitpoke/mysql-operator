@@ -114,11 +114,11 @@ func (cfg *Config) ShouldCloneFromBucket() bool {
 // NewConfig returns a pointer to Config configured from environment variables
 func NewConfig() *Config {
 	var (
-		err           error
-		hbPass        string
-		eData         bool
-		offset        int
-		custom_offset string
+		err          error
+		hbPass       string
+		eData        bool
+		offset       int
+		customOffset string
 	)
 
 	if hbPass, err = rand.AlphaNumericString(10); err != nil {
@@ -130,9 +130,9 @@ func NewConfig() *Config {
 	}
 
 	offset = MysqlServerIDOffset
-	custom_offset = getEnvValue("MY_SERVER_ID_OFFSET")
-	if len(custom_offset) != 0 {
-		if offset, err = strconv.Atoi(custom_offset); err != nil {
+	customOffset = getEnvValue("MY_SERVER_ID_OFFSET")
+	if len(customOffset) != 0 {
+		if offset, err = strconv.Atoi(customOffset); err != nil {
 			offset = MysqlServerIDOffset
 		}
 	}
