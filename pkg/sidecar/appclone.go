@@ -36,7 +36,7 @@ func RunCloneCommand(cfg *Config) error {
 		return fmt.Errorf("removing lost+found: %s", err)
 	}
 
-	if cfg.ServerID() > 100 {
+	if cfg.ServerID() > cfg.MyServerIDOffset {
 		// cloning from prior node
 		sourceHost := cfg.FQDNForServer(cfg.ServerID() - 1)
 		err := cloneFromSource(cfg, sourceHost)
