@@ -218,6 +218,12 @@ func NewConfig() *Config {
 			offset = MysqlServerIDOffset
 		}
 	}
+	// get MySQL version from env
+	var mysqlVersion semver.Version
+	mysqlVersionData := getEnvValue("MY_MYSQL_VERSION")
+	if len(mysqlVersionData) != 0 {
+		mysqlVersion = semver.MustParse(mysqlVersionData)
+	}
 
 	cfg := &Config{
 		Hostname:    getEnvValue("HOSTNAME"),
@@ -257,7 +263,7 @@ func NewConfig() *Config {
 
 		InitFileExtraSQL: strings.Split(getEnvValue("INITFILE_EXTRA_SQL"), ";"),
 
-		MySQLVersion: semver.MustParse(getEnvValue("MY_MYSQL_VERSION")),
+		MySQLVersion: mysqlVersion,
 	}
 
 	return cfg

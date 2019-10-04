@@ -52,4 +52,8 @@ LABEL quay.expires-after=2d
 
 COPY ./hack/docker/sidecar-entrypoint.sh /usr/local/bin/sidecar-entrypoint.sh
 COPY ./bin/mysql-operator-sidecar_linux_amd64 /usr/local/bin/mysql-operator-sidecar
+
+# copy rclone 
+COPY --from=rclone /usr/local/bin/rclone /usr/local/bin/rclone
+
 ENTRYPOINT ["/usr/local/bin/sidecar-entrypoint.sh"]
