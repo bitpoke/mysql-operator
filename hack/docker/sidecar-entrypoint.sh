@@ -75,7 +75,7 @@ case "$1" in
         exec $SIDECAR_BIN $VERBOSE schedule-backup "$@"
         ;;
     *)
-        echo "Usage: $0 {files-config|clone|config-and-serve}"
+        echo "Usage: $0 {clone-and-init|config-and-serve|take-backup-to|schedule-backup}"
         echo "Now runs your command."
         echo "$@"
 

@@ -47,9 +47,9 @@ bin/mysql-operator-sidecar_linux_amd64: $(shell hack/development/related-go-file
 bin/orc-helper_linux_amd64: $(shell hack/development/related-go-files.sh $(PKG_NAME) cmd/orc-helper/main.go)
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o bin/orc-helper_linux_amd64 github.com/presslabs/mysql-operator/cmd/orc-helper
 
-skaffold-build: bin/mysql-operator_linux_amd64 bin/mysql-operator-sidecar_linux_amd64 bin/orc-helper_linux_amd64
+dev-build: bin/mysql-operator_linux_amd64 bin/mysql-operator-sidecar_linux_amd64 bin/orc-helper_linux_amd64
 
-skaffold-run: skaffold-build
+skaffold-run:
 	skaffold run --cache-artifacts=true
 
 # Run against the configured Kubernetes cluster in ~/.kube/config

@@ -193,7 +193,7 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 
 	// create the status table used by the operator to configure or to mask MySQL node ready
 	// CSV engine for this table can't be used because we use REPLACE statement that requires PRIMARY KEY or
-	// UNIQUE KEY index
+	// UNIQUE KEY index. Also, the table may exists (in case of pod restart) and should not be changed.
 	// NOTE: value column should be big enough to contain all GTIDs from xtrabackup_slave_info file
 	// nolint: gosec
 	queries = append(queries, fmt.Sprintf(
