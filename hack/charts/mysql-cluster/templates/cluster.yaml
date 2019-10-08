@@ -20,7 +20,7 @@ spec:
   {{- end }}
 
   {{- if .Values.serverIDOffset }}
-  serverIDOffset: .Values.serverIDOffset
+  serverIDOffset: {{ .Values.serverIDOffset }}
   {{- end }}
 
   {{- if .Values.backupSchedule }}
