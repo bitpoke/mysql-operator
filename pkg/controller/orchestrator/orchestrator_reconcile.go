@@ -483,6 +483,12 @@ func (ou *orcUpdater) setReadOnlyNode(inst orc.Instance) error {
 
 // nolint: gocyclo
 func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet, master *orc.Instance) {
+	// If there is an in-progress failover, we will not interfere with readable/writable status on this iteration.
+	fip := ou.cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
+	if fip != nil && fip.Status == core.ConditionTrue {
+		log.Info("cluster has a failover in progress, will delay setting readable/writeable status until failover is complete", "cluster", ou.cluster.Name, "since", fip.LastTransitionTime)
+		return
+	}
 	var err error
 	if master == nil {
 		// master is not found
