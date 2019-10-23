@@ -417,6 +417,35 @@ var _ = Describe("Orchestrator reconciler", func() {
 			Expect(node1.ReadOnly).To(Equal(true))
 		})
 
+		It("should not set the master writable during failover", func() {
+			// Get master
+			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+			master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0)) // set node0 as master
+
+			// Simulate failover status:
+			//  1. Orchestrator would have set read-only on the master, and
+			//  2. ClusterConditionFailoverInProgress would be set to true
+			updater.setReadOnlyNode(*master)
+			cluster.UpdateStatusCondition(api.ClusterConditionFailoverInProgress, core.ConditionTrue,
+				"TestFailover", "Failover is in progress")
+
+			// check master (node-0) to be read-only before
+			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+			node0 := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
+			Expect(node0.ReadOnly).To(Equal(true))
+
+			updater.markReadOnlyNodesInOrc(insts, master)
+
+			// check master (node-0) to be read-only after
+			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+			node0 = InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
+			Expect(node0.ReadOnly).To(Equal(true))
+
+			// check slave (node-1) to be read-only
+			node1 := InstancesSet(insts).GetInstance(cluster.GetPodHostname(1))
+			Expect(node1.ReadOnly).To(Equal(true))
+		})
+
 		It("should remove old nodes from orchestrator", func() {
 			cluster.Spec.Replicas = &one
 			cluster.Status.ReadyNodes = 1
