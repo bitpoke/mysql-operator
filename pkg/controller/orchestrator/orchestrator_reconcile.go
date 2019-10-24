@@ -486,7 +486,8 @@ func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet, master *orc.Ins
 	// If there is an in-progress failover, we will not interfere with readable/writable status on this iteration.
 	fip := ou.cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
 	if fip != nil && fip.Status == core.ConditionTrue {
-		log.Info("cluster has a failover in progress, will delay setting readable/writeable status until failover is complete", "cluster", ou.cluster.Name, "since", fip.LastTransitionTime)
+		log.Info("cluster has a failover in progress, will delay setting readable/writeable status until failover is complete",
+			"cluster", ou.cluster.Name, "since", fip.LastTransitionTime)
 		return
 	}
 	var err error

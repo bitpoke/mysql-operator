@@ -425,7 +425,9 @@ var _ = Describe("Orchestrator reconciler", func() {
 			// Simulate failover status:
 			//  1. Orchestrator would have set read-only on the master, and
 			//  2. ClusterConditionFailoverInProgress would be set to true
-			updater.setReadOnlyNode(*master)
+			err := updater.setReadOnlyNode(*master)
+			Expect(err).To(Succeed())
+
 			cluster.UpdateStatusCondition(api.ClusterConditionFailoverInProgress, core.ConditionTrue,
 				"TestFailover", "Failover is in progress")
 
