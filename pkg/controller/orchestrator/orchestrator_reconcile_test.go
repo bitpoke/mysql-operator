@@ -420,7 +420,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 		It("should not set the master writable during failover", func() {
 			// Get master
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
-			master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0)) // set node0 as master
+			master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
 
 			// Simulate failover status:
 			//  1. Orchestrator would have set read-only on the master, and
