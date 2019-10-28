@@ -55,7 +55,11 @@ Create the name of the service account to use
 {{- end -}}
 
 {{- define "mysql-operator.orc-secret-name" -}}
-{{ include "mysql-operator.fullname" . }}-orc
+{{- if .Values.orchestrator.secretName -}}
+  {{ .Values.orchestrator.secretName }}
+{{- else -}}
+  {{ include "mysql-operator.fullname" . }}-orc
+{{- end -}}
 {{- end -}}
 
 {{- define "mysql-operator.orc-service-name" -}}
