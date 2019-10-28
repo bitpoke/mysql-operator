@@ -62,6 +62,7 @@ orchestrator:
   # orchestrator user and password to manage MySQL clusters
   topologyUser: orchestrator
   topologyPassword:  # this is empty and will be random generated if not specified
+  # secretName:  # you can specify which secret to use for orchestrator topology credentials
 
   resources:
     # For example
