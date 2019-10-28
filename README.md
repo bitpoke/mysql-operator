@@ -40,7 +40,7 @@ helm repo add presslabs https://presslabs.github.io/charts
 helm install presslabs/mysql-operator --name mysql-operator
 ```
 
-For more information about chart values see chart [README](hack/charts/mysql-operator/README.md). This chart will deploy the controller together with an [orchestrator](https://github.com/github/orchestrator) cluster.
+For more information about chart values see chart [README](charts/mysql-operator/README.md). This chart will deploy the controller together with an [orchestrator](https://github.com/github/orchestrator) cluster.
 
 __NOTE__: MySQL operator 0.2.x requires at least Kubernetes 1.11.x (or 1.10.x with alpha features) while version 0.1.x is known to work with Kubernetes up 1.9.x. To upgrade, check the [0.2.x upgrade notes](#v02x-upgrade) as some additional steps are required.
 

@@ -33,8 +33,8 @@ pipeline:
     image: quay.io/presslabs/kluster-toolbox
     pull: true
     commands:
-      - helm lint hack/charts/mysql-operator
-      - helm dep build hack/charts/mysql-operator
+      - helm lint charts/mysql-operator
+      - helm dep build charts/mysql-operator
 
   test:
     group: test
@@ -142,7 +142,7 @@ pipeline:
     environment:
       - GH_USER=presslabs-bot
     commands:
-      - cd hack/charts
+      - cd charts
       - (cd mysql-operator && helm dep build)
       - helm package mysql-operator
       - CHART="$(basename *.tgz)" ; MESSAGE="Publish $(basename $CHART .tgz)"
@@ -197,7 +197,7 @@ pipeline:
       - kubectl create clusterrolebinding tiller --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
       - helm init --service-account tiller --wait
       - helm repo add presslabs https://presslabs.github.io/charts
-      - helm dependency update hack/charts/mysql-operator
+      - helm dependency update charts/mysql-operator
     when:
       branch: master
       event: push

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CHART_PATH=charts/mysql-operator
+CHART_PATH=../charts/mysql-operator
 CONFIG_PATH=../config
 
 # templates/crds.yaml update
