@@ -53,7 +53,7 @@ More information about chart requirements can be found in the official [document
 ### Configure your chart's values.yaml file
 
 You can configure the cluster by providing values under the `mysql` key. A comprehensive description
-can be found in the chart [`values.yaml`](https://github.com/presslabs/mysql-operator/blob/master/hack/charts/mysql-cluster/values.yaml)
+can be found in the chart [`values.yaml`](https://github.com/presslabs/mysql-operator/blob/master/charts/mysql-cluster/values.yaml)
 file.
 
 ```yaml

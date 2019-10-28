@@ -40,7 +40,7 @@ const (
 	// manage the mysql cluster. This database contains a table with
 	// initialization history and table managed by pt-heartbeat. Be aware that
 	// when changing this value to update the orchestrator chart value for
-	// SlaveLagQuery in hack/charts/mysql-operator/values.yaml.
+	// SlaveLagQuery in charts/mysql-operator/values.yaml.
 	OperatorDbName = "sys_operator"
 
 	// OperatorStatusTableName represents the name of the table that contains information about MySQL status, like:
