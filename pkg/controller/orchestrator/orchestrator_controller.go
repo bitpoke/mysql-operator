@@ -188,7 +188,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 
 	// save old status
 	status := *cluster.Status.DeepCopy()
-	log.Info("reconciling cluster", "cluster", cluster)
+	log.Info("reconciling cluster", "cluster", request.NamespacedName.String())
 
 	// this syncer mutates the cluster and updates it. Should be the first syncer
 	finSyncer := newFinalizerSyncer(r.Client, r.scheme, cluster, r.orcClient)
