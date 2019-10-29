@@ -259,7 +259,6 @@ func (ou *orcUpdater) updateStatusFromOrc(insts InstancesSet, master *orc.Instan
 
 	// check if the master is up to date and is not downtime to remove in progress failover condition
 	if master != nil && master.SecondsSinceLastSeen.Valid && master.SecondsSinceLastSeen.Int64 < 5 {
-		log.Info("cluster failover finished", "master", master)
 		ou.cluster.UpdateStatusCondition(api.ClusterConditionFailoverInProgress, core.ConditionFalse,
 			"ClusterMasterHealthy", "Master is healthy in orchestrator")
 	}
