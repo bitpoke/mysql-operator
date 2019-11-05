@@ -18,12 +18,40 @@ package sidecar
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 )
 
-// RunCloneCommand clone the data from source.
+// RunCloneCommand clones the data from several potential sources.
+//
+// There are a few possible scenarios that this function tries to handle:
+//
+//  Scenario                 | Action Taken
+// ------------------------------------------------------------------------------------
+// Data already exists       | Log an informational message and return without error.
+//                           | This permits the pod to continue initializing and mysql
+//                           | will use the data already on the PVC.
+// ------------------------------------------------------------------------------------
+// Healthy replicas exist    | We will attempt to clone from the healthy replicas.
+//                           | If the cloning starts but is interrupted, we will return
+//                           | with an error, not trying to clone from the master. The
+//                           | assumption is that some intermittent error caused the
+//                           | failure and we should let K8S restart the init container
+//                           | to try to clone from the replicas again.
+// ------------------------------------------------------------------------------------
+// No healthy replicas; only | We attempt to clone from the master, assuming that this
+// master exists             | is the initialization of the second pod in a multi-pod
+//                           | cluster. If cloning starts and is interrupted, we will
+//                           | return with an error, letting K8S try again.
+// ------------------------------------------------------------------------------------
+// No healthy replicas; no   | If there is a bucket URL to clone from, we will try that.
+// master; bucket URL exists | The assumption is that this is the bootstrap case: the
+//                           | very first mysql pod is being initialized.
+// ------------------------------------------------------------------------------------
 func RunCloneCommand(cfg *Config) error {
 	log.Info("cloning command", "host", cfg.Hostname)
 
@@ -36,29 +64,62 @@ func RunCloneCommand(cfg *Config) error {
 		return fmt.Errorf("removing lost+found: %s", err)
 	}
 
-	if cfg.ServerID() > cfg.MyServerIDOffset {
-		// cloning from prior node
-		sourceHost := cfg.FQDNForServer(cfg.ServerID() - 1)
-		err := cloneFromSource(cfg, sourceHost)
-		if err != nil {
-			return fmt.Errorf("failed to clone from %s, err: %s", sourceHost, err)
+	if isServiceAvailable(cfg.ReplicasFQDN()) {
+		if err := attemptClone(cfg, cfg.ReplicasFQDN()); err != nil {
+			return fmt.Errorf("cloning from healthy replicas failed due to unexpected error: %s", err)
+		}
+	} else if isServiceAvailable(cfg.MasterFQDN()) {
+		log.Info("healthy replica service was unavailable for cloning, will attempt to clone from the master")
+		if err := attemptClone(cfg, cfg.MasterFQDN()); err != nil {
+			return fmt.Errorf("cloning from master service failed due to unexpected error: %s", err)
 		}
 	} else if cfg.ShouldCloneFromBucket() {
 		// cloning from provided initBucketURL
-		err := cloneFromBucket(cfg.InitBucketURL)
-		if err != nil {
+		log.Info("cloning from bucket")
+		if err := cloneFromBucket(cfg.InitBucketURL); err != nil {
 			return fmt.Errorf("failed to clone from bucket, err: %s", err)
 		}
 	} else {
-		log.Info("nothing to clone or init from")
+		log.Info("nothing to clone from: no existing data found, no replicas and no master available, and no clone bucket url found")
 		return nil
 	}
 
 	// prepare backup
-	if err := xtrabackupPreperData(); err != nil {
+	if err := xtrabackupPrepareData(); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func isServiceAvailable(svc string) bool {
+	req, err := http.NewRequest("GET", prepareUrl(svc, serverProbeEndpoint), nil)
+	if err != nil {
+		log.Info("failed to check available service", "service", svc, "error", err)
+		return false
+	}
+
+	client := &http.Client{}
+	client.Transport = fastTimeoutTransport(5)
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Info("service was not available", "service", svc, "error", err)
+		return false
+	}
+
+	if resp.StatusCode != 200 {
+		log.Info("service not available", "service", svc, "HTTP status code", resp.StatusCode)
+		return false
+	}
+
+	return true
+}
+
+func attemptClone(cfg *Config, sourceService string) error {
+	err := cloneFromSource(cfg, sourceService)
+	if err != nil {
+		return fmt.Errorf("failed to clone from %s, err: %s", sourceService, err)
+	}
 	return nil
 }
 
@@ -84,7 +145,7 @@ func cloneFromBucket(initBucket string) error {
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
 	// nolint: gosec
-	xbstream := exec.Command("xbstream", "-x", "-C", dataDir)
+	xbstream := exec.Command(xbStreamCommand, "-x", "-C", dataDir)
 
 	var err error
 	// rclone | gzip | xbstream
@@ -140,10 +201,18 @@ func cloneFromSource(cfg *Config, host string) error {
 	// extracts files from stdin (-x) and writes them to mysql
 	// data target dir
 	// nolint: gosec
-	xbstream := exec.Command("xbstream", "-x", "-C", dataDir)
+	xbstream := exec.Command(xbStreamCommand, "-x", "-C", dataDir)
 
 	xbstream.Stdin = response.Body
 	xbstream.Stderr = os.Stderr
+
+	cloneSucceeded := false
+	defer func() {
+		if !cloneSucceeded {
+			log.Info("clone operation failed, cleaning up dataDir so retries may proceed")
+			cleanDataDir()
+		}
+	}()
 
 	if err := xbstream.Start(); err != nil {
 		return fmt.Errorf("xbstream start error: %s", err)
@@ -157,12 +226,13 @@ func cloneFromSource(cfg *Config, host string) error {
 		return err
 	}
 
+	cloneSucceeded = true
 	return nil
 }
 
-func xtrabackupPreperData() error {
+func xtrabackupPrepareData() error {
 	// nolint: gosec
-	xtbkCmd := exec.Command("xtrabackup", "--prepare",
+	xtbkCmd := exec.Command(xtrabackupCommand, "--prepare",
 		fmt.Sprintf("--target-dir=%s", dataDir))
 
 	xtbkCmd.Stderr = os.Stderr
@@ -171,6 +241,20 @@ func xtrabackupPreperData() error {
 }
 
 func deleteLostFound() error {
-	path := fmt.Sprintf("%s/lost+found", dataDir)
-	return os.RemoveAll(path)
+	lfPath := fmt.Sprintf("%s/lost+found", dataDir)
+	return os.RemoveAll(lfPath)
+}
+
+func cleanDataDir() {
+	files, err := ioutil.ReadDir(dataDir)
+	if err != nil {
+		log.Error(err, "failed to clean dataDir")
+	}
+
+	for _, f := range files {
+		toRemove := path.Join(dataDir, f.Name())
+		if err := os.RemoveAll(toRemove); err != nil {
+			log.Error(err, "failed to remove file in dataDir")
+		}
+	}
 }

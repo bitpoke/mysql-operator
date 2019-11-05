@@ -113,8 +113,46 @@ var _ = Describe("Mysql cluster tests", func() {
 		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(podName, &meta.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete pod %s", podName)
 
-		// check failover done, this is a reggression test
+		// check failover done, this is a regression test
 		// TODO: decrease this timeout to 20
+		failoverTimeout := 60 * time.Second
+		By(fmt.Sprintf("Check failover done; timeout=%s", failoverTimeout))
+		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionTrue, failoverTimeout)
+
+		// after some time node 0 should be up and should be slave
+		By("test cluster master condition is properly set")
+		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionMaster, core.ConditionFalse, f.Timeout)
+		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionReplicating, core.ConditionTrue, f.Timeout)
+
+		By("test cluster endpoints after failover")
+		testClusterEndpoints(f, cluster, []int{1}, []int{0, 1})
+	})
+
+	It("fails over and successfully reclones master from replica", func() {
+		cluster.Spec.Replicas = &two
+		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
+
+		// test cluster to be ready
+		By("test cluster is ready after cluster update")
+		testClusterReadiness(f, cluster)
+		By("test cluster is registered in orchestrator after cluster update")
+		testClusterIsRegistredWithOrchestrator(f, cluster)
+
+		// check cluster to have a master and a slave
+		By("test cluster nodes master condition is properly set")
+		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionMaster, core.ConditionTrue, f.Timeout)
+		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionFalse, f.Timeout)
+
+		podName := framework.GetNameForResource("sts", cluster) + "-0"
+
+		// delete PVC from master pod and wait for it to be removed
+		pvcName := "data-" + podName
+		deletePVCSynchronously(f, pvcName, cluster.Namespace, 15 * time.Second)
+
+		// now delete master pod
+		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(podName, &meta.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred(), "Failed to delete pod %s", podName)
+
 		failoverTimeout := 60 * time.Second
 		By(fmt.Sprintf("Check failover done; timeout=%s", failoverTimeout))
 		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionTrue, failoverTimeout)
@@ -254,6 +292,19 @@ var _ = Describe("Mysql cluster tests", func() {
 	})
 
 })
+
+func deletePVCSynchronously(f *framework.Framework, pvcName, namespace string, timeout time.Duration) {
+	pvc := &core.PersistentVolumeClaim{}
+	pvcKey := types.NamespacedName{Name: pvcName, Namespace: namespace}
+	Expect(f.Client.Get(context.TODO(), pvcKey, pvc)).To(Succeed(), "failed to get pvc %s", pvcName)
+	pvc.Finalizers = nil
+	Expect(f.Client.Update(context.TODO(), pvc)).To(Succeed(), "Failed to remove finalizers from pvc %s", pvcName)
+	Expect(f.Client.Delete(context.TODO(), pvc)).To(Succeed(), "Failed to delete pvc %s", pvcName)
+	pvcRemoved := fmt.Sprintf("persistentvolumeclaims \"%s\" not found", pvc.Name)
+	Eventually(func() error {
+		return f.Client.Get(context.TODO(), pvcKey, pvc)
+	}, timeout, POLLING).Should(MatchError(pvcRemoved), "PVC did not delete in time '%s'", pvc.Name)
+}
 
 func testClusterReadiness(f *framework.Framework, cluster *api.MysqlCluster) {
 	timeout := f.Timeout

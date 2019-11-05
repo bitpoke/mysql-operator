@@ -19,12 +19,14 @@ package sidecar
 import (
 	"context"
 	"fmt"
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
-
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
+	"strings"
+	"time"
 )
 
 const (
@@ -90,7 +92,7 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Trailer", backupStatusTrailer)
 
 	// nolint: gosec
-	xtrabackup := exec.Command("xtrabackup", "--backup", "--slave-info", "--stream=xbstream",
+	xtrabackup := exec.Command(xtrabackupCommand, "--backup", "--slave-info", "--stream=xbstream",
 		fmt.Sprintf("--tables-exclude=%s.%s", constants.OperatorDbName, constants.OperatorStatusTableName),
 		"--host=127.0.0.1", fmt.Sprintf("--user=%s", s.cfg.ReplicationUser),
 		fmt.Sprintf("--password=%s", s.cfg.ReplicationPassword),
@@ -151,13 +153,33 @@ func maxClients(h http.Handler, n int) http.Handler {
 	})
 }
 
+func prepareUrl(svc string, endpoint string) string {
+	if !strings.Contains(svc, ":") {
+		svc = fmt.Sprintf("%s:%d", svc, serverPort)
+	}
+	return fmt.Sprintf("http://%s%s", svc, endpoint)
+}
+
+func fastTimeoutTransport(dialTimeout int) http.RoundTripper {
+	return &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   time.Duration(dialTimeout) * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+}
+
 // requestABackup connects to specified host and endpoint and gets the backup
 func requestABackup(cfg *Config, host, endpoint string) (*http.Response, error) {
 	log.Info("initialize a backup", "host", host, "endpoint", endpoint)
 
-	req, err := http.NewRequest("GET", fmt.Sprintf(
-		"http://%s:%d%s", host, serverPort, endpoint), nil)
-
+	req, err := http.NewRequest("GET", prepareUrl(host, endpoint), nil)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create request: %s", err)
 	}
@@ -166,6 +188,7 @@ func requestABackup(cfg *Config, host, endpoint string) (*http.Response, error) 
 	req.SetBasicAuth(cfg.BackupUser, cfg.BackupPassword)
 
 	client := &http.Client{}
+	client.Transport = fastTimeoutTransport(5)
 
 	resp, err := client.Do(req)
 	if err != nil || resp.StatusCode != 200 {

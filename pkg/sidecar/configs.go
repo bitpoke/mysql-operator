@@ -75,6 +75,9 @@ type Config struct {
 
 	// Offset for assigning MySQL Server ID
 	MyServerIDOffset int
+
+	masterService              string
+	healthyReplicaCloneService string
 }
 
 // FQDNForServer returns the pod hostname for given MySQL server id
@@ -90,7 +93,18 @@ func (cfg *Config) ClusterFQDN() string {
 
 // MasterFQDN the FQ Name of the cluster's master
 func (cfg *Config) MasterFQDN() string {
+	if cfg.masterService != "" {
+		return cfg.masterService
+	}
 	return mysqlcluster.GetNameForResource(mysqlcluster.MasterService, cfg.ClusterName)
+}
+
+// ReplicasFQDN the FQ Name of the replicas service
+func (cfg *Config) ReplicasFQDN() string {
+	if cfg.healthyReplicaCloneService != "" {
+		return cfg.healthyReplicaCloneService
+	}
+	return mysqlcluster.GetNameForResource(mysqlcluster.HealthyReplicasService, cfg.ClusterName)
 }
 
 // ServerID returns the MySQL server id

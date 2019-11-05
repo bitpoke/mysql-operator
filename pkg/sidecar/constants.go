@@ -65,6 +65,11 @@ var (
 	serverProbeEndpoint = constants.SidecarServerProbePath
 	// ServerBackupEndpoint is the http server endpoint for backups
 	serverBackupEndpoint = "/xbackup"
+
+	// xtrabackup Executable Name
+	xtrabackupCommand = "xtrabackup"
+	// xbstream Executable Name
+	xbStreamCommand = "xbstream"
 )
 
 const (
