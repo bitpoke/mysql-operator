@@ -111,7 +111,9 @@ const (
 	ConfigMap ResourceName = "config-files"
 	// MasterService is the name of the service that points to master node
 	MasterService ResourceName = "master-service"
-	// HealthyNodesService is the name of a service that continas all healthy nodes
+	// HealthyReplicasService is the name of a service that points healthy replicas (excludes master)
+	HealthyReplicasService ResourceName = "healthy-replicas-service"
+	// HealthyNodesService is the name of a service that contains all healthy nodes
 	HealthyNodesService ResourceName = "healthy-nodes-service"
 	// PodDisruptionBudget is the name of pod disruption budget for the stateful set
 	PodDisruptionBudget ResourceName = "pdb"
@@ -131,6 +133,8 @@ func GetNameForResource(name ResourceName, clusterName string) string {
 		return fmt.Sprintf("%s-mysql", clusterName)
 	case MasterService:
 		return fmt.Sprintf("%s-mysql-master", clusterName)
+	case HealthyReplicasService:
+		return fmt.Sprintf("%s-mysql-replicas", clusterName)
 	case HeadlessSVC:
 		return HeadlessSVCName
 	case OldHeadlessSVC:

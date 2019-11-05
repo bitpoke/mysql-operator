@@ -214,6 +214,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		clustersyncer.NewHeadlessSVCSyncer(r.Client, r.scheme, cluster),
 		clustersyncer.NewMasterSVCSyncer(r.Client, r.scheme, cluster),
 		clustersyncer.NewHealthySVCSyncer(r.Client, r.scheme, cluster),
+		clustersyncer.NewHealthyReplicasSVCSyncer(r.Client, r.scheme, cluster),
 
 		clustersyncer.NewStatefulSetSyncer(r.Client, r.scheme, cluster, cmRev, sctRev, r.opt),
 	}

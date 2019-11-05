@@ -26,29 +26,31 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
-// NewMasterSVCSyncer returns a service syncer for master service
-func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
+// NewHealthyReplicasSVCSyncer returns a service syncer for healthy replicas service
+func NewHealthyReplicasSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
 	obj := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.GetNameForResource(mysqlcluster.MasterService),
+			Name:      cluster.GetNameForResource(mysqlcluster.HealthyReplicasService),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("MasterSVC", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
+	return syncer.NewObjectSyncer("HealthyReplicasSVC", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
 		out := in.(*core.Service)
 
 		// set service labels
 		out.Labels = cluster.GetLabels()
-		out.Labels["mysql.presslabs.org/service-type"] = "master"
+		out.Labels["mysql.presslabs.org/service-type"] = "ready-replicas"
 
-		// set selectors for master node
+		// set selectors for healthy replica (non-master) mysql pods only
 		out.Spec.Selector = cluster.GetSelectorLabels()
-		out.Spec.Selector["role"] = "master"
+		out.Spec.Selector["role"] = "replica"
+		out.Spec.Selector["healthy"] = "yes"
 
 		if len(out.Spec.Ports) != 2 {
 			out.Spec.Ports = make([]core.ServicePort, 2)
 		}
+
 		out.Spec.Ports[0].Name = MysqlPortName
 		out.Spec.Ports[0].Port = MysqlPort
 		out.Spec.Ports[0].TargetPort = TargetPort
