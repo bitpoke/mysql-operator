@@ -129,7 +129,7 @@ func (fSrv *fakeServer) backupHandler(w http.ResponseWriter, req *http.Request) 
 
 	// Error: return http status code of 500
 	if fSrv.simulateError {
-		http.Error(w, "xtrbackup failed", http.StatusInternalServerError)
+		http.Error(w, "xtrabackup failed", http.StatusInternalServerError)
 		return
 	}
 
