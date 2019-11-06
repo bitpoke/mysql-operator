@@ -153,7 +153,7 @@ func maxClients(h http.Handler, n int) http.Handler {
 	})
 }
 
-func prepareUrl(svc string, endpoint string) string {
+func prepareURL(svc string, endpoint string) string {
 	if !strings.Contains(svc, ":") {
 		svc = fmt.Sprintf("%s:%d", svc, serverPort)
 	}
@@ -179,7 +179,7 @@ func fastTimeoutTransport(dialTimeout int) http.RoundTripper {
 func requestABackup(cfg *Config, host, endpoint string) (*http.Response, error) {
 	log.Info("initialize a backup", "host", host, "endpoint", endpoint)
 
-	req, err := http.NewRequest("GET", prepareUrl(host, endpoint), nil)
+	req, err := http.NewRequest("GET", prepareURL(host, endpoint), nil)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create request: %s", err)
 	}

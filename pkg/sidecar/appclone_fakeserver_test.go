@@ -52,7 +52,7 @@ func newFakeServer(address string, cfg *Config) *fakeServer {
 func (fSrv *fakeServer) waitReady() error {
 	retries := 0
 	for {
-		resp, err := http.Get(prepareUrl(fSrv.server.Addr, serverProbeEndpoint))
+		resp, err := http.Get(prepareURL(fSrv.server.Addr, serverProbeEndpoint))
 		if err == nil && resp.StatusCode == 200 {
 			return nil
 		}
