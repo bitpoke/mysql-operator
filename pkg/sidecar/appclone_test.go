@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 )
 
@@ -37,6 +38,7 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 		// each "service" on its own port.
 		masterServiceAddr          = fmt.Sprintf(":%d", serverPort)
 		healthyReplicasServiceAddr = ":8081"
+		skipTruncatedDataTests     = false
 	)
 
 	setupFakeDataDir := func() {
@@ -86,6 +88,19 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 		xtrabackupCommand = "echo"
 	}
 
+	disableXbStreamIfNotAvailable := func() {
+		if _, err := exec.LookPath(xbStreamCommand); err != nil {
+			xbStreamCommand = "echo"
+			skipTruncatedDataTests = true
+		}
+	}
+
+	expectBackupFileToBeCreated := func() {
+		if !skipTruncatedDataTests {
+			Expect(fakeBackupFile).Should(BeAnExistingFile())
+		}
+	}
+
 	BeforeSuite(func() {
 		cfg = &Config{
 			masterService:              "localhost" + masterServiceAddr,
@@ -94,6 +109,7 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 
 		setupFakeDataDir()
 		disableXtraBackup()
+		disableXbStreamIfNotAvailable()
 	})
 
 	AfterSuite(func() {
@@ -134,7 +150,8 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 		Expect(fakeReplicaServer.backupRequestsReceived()).To(Equal(1))
 		Expect(fakeMasterServer.backupRequestsReceived()).To(Equal(0))
 
-		Expect(fakeBackupFile).Should(BeAnExistingFile())
+		expectBackupFileToBeCreated()
+
 	})
 
 	Context("with truncated xbstream data from replicas", func() {
@@ -144,6 +161,11 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 		})
 
 		It("cloneFromSource should clean up the data directory after failure", func() {
+
+			if skipTruncatedDataTests {
+				Skip("Skipping tests for truncated backup stream because no xbstream executable was found.")
+			}
+
 			Expect(fakeBackupFile).ShouldNot(BeAnExistingFile())
 
 			err := cloneFromSource(cfg, healthyReplicasServiceAddr)
@@ -156,6 +178,11 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 		})
 
 		It("should not fall back to master service", func() {
+
+			if skipTruncatedDataTests {
+				Skip("Skipping tests for truncated backup stream because no xbstream executable was found.")
+			}
+
 			Expect(fakeBackupFile).ShouldNot(BeAnExistingFile())
 
 			err := RunCloneCommand(cfg)
@@ -164,7 +191,7 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 			Expect(fakeReplicaServer.backupRequestsReceived()).To(Equal(1))
 			Expect(fakeMasterServer.backupRequestsReceived()).To(Equal(0))
 
-			Expect(fakeBackupFile).ShouldNot(BeAnExistingFile())
+			expectBackupFileToBeCreated()
 		})
 
 	})
@@ -216,7 +243,7 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 			Expect(fakeReplicaServer.backupRequestsReceived()).To(Equal(0))
 			Expect(fakeMasterServer.backupRequestsReceived()).To(Equal(1))
 
-			Expect(fakeBackupFile).Should(BeAnExistingFile())
+			expectBackupFileToBeCreated()
 		})
 
 	})
