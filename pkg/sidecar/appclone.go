@@ -93,7 +93,7 @@ func RunCloneCommand(cfg *Config) error {
 }
 
 func isServiceAvailable(svc string) bool {
-	req, err := http.NewRequest("GET", prepareUrl(svc, serverProbeEndpoint), nil)
+	req, err := http.NewRequest("GET", prepareURL(svc, serverProbeEndpoint), nil)
 	if err != nil {
 		log.Info("failed to check available service", "service", svc, "error", err)
 		return false
