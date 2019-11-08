@@ -1,7 +1,7 @@
 ###############################################################################
 #  Build the mysql-oerator related binaries
 ###############################################################################
-FROM golang:1.11.2 as builder
+FROM golang:1.13.4 as builder
 
 # Copy in the go src
 WORKDIR /go/src/github.com/presslabs/mysql-operator
@@ -17,13 +17,13 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o orc-helper github.com/p
 ##############################################################################
 #  Build Orchestrator
 ###############################################################################
-FROM golang:1.9-alpine as builder-orc
+FROM golang:1.13.4-alpine as builder-orc
 
 RUN set -ex \
     && apk add --no-cache \
-        bash gcc git musl-dev openssl rsync
+        bash gcc git musl-dev openssl rsync perl-utils
 
-ARG ORCHESTRATOR_VERSION=v3.0.14
+ARG ORCHESTRATOR_VERSION=v3.1.2
 ARG ORCHESTRATOR_REPO=https://github.com/github/orchestrator.git
 RUN set -ex \
     && mkdir -p $GOPATH/src/github.com/github/orchestrator \
@@ -41,7 +41,7 @@ RUN set -ex \
 ###############################################################################
 #  Docker image for orchestrator
 ###############################################################################
-FROM alpine:3.7
+FROM alpine:3.10
 
 # Create a group and user
 RUN addgroup -g 777 orchestrator && adduser -u 777 -g 777 -S orchestrator
