@@ -255,11 +255,22 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 			stopFakeMasterService()
 		})
 
-		It("should return nil", func() {
+		It("should return nil for first pod", func() {
+			cfg.Hostname = "mysql-mysql-0"
 			Expect(fakeBackupFile).ShouldNot(BeAnExistingFile())
 
 			err := RunCloneCommand(cfg)
 			Expect(err).To(Succeed())
+
+			Expect(fakeBackupFile).ShouldNot(BeAnExistingFile())
+		})
+
+		It("should return an error for subsequent pods", func() {
+			cfg.Hostname = "mysql-mysql-1"
+			Expect(fakeBackupFile).ShouldNot(BeAnExistingFile())
+
+			err := RunCloneCommand(cfg)
+			Expect(err).To(HaveOccurred())
 
 			Expect(fakeBackupFile).ShouldNot(BeAnExistingFile())
 		})

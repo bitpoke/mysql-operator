@@ -120,6 +120,11 @@ func (cfg *Config) MysqlDSN() string {
 	)
 }
 
+func (cfg *Config) IsFirstPodInSet() bool {
+	ordinal := getOrdinalFromHostname(cfg.Hostname)
+	return ordinal == 0
+}
+
 // ShouldCloneFromBucket returns true if it's time to initialize from a bucket URL provided
 func (cfg *Config) ShouldCloneFromBucket() bool {
 	return !cfg.ExistsMySQLData && cfg.ServerID() == 100 && len(cfg.InitBucketURL) != 0

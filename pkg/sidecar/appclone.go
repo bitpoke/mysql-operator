@@ -52,6 +52,10 @@ import (
 // master; bucket URL exists | The assumption is that this is the bootstrap case: the
 //                           | very first mysql pod is being initialized.
 // ------------------------------------------------------------------------------------
+// No healthy replcias; no   | If this is the first pod in the cluster, then allow it
+// master; no bucket URL     | to initialize as an empty instance, otherwise, return an
+//                           | error to allow k8s to kill and restart the pod.
+// ------------------------------------------------------------------------------------
 func RunCloneCommand(cfg *Config) error {
 	log.Info("cloning command", "host", cfg.Hostname)
 
@@ -79,9 +83,11 @@ func RunCloneCommand(cfg *Config) error {
 		if err := cloneFromBucket(cfg.InitBucketURL); err != nil {
 			return fmt.Errorf("failed to clone from bucket, err: %s", err)
 		}
-	} else {
-		log.Info("nothing to clone from: no existing data found, no replicas and no master available, and no clone bucket url found")
+	} else if cfg.IsFirstPodInSet() {
+		log.Info("nothing to clone from: empty cluster initializing")
 		return nil
+	} else {
+		return fmt.Errorf("nothing to clone from: no existing data found, no replicas and no master available, and no clone bucket url found")
 	}
 
 	// prepare backup
