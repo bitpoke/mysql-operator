@@ -160,11 +160,11 @@ func prepareURL(svc string, endpoint string) string {
 	return fmt.Sprintf("http://%s%s", svc, endpoint)
 }
 
-func fastTimeoutTransport(dialTimeout int) http.RoundTripper {
+func transportWithTimeout(connectTimeout time.Duration) http.RoundTripper {
 	return &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
-			Timeout:   time.Duration(dialTimeout) * time.Second,
+			Timeout:   connectTimeout,
 			KeepAlive: 30 * time.Second,
 			DualStack: true,
 		}).DialContext,
@@ -188,7 +188,7 @@ func requestABackup(cfg *Config, host, endpoint string) (*http.Response, error) 
 	req.SetBasicAuth(cfg.BackupUser, cfg.BackupPassword)
 
 	client := &http.Client{}
-	client.Transport = fastTimeoutTransport(5)
+	client.Transport = transportWithTimeout(serverConnectTimeout)
 
 	resp, err := client.Do(req)
 	if err != nil || resp.StatusCode != 200 {
