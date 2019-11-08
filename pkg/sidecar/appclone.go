@@ -100,7 +100,7 @@ func isServiceAvailable(svc string) bool {
 	}
 
 	client := &http.Client{}
-	client.Transport = fastTimeoutTransport(5)
+	client.Transport = transportWithTimeout(serverConnectTimeout)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Info("service was not available", "service", svc, "error", err)

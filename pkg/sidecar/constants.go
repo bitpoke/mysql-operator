@@ -18,6 +18,7 @@ package sidecar
 
 import (
 	"strconv"
+	"time"
 
 	// add mysql driver
 	_ "github.com/go-sql-driver/mysql"
@@ -65,6 +66,8 @@ var (
 	serverProbeEndpoint = constants.SidecarServerProbePath
 	// ServerBackupEndpoint is the http server endpoint for backups
 	serverBackupEndpoint = "/xbackup"
+	// ServerDialTimeout is the connect timeout (not http timeout) for requesting a backup from the sidecar server
+	serverConnectTimeout = 5 * time.Second
 
 	// xtrabackup Executable Name
 	xtrabackupCommand = "xtrabackup"
