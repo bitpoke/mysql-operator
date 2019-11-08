@@ -191,7 +191,7 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 			Expect(fakeReplicaServer.backupRequestsReceived()).To(Equal(1))
 			Expect(fakeMasterServer.backupRequestsReceived()).To(Equal(0))
 
-			expectBackupFileToBeCreated()
+			Expect(fakeBackupFile).ShouldNot(BeAnExistingFile())
 		})
 
 	})
