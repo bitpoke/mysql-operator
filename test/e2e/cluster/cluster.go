@@ -147,7 +147,7 @@ var _ = Describe("Mysql cluster tests", func() {
 
 		// delete PVC from master pod and wait for it to be removed
 		pvcName := "data-" + podName
-		deletePVCSynchronously(f, pvcName, cluster.Namespace, 15 * time.Second)
+		deletePVCSynchronously(f, pvcName, cluster.Namespace, 30*time.Second)
 
 		// now delete master pod
 		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(podName, &meta.DeleteOptions{})
