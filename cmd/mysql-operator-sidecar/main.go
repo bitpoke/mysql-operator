@@ -65,7 +65,7 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := sidecar.RunCloneCommand(cfg); err != nil {
 				log.Error(err, "clone command failed")
-				os.Exit(1)
+				os.Exit(8)
 			}
 			if err := sidecar.RunConfigCommand(cfg); err != nil {
 				log.Error(err, "init command failed")
