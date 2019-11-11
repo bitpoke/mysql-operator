@@ -91,11 +91,7 @@ func RunCloneCommand(cfg *Config) error {
 	}
 
 	// prepare backup
-	if err := xtrabackupPrepareData(); err != nil {
-		return err
-	}
-
-	return nil
+	return xtrabackupPrepareData()
 }
 
 func isServiceAvailable(svc string) bool {
