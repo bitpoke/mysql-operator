@@ -120,6 +120,7 @@ func (cfg *Config) MysqlDSN() string {
 	)
 }
 
+// IsFirstPodInSet returns true if this pod has an ordinal of 0, meaning it is the first one in the set
 func (cfg *Config) IsFirstPodInSet() bool {
 	ordinal := getOrdinalFromHostname(cfg.Hostname)
 	return ordinal == 0
