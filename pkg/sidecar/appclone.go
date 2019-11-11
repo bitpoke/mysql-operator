@@ -52,7 +52,7 @@ import (
 // master; bucket URL exists | The assumption is that this is the bootstrap case: the
 //                           | very first mysql pod is being initialized.
 // ------------------------------------------------------------------------------------
-// No healthy replcias; no   | If this is the first pod in the cluster, then allow it
+// No healthy replicas; no   | If this is the first pod in the cluster, then allow it
 // master; no bucket URL     | to initialize as an empty instance, otherwise, return an
 //                           | error to allow k8s to kill and restart the pod.
 // ------------------------------------------------------------------------------------
