@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"sigs.k8s.io/testing_frameworks/integration/addr"
 )
 
 var _ = Describe("Test RunCloneCommand cloning logic", func() {
@@ -36,10 +37,19 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 		// Normally, these are true k8s services, each listening on
 		// SidecarServerPort. Since we can't simulate that in unit tests, we put
 		// each "service" on its own port.
-		masterServiceAddr          = fmt.Sprintf(":%d", serverPort)
-		healthyReplicasServiceAddr = ":8081"
+
+		masterServiceAddr          string
+		healthyReplicasServiceAddr string
 		skipTruncatedDataTests     = false
 	)
+
+	generateAddress := func() string {
+		port, host, err := addr.Suggest()
+		if err != nil {
+			panic("couldn't generate local address for fakeserver")
+		}
+		return fmt.Sprintf("%s:%d", host, port)
+	}
 
 	setupFakeDataDir := func() {
 		tempDataDir, err := ioutil.TempDir("", "mysql-operator-tests")
@@ -102,9 +112,12 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 	}
 
 	BeforeSuite(func() {
+		masterServiceAddr = generateAddress()
+		healthyReplicasServiceAddr = generateAddress()
+
 		cfg = &Config{
-			masterService:              "localhost" + masterServiceAddr,
-			healthyReplicaCloneService: "localhost" + healthyReplicasServiceAddr,
+			masterService:              masterServiceAddr,
+			healthyReplicaCloneService: healthyReplicasServiceAddr,
 		}
 
 		setupFakeDataDir()
