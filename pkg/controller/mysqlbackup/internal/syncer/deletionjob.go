@@ -139,38 +139,51 @@ func (s *deletionJobSyncer) SyncFn(in runtime.Object) error {
 }
 
 func (s *deletionJobSyncer) ensurePodSpec() core.PodSpec {
+	// get the service account, the same as the one used by the cluster if the cluster exists otherwise use
+	// the default one. This may cause some issues when using workload identity in case when the cluster is removed
+	// before the backup.
+	serviceAccountName := ""
+	if s.cluster != nil {
+		serviceAccountName = s.cluster.Spec.PodSpec.ServiceAccountName
+	}
+
 	return core.PodSpec{
 		RestartPolicy: core.RestartPolicyNever,
 		Containers:    s.ensureContainers(),
 		ImagePullSecrets: []core.LocalObjectReference{
 			{Name: s.opt.ImagePullSecretName},
 		},
+		// set service account to this pod in order to be able to connect to remote storage if using workload identity
+		ServiceAccountName: serviceAccountName,
 	}
 }
 
 func (s *deletionJobSyncer) ensureContainers() []core.Container {
-	return []core.Container{
-		{
-			Name:            "delete",
-			Image:           s.opt.SidecarImage,
-			ImagePullPolicy: s.opt.ImagePullPolicy,
-			Args: []string{
-				"rclone",
-				constants.RcloneConfigArg,
-				"delete",
-				bucketForRclone(s.backup.Spec.BackupURL),
-			},
-			EnvFrom: []core.EnvFromSource{
-				{
-					SecretRef: &core.SecretEnvSource{
-						LocalObjectReference: core.LocalObjectReference{
-							Name: s.backup.Spec.BackupSecretName,
-						},
+	container := core.Container{
+		Name:            "delete",
+		Image:           s.opt.SidecarImage,
+		ImagePullPolicy: s.opt.ImagePullPolicy,
+		Args: []string{
+			"rclone",
+			constants.RcloneConfigArg,
+			"delete",
+			bucketForRclone(s.backup.Spec.BackupURL),
+		},
+	}
+
+	// if backups secret name is specified use it otherwise don't set anything
+	if len(s.backup.Spec.BackupSecretName) != 0 {
+		container.EnvFrom = []core.EnvFromSource{
+			{
+				SecretRef: &core.SecretEnvSource{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: s.backup.Spec.BackupSecretName,
 					},
 				},
 			},
-		},
+		}
 	}
+	return []core.Container{container}
 }
 
 func (s *deletionJobSyncer) recordWEventOnCluster(reason, msg string) {
