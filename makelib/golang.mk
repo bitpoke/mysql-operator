@@ -41,7 +41,7 @@ GO_TEST_FLAGS ?=
 GO_TEST_SUITE ?=
 GO_NOCOV ?=
 
-GO_SRCS := $(shell find $(STAGING_DIR) $(GO_SUBDIRS) -type f -name '*.go' | grep -v '_test.go')
+GO_SRCS := $(shell find $(GO_SUBDIRS) -type f -name '*.go' | grep -v '_test.go')
 
 # ====================================================================================
 # Setup go environment
@@ -120,6 +120,8 @@ endif
 GO_COMMON_FLAGS = $(GO_BUILDFLAGS) -tags '$(GO_TAGS)'
 GO_STATIC_FLAGS = $(GO_COMMON_FLAGS) $(GO_PKG_STATIC_FLAGS) -installsuffix static  -ldflags '$(GO_LDFLAGS)'
 GO_GENERATE_FLAGS = $(GO_BUILDFLAGS) -tags 'generate $(GO_TAGS)'
+GO_XGETTEXT_ARGS ?=
+GO_LOCALE_PREFIX ?= default
 
 export GO111MODULE
 
@@ -181,6 +183,12 @@ GOLANGCI_LINT_VERSION ?= 1.21.0
 GOLANGCI_LINT_DOWNLOAD_URL ?= https://github.com/golangci/golangci-lint/releases/download/v$(GOLANGCI_LINT_VERSION)/golangci-lint-$(GOLANGCI_LINT_VERSION)-$(HOSTOS)-$(HOSTARCH).tar.gz
 $(eval $(call tool.download.tar.gz,golangci-lint,$(GOLANGCI_LINT_VERSION),$(GOLANGCI_LINT_DOWNLOAD_URL)))
 
+ifneq ($(LANGUAGES),)
+GO_XGETTEXT_VERSION ?= 0.0.0-20180127124228-c366ce0fe48d
+GO_XGETTEXT_URL ?= github.com/presslabs/gettext/go-xgettext@v$(GO_XGETTEXT_VERSION)
+$(eval $(call tool.go.get,go-xgettext,$(GO_XGETTEXT_VERSION),$(GO_XGETTEXT_URL)))
+endif
+
 # we use a consistent version of gofmt even while running different go compilers.
 # see https://github.com/golang/go/issues/26397 for more details
 GOFMT_VERSION ?= 1.13
@@ -221,9 +229,9 @@ endif # GO_TEST_TOOL
 $(eval $(call common.target,go.build))
 .go.build.run: .do.go.build
 .do.go.build:
-	@$(INFO) go build $(PLATFORM)
-	$(foreach p,$(GO_STATIC_PACKAGES),@CGO_ENABLED=0 $(GO) build -v -i -o $(GO_OUT_DIR)/$(lastword $(subst /, ,$(p)))$(GO_OUT_EXT) $(GO_STATIC_FLAGS) $(p) || $(FAIL) ${\n})
-	@$(OK) go build $(PLATFORM)
+	@$(INFO) go build $(PLATFORM) $(GO_TAGS)
+	$(foreach p,$(GO_STATIC_PACKAGES),@CGO_ENABLED=0 $(GO) build -v -i -o $(GO_OUT_DIR)/$(call list-join,_,$(lastword $(subst /, ,$(p))) $(call lower,$(GO_TAGS)))$(GO_OUT_EXT) $(GO_STATIC_FLAGS) $(p) || $(FAIL) ${\n})
+	@$(OK) go build $(PLATFORM) $(GO_TAGS)
 
 ifeq ($(GO_TEST_TOOL),ginkgo)
 go.test.unit: $(GINKGO)
@@ -347,6 +355,26 @@ go.generate: $(GOIMPORTS)
 	@find $(GO_SUBDIRS) $(GO_INTEGRATION_TESTS_SUBDIRS) -type f -name 'zz_generated*' -exec $(GOIMPORTS) -l -w -local $(GO_PROJECT) {} \;
 	@$(OK) go generate $(PLATFORM)
 
+ifneq ($(LANGUAGES),)
+.PHONY: go.collect-translations
+go.collect-translations: $(GO_XGETTEXT) |$(WORK_DIR)
+	@$(INFO) go-xgettext collect translations
+	@$(GO_XGETTEXT) -sort-output -output "$(WORK_DIR)/$(GO_LOCALE_PREFIX).pot" $(GO_XGETTEXT_ARGS) \
+		$(shell find $(GO_SUBDIRS) $(STAGING_DIR) -type f -name '*.go' -not -name '*test.go' -not -name '*pb.go')
+	@$(SED) 's|$(STAGING_DIR)/||g' "$(WORK_DIR)/$(GO_LOCALE_PREFIX).pot" || $(FAIL)
+	$(foreach p,$(GO_SUBDIRS),@$(SED) 's|([[:space:]])($(p)/[[:alnum:]/]+.go)|\1$(GO_PROJECT)/\2|g' "$(WORK_DIR)/$(GO_LOCALE_PREFIX).pot" || $(FAIL) ${\n})
+#
+#	Update the .pot file only if there are changes to actual messages. We need this because the collector always updates
+#	the POT-Creation-Date
+#
+	@$(MAKELIB_BIN_DIR)/po-diff.sh $(LOCALES_DIR)/$(GO_LOCALE_PREFIX).pot $(WORK_DIR)/$(GO_LOCALE_PREFIX).pot || \
+		mv $(WORK_DIR)/$(GO_LOCALE_PREFIX).pot $(LOCALES_DIR)/$(GO_LOCALE_PREFIX).pot
+	@rm -f $(WORK_DIR)/$(GO_LOCALE_PREFIX).pot
+#
+	@$(OK) go-xgettext collect translations
+
+.translations.init: go.collect-translations
+endif
 
 .PHONY: .go.init .do.go.build go.test.unit go.test.integration go.test.codecov go.lint go.fmt go.generate
 .PHONY: .go.vendor.lite go.vendor go.vendor.check go.vendor.update .go.clean .go.distclean
