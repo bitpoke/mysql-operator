@@ -23,6 +23,8 @@ include $(SELF_DIR)/nodejs.mk
 
 REACT_OUTPUT_DIR ?= $(OUTPUT_DIR)/react
 
+REACT_LOCALE_PREFIX ?= messages
+
 # ====================================================================================
 # React app Targets
 
@@ -44,7 +46,7 @@ react.test: $(REACT)
 	@cd $(NODE_ROOT_DIR); TZ='UTC' $(REACT) test --env=jsdom --verbose --colors
 	@$(OK) react-scripts test
 
-react.run:
+react.run: $(REACT)
 	@cd $(NODE_ROOT_DIR); NODE_ENV=development BROWSER=none $(REACT) start
 
 .react.clean:
@@ -52,10 +54,45 @@ react.run:
 
 .PHONY: react.build react.test .react.clean
 
+ifneq ($(LANGUAGES),)
+I18NEXT_CONV := $(YARN_BIN_DIR)/i18next-conv
+REACT_GETTEXT_PARSER := $(YARN_BIN_DIR)/react-gettext-parser
+
+$(I18NEXT_CONV): yarn.install
+$(REACT_GETTEXT_PARSER): yarn.install
+build.tools: $(REACT_GETTEXT_PARSER) $(I18NEXT_CONV)
+
+.PHONY: react.collect-translations
+react.collect-translations: $(REACT_GETTEXT_PARSER) |$(WORK_DIR)
+	@$(INFO) react-gettext-parser collect translations
+	@cd $(NODE_ROOT_DIR); $(REACT_GETTEXT_PARSER) --config .gettextparser --no-wrap --output $(abspath $(WORK_DIR))/$(REACT_LOCALE_PREFIX).pot '$(NODE_SRC_DIR)/**/*.{js,ts,tsx}'
+#	Update the .pot file only if there are changes to actual messages. We need this because the collector always updates
+#	the POT-Creation-Date
+#
+	@$(MAKELIB_BIN_DIR)/po-diff.sh $(LOCALES_DIR)/$(REACT_LOCALE_PREFIX).pot $(WORK_DIR)/$(REACT_LOCALE_PREFIX).pot || \
+		mv $(WORK_DIR)/$(REACT_LOCALE_PREFIX).pot $(LOCALES_DIR)/$(REACT_LOCALE_PREFIX).pot
+	@rm -f $(WORK_DIR)/$(REACT_LOCALE_PREFIX).pot
+#
+	@$(OK) react-gettext-parser collect translations
+
+react.convert-translations: $(I18NEXT_CONV)
+	@$(INFO) i18next convert translations to json
+	$(foreach l,$(LANGUAGES),@$(I18NEXT_CONV) --language $(l) --skipUntranslated \
+		--source $(LOCALES_DIR)/$(l)/$(REACT_LOCALE_PREFIX).po \
+		--target $(NODE_ROOT_DIR)/$(NODE_SRC_DIR)/locales/$(l).json  \
+		> /dev/null || $(FAIL) ${\n}\
+	)
+	@$(OK) i18next convert translations to json
+
+.translations.init: react.collect-translations
+.translations.done: react.convert-translations
+endif
+
 # ====================================================================================
 # Common Targets
 
 .js.build.run: react.build
+.js.test.run: react.test
 clean: .react.clean
 
 # ====================================================================================
