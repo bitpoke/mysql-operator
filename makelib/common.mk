@@ -491,6 +491,7 @@ Common Targets:
     lint               Run lint and code analysis tools.
     test               Runs unit tests.
     e2e                Runs end-to-end integration tests.
+    translate          Collect translation strings and post-process the .pot/.po files.
     help               Show this help info.
 
 Common Options:
