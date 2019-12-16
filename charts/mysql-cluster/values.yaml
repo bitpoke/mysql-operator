@@ -18,6 +18,7 @@ volumeSpec:
 serverIDOffset:
 
 backupSchedule:
+backupScheduleJobsHistoryLimit:
 backupURL:
 backupSecretName:
 backupRemoteDeletePolicy:

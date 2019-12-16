@@ -28,6 +28,9 @@ spec:
   backupRemoteDeletePolicy: {{ .Values.backupRemoteDeletePolicy }}
   backupURL: {{ required ".mysql.backupURL is missing" .Values.backupURL }}
   {{- end }}
+  {{- if .Values.backupScheduleJobsHistoryLimit }}
+  backupScheduleJobsHistoryLimit: {{ .Values.backupScheduleJobsHistoryLimit }}
+  {{- end }}
 
   {{- if .Values.mysqlConf }}
   mysqlConf:
