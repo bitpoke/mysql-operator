@@ -9,8 +9,6 @@ metadata:
     heritage: '{{ .Release.Service }}'
     release: '{{ .Release.Name }}'
   name: mysqlbackups.mysql.presslabs.org
-  annotations:
-    helm.sh/hook: crd-install
 spec:
   group: mysql.presslabs.org
   names:
@@ -29,8 +27,6 @@ metadata:
     heritage: '{{ .Release.Service }}'
     release: '{{ .Release.Name }}'
   name: mysqlclusters.mysql.presslabs.org
-  annotations:
-    helm.sh/hook: crd-install
 spec:
   additionalPrinterColumns:
   - JSONPath: .status.conditions[?(@.type == "Ready")].status
