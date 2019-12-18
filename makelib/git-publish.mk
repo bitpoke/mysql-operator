@@ -118,7 +118,7 @@ $(foreach d,$(PUBLISH_DIRS), $(eval $(call git.publish,$(d))))
 # if PUBLISH_DIRS is defined the invoke publish for each dir
 ifneq ($(filter-out $(PUBLISH_DIR),$(PUBLISH_DIRS)),)
 
-.build.artifacts: .git.build.artifacts
+.publish.init: .git.build.artifacts
 clean: .git.clean
 
 # only publish for master and release branches
@@ -138,7 +138,7 @@ ifeq ($(PUBLISH_REPO),)
 $(error You must specify the PUBLISH_REPO variable in order to handle git publishing)
 endif
 
-.build.artifacts: .git.build.artifacts
+.publish.init: .git.build.artifacts
 clean: .git.clean
 
 endif # PUBLISH_DIRS
