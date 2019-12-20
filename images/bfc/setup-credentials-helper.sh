@@ -5,6 +5,9 @@
 : ${ZONE:="$PLUGIN_ZONE"}
 : ${UPGRADE_TILLER:="$PLUGIN_UPGRADE_TILLER"}
 : ${SSH_KEY:="$PLUGIN_SSH_KEY"}
+: ${DOCKER_USERNAME:="$PLUGIN_DOCKER_USERNAME"}
+: ${DOCKER_PASSWORD:="$PLUGIN_DOCKER_PASSWORD"}
+: ${DOCKER_REGISTRY:="${PLUGIN_DOCKER_REGISTRY:-docker.io}"}
 
 export PATH="$CI_WORKSPACE/bin:$PATH"
 
@@ -30,10 +33,10 @@ run() {
     "$@"
 }
 
-if [ ! -z "$QUAY_TOKEN" ] ; then
-    require_param QUAY_ACCOUNT
-    echo "+ docker login -u $QUAY_ACCOUNT quay.io"
-    echo "$QUAY_TOKEN" | docker login --username "$QUAY_ACCOUNT" --password-stdin quay.io
+if [ ! -z "$DOCKER_PASSWORD" ] ; then
+    require_param DOCKER_USERNAME
+    echo "+ docker login $DOCKER_REGISTRY -u $DOCKER_USERNAME"
+    docker login $DOCKER_REGISTRY -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 fi
 
 if [ ! -z "$GOOGLE_CREDENTIALS" ] ; then
