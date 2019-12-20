@@ -1,0 +1,288 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: mysqlclusters.mysql.presslabs.org
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.conditions[?(@.type == "Ready")].status
+    description: The cluster status
+    name: Ready
+    type: string
+  - JSONPath: .spec.replicas
+    description: The number of desired nodes
+    name: Replicas
+    type: integer
+  - JSONPath: .metadata.creationTimestamp
+    name: Age
+    type: date
+  group: mysql.presslabs.org
+  names:
+    kind: MysqlCluster
+    plural: mysqlclusters
+  scope: Namespaced
+  subresources:
+    scale:
+      specReplicasPath: .spec.replicas
+      statusReplicasPath: .status.readyNodes
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            backupRemoteDeletePolicy:
+              description: BackupRemoteDeletePolicy the deletion policy that specify
+                how to treat the data from remote storage. By default it's used softDelete.
+              type: string
+            backupSchedule:
+              description: Specify under crontab format interval to take backups leave
+                it empty to deactivate the backup process Defaults to ""
+              type: string
+            backupScheduleJobsHistoryLimit:
+              description: If set keeps last BackupScheduleJobsHistoryLimit Backups
+              format: int64
+              type: integer
+            backupSecretName:
+              description: Represents the name of the secret that contains credentials
+                to connect to the storage provider to store backups.
+              type: string
+            backupURL:
+              description: Represents an URL to the location where to put backups.
+              type: string
+            image:
+              description: To specify the image that will be used for mysql server
+                container. If this is specified then the mysqlVersion is used as source
+                for MySQL server version.
+              type: string
+            initBucketSecretName:
+              type: string
+            initBucketURI:
+              description: Same as InitBucketURL but is DEPRECATED
+              type: string
+            initBucketURL:
+              description: A bucket URL that contains a xtrabackup to initialize the
+                mysql database.
+              type: string
+            maxSlaveLatency:
+              description: MaxSlaveLatency represents the allowed latency for a slave
+                node in seconds. If set then the node with a latency grater than this
+                is removed from service.
+              format: int64
+              type: integer
+            minAvailable:
+              description: The number of pods from that set that must still be available
+                after the eviction, even in the absence of the evicted pod Defaults
+                to 50%
+              type: string
+            mysqlConf:
+              description: A map[string]string that will be passed to my.cnf file.
+              type: object
+            mysqlVersion:
+              description: 'Represents the MySQL version that will be run. The available
+                version can be found here: https://github.com/presslabs/mysql-operator/blob/0fd4641ce4f756a0aab9d31c8b1f1c44ee10fcb2/pkg/util/constants/constants.go#L87
+                This field should be set even if the Image is set to let the operator
+                know which mysql version is running. Based on this version the operator
+                can take decisions which features can be used. Defaults to 5.7'
+              type: string
+            podSpec:
+              description: Pod extra specification
+              properties:
+                affinity:
+                  type: object
+                annotations:
+                  type: object
+                imagePullPolicy:
+                  type: string
+                imagePullSecrets:
+                  items:
+                    type: object
+                  type: array
+                labels:
+                  type: object
+                nodeSelector:
+                  type: object
+                priorityClassName:
+                  type: string
+                resources:
+                  type: object
+                serviceAccountName:
+                  type: string
+                tolerations:
+                  items:
+                    type: object
+                  type: array
+              type: object
+            queryLimits:
+              description: QueryLimits represents limits for a query
+              properties:
+                ignoreCommands:
+                  description: IgnoreCommands the list of commands to be ignored.
+                  items:
+                    type: string
+                  type: array
+                ignoreDb:
+                  description: IgnoreDb is the list of database that are ignored by
+                    pt-kill (--ignore-db flag).
+                  items:
+                    type: string
+                  type: array
+                ignoreUser:
+                  description: IgnoreUser the list of users to be ignored.
+                  items:
+                    type: string
+                  type: array
+                kill:
+                  description: Kill represents the mode of which the matching queries
+                    in each class will be killed, (the --victims flag). Can be one
+                    of oldest|all|all-but-oldest. By default, the matching query with
+                    the highest Time value is killed (the oldest query.
+                  type: string
+                killMode:
+                  description: 'KillMode can be: `connection` or `query`, when it''s
+                    used `connection` means that when a query is matched the connection
+                    is killed (using --kill flag) and if it''s used `query` means
+                    that the query is killed (using --kill-query flag)'
+                  type: string
+                maxIdleTime:
+                  description: MaxIdleTime match queries that have been idle for longer
+                    then this time, in seconds. (--idle-time flag) + optional
+                  format: int64
+                  type: integer
+                maxQueryTime:
+                  description: MaxQueryTime match queries that have been running for
+                    longer then this time, in seconds. This field is required. (--busy-time
+                    flag)
+                  format: int64
+                  type: integer
+              required:
+              - maxQueryTime
+              type: object
+            readOnly:
+              description: Makes the cluster READ ONLY. Set the master to writable
+                or ReadOnly
+              type: boolean
+            replicas:
+              description: The number of pods. This updates replicas filed Defaults
+                to 0
+              format: int32
+              type: integer
+            secretName:
+              description: The secret name that contains connection information to
+                initialize database, like USER, PASSWORD, ROOT_PASSWORD and so on
+                This secret will be updated with DB_CONNECT_URL and some more configs.
+                Can be specified partially
+              maxLength: 63
+              minLength: 1
+              type: string
+            serverIDOffset:
+              description: Set a custom offset for Server IDs.  ServerID for each
+                node will be the index of the statefulset, plus offset
+              format: int64
+              type: integer
+            volumeSpec:
+              description: PVC extra specifiaction
+              properties:
+                emptyDir:
+                  description: EmptyDir to use as data volume for mysql. EmptyDir
+                    represents a temporary directory that shares a pod's lifetime.
+                  type: object
+                hostPath:
+                  description: HostPath to use as data volume for mysql. HostPath
+                    represents a pre-existing file or directory on the host machine
+                    that is directly exposed to the container.
+                  type: object
+                persistentVolumeClaim:
+                  description: PersistentVolumeClaim to specify PVC spec for the volume
+                    for mysql data. It has the highest level of precedence, followed
+                    by HostPath and EmptyDir. And represents the PVC specification.
+                  type: object
+              type: object
+          required:
+          - secretName
+          type: object
+        status:
+          properties:
+            conditions:
+              description: Conditions contains the list of the cluster conditions
+                fulfilled
+              items:
+                properties:
+                  lastTransitionTime:
+                    description: LastTransitionTime
+                    format: date-time
+                    type: string
+                  message:
+                    description: Message
+                    type: string
+                  reason:
+                    description: Reason
+                    type: string
+                  status:
+                    description: Status of the condition, one of (\"True\", \"False\",
+                      \"Unknown\")
+                    type: string
+                  type:
+                    description: type of cluster condition, values in (\"Ready\")
+                    type: string
+                required:
+                - type
+                - status
+                - lastTransitionTime
+                - reason
+                - message
+                type: object
+              type: array
+            nodes:
+              description: Nodes contains informations from orchestrator
+              items:
+                properties:
+                  conditions:
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          format: date-time
+                          type: string
+                        status:
+                          type: string
+                        type:
+                          type: string
+                      required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      type: object
+                    type: array
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              type: array
+            readyNodes:
+              description: ReadyNodes represents number of the nodes that are in ready
+                state
+              format: int64
+              type: integer
+          type: object
+  version: v1alpha1
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
