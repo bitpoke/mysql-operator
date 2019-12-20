@@ -253,11 +253,11 @@ endif
 endif
 export VERSION
 
-VERSION_REGEX := ^v\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)$$
-VERSION_VALID := $(shell echo "$(VERSION)" | grep -q '$(VERSION_REGEX)' && echo 1 || echo 0)
-VERSION_MAJOR := $(shell echo "$(VERSION)" | sed -e 's/$(VERSION_REGEX)/\1/')
-VERSION_MINOR := $(shell echo "$(VERSION)" | sed -e 's/$(VERSION_REGEX)/\2/')
-VERSION_PATCH := $(shell echo "$(VERSION)" | sed -e 's/$(VERSION_REGEX)/\3/')
+VERSION_REGEX := ^v([0-9]*)[.]([0-9]*)[.]([0-9]*)(-(alpha|beta|rc)[.][0-9]+)?(\+[[:alnum:].+_-]+)?$$
+VERSION_VALID := $(shell echo "$(VERSION)" | grep -E -q '$(VERSION_REGEX)' && echo 1 || echo 0)
+VERSION_MAJOR := $(shell echo "$(VERSION)" | sed -E -e 's/$(VERSION_REGEX)/\1/')
+VERSION_MINOR := $(shell echo "$(VERSION)" | sed -E -e 's/$(VERSION_REGEX)/\2/')
+VERSION_PATCH := $(shell echo "$(VERSION)" | sed -E -e 's/$(VERSION_REGEX)/\3/')
 
 BUILD_DATE ?= $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 GIT_COMMIT := $(shell git rev-parse HEAD)
@@ -271,11 +271,11 @@ endif
 
 .publish.tag: .version.require.clean.tree
 ifneq ($(VERSION_VALID),1)
-	$(error invalid version $(VERSION). must be a semantic version with v[Major].[Minor].[Patch] only)
+	$(error invalid version $(VERSION). must be a semantic semver version (eg. with v[Major].[Minor].[Patch]))
 endif
-	@$(INFO) tagging commit hash $(COMMIT_HASH) with v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH)
-	git tag -f -m "release $(VERSION)" v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH) $(COMMIT_HASH)
-	git push $(REMOTE_NAME) v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH)
+	@$(INFO) tagging commit hash $(COMMIT_HASH) with $(VERSION)
+	git tag -f -m "release $(VERSION)" $(VERSION) $(COMMIT_HASH)
+	git push $(REMOTE_NAME) $(VERSION)
 	@set -e; if ! git ls-remote --heads $(REMOTE_NAME) | grep -q refs/heads/release-$(VERSION_MAJOR).$(VERSION_MINOR); then \
 		echo === creating new release branch release-$(VERSION_MAJOR).$(VERSION_MINOR) ;\
 		git branch -f release-$(VERSION_MAJOR).$(VERSION_MINOR) $(COMMIT_HASH) ;\
@@ -285,7 +285,7 @@ endif
 
 # fail publish if the version is dirty
 .version.require.clean.tree:
-	@if [[ $(GIT_TREE_STATE) = dirty ]]; then \
+	@if [[ $$ALLOW_DIRTY_TREE != "true" ]] && [[ $(GIT_TREE_STATE) = dirty ]]; then \
 		$(ERR) version '$(VERSION)' is dirty. The following files changed: ;\
 		git status --short;\
 		exit 1; \
