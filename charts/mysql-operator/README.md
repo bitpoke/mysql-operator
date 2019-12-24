@@ -4,8 +4,13 @@ This is the helm chart for [mysql-operator](https://github.com/presslabs/mysql-o
 
 ## TL;DR
 ```sh
+## For Helm v2
 helm repo add presslabs https://presslabs.github.io/charts
 helm install presslabs/mysql-operator --name mysql-operator
+
+## For Helm v3
+helm repo add presslabs https://presslabs.github.io/charts
+helm install mysql-operator presslabs/mysql-operator --skip-crds
 ```
 
 ## Configuration
@@ -17,7 +22,7 @@ The following table contains the configuration parameters for mysql-operator and
 | `image`                         | Controller container image                                                                    | `quay.io/presslabs/mysql-operator:v0.1.5` |
 | `imagePullPolicy`               | Controller image pull policy                                                                  | `IfNotPresent`                            |
 | `sidecarImage`                  | Mysql operator sidecar image                                                                  | `quay.io/presslabs/mysql-helper:v0.1.5`   |
-| `installCRDs`                   | Whether or not to install CRDS                                                                | `true`                                    |
+| `installCRDs`                   | Whether or not to install CRDS, Regardless of value of this, Helm v3+ will install the CRDs if those are not present already. Use `--skip-crds` with `helm install` if you want to skip CRD creation                                                                | `true`                                    |
 | `resources`                     | Controller and Orchestrator pod resources limits and requests                                 | `{}`                                      |
 | `nodeSelector`                  | Controller and Orchestrator pod nodeSelector                                                  | `{}`                                      |
 | `tolerations`                   | Controller and Orchestrator pod tolerations                                                   | `{}`                                      |
