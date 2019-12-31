@@ -3,6 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   labels:
     app: mysql-operator
+    controller-tools.k8s.io: "1.0"
   name: mysqlbackups.mysql.presslabs.org
 spec:
   group: mysql.presslabs.org
@@ -17,6 +18,7 @@ kind: CustomResourceDefinition
 metadata:
   labels:
     app: mysql-operator
+    controller-tools.k8s.io: "1.0"
   name: mysqlclusters.mysql.presslabs.org
 spec:
   additionalPrinterColumns:
