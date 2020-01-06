@@ -236,7 +236,7 @@ $(foreach r,$(REGISTRIES), $(foreach i,$(IMAGES), $(foreach a,$(IMAGE_ARCHS),$(e
 
 .PHONY: .img.release.manifest.publish.%
 .img.release.manifest.publish.%: .img.release.publish $(MANIFEST_TOOL)
-	$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms $(IMAGE_PLATFORMS) --template $(DOCKER_REGISTRY)/$*-ARCH:$(VERSION) --target $(DOCKER_REGISTRY)/$*:$(VERSION) || $(FAIL)
+	@$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms $(IMAGE_PLATFORMS) --template $(DOCKER_REGISTRY)/$*-ARCH:$(VERSION) --target $(DOCKER_REGISTRY)/$*:$(VERSION) || $(FAIL)
 
 .PHONY: .img.release.manifest.promote.%
 .img.release.manifest.promote.%: .img.release.promote $(MANIFEST_TOOL)
