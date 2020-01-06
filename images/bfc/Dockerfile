@@ -20,12 +20,14 @@ COPY build-scripts /usr/local/build-scripts
 # ------------------------------------------------------------------------------------------------
 # install build and release tools
 RUN /usr/local/build-scripts/install-packages.sh \
+        apt-transport-https \
+        gnupg-agent \
+        software-properties-common \
         python \
         gettext \
         build-essential \
         ca-certificates \
         curl \
-        docker.io \
         git \
         jq \
         lsb-release \
@@ -35,6 +37,13 @@ RUN /usr/local/build-scripts/install-packages.sh \
         runit \
         sudo \
         zip
+
+# ------------------------------------------------------------------------------------------------
+# install docker
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - \
+    && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+    && /usr/local/build-scripts/install-packages.sh docker-ce docker-ce-cli containerd.io
+
 # ------------------------------------------------------------------------------------------------
 # Install pip & AWSCLI
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
