@@ -1,7 +1,11 @@
 PLATFORMS := linux_amd64
 include ../../makelib/common.mk
 
-IMAGE = $(BUILD_REGISTRY)/bfc-$(ARCH)
+# this is required, since by default, the makelib files are under a ./build path prefix, but here,
+# they are under root
+ROOT_DIR := $(abspath $(shell cd ./../.. && pwd -P))
+
+IMAGE = $(BUILD_REGISTRY)/build-$(ARCH)
 CACHE_IMAGES = $(IMAGE)
 include ../../makelib/image.mk
 

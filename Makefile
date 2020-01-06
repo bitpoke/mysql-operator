@@ -4,9 +4,13 @@ PROJECT_REPO := github.com/presslabs/build
 
 PLATFORMS = linux_amd64
 
-include makelib/common.mk
-include makelib/gcp.mk
+# this is required, since by default, the makelib files are under a ./build path prefix, but here,
+# they are under root
+ROOT_DIR := $(abspath $(shell cd ./ && pwd -P))
 
-IMAGES ?= bfc
-DOCKER_REGISTRY ?= gcr.io/$(GOOGLE_CLOUD_PROJECT)/$(PROJECT_NAME)
+include makelib/common.mk
+
+IMAGES ?= build
+DOCKER_REGISTRY ?= docker.io/presslabs
+
 include makelib/image.mk

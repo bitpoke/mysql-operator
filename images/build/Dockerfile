@@ -12,56 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:16.04
+FROM google/cloud-sdk:274.0.1
 
 ENV DEBIAN_FRONTEND noninteractive
 
 COPY build-scripts /usr/local/build-scripts
+
 # ------------------------------------------------------------------------------------------------
 # install build and release tools
 RUN /usr/local/build-scripts/install-packages.sh \
-        apt-transport-https \
-        gnupg-agent \
-        software-properties-common \
-        python \
         gettext \
-        build-essential \
-        ca-certificates \
-        curl \
-        git \
         jq \
         lsb-release \
         make \
-        openssh-client \
         rsync \
         runit \
         sudo \
         zip
 
 # ------------------------------------------------------------------------------------------------
-# install docker
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - \
-    && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-    && /usr/local/build-scripts/install-packages.sh docker-ce docker-ce-cli containerd.io
-
-# ------------------------------------------------------------------------------------------------
-# Install pip & AWSCLI
-RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
-    python get-pip.py && \
-    pip install awscli --upgrade
-
-# ------------------------------------------------------------------------------------------------
-# Install google cloud sdk
-# https://cloud.google.com/sdk/docs/downloads-versioned-archives
-ENV GCLOUD_SDK_VERSION="254.0.0"
-ENV CLOUDSDK_PYTHON="/usr/bin/python2.7"
-ENV GOOGLE_APPLICATION_CREDENTIALS="/run/google-credentials.json"
-RUN curl -sL -o google-cloud-sdk.tar.gz https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-${GCLOUD_SDK_VERSION}-linux-x86_64.tar.gz \
-    && tar -zxf google-cloud-sdk.tar.gz \
-    && mv google-cloud-sdk /opt/ \
-    && rm google-cloud-sdk.tar.gz \
-    && /opt/google-cloud-sdk/bin/gcloud --quiet components install beta
-ENV PATH /opt/google-cloud-sdk/bin:$PATH
+# git config
+RUN git config --global user.email "bot@presslabs.com" \
+    && git config --global user.name "Igor Debot"
 
 # ------------------------------------------------------------------------------------------------
 # Go support
@@ -88,11 +60,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_10.x | bash - && \
         nodejs \
         google-chrome-stable \
         xvfb && \
-    rm -f /etc/apt/sources.list.d/google.list
-
-# setup chrome to run inside the container
-ADD xvfb-chrome /usr/bin/xvfb-chrome
-RUN ln -fs /usr/bin/xvfb-chrome /usr/bin/google-chrome
+    rm -f /etc/apt/sources.list.d/google.list && \
+    ln -fs /usr/local/bin/xvfb-chrome /usr/bin/google-chrome
 ENV CHROME_BIN /usr/bin/google-chrome
 
 # ------------------------------------------------------------------------------------------------
@@ -112,18 +81,14 @@ RUN set -ex \
     && rm rclone-v${RCLONE_VERSION}-linux-amd64.deb
 
 # ------------------------------------------------------------------------------------------------
-# git config
-RUN git config --global user.email "bot@presslabs.com" \
-    && git config --global user.name "Igor Debot"
-
-# ------------------------------------------------------------------------------------------------
 # Run tini as PID 1 and avoid signal handling issues
 ARG ARCH
 ARG TINI_VERSION
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${ARCH} /tini
-RUN chmod +x /tini
+RUN curl -sL -o /tini https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${ARCH} && \
+    chmod +x /tini
 
-COPY setup-credentials-helper.sh /usr/local/bin/setup-credentials-helper.sh
-COPY run.sh rsyncd.sh /build/
+ENV DOCKER_HOST=unix:///workspace/docker.sock
+
+COPY root /
 
 ENTRYPOINT [ "/tini", "-g", "--", "/build/run.sh" ]

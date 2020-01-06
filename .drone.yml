@@ -1,0 +1,46 @@
+kind: pipeline
+name: default
+
+clone:
+  disable: true
+
+workspace:
+  base: /workspace
+  path: src/github.com/presslabs/build
+
+steps:
+- name: clone
+  image: plugins/git
+  settings:
+    depth: 0
+    tags: true
+
+- name: build
+  image: docker.io/presslabs/build:v0.2.0
+  commands:
+  - make -j4 build
+  depends_on:
+    - clone
+
+- name: publish
+  image: docker.io/presslabs/build:v0.2.0
+  commands:
+  - /usr/local/bin/setup-credentials-helper.sh
+  - make publish
+  environment:
+    DOCKER_USERNAME: presslabsbot
+    DOCKER_PASSWORD:
+      from_secret: DOCKER_PASSWORD
+  depends_on:
+    - build
+
+services:
+- name: docker
+  image: docker:19.03.5-dind
+  privileged: true
+  commands:
+    - /usr/local/bin/dockerd-entrypoint.sh dockerd --host "unix:///workspace/docker.sock" --storage-driver overlay2 --log-level error
+
+trigger:
+  ref:
+    - refs/tags/**
