@@ -314,6 +314,29 @@ var _ = Describe("Orchestrator reconciler", func() {
 			Expect(master).To(BeNil())
 
 		})
+		It("should be unable to find a clear master even if the CoMaster is not set by orchestrator", func() {
+			// Topology:
+			//  0
+			//  |
+			//  1
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+			})
+
+			var insts InstancesSet
+			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+
+			// should not determine any master because there are two masters
+			master := insts.DetermineMaster()
+			Expect(master).To(BeNil())
+		})
 	})
 
 	It("should not determine the master when master is not in orc", func() {
