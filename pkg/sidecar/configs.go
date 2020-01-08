@@ -108,7 +108,7 @@ func (cfg *Config) MysqlDSN() string {
 
 // ShouldCloneFromBucket returns true if it's time to initialize from a bucket URL provided
 func (cfg *Config) ShouldCloneFromBucket() bool {
-	return !cfg.ExistsMySQLData && cfg.ServerID() == 100 && len(cfg.InitBucketURL) != 0
+	return !cfg.ExistsMySQLData && cfg.ServerID() == cfg.MyServerIDOffset && len(cfg.InitBucketURL) != 0
 }
 
 // NewConfig returns a pointer to Config configured from environment variables
