@@ -203,7 +203,7 @@ pipeline:
       event: push
 
   e2e-tests:
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.1
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
