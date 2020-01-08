@@ -537,18 +537,27 @@ func (is InstancesSet) GetInstance(host string) *orc.Instance {
 	return nil
 }
 
-func (is InstancesSet) getMasterForNode(node *orc.Instance) *orc.Instance {
+func (is InstancesSet) getMasterForNode(node *orc.Instance, visited []*orc.Instance) *orc.Instance {
+	// Check for infinite loops. We don't want to follow a node that was already visited.
+	// This may happen when node are not marked as CoMaster by orchestrator
+	for _, vn := range visited {
+		if vn.Key == node.Key {
+			return nil
+		}
+	}
+	visited = append(visited, node)
+
 	if len(node.MasterKey.Hostname) != 0 && !node.IsCoMaster && !node.IsDetachedMaster {
-		// get the master hostname from MasterKey if MasterKey is set
+		// get the (maybe intermediate) master hostname from MasterKey if MasterKey is set
 		master := is.GetInstance(node.MasterKey.Hostname)
 		if master != nil {
-			return is.getMasterForNode(master)
+			return is.getMasterForNode(master, visited)
 		}
 		return nil
 	}
 
 	if node.IsCoMaster {
-		// if it's comaster then return the other master
+		// if it's CoMaster then return the other master
 		master := is.GetInstance(node.MasterKey.Hostname)
 		return master
 	}
@@ -561,7 +570,7 @@ func (is InstancesSet) DetermineMaster() *orc.Instance {
 	masterForNode := []orc.Instance{}
 
 	for _, node := range is {
-		master := is.getMasterForNode(&node)
+		master := is.getMasterForNode(&node, []*orc.Instance{})
 		if master == nil {
 			log.V(1).Info("DetermineMaster: master not found for node", "node", node.Key.Hostname)
 			return nil
