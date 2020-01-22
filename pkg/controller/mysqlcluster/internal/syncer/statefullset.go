@@ -535,7 +535,7 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 			{Name: dataVolumeName, MountPath: DataVolumeMountPath},
 		}
 		if s.getTmpfsSize() != nil {
-			mounts = append(mounts, core.VolumeMount{Name: tmpfsVolumeName, MountPath: DataVolumeMountPath})
+			mounts = append(mounts, core.VolumeMount{Name: tmpfsVolumeName, MountPath: TmpfsVolumeMountPath})
 		}
 
 		return mounts
@@ -546,7 +546,7 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 			{Name: dataVolumeName, MountPath: DataVolumeMountPath},
 		}
 		if s.getTmpfsSize() != nil {
-			mounts = append(mounts, core.VolumeMount{Name: tmpfsVolumeName, MountPath: DataVolumeMountPath})
+			mounts = append(mounts, core.VolumeMount{Name: tmpfsVolumeName, MountPath: TmpfsVolumeMountPath})
 		}
 
 		return mounts
