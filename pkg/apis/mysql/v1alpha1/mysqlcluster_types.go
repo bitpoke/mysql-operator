@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -105,6 +106,10 @@ type MysqlClusterSpec struct {
 	// PVC extra specifiaction
 	// +optional
 	VolumeSpec VolumeSpec `json:"volumeSpec,omitempty"`
+
+	// TmpfsSize if specified, mounts a tmpfs of this size into /tmp
+	// +optional
+	TmpfsSize *resource.Quantity `json:"tmpfsSize,omitempty"`
 
 	// MaxSlaveLatency represents the allowed latency for a slave node in
 	// seconds. If set then the node with a latency grater than this is removed

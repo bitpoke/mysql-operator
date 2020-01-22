@@ -194,6 +194,10 @@ spec:
                 node will be the index of the statefulset, plus offset
               format: int64
               type: integer
+            tmpfsSize:
+              description: TmpfsSize if specified, mounts a tmpfs of this size into
+                /tmp
+              type: object
             volumeSpec:
               description: PVC extra specifiaction
               properties:

@@ -53,6 +53,9 @@ const (
 	// DataVolumeMountPath is the path to mysql data
 	DataVolumeMountPath = "/var/lib/mysql"
 
+	// TmpfsVolumeMountPath is the path for the tmpfs mount
+	TmpfsVolumeMountPath = "/tmp"
+
 	// ConfMapVolumeMountPath represents the temp config mount path in init containers
 	ConfMapVolumeMountPath = "/mnt/conf"
 

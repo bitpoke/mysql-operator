@@ -44,6 +44,7 @@ const (
 	confMapVolumeName = "config-map"
 	initDBVolumeName  = "init-scripts"
 	dataVolumeName    = "data"
+	tmpfsVolumeName   = "tmp"
 )
 
 // containers names
@@ -422,7 +423,7 @@ func (s *sfsSyncer) ensureVolumes() []core.Volume {
 		log.Info("no volume spec is specified", ".spec.volumeSpec", s.cluster.Spec.VolumeSpec)
 	}
 
-	return []core.Volume{
+	volumes := []core.Volume{
 		ensureVolume(confVolumeName, core.VolumeSource{
 			EmptyDir: &core.EmptyDirVolumeSource{},
 		}),
@@ -442,6 +443,17 @@ func (s *sfsSyncer) ensureVolumes() []core.Volume {
 
 		ensureVolume(dataVolumeName, dataVolume),
 	}
+
+	if s.cluster.Spec.TmpfsSize != nil {
+		volumes = append(volumes, ensureVolume(tmpfsVolumeName, core.VolumeSource{
+			EmptyDir: &core.EmptyDirVolumeSource{
+				Medium:    core.StorageMediumMemory,
+				SizeLimit: s.cluster.Spec.TmpfsSize,
+			},
+		}))
+	}
+
+	return volumes
 }
 
 // TODO rework the condition here after kubernetes-sigs/controller-runtime#98 gets merged.
@@ -506,17 +518,27 @@ func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 	switch name {
 	case containerCloneAndInitName:
-		return []core.VolumeMount{
+		mounts := []core.VolumeMount{
 			{Name: confVolumeName, MountPath: ConfVolumeMountPath},
 			{Name: confMapVolumeName, MountPath: ConfMapVolumeMountPath},
 			{Name: dataVolumeName, MountPath: DataVolumeMountPath},
 		}
+		if s.cluster.Spec.TmpfsSize != nil {
+			mounts = append(mounts, core.VolumeMount{Name: tmpfsVolumeName, MountPath: DataVolumeMountPath})
+		}
+
+		return mounts
 
 	case containerMysqlName, containerSidecarName, containerMySQLInitName:
-		return []core.VolumeMount{
+		mounts := []core.VolumeMount{
 			{Name: confVolumeName, MountPath: ConfVolumeMountPath},
 			{Name: dataVolumeName, MountPath: DataVolumeMountPath},
 		}
+		if s.cluster.Spec.TmpfsSize != nil {
+			mounts = append(mounts, core.VolumeMount{Name: tmpfsVolumeName, MountPath: DataVolumeMountPath})
+		}
+
+		return mounts
 
 	case containerHeartBeatName, containerKillerName:
 		return []core.VolumeMount{
