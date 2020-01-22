@@ -242,6 +242,11 @@ func (in *MysqlClusterSpec) DeepCopyInto(out *MysqlClusterSpec) {
 	}
 	in.PodSpec.DeepCopyInto(&out.PodSpec)
 	in.VolumeSpec.DeepCopyInto(&out.VolumeSpec)
+	if in.TmpfsSize != nil {
+		in, out := &in.TmpfsSize, &out.TmpfsSize
+		x := (*in).DeepCopy()
+		*out = &x
+	}
 	if in.MaxSlaveLatency != nil {
 		in, out := &in.MaxSlaveLatency, &out.MaxSlaveLatency
 		*out = new(int64)
