@@ -1,7 +1,8 @@
 branches:
   - master
-  - 1.x
-  - 2.x
+  - 0.1.x
+  - 0.2.x
+  - 0.3.x
   # This is very useful when debugging drone related issues. Just prefix your branch with "drone-"
   # to trigger a drone build.
   - drone-*
