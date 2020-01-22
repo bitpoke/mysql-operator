@@ -197,7 +197,7 @@ spec:
             tmpfsSize:
               description: TmpfsSize if specified, mounts a tmpfs of this size into
                 /tmp
-              type: object
+              type: string
             volumeSpec:
               description: PVC extra specifiaction
               properties:

@@ -18,13 +18,13 @@ package mysqlcluster
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"strconv"
 	"strings"
 
 	"github.com/imdario/mergo"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -444,13 +444,16 @@ func (s *sfsSyncer) ensureVolumes() []core.Volume {
 		ensureVolume(dataVolumeName, dataVolume),
 	}
 
-	if s.cluster.Spec.TmpfsSize != nil {
+	tmpfsSize := s.getTmpfsSize()
+	if tmpfsSize != nil {
 		volumes = append(volumes, ensureVolume(tmpfsVolumeName, core.VolumeSource{
 			EmptyDir: &core.EmptyDirVolumeSource{
 				Medium:    core.StorageMediumMemory,
-				SizeLimit: s.cluster.Spec.TmpfsSize,
+				SizeLimit: tmpfsSize,
 			},
 		}))
+	} else if s.cluster.Spec.TmpfsSize != "" {
+		log.Error(fmt.Errorf("%s is an invalid resource", s.cluster.Spec.TmpfsSize), "invalid resource spec")
 	}
 
 	return volumes
@@ -515,6 +518,14 @@ func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 	return envSources
 }
 
+func (s *sfsSyncer) getTmpfsSize() *resource.Quantity {
+	tmpfsSize, err := resource.ParseQuantity(s.cluster.Spec.TmpfsSize)
+	if err != nil {
+		return &tmpfsSize
+	}
+	return nil
+}
+
 func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 	switch name {
 	case containerCloneAndInitName:
@@ -523,7 +534,7 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 			{Name: confMapVolumeName, MountPath: ConfMapVolumeMountPath},
 			{Name: dataVolumeName, MountPath: DataVolumeMountPath},
 		}
-		if s.cluster.Spec.TmpfsSize != nil {
+		if s.getTmpfsSize() != nil {
 			mounts = append(mounts, core.VolumeMount{Name: tmpfsVolumeName, MountPath: DataVolumeMountPath})
 		}
 
@@ -534,7 +545,7 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 			{Name: confVolumeName, MountPath: ConfVolumeMountPath},
 			{Name: dataVolumeName, MountPath: DataVolumeMountPath},
 		}
-		if s.cluster.Spec.TmpfsSize != nil {
+		if s.getTmpfsSize() != nil {
 			mounts = append(mounts, core.VolumeMount{Name: tmpfsVolumeName, MountPath: DataVolumeMountPath})
 		}
 
