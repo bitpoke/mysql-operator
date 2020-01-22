@@ -521,9 +521,9 @@ func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 func (s *sfsSyncer) getTmpfsSize() *resource.Quantity {
 	tmpfsSize, err := resource.ParseQuantity(s.cluster.Spec.TmpfsSize)
 	if err != nil {
-		return &tmpfsSize
+		return nil
 	}
-	return nil
+	return &tmpfsSize
 }
 
 func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
