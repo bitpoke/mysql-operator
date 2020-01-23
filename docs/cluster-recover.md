@@ -1,11 +1,12 @@
 ---
 title: MySQL Cluster Recovery
-linktitle: MySQL Cluster recovery
+linktitle: Recovery
 description: MySQL operator provides a way to recreate clusters from snapshots.
-categories: [mysql operator]
 keywords: [mysql operator]
-toc: true
-related: true
+menu:
+  global:
+    parent: "mysql-cluster"
+    weight: 2
 slug: mysql-cluster-recovery
 ---
 

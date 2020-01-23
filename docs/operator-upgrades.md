@@ -2,10 +2,11 @@
 title: The MySQL Operator Upgrades
 linktitle: Operator upgrades
 description: The steps to make in order to migrate the operator to a newer version of the MySQL operator.
-categories: [mysql operator]
 keywords: [mysql operator, upgrades]
-toc: true
-related: true
+menu:
+  global:
+    parent: "mysql-operator"
+    weight: 3
 slug: operator-upgrades
 ---
 
