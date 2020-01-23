@@ -1,11 +1,12 @@
 ---
 title: MySQL Operator Recurrent Backups
-linktitle: Recurrent Backups for MySQL cluster
+linktitle: Recurrent Backups
 description: MySQL operator provides effortless recurrent backups while keeping the cluster highly available.
-categories: [mysql operator]
 keywords: [mysql operator]
-toc: true
-related: true
+menu:
+  global:
+    parent: "mysql-operator"
+    weight: 2
 slug: cluster-recurrent-backups
 ---
 

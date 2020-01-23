@@ -1,11 +1,12 @@
 ---
 title: Integrating mysql clusters into your own helm charts
-linktitle: MySQL Operator Integration
+linktitle: Integration
 description: How to integrate the MySQL operator with your application.
-categories: [mysql operator]
 keywords: [mysql operator]
-toc: true
-related: true
+menu:
+  global:
+    parent: "mysql-operator"
+    weight: 1
 slug: integrate-operator
 ---
 

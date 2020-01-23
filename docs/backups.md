@@ -1,11 +1,12 @@
 ---
 title: MySQL Cluster Backups
-linktitle: Backups of a cluster
+linktitle: Backups
 description: MySQL operator provides effortless backups while keeping the cluster highly-available.
-categories: [mysql operator]
 keywords: [mysql operator]
-toc: true
-related: true
+menu:
+  global:
+    parent: "mysql-cluster"
+    weight: 1
 slug: mysql-cluster-backups
 ---
 

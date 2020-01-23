@@ -1,11 +1,12 @@
 ---
 title: MySQL Cluster Setup
-linktitle: Deploy a MySQL cluster
+linktitle: Deploy
 description: How to setup a cluster with MySQL operator.
-categories: [mysql operator, cluster]
 keywords: [mysql operator, cluster]
-toc: true
-related: true
+menu:
+  global:
+    parent: "mysql-cluster"
+    weight: 3
 slug: deploy-mysql-cluster
 ---
 

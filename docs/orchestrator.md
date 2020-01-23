@@ -2,10 +2,7 @@
 title: Accessing the Orchestrator
 linktitle: Accessing Orchestrator
 description: The orchestrator part in cluster management
-categories: [mysql operator, orchestrator]
 keywords: [mysql operator, cluster, orchestrator]
-toc: true
-related: true
 slug: orchestrator
 ---
 
