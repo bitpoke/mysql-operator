@@ -7,7 +7,6 @@ menu:
   global:
     parent: "mysql-operator"
     weight: 3
-slug: operator-upgrades
 ---
 
 In this section you can find the migration path when upgrading to a newer version of the MySQL operator.

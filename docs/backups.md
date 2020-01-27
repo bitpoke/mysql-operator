@@ -7,7 +7,6 @@ menu:
   global:
     parent: "mysql-cluster"
     weight: 1
-slug: mysql-cluster-backups
 ---
 
 Backups are stored on object storage services like S3 or Google Cloud Storage.

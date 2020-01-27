@@ -7,7 +7,6 @@ menu:
   global:
     parent: "mysql-operator"
     weight: 1
-slug: integrate-operator
 ---
 
 After cluster creation, you can update the provided secret with a new field named `DB_CONNECT_URL`

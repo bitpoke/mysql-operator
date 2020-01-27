@@ -7,7 +7,6 @@ menu:
   global:
     parent: "mysql-cluster"
     weight: 2
-slug: mysql-cluster-recovery
 ---
 
 The MySQL operator provides a way to recreate a cluster based on a backup (snapshot). Just create a new cluster with a new name which has `initBucketURL` field pointed to the right backup.

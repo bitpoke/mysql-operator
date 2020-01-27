@@ -3,7 +3,6 @@ title: Accessing the Orchestrator
 linktitle: Accessing Orchestrator
 description: The orchestrator part in cluster management
 keywords: [mysql operator, cluster, orchestrator]
-slug: orchestrator
 ---
 
 The MySQL operator uses [orchestrator](https://github.com/github/orchestrator), a tool developed by GitHub for MySQL replication topology management and high availability. By default, the operator is deployed alongside with the operator.
