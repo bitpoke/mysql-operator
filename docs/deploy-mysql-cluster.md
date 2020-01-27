@@ -10,7 +10,7 @@ menu:
 slug: deploy-mysql-cluster
 ---
 
-How to deploy a MySQL cluster using the operator, after the operator is deployed as described in [getting started]({{< ref "./_index.md" >}}).
+How to deploy a MySQL cluster using the operator, after the operator is deployed as described in [getting started](./_index.md).
 
 ## Deploy a cluster
 
