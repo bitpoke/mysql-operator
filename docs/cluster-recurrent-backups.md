@@ -7,7 +7,6 @@ menu:
   global:
     parent: "mysql-operator"
     weight: 2
-slug: cluster-recurrent-backups
 ---
 
 In the [Backups](./backups.md) section we take backups on demand. However, a cluster can be configured to take recurrent backups. Also, a cluster can be initialized from an existing backup.

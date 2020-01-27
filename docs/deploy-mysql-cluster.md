@@ -7,7 +7,6 @@ menu:
   global:
     parent: "mysql-cluster"
     weight: 3
-slug: deploy-mysql-cluster
 ---
 
 How to deploy a MySQL cluster using the operator, after the operator is deployed as described in [getting started](./_index.md).
