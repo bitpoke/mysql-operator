@@ -246,10 +246,10 @@ ifeq ($(origin VERSION), undefined)
 # check if there are any existing `git tag` values
 ifeq ($(shell git tag),)
 # no tags found - default to initial tag `v0.0.0`
-VERSION := $(shell echo "v0.0.0-$$(git rev-list HEAD --count)-$$(git describe --dirty --always)" | sed 's/-/./2' | sed 's/-/./2')
+VERSION := $(shell echo "v0.0.0-$$(git rev-list HEAD --count)-$$(git describe --dirty --always --abbrev=7)" | sed 's/-/./2' | sed 's/-/./2')
 else
 # use tags
-VERSION := $(shell git describe --dirty --always --tags | sed 's/-/./2' | sed 's/-/./2' )
+VERSION := $(shell git describe --dirty --always --tags --abbrev=7 | sed 's/-/./2' | sed 's/-/./2' )
 endif
 endif
 export VERSION
