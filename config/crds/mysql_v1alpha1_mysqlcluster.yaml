@@ -84,6 +84,13 @@ spec:
                 is removed from service.
               format: int64
               type: integer
+            metricsExporterExtraArgs:
+              description: MetricsExporterExtraArgs is a list of extra command line
+                arguments to pass to MySQL metrics exporter. See https://github.com/prometheus/mysqld_exporter
+                for the list of available flags.
+              items:
+                type: string
+              type: array
             minAvailable:
               description: The number of pods from that set that must still be available
                 after the eviction, even in the absence of the evicted pod Defaults
