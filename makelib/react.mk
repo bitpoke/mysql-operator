@@ -28,7 +28,7 @@ REACT_LOCALE_PREFIX ?= messages
 # ====================================================================================
 # React app Targets
 
-REACT := $(YARN_BIN_DIR)/react-scripts
+REACT := $(YARN_BIN_DIR)/react-scripts --max_old_space_size=4096
 $(REACT): yarn.install
 build.tools: $(REACT)
 
