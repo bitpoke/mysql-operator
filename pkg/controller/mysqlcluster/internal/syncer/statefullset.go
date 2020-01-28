@@ -339,15 +339,22 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 	})
 
 	// METRICS container
+	exporterCommand := []string{
+		fmt.Sprintf("--web.listen-address=0.0.0.0:%d", ExporterPort),
+		fmt.Sprintf("--web.telemetry-path=%s", ExporterPath),
+		"--collect.heartbeat",
+		fmt.Sprintf("--collect.heartbeat.database=%s", constants.OperatorDbName),
+	}
+
+	if len(s.cluster.Spec.MetricsExporterExtraArgs) > 0 {
+		exporterCommand = append(exporterCommand, s.cluster.Spec.MetricsExporterExtraArgs...)
+	}
+
 	exporter := s.ensureContainer(containerExporterName,
 		s.opt.MetricsExporterImage,
-		[]string{
-			fmt.Sprintf("--web.listen-address=0.0.0.0:%d", ExporterPort),
-			fmt.Sprintf("--web.telemetry-path=%s", ExporterPath),
-			"--collect.heartbeat",
-			fmt.Sprintf("--collect.heartbeat.database=%s", constants.OperatorDbName),
-		},
+		exporterCommand,
 	)
+
 	exporter.Ports = ensurePorts(core.ContainerPort{
 		Name:          ExporterPortName,
 		ContainerPort: ExporterPort,

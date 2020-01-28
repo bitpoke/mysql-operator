@@ -257,6 +257,11 @@ func (in *MysqlClusterSpec) DeepCopyInto(out *MysqlClusterSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.MetricsExporterExtraArgs != nil {
+		in, out := &in.MetricsExporterExtraArgs, &out.MetricsExporterExtraArgs
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

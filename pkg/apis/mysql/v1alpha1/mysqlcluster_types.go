@@ -127,6 +127,11 @@ type MysqlClusterSpec struct {
 	// Set a custom offset for Server IDs.  ServerID for each node will be the index of the statefulset, plus offset
 	// +optional
 	ServerIDOffset *int `json:"serverIDOffset,omitempty"`
+
+	// MetricsExporterExtraArgs is a list of extra command line arguments to pass to MySQL metrics exporter.
+	// See https://github.com/prometheus/mysqld_exporter for the list of available flags.
+	// +optional
+	MetricsExporterExtraArgs []string `json:"metricsExporterExtraArgs,omitempty"`
 }
 
 // MysqlConf defines type for extra cluster configs. It's a simple map between
