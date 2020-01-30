@@ -148,10 +148,10 @@ define tool.go.get
 $(call tool,$(1),$(2))
 
 $$(TOOLS_HOST_DIR)/$(1)-v$(2): |$$(TOOLS_HOST_DIR)
-	@echo ${TIME} ${BLUE}[TOOL]${CNone} go get $(3)
+	@echo ${TIME} ${BLUE}[TOOL]${CNone} go get $(3)@$(2)
 	@mkdir -p $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2) || $$(FAIL)
 	@mkdir -p $$(TOOLS_DIR)/go/$(1)-v$(2)/ && cd $$(TOOLS_DIR)/go/$(1)-v$(2)/ && $(GOHOST) mod init tools && \
-	    $(4) GO111MODULE=on GOPATH=$$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2) $(GOHOST) get -u $(3) || $$(FAIL)
+	    $(4) GO111MODULE=on GOPATH=$$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2) $(GOHOST) get -u $(3)@$(2) || $$(FAIL)
 	@find $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2) -type f -print0 | xargs -0 chmod 0644 || $$(FAIL)
 	@find $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2) -type d -print0 | xargs -0 chmod 0755 || $$(FAIL)
 	@mv $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2)/bin/$(1) $$@ || $$(FAIL)
@@ -185,8 +185,8 @@ GOLANGCI_LINT_DOWNLOAD_URL ?= https://github.com/golangci/golangci-lint/releases
 $(eval $(call tool.download.tar.gz,golangci-lint,$(GOLANGCI_LINT_VERSION),$(GOLANGCI_LINT_DOWNLOAD_URL)))
 
 ifneq ($(LANGUAGES),)
-GO_XGETTEXT_VERSION ?= 0.0.0-20180127124228-c366ce0fe48d
-GO_XGETTEXT_URL ?= github.com/presslabs/gettext/go-xgettext@v$(GO_XGETTEXT_VERSION)
+GO_XGETTEXT_VERSION ?= v0.0.0-20180127124228-c366ce0fe48d
+GO_XGETTEXT_URL ?= github.com/presslabs/gettext/go-xgettext
 $(eval $(call tool.go.get,go-xgettext,$(GO_XGETTEXT_VERSION),$(GO_XGETTEXT_URL)))
 endif
 
@@ -200,17 +200,17 @@ else
 $(eval $(call tool.download.tar.gz,gofmt,$(GOFMT_VERSION),$(GOFMT_DOWNLOAD_URL),bin/gofmt))
 endif
 
-GOIMPORTS_VERSION ?= 0.0.0-20191111154804-8cb0d02132ec
-GOIMPORTS_URL ?= golang.org/x/tools/cmd/goimports@v$(GOIMPORTS_VERSION)
+GOIMPORTS_VERSION ?= v0.0.0-20191111154804-8cb0d02132ec
+GOIMPORTS_URL ?= golang.org/x/tools/cmd/goimports
 $(eval $(call tool.go.get,goimports,$(GOIMPORTS_VERSION),$(GOIMPORTS_URL)))
 
 ifeq ($(GO_TEST_TOOL),ginkgo)
-GINKGO_VERSION ?= 1.10.3
-GINKGO_URL ?= github.com/onsi/ginkgo/ginkgo@v$(GINKGO_VERSION)
+GINKGO_VERSION ?= v1.10.3
+GINKGO_URL ?= github.com/onsi/ginkgo/ginkgo
 $(eval $(call tool.go.get,ginkgo,$(GINKGO_VERSION),$(GINKGO_URL)))
 else # GO_TEST_TOOL != ginkgo
-GO_JUNIT_REPORT_VERSION ?= 0.9.2-0.20191008195320-984a47ca6b0a
-GO_JUNIT_REPORT_URL ?= github.com/jstemmer/go-junit-report@v$(GO_JUNIT_REPORT_VERSION)
+GO_JUNIT_REPORT_VERSION ?= v0.9.2-0.20191008195320-984a47ca6b0a
+GO_JUNIT_REPORT_URL ?= github.com/jstemmer/go-junit-report
 $(eval $(call tool.go.get,go-junit-report,$(GO_JUNIT_REPORT_VERSION),$(GO_JUNIT_REPORT_URL),go-junit-report))
 endif # GO_TEST_TOOL
 
