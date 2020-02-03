@@ -31,7 +31,7 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 
 	var (
 		cfg               *Config
-		fakeBackupFile    string // as named in fakeServer.validXBStream
+		fakeBackupFile    string // as named in fakeServer.validXbstream
 		fakeMasterServer  *fakeServer
 		fakeReplicaServer *fakeServer
 		// Normally, these are true k8s services, each listening on
@@ -98,9 +98,9 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 		xtrabackupCommand = "echo"
 	}
 
-	disableXbStreamIfNotAvailable := func() {
-		if _, err := exec.LookPath(xbStreamCommand); err != nil {
-			xbStreamCommand = "echo"
+	disableXbstreamIfNotAvailable := func() {
+		if _, err := exec.LookPath(xbstreamCommand); err != nil {
+			xbstreamCommand = "echo"
 			skipTruncatedDataTests = true
 		}
 	}
@@ -122,7 +122,7 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 
 		setupFakeDataDir()
 		disableXtraBackup()
-		disableXbStreamIfNotAvailable()
+		disableXbstreamIfNotAvailable()
 	})
 
 	AfterSuite(func() {

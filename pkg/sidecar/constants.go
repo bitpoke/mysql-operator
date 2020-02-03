@@ -71,8 +71,9 @@ var (
 
 	// xtrabackup Executable Name
 	xtrabackupCommand = "xtrabackup"
+
 	// xbstream Executable Name
-	xbStreamCommand = "xbstream"
+	xbstreamCommand = "xbstream"
 )
 
 const (
