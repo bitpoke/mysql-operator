@@ -223,6 +223,12 @@ spec:
                     by HostPath and EmptyDir. And represents the PVC specification.
                   type: object
               type: object
+            xbstreamExtraArgs:
+              description: XbstreamExtraArgs is a list of extra command line arguments
+                to pass to xbstream.
+              items:
+                type: string
+              type: array
           required:
           - secretName
           type: object

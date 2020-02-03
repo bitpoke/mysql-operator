@@ -80,7 +80,7 @@ func RunCloneCommand(cfg *Config) error {
 	} else if cfg.ShouldCloneFromBucket() {
 		// cloning from provided initBucketURL
 		log.Info("cloning from bucket")
-		if err := cloneFromBucket(cfg.InitBucketURL); err != nil {
+		if err := cloneFromBucket(cfg); err != nil {
 			return fmt.Errorf("failed to clone from bucket, err: %s", err)
 		}
 	} else if cfg.IsFirstPodInSet() {
@@ -125,8 +125,8 @@ func attemptClone(cfg *Config, sourceService string) error {
 	return nil
 }
 
-func cloneFromBucket(initBucket string) error {
-	initBucket = strings.Replace(initBucket, "://", ":", 1)
+func cloneFromBucket(cfg *Config) error {
+	initBucket := strings.Replace(cfg.InitBucketURL, "://", ":", 1)
 
 	log.Info("cloning from bucket", "bucket", initBucket)
 
@@ -143,11 +143,9 @@ func cloneFromBucket(initBucket string) error {
 	// nolint: gosec
 	gzip := exec.Command("gzip", "-d")
 
-	// xbstream -x -C {mysql data target dir}
-	// extracts files from stdin (-x) and writes them to mysql
-	// data target dir
+	// extracts files from stdin and writes them to mysql data dir
 	// nolint: gosec
-	xbstream := exec.Command(xbStreamCommand, "-x", "-C", dataDir)
+	xbstream := exec.Command(xbstreamCommand, cfg.XbstreamArgs()...)
 
 	var err error
 	// rclone | gzip | xbstream
@@ -199,11 +197,9 @@ func cloneFromSource(cfg *Config, host string) error {
 		return fmt.Errorf("fail to get backup: %s", err)
 	}
 
-	// xbstream -x -C {mysql data target dir}
-	// extracts files from stdin (-x) and writes them to mysql
-	// data target dir
+	// extracts files from stdin and writes them to mysql data dir
 	// nolint: gosec
-	xbstream := exec.Command(xbStreamCommand, "-x", "-C", dataDir)
+	xbstream := exec.Command(xbstreamCommand, cfg.XbstreamArgs()...)
 
 	xbstream.Stdin = response.Body
 	xbstream.Stderr = os.Stderr

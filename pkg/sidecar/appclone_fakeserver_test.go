@@ -34,7 +34,7 @@ type fakeServer struct {
 	calls            []loggedRequest
 	simulateTruncate bool // Will cause the next request to truncate the response
 	simulateError    bool // Will cause the next request to return http error
-	validXBStream    []byte
+	validXbstream    []byte
 }
 
 func newFakeServer(address string, cfg *Config) *fakeServer {
@@ -47,8 +47,8 @@ func newFakeServer(address string, cfg *Config) *fakeServer {
 		},
 	}
 
-	// A small file named "t" containing the text "fake-backup", encoded with xbstream -c
-	fSrv.validXBStream = []byte{
+	// A small file named "t" containing the text "fake-backup", encoded with `xbstream --create`
+	fSrv.validXbstream = []byte{
 		0x58, 0x42, 0x53, 0x54, 0x43, 0x4b, 0x30, 0x31, 0x00, 0x50, 0x01, 0x00, 0x00, 0x00, 0x74, 0x0c, // XBSTCK01.P....t.
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6b, // ...............k
 		0xcc, 0x84, 0x00, 0x66, 0x61, 0x6b, 0x65, 0x2d, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x0a, 0x58, // ...fake-backup.X
@@ -137,10 +137,10 @@ func (fSrv *fakeServer) backupHandler(w http.ResponseWriter, req *http.Request) 
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Trailer", backupStatusTrailer)
 
-	backup := fSrv.validXBStream
+	backup := fSrv.validXbstream
 	// Truncate: send half the stream, with "successful" trailers
 	if fSrv.simulateTruncate {
-		backup = fSrv.validXBStream[0:10]
+		backup = fSrv.validXbstream[0:10]
 	}
 
 	if _, err := w.Write(backup); err != nil {

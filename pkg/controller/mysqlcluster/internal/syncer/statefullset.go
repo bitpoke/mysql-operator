@@ -213,7 +213,7 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		Value: "$(MY_POD_NAME).$(MY_SERVICE_NAME).$(MY_NAMESPACE)",
 	})
 
-	if len(s.cluster.Spec.InitBucketURL) > 0 && name == containerCloneAndInitName {
+	if len(s.cluster.Spec.InitBucketURL) > 0 && isCloneAndInit(name) {
 		env = append(env, core.EnvVar{
 			Name:  "INIT_BUCKET_URI",
 			Value: s.cluster.Spec.InitBucketURL,
@@ -224,6 +224,14 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		env = append(env, core.EnvVar{
 			Name:  "MY_SERVER_ID_OFFSET",
 			Value: strconv.FormatInt(int64(*s.cluster.Spec.ServerIDOffset), 10),
+		})
+	}
+
+	hasXbstreamExtraArgs := len(s.cluster.Spec.XbstreamExtraArgs) > 0
+	if hasXbstreamExtraArgs && (isCloneAndInit(name) || isSidecar(name)) {
+		env = append(env, core.EnvVar{
+			Name:  "XBSTREAM_EXTRA_ARGS",
+			Value: strings.Join(s.cluster.Spec.XbstreamExtraArgs, " "),
 		})
 	}
 
@@ -501,7 +509,7 @@ func (s *sfsSyncer) ensureVolumeClaimTemplates(in []core.PersistentVolumeClaim) 
 
 func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 	envSources := []core.EnvFromSource{}
-	if name == containerCloneAndInitName && len(s.cluster.Spec.InitBucketSecretName) > 0 {
+	if isCloneAndInit(name) && len(s.cluster.Spec.InitBucketSecretName) > 0 {
 		envSources = append(envSources, core.EnvFromSource{
 			SecretRef: &core.SecretEnvSource{
 				LocalObjectReference: core.LocalObjectReference{
@@ -510,7 +518,7 @@ func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 			},
 		})
 	}
-	if name == containerSidecarName || name == containerCloneAndInitName {
+	if isCloneAndInit(name) || isSidecar(name) {
 		envSources = append(envSources, core.EnvFromSource{
 			SecretRef: &core.SecretEnvSource{
 				LocalObjectReference: core.LocalObjectReference{
@@ -649,4 +657,12 @@ func ensureProbe(delay, timeout, period int32, handler core.Handler) *core.Probe
 
 func ensurePorts(ports ...core.ContainerPort) []core.ContainerPort {
 	return ports
+}
+
+func isCloneAndInit(name string) bool {
+	return name == containerCloneAndInitName
+}
+
+func isSidecar(name string) bool {
+	return name == containerSidecarName
 }
