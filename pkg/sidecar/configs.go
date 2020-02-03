@@ -76,6 +76,9 @@ type Config struct {
 	// Offset for assigning MySQL Server ID
 	MyServerIDOffset int
 
+	// XbstreamExtraArgs is a list of extra command line arguments to pass to xbstream.
+	XbstreamExtraArgs []string
+
 	masterService              string
 	healthyReplicaCloneService string
 }
@@ -129,6 +132,13 @@ func (cfg *Config) IsFirstPodInSet() bool {
 // ShouldCloneFromBucket returns true if it's time to initialize from a bucket URL provided
 func (cfg *Config) ShouldCloneFromBucket() bool {
 	return !cfg.ExistsMySQLData && cfg.ServerID() == cfg.MyServerIDOffset && len(cfg.InitBucketURL) != 0
+}
+
+// XbstreamArgs returns a complete set of xbstream arguments.
+func (cfg *Config) XbstreamArgs() []string {
+	// xbstream --extract --directory=<mysql data dir> <extra args>
+	xbstreamArgs := []string{"--extract", fmt.Sprintf("--directory=%s", dataDir)}
+	return append(xbstreamArgs, cfg.XbstreamExtraArgs...)
 }
 
 // NewConfig returns a pointer to Config configured from environment variables
@@ -186,6 +196,8 @@ func NewConfig() *Config {
 		ExistsMySQLData: eData,
 
 		MyServerIDOffset: offset,
+
+		XbstreamExtraArgs: strings.Fields(getEnvValue("XBSTREAM_EXTRA_ARGS")),
 	}
 
 	return cfg

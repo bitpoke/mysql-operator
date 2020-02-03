@@ -133,6 +133,10 @@ type MysqlClusterSpec struct {
 	// See https://github.com/prometheus/mysqld_exporter for the list of available flags.
 	// +optional
 	MetricsExporterExtraArgs []string `json:"metricsExporterExtraArgs,omitempty"`
+
+	// XbstreamExtraArgs is a list of extra command line arguments to pass to xbstream.
+	// +optional
+	XbstreamExtraArgs []string `json:"xbstreamExtraArgs,omitempty"`
 }
 
 // MysqlConf defines type for extra cluster configs. It's a simple map between
