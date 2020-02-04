@@ -23,7 +23,7 @@ RUN set -ex \
     && apk add --no-cache \
         bash gcc git musl-dev openssl rsync perl-utils
 
-ARG ORCHESTRATOR_VERSION=v3.1.2
+ARG ORCHESTRATOR_VERSION=v3.1.4
 ARG ORCHESTRATOR_REPO=https://github.com/github/orchestrator.git
 RUN set -ex \
     && mkdir -p $GOPATH/src/github.com/github/orchestrator \
