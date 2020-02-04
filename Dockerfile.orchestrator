@@ -1,7 +1,7 @@
 ###############################################################################
 #  Build the mysql-oerator related binaries
 ###############################################################################
-FROM golang:1.13.4 as builder
+FROM golang:1.13.7 as builder
 
 # Copy in the go src
 WORKDIR /go/src/github.com/presslabs/mysql-operator
@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o orc-helper github.com/p
 ##############################################################################
 #  Build Orchestrator
 ###############################################################################
-FROM golang:1.13.4-alpine as builder-orc
+FROM golang:1.13.7-alpine as builder-orc
 
 RUN set -ex \
     && apk add --no-cache \
