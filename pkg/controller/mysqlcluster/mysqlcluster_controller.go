@@ -37,6 +37,7 @@ import (
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	cleaner "github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/cleaner"
 	clustersyncer "github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/upgrades"
@@ -172,6 +173,28 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		sErr := r.Update(context.TODO(), cluster.Unwrap())
 		if sErr != nil {
 			log.Error(sErr, "failed to update cluster spec", "cluster", cluster)
+			return reconcile.Result{}, sErr
+		}
+		return reconcile.Result{}, nil
+	}
+
+	// Update FailoverInProgress condition to false when both Replicas and ReadyNodes are 0
+	//
+	// When a cluster's replica is set to 0, pods will be shutdown one by one,
+	// during this process, orchestrator will try to do failover on this cluster
+	// and set FailoverInProgress to True. Since all pods are deleted, the FailoverInProgress
+	// condition will be true all the time. When user set cluster's replicas to a value greater than 0,
+	// the pods of the cluster will boot one by one, but node controller will not init mysql when FailoverInProgress
+	// is true.
+	fip := cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
+	if fip != nil && fip.Status == corev1.ConditionTrue &&
+		*cluster.Spec.Replicas == 0 && cluster.Status.ReadyNodes == 0 {
+
+		cluster.UpdateStatusCondition(api.ClusterConditionFailoverInProgress, corev1.ConditionFalse,
+			"ClusterNotRunning", "cluster is not running")
+
+		if sErr := r.Status().Update(context.TODO(), cluster.Unwrap()); sErr != nil {
+			log.Error(sErr, "failed to update cluster status", "cluster", cluster)
 			return reconcile.Result{}, sErr
 		}
 		return reconcile.Result{}, nil
