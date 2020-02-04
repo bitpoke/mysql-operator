@@ -21,7 +21,7 @@ helm install presslabs/mysql-operator --name mysql-operator
 ```
 
 For more information about chart values see chart
-[README](https://github.com/presslabs/mysql-operator/blob/master/hack/charts/mysql-operator/README.md).
+[README](https://github.com/presslabs/mysql-operator/blob/master/charts/mysql-operator/README.md).
 This chart will deploy the controller along with an
 [orchestrator](https://github.com/github/orchestrator) cluster.
 
