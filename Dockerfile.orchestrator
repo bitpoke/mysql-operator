@@ -41,7 +41,7 @@ RUN set -ex \
 ###############################################################################
 #  Docker image for orchestrator
 ###############################################################################
-FROM alpine:3.10
+FROM alpine:3.11
 
 # Create a group and user
 RUN addgroup -g 777 orchestrator && adduser -u 777 -g 777 -S orchestrator
