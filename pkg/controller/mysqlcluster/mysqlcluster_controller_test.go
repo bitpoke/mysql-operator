@@ -48,7 +48,8 @@ type clusterComponents []runtime.Object
 const timeout = time.Second * 2
 
 var (
-	two = int32(2)
+	zero = int32(0)
+	two  = int32(2)
 )
 
 var _ = Describe("MysqlCluster controller", func() {
@@ -380,6 +381,40 @@ var _ = Describe("MysqlCluster controller", func() {
 			})
 
 		})
+
+		Context("and later cluster's replicas is changed to 0", func() {
+			It("should set FailoverInProgress condition to false when all pods are purged", func() {
+				cluster.Spec.Replicas = &zero
+				Expect(c.Update(context.TODO(), cluster.Unwrap())).To(Succeed())
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+				cluster.Status.ReadyNodes = 0
+				cluster.Status.Conditions = []api.ClusterCondition{
+					{
+						Type:               api.ClusterConditionFailoverInProgress,
+						Status:             corev1.ConditionTrue,
+						Reason:             "ClusterNotHealthy",
+						Message:            "cluster is not healthy",
+						LastTransitionTime: metav1.NewTime(time.Now()),
+					},
+				}
+				Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+				newCluster := api.MysqlCluster{}
+				Expect(c.Get(context.TODO(), clusterKey, &newCluster)).To(Succeed())
+
+				var fipCond api.ClusterCondition
+				for _, cond := range newCluster.Status.Conditions {
+					if cond.Type == api.ClusterConditionFailoverInProgress {
+						fipCond = cond
+						break
+					}
+				}
+				Expect(fipCond.Status).To(Equal(corev1.ConditionFalse))
+			})
+		})
 	})
 
 	Context("with secret and uninitialized cluster", func() {
@@ -453,6 +488,7 @@ var _ = Describe("MysqlCluster controller", func() {
 		})
 
 	})
+
 	Context("testing defaults", func() {
 		It("should set the defaults", func() {
 			newCl := &api.MysqlCluster{}
