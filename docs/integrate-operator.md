@@ -48,7 +48,7 @@ dependencies:
 
 Once dependencies are configured run `helm dependency update` to fetch related charts.
 
-More information about chart requirements can be found in the official [documentation](https://docs.helm.sh/developing_charts/#managing-dependencies-with-requirements-yaml).
+More information about chart requirements can be found in the official [documentation](https://v2.helm.sh/docs/developing_charts/#managing-dependencies-with-requirements-yaml).
 
 ### Configure your chart's values.yaml file
 
