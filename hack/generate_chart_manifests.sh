@@ -5,6 +5,8 @@ CONFIG_PATH=../config
 
 # crds/crds.yaml update
 awk 'FNR==1 && NR!=1 {print "---"}{print}' ${CONFIG_PATH}/crds/*.yaml > ${CHART_PATH}/crds/crds.yaml
+yq w -d'*' -i ${CHART_PATH}/crds/crds.yaml 'metadata.annotations[helm.sh/hook]' crd-install
+yq w -d'*' -i ${CHART_PATH}/crds/crds.yaml 'metadata.labels[app]' mysql-operator
 yq d -d'*' -i ${CHART_PATH}/crds/crds.yaml metadata.creationTimestamp
 yq d -d'*' -i ${CHART_PATH}/crds/crds.yaml status
 yq d -d'*' -i ${CHART_PATH}/crds/crds.yaml spec.validation
