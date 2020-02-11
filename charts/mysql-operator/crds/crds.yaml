@@ -3,7 +3,10 @@ kind: CustomResourceDefinition
 metadata:
   labels:
     controller-tools.k8s.io: "1.0"
+    app: mysql-operator
   name: mysqlbackups.mysql.presslabs.org
+  annotations:
+    helm.sh/hook: crd-install
 spec:
   group: mysql.presslabs.org
   names:
@@ -17,7 +20,10 @@ kind: CustomResourceDefinition
 metadata:
   labels:
     controller-tools.k8s.io: "1.0"
+    app: mysql-operator
   name: mysqlclusters.mysql.presslabs.org
+  annotations:
+    helm.sh/hook: crd-install
 spec:
   additionalPrinterColumns:
   - JSONPath: .status.conditions[?(@.type == "Ready")].status

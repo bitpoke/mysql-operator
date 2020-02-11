@@ -1,0 +1,8 @@
+{{- if (and .Values.installCRDs (not (.Capabilities.APIVersions.Has "mysql.presslabs.org/v1alpha1"))) }}
+{{- if and .Values.installCRDs -}}
+{{- range $path, $bytes := .Files.Glob "crds/*.yaml" }}
+---
+{{ $.Files.Get $path }}
+{{- end }}
+{{- end }}
+{{- end }}
