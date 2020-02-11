@@ -1,10 +1,11 @@
 ###############################################################################
-FROM golang:1.9-alpine as builder
+FROM golang:1.13.7-alpine as builder
 
 RUN set -ex \
     && apk add --no-cache \
-        bash gcc git musl-dev openssl rsync
-ARG ORCHESTRATOR_VERSION=v3.0.14
+        bash gcc git musl-dev openssl rsync perl-utils
+
+ARG ORCHESTRATOR_VERSION=v3.1.2
 ARG ORCHESTRATOR_REPO=https://github.com/github/orchestrator.git
 RUN set -ex \
     && mkdir -p $GOPATH/src/github.com/github/orchestrator \
@@ -12,13 +13,15 @@ RUN set -ex \
     && git init && git remote add origin $ORCHESTRATOR_REPO \
     && git fetch --tags \
     && git checkout $ORCHESTRATOR_VERSION
+
 WORKDIR $GOPATH/src/github.com/github/orchestrator
+
 RUN set -ex \
     && ls -l \
     && ./script/build
 
 ###############################################################################
-FROM alpine:3.7
+FROM alpine:3.11
 
 # Create a group and user
 RUN addgroup -g 777 orchestrator && adduser -u 777 -g 777 -S orchestrator

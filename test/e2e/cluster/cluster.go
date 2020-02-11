@@ -147,7 +147,7 @@ var _ = Describe("Mysql cluster tests", func() {
 
 		// delete PVC from master pod and wait for it to be removed
 		pvcName := "data-" + podName
-		deletePVCSynchronously(f, pvcName, cluster.Namespace, 30*time.Second)
+		deletePVCSynchronously(f, pvcName, cluster.Namespace, 60*time.Second)
 
 		// now delete master pod
 		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(podName, &meta.DeleteOptions{})
@@ -296,14 +296,18 @@ var _ = Describe("Mysql cluster tests", func() {
 func deletePVCSynchronously(f *framework.Framework, pvcName, namespace string, timeout time.Duration) {
 	pvc := &core.PersistentVolumeClaim{}
 	pvcKey := types.NamespacedName{Name: pvcName, Namespace: namespace}
+
+	// first delete the PVC then remove the finalizer
+	Expect(f.Client.Get(context.TODO(), pvcKey, pvc)).To(Succeed(), "failed to get pvc %s", pvcName)
+	Expect(f.Client.Delete(context.TODO(), pvc)).To(Succeed(), "Failed to delete pvc %s", pvcName)
 	Expect(f.Client.Get(context.TODO(), pvcKey, pvc)).To(Succeed(), "failed to get pvc %s", pvcName)
 	pvc.Finalizers = nil
 	Expect(f.Client.Update(context.TODO(), pvc)).To(Succeed(), "Failed to remove finalizers from pvc %s", pvcName)
-	Expect(f.Client.Delete(context.TODO(), pvc)).To(Succeed(), "Failed to delete pvc %s", pvcName)
-	pvcRemoved := fmt.Sprintf("persistentvolumeclaims \"%s\" not found", pvc.Name)
+
+	pvcNotFound := fmt.Sprintf("persistentvolumeclaims \"%s\" not found", pvc.Name)
 	Eventually(func() error {
 		return f.Client.Get(context.TODO(), pvcKey, pvc)
-	}, timeout, POLLING).Should(MatchError(pvcRemoved), "PVC did not delete in time '%s'", pvc.Name)
+	}, timeout, POLLING).Should(MatchError(pvcNotFound), "PVC did not delete in time '%s'", pvc.Name)
 }
 
 func testClusterReadiness(f *framework.Framework, cluster *api.MysqlCluster) {

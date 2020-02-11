@@ -191,7 +191,7 @@ pipeline:
       - setup-credentials-helper.sh
       - gcloud container clusters create $CLUSTER_NAME
           --zone europe-west3-b --project testing-reactor
-          --preemptible  --cluster-version 1.12
+          --preemptible  --cluster-version 1.14
       # initialize cluster
       - kubectl create serviceaccount -n kube-system tiller
       - kubectl create clusterrolebinding tiller --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
