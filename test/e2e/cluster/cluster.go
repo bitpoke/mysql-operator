@@ -190,8 +190,9 @@ var _ = Describe("Mysql cluster tests", func() {
 		testClusterReadiness(f, cluster)
 
 		By("check pvc gets deleted")
-		Eventually(f.GetClusterPVCsFn(cluster), "5s", POLLING).Should(HaveLen(1))
+		Eventually(f.GetClusterPVCsFn(cluster), "30s", POLLING).Should(HaveLen(1))
 
+		By("scale cluster to zero")
 		// scale down the cluster to zero
 		zero := int32(0)
 		cluster.Spec.Replicas = &zero
@@ -200,6 +201,7 @@ var _ = Describe("Mysql cluster tests", func() {
 		By("test cluster is ready after scale down")
 		testClusterReadiness(f, cluster)
 
+		// it must not delete the PVC 0
 		Consistently(f.GetClusterPVCsFn(cluster), "30s", POLLING).Should(HaveLen(1))
 	})
 
