@@ -6,7 +6,7 @@ keywords: [mysql operator]
 menu:
   global:
     parent: "mysql-operator"
-    weight: 1
+    weight: 2
 ---
 
 After cluster creation, you can update the provided secret with a new field named `DB_CONNECT_URL`
