@@ -5,7 +5,12 @@ metadata:
 spec:
   replicas: 2
   secretName: my-secret
+
+  ## For setting custom docker image or specifying mysql version
+  ## the image field has priority over mysqlVersion.
+  # image: percona:5.7
   # mysqlVersion: 5.7
+
   # initBucketURL: gs://bucket_name/backup.xtrabackup.gz
   # initBucketSecretName:
 
@@ -71,3 +76,15 @@ spec:
   ## removed from scheme
   # targetSLO:
   #   maxSlaveLatency: 10s
+
+  ## You can use custom volume for /tmp partition if needed.
+  ## Is disabled by default
+  # tmpfsSize: 1Gi
+
+  ## Set cluster in read only
+  # readOnly: false
+
+  ## Add metrics exporter extra arguments
+  # metricsExporterExtraArgs:
+  #   - --collect.info_schema.userstats
+  #   - --collect.perf_schema.file_events
