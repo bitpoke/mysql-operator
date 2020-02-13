@@ -1,56 +1,22 @@
-required = [
-    "github.com/emicklei/go-restful",
-    "github.com/go-openapi/spec",
-    "github.com/onsi/ginkgo", # for integration testing
-    "github.com/spf13/pflag",
-    "k8s.io/client-go/plugin/pkg/client/auth/gcp", # for development against gcp
-    "k8s.io/code-generator/cmd/deepcopy-gen", # for go generate
-    "sigs.k8s.io/testing_frameworks/integration", # for integration testing
-    ]
-
-[[constraint]]
-  name="sigs.k8s.io/controller-runtime"
-  version="v0.1.1"
+ignored = [
+    "sigs.k8s.io/controller-tools/testData/*",  # it's just testdata
+]
 
 [[constraint]]
   name="k8s.io/api"
-  version="kubernetes-1.13.1"
+  version="kubernetes-1.13.4"
 
 [[constraint]]
   name="k8s.io/apiextensions-apiserver"
-  version="kubernetes-1.13.1"
+  version="kubernetes-1.13.4"
 
 [[constraint]]
   name="k8s.io/apimachinery"
-  version="kubernetes-1.13.1"
-
-[[constraint]]
-  name="k8s.io/code-generator"
-  version="kubernetes-1.13.1"
-
-[[constraint]]
-  name="k8s.io/client-go"
-  version="kubernetes-1.13.1"
-
-[[constraint]]
-  name = "github.com/onsi/ginkgo"
-  version = "v1.5.0"
-
-[[constraint]]
-  name = "github.com/onsi/gomega"
-  version = "v1.4.0"
+  version="kubernetes-1.13.4"
 
 [[constraint]]
   name = "github.com/spf13/afero"
   version = "v1.1.1"
-
-[[constraint]]
-  name = "gopkg.in/yaml.v2"
-  version = "v2.2.1"
-
-[[constraint]]
-  name = "github.com/emicklei/go-restful"
-  version = "v2.7.1"
 
 [[constraint]]
   name = "github.com/spf13/cobra"
@@ -59,10 +25,6 @@ required = [
 [[constraint]]
   name = "github.com/spf13/pflag"
   version = "v1.0.1"
-
-[[constraint]]
-  name = "github.com/spf13/viper"
-  version = "v1.0.2"
 
 [[constraint]]
   name = "github.com/ghodss/yaml"
@@ -83,3 +45,4 @@ required = [
 
 [prune]
   go-tests = true
+  unused-packages = true

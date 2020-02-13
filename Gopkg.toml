@@ -24,7 +24,7 @@ required = [
 
 [[override]]
   name="sigs.k8s.io/controller-tools"
-  version = "v0.1.8"
+  version = "v0.1.12"
 
 [[constraint]]
   name="github.com/presslabs/controller-util"
