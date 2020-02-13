@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/markbates/inflect"
+	"github.com/gobuffalo/flect"
 )
 
 // Resource contains the information required to scaffold files for a resource.
@@ -41,13 +41,12 @@ func (r *Resource) Validate() error {
 		return fmt.Errorf("kind cannot be empty")
 	}
 
-	rs := inflect.NewDefaultRuleset()
 	if len(r.Resource) == 0 {
-		r.Resource = rs.Pluralize(strings.ToLower(r.Kind))
+		r.Resource = flect.Pluralize(strings.ToLower(r.Kind))
 	}
 
-	if r.Kind != inflect.Camelize(r.Kind) {
-		return fmt.Errorf("Kind must be camelcase (expected %s was %s)", inflect.Camelize(r.Kind), r.Kind)
+	if r.Kind != flect.Pascalize(r.Kind) {
+		return fmt.Errorf("kind must be camelcase (expected %s was %s)", flect.Pascalize(r.Kind), r.Kind)
 	}
 
 	return nil
