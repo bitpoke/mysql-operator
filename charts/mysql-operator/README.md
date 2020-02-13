@@ -10,7 +10,7 @@ helm install presslabs/mysql-operator --name mysql-operator
 
 ## For Helm v3
 helm repo add presslabs https://presslabs.github.io/charts
-helm install mysql-operator presslabs/mysql-operator --skip-crds
+helm install mysql-operator presslabs/mysql-operator
 ```
 
 ## Configuration
