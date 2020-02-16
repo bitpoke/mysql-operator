@@ -170,6 +170,7 @@ func (s *sfsSyncer) envVarFromSecret(sctName, name, key string, opt bool) core.E
 	return env
 }
 
+// nolint: gocyclo
 func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 	env := []core.EnvVar{}
 
