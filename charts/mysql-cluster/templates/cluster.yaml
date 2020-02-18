@@ -9,7 +9,12 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicas }}
+
+  {{- if .Values.customSecretName }}
+  secretName: {{ .Values.customSecretName }}
+  {{- else }}
   secretName: {{ include "mysql-cluster.secretName" . }}
+  {{- end }}
 
   {{- if .Values.backupSecretName }}
   backupSecretName: {{ .Values.backupSecretName }}
