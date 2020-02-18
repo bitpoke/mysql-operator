@@ -101,7 +101,7 @@ var _ = Describe("MysqlBackupCron controller", func() {
 				Replicas:   &two,
 				SecretName: "a-secret",
 
-				BackupSchedule:   "0 0 0 * *",
+				BackupSchedule:   "0 0 0 0 * *",
 				BackupSecretName: "a-backup-secret",
 				BackupURL:        "gs://bucket/",
 			},
@@ -141,7 +141,7 @@ var _ = Describe("MysqlBackupCron controller", func() {
 
 		It("should update cluster backup schedule", func() {
 			// update cluster scheduler
-			cluster.Spec.BackupSchedule = "0 0 * * *"
+			cluster.Spec.BackupSchedule = "0 0 0 * * *"
 			newSchedule, _ := cronpkg.Parse(cluster.Spec.BackupSchedule)
 			Expect(c.Update(context.TODO(), cluster)).To(Succeed())
 

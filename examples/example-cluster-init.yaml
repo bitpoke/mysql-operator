@@ -6,7 +6,7 @@ spec:
   replicas: 2
   secretName: the-secret
 
-  backupSchedule: "1 1 * * *"
+  backupSchedule: "0 1 1 * * *"
   backupURL: gs://bucket_name/path/
   backupSecretName: backup-secret
 
