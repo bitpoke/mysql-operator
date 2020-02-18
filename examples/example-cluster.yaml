@@ -17,7 +17,7 @@ spec:
   ## PodDisruptionBudget
   # minAvailable: 1
 
-  ## For recurrent backups set backupSchedule with a cronjob expression
+  ## For recurrent backups set backupSchedule with a cronjob expression with seconds
   # backupSchedule:
   # backupURL: s3://bucket_name/
   # backupSecretName:
