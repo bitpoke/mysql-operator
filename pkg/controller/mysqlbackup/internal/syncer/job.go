@@ -109,9 +109,10 @@ func (s *jobSyncer) getBackupCandidate() string {
 			return node.Name
 		}
 	}
-	log.Info("no healthy slave node found so returns the master node", "default_node", s.cluster.GetPodHostname(0),
+
+	log.Info("no healthy slave node found so returns the master node", "default_node", s.cluster.GetMasterHost(),
 		"cluster", s.cluster)
-	return s.cluster.GetPodHostname(0)
+	return s.cluster.GetMasterHost()
 }
 
 func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
