@@ -19,7 +19,6 @@ package mysqlbackup
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
@@ -73,8 +72,7 @@ func (b *MysqlBackup) composeBackupURL(base string) string {
 		base = base[:len(base)-1]
 	}
 
-	timestamp := time.Now().Format("2006-01-02T15:04:05")
-	fileName := fmt.Sprintf("/%s-%s.%s", b.GetName(), timestamp, BackupSuffix)
+	fileName := fmt.Sprintf("/%s.%s", b.GetName(), BackupSuffix)
 	return base + fileName
 }
 
