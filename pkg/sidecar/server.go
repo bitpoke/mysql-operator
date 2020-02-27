@@ -19,7 +19,6 @@ package sidecar
 import (
 	"context"
 	"fmt"
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
 	"io"
 	"net"
 	"net/http"
@@ -92,12 +91,7 @@ func (s *server) backupHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Trailer", backupStatusTrailer)
 
 	// nolint: gosec
-	xtrabackup := exec.Command(xtrabackupCommand, "--backup", "--slave-info", "--stream=xbstream",
-		fmt.Sprintf("--tables-exclude=%s.%s", constants.OperatorDbName, constants.OperatorStatusTableName),
-		"--host=127.0.0.1", fmt.Sprintf("--user=%s", s.cfg.ReplicationUser),
-		fmt.Sprintf("--password=%s", s.cfg.ReplicationPassword),
-		"--target-dir=/tmp/xtrabackup_backupfiles/")
-
+	xtrabackup := exec.Command(xtrabackupCommand, s.cfg.XtrabackupArgs()...)
 	xtrabackup.Stderr = os.Stderr
 
 	stdout, err := xtrabackup.StdoutPipe()

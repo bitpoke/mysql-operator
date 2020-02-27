@@ -137,6 +137,19 @@ type MysqlClusterSpec struct {
 	// XbstreamExtraArgs is a list of extra command line arguments to pass to xbstream.
 	// +optional
 	XbstreamExtraArgs []string `json:"xbstreamExtraArgs,omitempty"`
+
+	// XtrabackupExtraArgs is a list of extra command line arguments to pass to xtrabackup.
+	// +optional
+	XtrabackupExtraArgs []string `json:"xtrabackupExtraArgs,omitempty"`
+
+	// XtrabackupPrepareExtraArgs is a list of extra command line arguments to pass to xtrabackup
+	// during --prepare.
+	// +optional
+	XtrabackupPrepareExtraArgs []string `json:"xtrabackupPrepareExtraArgs,omitempty"`
+
+	// XtrabackupTargetDir is a backup destination directory for xtrabackup.
+	// +optional
+	XtrabackupTargetDir string `json:"xtrabackupTargetDir,omitempty"`
 }
 
 // MysqlConf defines type for extra cluster configs. It's a simple map between

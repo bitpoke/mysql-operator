@@ -104,6 +104,11 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 			setConfigIfNotSet(cluster.Spec.MysqlConf, "binlog-space-limit", humanizeSize(binlogSpaceLimit))
 		}
 	}
+
+	// set default xtrabackup target directory
+	if len(cluster.Spec.XtrabackupTargetDir) == 0 {
+		cluster.Spec.XtrabackupTargetDir = "/tmp/xtrabackup_backupfiles/"
+	}
 }
 
 func setConfigIfNotSet(conf api.MysqlConf, option string, value intstr.IntOrString) {

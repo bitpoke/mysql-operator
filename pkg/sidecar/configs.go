@@ -30,6 +30,7 @@ import (
 	"github.com/presslabs/controller-util/rand"
 
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 // Config contains information related with the pod.
@@ -78,6 +79,16 @@ type Config struct {
 
 	// XbstreamExtraArgs is a list of extra command line arguments to pass to xbstream.
 	XbstreamExtraArgs []string
+
+	// XtrabackupExtraArgs is a list of extra command line arguments to pass to xtrabackup.
+	XtrabackupExtraArgs []string
+
+	// XtrabackupPrepareExtraArgs is a list of extra command line arguments to pass to xtrabackup
+	// during --prepare.
+	XtrabackupPrepareExtraArgs []string
+
+	// XtrabackupTargetDir is a backup destination directory for xtrabackup.
+	XtrabackupTargetDir string
 
 	masterService              string
 	healthyReplicaCloneService string
@@ -136,9 +147,33 @@ func (cfg *Config) ShouldCloneFromBucket() bool {
 
 // XbstreamArgs returns a complete set of xbstream arguments.
 func (cfg *Config) XbstreamArgs() []string {
-	// xbstream --extract --directory=<mysql data dir> <extra args>
+	// xbstream --extract --directory=<mysql-data-dir> <extra-args>
 	xbstreamArgs := []string{"--extract", fmt.Sprintf("--directory=%s", dataDir)}
 	return append(xbstreamArgs, cfg.XbstreamExtraArgs...)
+}
+
+// XtrabackupArgs returns a complete set of xtrabackup arguments.
+func (cfg *Config) XtrabackupArgs() []string {
+	// xtrabackup --backup <args> --target-dir=<backup-dir> <extra-args>
+	xtrabackupArgs := []string{
+		"--backup",
+		"--slave-info",
+		"--stream=xbstream",
+		fmt.Sprintf("--tables-exclude=%s.%s", constants.OperatorDbName, constants.OperatorStatusTableName),
+		"--host=127.0.0.1",
+		fmt.Sprintf("--user=%s", cfg.ReplicationUser),
+		fmt.Sprintf("--password=%s", cfg.ReplicationPassword),
+		fmt.Sprintf("--target-dir=%s", cfg.XtrabackupTargetDir),
+	}
+
+	return append(xtrabackupArgs, cfg.XtrabackupExtraArgs...)
+}
+
+// XtrabackupPrepareArgs returns a complete set of xtrabackup arguments during --prepare.
+func (cfg *Config) XtrabackupPrepareArgs() []string {
+	// xtrabackup --prepare --target-dir=<mysql-data-dir> <extra-args>
+	xtrabackupPrepareArgs := []string{"--prepare", fmt.Sprintf("--target-dir=%s", dataDir)}
+	return append(xtrabackupPrepareArgs, cfg.XtrabackupPrepareExtraArgs...)
 }
 
 // NewConfig returns a pointer to Config configured from environment variables
@@ -197,7 +232,10 @@ func NewConfig() *Config {
 
 		MyServerIDOffset: offset,
 
-		XbstreamExtraArgs: strings.Fields(getEnvValue("XBSTREAM_EXTRA_ARGS")),
+		XbstreamExtraArgs:          strings.Fields(getEnvValue("XBSTREAM_EXTRA_ARGS")),
+		XtrabackupExtraArgs:        strings.Fields(getEnvValue("XTRABACKUP_EXTRA_ARGS")),
+		XtrabackupPrepareExtraArgs: strings.Fields(getEnvValue("XTRABACKUP_PREPARE_EXTRA_ARGS")),
+		XtrabackupTargetDir:        getEnvValue("XTRABACKUP_TARGET_DIR"),
 	}
 
 	return cfg

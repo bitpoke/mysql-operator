@@ -18,9 +18,10 @@ package mysqlcluster
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"strconv"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/imdario/mergo"
 	apps "k8s.io/api/apps/v1"
@@ -233,6 +234,30 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		env = append(env, core.EnvVar{
 			Name:  "XBSTREAM_EXTRA_ARGS",
 			Value: strings.Join(s.cluster.Spec.XbstreamExtraArgs, " "),
+		})
+	}
+
+	hasXtrabackupExtraArgs := len(s.cluster.Spec.XtrabackupExtraArgs) > 0
+	if hasXtrabackupExtraArgs && isSidecar(name) {
+		env = append(env, core.EnvVar{
+			Name:  "XTRABACKUP_EXTRA_ARGS",
+			Value: strings.Join(s.cluster.Spec.XtrabackupExtraArgs, " "),
+		})
+	}
+
+	hasXtrabackupPrepareExtraArgs := len(s.cluster.Spec.XtrabackupPrepareExtraArgs) > 0
+	if hasXtrabackupPrepareExtraArgs && isCloneAndInit(name) {
+		env = append(env, core.EnvVar{
+			Name:  "XTRABACKUP_PREPARE_EXTRA_ARGS",
+			Value: strings.Join(s.cluster.Spec.XtrabackupPrepareExtraArgs, " "),
+		})
+	}
+
+	hasXtrabackupTargetDir := len(s.cluster.Spec.XtrabackupTargetDir) > 0
+	if hasXtrabackupTargetDir && isSidecar(name) {
+		env = append(env, core.EnvVar{
+			Name:  "XTRABACKUP_TARGET_DIR",
+			Value: s.cluster.Spec.XtrabackupTargetDir,
 		})
 	}
 
