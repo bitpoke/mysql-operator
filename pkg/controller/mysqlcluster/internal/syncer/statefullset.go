@@ -229,6 +229,14 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		})
 	}
 
+	hasRcloneExtraArgs := len(s.cluster.Spec.RcloneExtraArgs) > 0
+	if hasRcloneExtraArgs && (isCloneAndInit(name) || isSidecar(name)) {
+		env = append(env, core.EnvVar{
+			Name:  "RCLONE_EXTRA_ARGS",
+			Value: strings.Join(s.cluster.Spec.RcloneExtraArgs, " "),
+		})
+	}
+
 	hasXbstreamExtraArgs := len(s.cluster.Spec.XbstreamExtraArgs) > 0
 	if hasXbstreamExtraArgs && (isCloneAndInit(name) || isSidecar(name)) {
 		env = append(env, core.EnvVar{

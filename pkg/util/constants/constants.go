@@ -74,9 +74,6 @@ const (
 	// configs. This path should be the same as defined in docker entrypoint
 	// script from mysql-operator-sidecar/docker-entrypoint.sh. /tmp/rclone.conf
 	RcloneConfigFile = "/tmp/rclone.conf"
-
-	// RcloneConfigArg represents the config argument to rclone cmd
-	RcloneConfigArg = "--config=" + RcloneConfigFile
 )
 
 var (

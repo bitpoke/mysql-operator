@@ -267,6 +267,11 @@ func (in *MysqlClusterSpec) DeepCopyInto(out *MysqlClusterSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.RcloneExtraArgs != nil {
+		in, out := &in.RcloneExtraArgs, &out.RcloneExtraArgs
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.XbstreamExtraArgs != nil {
 		in, out := &in.XbstreamExtraArgs, &out.XbstreamExtraArgs
 		*out = make([]string, len(*in))

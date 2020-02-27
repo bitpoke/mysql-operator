@@ -179,6 +179,12 @@ spec:
               required:
               - maxQueryTime
               type: object
+            rcloneExtraArgs:
+              description: RcloneExtraArgs is a list of extra command line arguments
+                to pass to rclone.
+              items:
+                type: string
+              type: array
             readOnly:
               description: Makes the cluster READ ONLY. Set the master to writable
                 or ReadOnly

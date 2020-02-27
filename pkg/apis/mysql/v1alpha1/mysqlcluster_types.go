@@ -134,6 +134,10 @@ type MysqlClusterSpec struct {
 	// +optional
 	MetricsExporterExtraArgs []string `json:"metricsExporterExtraArgs,omitempty"`
 
+	// RcloneExtraArgs is a list of extra command line arguments to pass to rclone.
+	// +optional
+	RcloneExtraArgs []string `json:"rcloneExtraArgs,omitempty"`
+
 	// XbstreamExtraArgs is a list of extra command line arguments to pass to xbstream.
 	// +optional
 	XbstreamExtraArgs []string `json:"xbstreamExtraArgs,omitempty"`
