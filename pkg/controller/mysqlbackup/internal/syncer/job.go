@@ -110,7 +110,7 @@ func (s *jobSyncer) getBackupCandidate() string {
 		}
 	}
 
-	log.Info("no healthy slave node found so returns the master node", "default_node", s.cluster.GetMasterHost(),
+	log.Info("no healthy slave node found so returns the master node", "master_node", s.cluster.GetMasterHost(),
 		"cluster", s.cluster)
 	return s.cluster.GetMasterHost()
 }
