@@ -159,16 +159,19 @@ func (s *deletionJobSyncer) ensurePodSpec() core.PodSpec {
 }
 
 func (s *deletionJobSyncer) ensureContainers() []core.Container {
+	rcloneCommand := []string{"rclone", fmt.Sprintf("--config=%s", constants.RcloneConfigFile)}
+
+	if s.cluster != nil && len(s.cluster.Spec.RcloneExtraArgs) > 0 {
+		rcloneCommand = append(rcloneCommand, s.cluster.Spec.RcloneExtraArgs...)
+	}
+
+	rcloneCommand = append(rcloneCommand, "delete", bucketForRclone(s.backup.Spec.BackupURL))
+
 	container := core.Container{
 		Name:            "delete",
 		Image:           s.opt.SidecarImage,
 		ImagePullPolicy: s.opt.ImagePullPolicy,
-		Args: []string{
-			"rclone",
-			constants.RcloneConfigArg,
-			"delete",
-			bucketForRclone(s.backup.Spec.BackupURL),
-		},
+		Args:            rcloneCommand,
 	}
 
 	// if backups secret name is specified use it otherwise don't set anything

@@ -77,6 +77,9 @@ type Config struct {
 	// Offset for assigning MySQL Server ID
 	MyServerIDOffset int
 
+	// RcloneExtraArgs is a list of extra command line arguments to pass to rclone.
+	RcloneExtraArgs []string
+
 	// XbstreamExtraArgs is a list of extra command line arguments to pass to xbstream.
 	XbstreamExtraArgs []string
 
@@ -143,6 +146,13 @@ func (cfg *Config) IsFirstPodInSet() bool {
 // ShouldCloneFromBucket returns true if it's time to initialize from a bucket URL provided
 func (cfg *Config) ShouldCloneFromBucket() bool {
 	return !cfg.ExistsMySQLData && cfg.ServerID() == cfg.MyServerIDOffset && len(cfg.InitBucketURL) != 0
+}
+
+// RcloneArgs returns a complete set of rclone arguments.
+func (cfg *Config) RcloneArgs() []string {
+	// rclone --config=<config-file> <extra-args>
+	rcloneArgs := []string{fmt.Sprintf("--config=%s", constants.RcloneConfigFile)}
+	return append(rcloneArgs, cfg.RcloneExtraArgs...)
 }
 
 // XbstreamArgs returns a complete set of xbstream arguments.
@@ -232,6 +242,7 @@ func NewConfig() *Config {
 
 		MyServerIDOffset: offset,
 
+		RcloneExtraArgs:            strings.Fields(getEnvValue("RCLONE_EXTRA_ARGS")),
 		XbstreamExtraArgs:          strings.Fields(getEnvValue("XBSTREAM_EXTRA_ARGS")),
 		XtrabackupExtraArgs:        strings.Fields(getEnvValue("XTRABACKUP_EXTRA_ARGS")),
 		XtrabackupPrepareExtraArgs: strings.Fields(getEnvValue("XTRABACKUP_PREPARE_EXTRA_ARGS")),

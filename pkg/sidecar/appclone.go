@@ -24,6 +24,8 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 // RunCloneCommand clones the data from several potential sources.
@@ -91,11 +93,7 @@ func RunCloneCommand(cfg *Config) error {
 	}
 
 	// prepare backup
-	if err := xtrabackupPrepare(cfg); err != nil {
-		return err
-	}
-
-	return nil
+	return xtrabackupPrepare(cfg)
 }
 
 func isServiceAvailable(svc string) bool {
@@ -134,14 +132,14 @@ func cloneFromBucket(cfg *Config) error {
 
 	log.Info("cloning from bucket", "bucket", initBucket)
 
-	if _, err := os.Stat(rcloneConfigFile); os.IsNotExist(err) {
+	if _, err := os.Stat(constants.RcloneConfigFile); os.IsNotExist(err) {
 		log.Error(err, "rclone config file does not exists")
 		return err
 	}
-	// rclone --config={conf file} cat {bucket uri}
-	// writes to stdout the content of the bucket uri
+
+	// writes the contents of the bucket url to stdout
 	// nolint: gosec
-	rclone := exec.Command("rclone", "-vv", rcloneConfigArg, "cat", initBucket)
+	rclone := exec.Command("rclone", append(cfg.RcloneArgs(), "cat", initBucket)...)
 
 	// gzip reads from stdin decompress and then writes to stdout
 	// nolint: gosec
