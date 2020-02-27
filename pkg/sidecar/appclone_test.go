@@ -18,12 +18,13 @@ package sidecar
 
 import (
 	"fmt"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"sigs.k8s.io/testing_frameworks/integration/addr"
 )
 
@@ -94,7 +95,7 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 
 	// Don't let xtrabackup try to --prepare our little fake xbstream sample or
 	// it will return errors.
-	disableXtraBackup := func() {
+	disableXtrabackup := func() {
 		xtrabackupCommand = "echo"
 	}
 
@@ -121,7 +122,7 @@ var _ = Describe("Test RunCloneCommand cloning logic", func() {
 		}
 
 		setupFakeDataDir()
-		disableXtraBackup()
+		disableXtrabackup()
 		disableXbstreamIfNotAvailable()
 	})
 

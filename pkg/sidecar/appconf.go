@@ -62,7 +62,7 @@ func RunConfigCommand(cfg *Config) error {
 	gtidPurged, err = readPurgedGTID()
 	if err != nil {
 		// not a fatal error, log it and continue
-		log.Info("error while reading PURGE GTID from xtrabackup info file", "error", err)
+		log.Info("error while reading PURGE GTID from xtrabackup_binlog_info", "error", err)
 	}
 
 	initFilePath := path.Join(confDPath, "operator-init.sql")

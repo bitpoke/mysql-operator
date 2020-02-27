@@ -88,3 +88,18 @@ spec:
   # metricsExporterExtraArgs:
   #   - --collect.info_schema.userstats
   #   - --collect.perf_schema.file_events
+
+  ## Add extra arguments to xbstream
+  # xbstreamExtraArgs:
+  #   - --parallel=8
+
+  ## Add extra arguments to xtrabackup
+  # xtrabackupExtraArgs:
+  #   - --parallel=8
+
+  ## Add extra arguments to xtrabackup during --prepare
+  # xtrabackupPrepareExtraArgs:
+  #   - --use-memory=5G
+
+  ## Set xtrabackup target directory
+  # xtrabackupTargetDir: /var/lib/mysql/.tmp/xtrabackup/

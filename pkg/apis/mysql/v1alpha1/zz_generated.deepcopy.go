@@ -272,6 +272,16 @@ func (in *MysqlClusterSpec) DeepCopyInto(out *MysqlClusterSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.XtrabackupExtraArgs != nil {
+		in, out := &in.XtrabackupExtraArgs, &out.XtrabackupExtraArgs
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.XtrabackupPrepareExtraArgs != nil {
+		in, out := &in.XtrabackupPrepareExtraArgs, &out.XtrabackupPrepareExtraArgs
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

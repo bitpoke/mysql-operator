@@ -91,7 +91,11 @@ func RunCloneCommand(cfg *Config) error {
 	}
 
 	// prepare backup
-	return xtrabackupPrepareData()
+	if err := xtrabackupPrepare(cfg); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func isServiceAvailable(svc string) bool {
@@ -228,14 +232,12 @@ func cloneFromSource(cfg *Config, host string) error {
 	return nil
 }
 
-func xtrabackupPrepareData() error {
+func xtrabackupPrepare(cfg *Config) error {
 	// nolint: gosec
-	xtbkCmd := exec.Command(xtrabackupCommand, "--prepare",
-		fmt.Sprintf("--target-dir=%s", dataDir))
+	xtrabackupPrepare := exec.Command(xtrabackupCommand, cfg.XtrabackupPrepareArgs()...)
+	xtrabackupPrepare.Stderr = os.Stderr
 
-	xtbkCmd.Stderr = os.Stderr
-
-	return xtbkCmd.Run()
+	return xtrabackupPrepare.Run()
 }
 
 func deleteLostFound() error {

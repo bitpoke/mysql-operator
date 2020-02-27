@@ -229,6 +229,22 @@ spec:
               items:
                 type: string
               type: array
+            xtrabackupExtraArgs:
+              description: XtrabackupExtraArgs is a list of extra command line arguments
+                to pass to xtrabackup.
+              items:
+                type: string
+              type: array
+            xtrabackupPrepareExtraArgs:
+              description: XtrabackupPrepareExtraArgs is a list of extra command line
+                arguments to pass to xtrabackup during --prepare.
+              items:
+                type: string
+              type: array
+            xtrabackupTargetDir:
+              description: XtrabackupTargetDir is a backup destination directory for
+                xtrabackup.
+              type: string
           required:
           - secretName
           type: object
