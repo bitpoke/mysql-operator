@@ -219,7 +219,7 @@ pipeline:
             --orchestrator-image quay.io/presslabs/mysql-operator-orchestrator:${DRONE_BRANCH/master/latest}
             --pod-wait-timeout 150
             --dump-logs-on-failure=false
-            -timeout 30m
+            -timeout 40m
             -ginkgo.slowSpecThreshold 300
     when:
       branch: master
