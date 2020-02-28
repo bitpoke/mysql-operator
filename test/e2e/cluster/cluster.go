@@ -193,6 +193,9 @@ var _ = Describe("Mysql cluster tests", func() {
 		Eventually(f.GetClusterPVCsFn(cluster), "30s", POLLING).Should(HaveLen(1))
 
 		By("scale cluster to zero")
+		// refresh cluster to prevent a update conflict
+		Expect(f.Client.Get(context.TODO(), clusterKey, cluster)).To(Succeed())
+
 		// scale down the cluster to zero
 		zero := int32(0)
 		cluster.Spec.Replicas = &zero
