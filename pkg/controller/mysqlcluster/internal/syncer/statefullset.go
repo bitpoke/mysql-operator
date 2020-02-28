@@ -115,6 +115,11 @@ func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 		return err
 	}
 
+	// mergo will add new keys for NodeSelector and Tolerations and keep the others instead of removing them
+	// Fixes: https://github.com/presslabs/mysql-operator/issues/454
+	out.Spec.Template.Spec.NodeSelector = s.cluster.Spec.PodSpec.NodeSelector
+	out.Spec.Template.Spec.Tolerations = s.cluster.Spec.PodSpec.Tolerations
+
 	if s.cluster.Spec.VolumeSpec.PersistentVolumeClaim != nil {
 		out.Spec.VolumeClaimTemplates = s.ensureVolumeClaimTemplates(out.Spec.VolumeClaimTemplates)
 	}
