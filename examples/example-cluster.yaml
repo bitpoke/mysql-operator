@@ -111,3 +111,7 @@ spec:
 
   ## Set xtrabackup target directory (the directory needs to exist)
   # xtrabackupTargetDir: /var/lib/mysql/.tmp/xtrabackup/
+
+  # Add additional SQL commands to run during init of mysql
+  # initFileExtraSQL:
+  #   - "CREATE USER test@localhost"

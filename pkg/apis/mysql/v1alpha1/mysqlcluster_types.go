@@ -154,6 +154,10 @@ type MysqlClusterSpec struct {
 	// XtrabackupTargetDir is a backup destination directory for xtrabackup.
 	// +optional
 	XtrabackupTargetDir string `json:"xtrabackupTargetDir,omitempty"`
+
+	// InitFileExtraSQL is a list of extra sql commands to append to init_file.
+	// +optional
+	InitFileExtraSQL []string `json:"initFileExtraSQL,omitempty"`
 }
 
 // MysqlConf defines type for extra cluster configs. It's a simple map between

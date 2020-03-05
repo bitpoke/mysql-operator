@@ -274,6 +274,14 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		})
 	}
 
+	hasInitFileExtraSQL := len(s.cluster.Spec.InitFileExtraSQL) > 0
+	if hasInitFileExtraSQL && isCloneAndInit(name) {
+		env = append(env, core.EnvVar{
+			Name:  "INITFILE_EXTRA_SQL",
+			Value: strings.Join(s.cluster.Spec.InitFileExtraSQL, ";"),
+		})
+	}
+
 	sctName := s.cluster.Spec.SecretName
 	sctOpName := s.cluster.GetNameForResource(mysqlcluster.Secret)
 	switch name {
