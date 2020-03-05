@@ -211,6 +211,10 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 		queries = append(queries, "RESET SLAVE ALL")
 	}
 
+	if len(cfg.InitFileExtraSQL[0]) > 0 {
+		queries = append(queries, cfg.InitFileExtraSQL...)
+	}
+
 	return []byte(strings.Join(queries, ";\n") + ";\n")
 }
 

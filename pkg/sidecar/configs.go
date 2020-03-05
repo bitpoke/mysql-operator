@@ -95,6 +95,9 @@ type Config struct {
 
 	masterService              string
 	healthyReplicaCloneService string
+
+	// InitFileExtraSQL is a list of extra sql commands to append to init_file.
+	InitFileExtraSQL []string
 }
 
 // FQDNForServer returns the pod hostname for given MySQL server id
@@ -247,6 +250,8 @@ func NewConfig() *Config {
 		XtrabackupExtraArgs:        strings.Fields(getEnvValue("XTRABACKUP_EXTRA_ARGS")),
 		XtrabackupPrepareExtraArgs: strings.Fields(getEnvValue("XTRABACKUP_PREPARE_EXTRA_ARGS")),
 		XtrabackupTargetDir:        getEnvValue("XTRABACKUP_TARGET_DIR"),
+
+		InitFileExtraSQL: strings.Split(getEnvValue("INITFILE_EXTRA_SQL"), ";"),
 	}
 
 	return cfg

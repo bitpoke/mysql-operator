@@ -80,6 +80,12 @@ spec:
               description: A bucket URL that contains a xtrabackup to initialize the
                 mysql database.
               type: string
+            initFileExtraSQL:
+              description: InitFileExtraSQL is a list of extra sql commands to append
+                to init_file.
+              items:
+                type: string
+              type: array
             maxSlaveLatency:
               description: MaxSlaveLatency represents the allowed latency for a slave
                 node in seconds. If set then the node with a latency grater than this
