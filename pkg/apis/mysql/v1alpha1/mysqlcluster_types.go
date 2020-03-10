@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"strings"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -123,7 +124,7 @@ type MysqlClusterSpec struct {
 
 	// Makes the cluster READ ONLY. Set the master to writable or ReadOnly
 	// +optional
-	ReadOnly bool `json:"readOnly,omitempty"`
+	ReadOnly ReadOnlyMode `json:"readOnly,omitempty"`
 
 	// Set a custom offset for Server IDs.  ServerID for each node will be the index of the statefulset, plus offset
 	// +optional
@@ -299,6 +300,21 @@ const (
 	// NodeConditionReadOnly repesents if the node is read only or not
 	NodeConditionReadOnly NodeConditionType = "ReadOnly"
 )
+
+// +kubebuilder:validation:Enum=true;false;ignored
+type ReadOnlyMode string
+
+const (
+	ReadOnlyControlIgnored ReadOnlyMode = "ignored"
+)
+
+func (rom ReadOnlyMode) IsSet() bool {
+	return strings.EqualFold(string(rom), "true")
+}
+
+func (rom ReadOnlyMode) IsIgnored() bool {
+	return strings.EqualFold(string(rom), string(ReadOnlyControlIgnored))
+}
 
 // MysqlClusterStatus defines the observed state of MysqlCluster
 type MysqlClusterStatus struct {

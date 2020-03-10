@@ -190,7 +190,7 @@ spec:
             readOnly:
               description: Makes the cluster READ ONLY. Set the master to writable
                 or ReadOnly
-              type: boolean
+              type: string
             replicas:
               description: The number of pods. This updates replicas filed Defaults
                 to 0

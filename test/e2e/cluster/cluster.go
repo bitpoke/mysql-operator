@@ -259,7 +259,7 @@ var _ = Describe("Mysql cluster tests", func() {
 
 	It("cluster readOnly", func() {
 		cluster.Spec.Replicas = &two
-		cluster.Spec.ReadOnly = true
+		cluster.Spec.ReadOnly = "true"
 		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
 
 		// test cluster to be ready

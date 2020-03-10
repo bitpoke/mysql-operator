@@ -172,7 +172,7 @@ func (ou *orcUpdater) updateClusterReadyStatus() {
 		}
 	}
 
-	if !hasMaster && !ou.cluster.Spec.ReadOnly && int(*ou.cluster.Spec.Replicas) > 0 {
+	if !hasMaster && !ou.cluster.Spec.ReadOnly.IsSet() && int(*ou.cluster.Spec.Replicas) > 0 {
 		ou.cluster.UpdateStatusCondition(api.ClusterConditionReady, core.ConditionFalse, "NoMaster",
 			"Cluster has no designated master")
 		return
@@ -482,6 +482,11 @@ func (ou *orcUpdater) setReadOnlyNode(inst orc.Instance) error {
 
 // nolint: gocyclo
 func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet, master *orc.Instance) {
+	// If the user has disabled ReadOnly option completely, we will not interfere with Orchestrator's management of writability
+	if ou.cluster.Spec.ReadOnly.IsIgnored() {
+		return
+	}
+
 	// If there is an in-progress failover, we will not interfere with readable/writable status on this iteration.
 	fip := ou.cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
 	if fip != nil && fip.Status == core.ConditionTrue {
@@ -504,7 +509,7 @@ func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet, master *orc.Ins
 
 	// master is determined
 	for _, inst := range insts {
-		if ou.cluster.Spec.ReadOnly {
+		if ou.cluster.Spec.ReadOnly.IsSet() {
 			if err = ou.setReadOnlyNode(inst); err != nil {
 				log.Error(err, "failed to set read only", "instance", inst)
 			}

@@ -410,7 +410,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 		})
 
 		It("should set the master readOnly when cluster is read only", func() {
-			cluster.Spec.ReadOnly = true
+			cluster.Spec.ReadOnly = "true"
 
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
 			master, _ := orcClient.Master(cluster.GetClusterAlias())
@@ -424,7 +424,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 
 		It("should set the master writable when cluster is writable", func() {
 			//Set ReadOnly to false in order to get the master Writable
-			cluster.Spec.ReadOnly = false
+			cluster.Spec.ReadOnly = "false"
 
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
 			master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0)) // set node0 as master
@@ -469,6 +469,23 @@ var _ = Describe("Orchestrator reconciler", func() {
 			// check slave (node-1) to be read-only
 			node1 := InstancesSet(insts).GetInstance(cluster.GetPodHostname(1))
 			Expect(node1.ReadOnly).To(Equal(true))
+		})
+
+		It("should not change read/write status when ReadOnly is Ignored", func() {
+			// Ignore the ReadOnly management; we will never tell Orchestrator what to do in this case
+			cluster.Spec.ReadOnly = api.ReadOnlyControlIgnored
+
+			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+			node0 := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
+
+			node0.ReadOnly = true
+			updater.markReadOnlyNodesInOrc(insts, node0)
+			Expect(node0.ReadOnly).To(Equal(true))
+
+			node0.ReadOnly = false
+			updater.markReadOnlyNodesInOrc(insts, node0)
+			Expect(node0.ReadOnly).To(Equal(false))
+
 		})
 
 		It("should remove old nodes from orchestrator", func() {
