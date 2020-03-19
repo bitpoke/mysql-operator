@@ -100,8 +100,12 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 				binlogSpaceLimit = space.Value() / 3
 				maxBinlogSize = min(binlogSpaceLimit/3, 1*gb)
 			}
-			setConfigIfNotSet(cluster.Spec.MysqlConf, "max-binlog-size", humanizeSize(maxBinlogSize))
+
+			// binlog-space-limit = totalSpace / 2
 			setConfigIfNotSet(cluster.Spec.MysqlConf, "binlog-space-limit", humanizeSize(binlogSpaceLimit))
+
+			// max-binlog-size = min(binlog-space-limit / 4, 1*gb)
+			setConfigIfNotSet(cluster.Spec.MysqlConf, "max-binlog-size", humanizeSize(maxBinlogSize))
 		}
 	}
 }

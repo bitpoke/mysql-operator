@@ -221,3 +221,8 @@ func (c *MysqlCluster) ShouldHaveInitContainerForMysql() bool {
 
 	return strings.Contains(c.GetMysqlImage(), "percona") && expectedRange(c.GetMySQLSemVer())
 }
+
+// String returns the cluster name and namespace
+func (c *MysqlCluster) String() string {
+	return fmt.Sprintf("%s/%s", c.Namespace, c.Name)
+}
