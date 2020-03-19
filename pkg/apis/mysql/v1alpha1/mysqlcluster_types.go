@@ -301,17 +301,21 @@ const (
 	NodeConditionReadOnly NodeConditionType = "ReadOnly"
 )
 
+// ReadOnlyMode can be one of "true", "false", or "ignored"
 // +kubebuilder:validation:Enum=true;false;ignored
 type ReadOnlyMode string
 
+// ReadOnlyMode constants
 const (
 	ReadOnlyControlIgnored ReadOnlyMode = "ignored"
 )
 
+// IsSet returns true if cluster ReadOnly setting has been set to true; otherwise it returns false
 func (rom ReadOnlyMode) IsSet() bool {
 	return strings.EqualFold(string(rom), "true")
 }
 
+// IsIgnored returns true if cluster ReadOnly setting is disabled (set to "ignored")
 func (rom ReadOnlyMode) IsIgnored() bool {
 	return strings.EqualFold(string(rom), string(ReadOnlyControlIgnored))
 }
