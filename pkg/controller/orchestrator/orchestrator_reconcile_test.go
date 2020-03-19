@@ -371,11 +371,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 		)
 
 		BeforeEach(func() {
-			updater = &orcUpdater{
-				cluster:   cluster,
-				recorder:  rec,
-				orcClient: orcClient,
-			}
+			updater = NewOrcUpdater(cluster, rec, orcClient).(*orcUpdater)
 			// set cluster on readonly, master should be in read only state
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
@@ -401,7 +397,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 			// update cluster nodes status
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
 			master, _ := orcClient.Master(cluster.GetClusterAlias())
-			updater.updateStatusFromOrc(insts, master)
+			updater.updateNodesStatus(insts, master)
 		})
 
 		It("should update status for nodes on cluster", func() {
@@ -535,7 +531,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 				master, _ := orcClient.Master(cluster.GetClusterAlias())
 				cluster.Spec.Replicas = &three
 				cluster.Status.ReadyNodes = 3
-				updater.updateStatusFromOrc(insts, master)
+				updater.updateNodesStatus(insts, master)
 				updater.updateClusterReadyStatus()
 
 				Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionReady, core.ConditionFalse, "NotReplicating"))
@@ -562,11 +558,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 		)
 
 		BeforeEach(func() {
-			updater = &orcUpdater{
-				cluster:   cluster,
-				recorder:  rec,
-				orcClient: orcClient,
-			}
+			updater = NewOrcUpdater(cluster, rec, orcClient).(*orcUpdater)
 			// set cluster on readonly, master should be in read only state
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
@@ -585,7 +577,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 			// update cluster nodes status
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
 			master, _ := orcClient.Master(cluster.GetClusterAlias())
-			updater.updateStatusFromOrc(insts, master)
+			updater.updateNodesStatus(insts, master)
 		})
 
 		It("should not remove nodes from cluster when upgrading", func() {
