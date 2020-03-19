@@ -126,6 +126,10 @@ type MysqlClusterSpec struct {
 	// +optional
 	ReadOnly bool `json:"readOnly,omitempty"`
 
+	// Makes the operator ignore the ReadOnly setting completely
+	// +optional
+	IgnoreReadOnly bool `json:"ignoreReadOnly,omitempty"`
+
 	// Set a custom offset for Server IDs.  ServerID for each node will be the index of the statefulset, plus offset
 	// +optional
 	ServerIDOffset *int `json:"serverIDOffset,omitempty"`

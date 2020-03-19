@@ -467,6 +467,23 @@ var _ = Describe("Orchestrator reconciler", func() {
 			Expect(node1.ReadOnly).To(Equal(true))
 		})
 
+		It("should not change read/write status when ReadOnly is Ignored", func() {
+			// Ignore the ReadOnly management; we will never tell Orchestrator what to do in this case
+			cluster.Spec.IgnoreReadOnly = true
+
+			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+			node0 := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
+
+			node0.ReadOnly = true
+			updater.markReadOnlyNodesInOrc(insts, node0)
+			Expect(node0.ReadOnly).To(Equal(true))
+
+			node0.ReadOnly = false
+			updater.markReadOnlyNodesInOrc(insts, node0)
+			Expect(node0.ReadOnly).To(Equal(false))
+
+		})
+
 		It("should remove old nodes from orchestrator", func() {
 			cluster.Spec.Replicas = &one
 			cluster.Status.ReadyNodes = 1

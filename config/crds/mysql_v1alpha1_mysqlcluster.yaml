@@ -66,6 +66,9 @@ spec:
             backupURL:
               description: Represents an URL to the location where to put backups.
               type: string
+            ignoreReadOnly:
+              description: Makes the operator ignore the ReadOnly setting completely
+              type: boolean
             image:
               description: To specify the image that will be used for mysql server
                 container. If this is specified then the mysqlVersion is used as source
