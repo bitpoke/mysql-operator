@@ -119,7 +119,7 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	log.V(1).Info("reconcile backup", "backup", backup)
+	log.V(1).Info("reconcile backup", "backup", backup.String())
 
 	// Set defaults on backup
 	r.scheme.Default(backup.Unwrap())
