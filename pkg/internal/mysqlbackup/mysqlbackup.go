@@ -81,7 +81,12 @@ func (b *MysqlBackup) GetNameForJob() string {
 	return fmt.Sprintf("%s-backup", b.Name)
 }
 
-//GetNameForDeletionJob returns the name for the hard deletion job.
+// GetNameForDeletionJob returns the name for the hard deletion job.
 func (b *MysqlBackup) GetNameForDeletionJob() string {
 	return fmt.Sprintf("%s-backup-cleanup", b.Name)
+}
+
+// String returns the backup name and namespace
+func (b *MysqlBackup) String() string {
+	return fmt.Sprintf("%s/%s", b.Namespace, b.Name)
 }

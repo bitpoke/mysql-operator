@@ -154,10 +154,13 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	log.Info("syncing cluster", "cluster", request.NamespacedName.String())
+	// overwrite logger with cluster info
+	// nolint: govet
+	log := log.WithValues("cluster", request.NamespacedName.String())
+	log.V(1).Info("reconcile cluster")
 
 	// run upgrades
-	// TODO: this should be removed in next version (v0.4)
+	// TODO: this should be removed in next version (v0.5)
 	up := upgrades.NewUpgrader(r.Client, r.recorder, cluster, r.opt)
 	if up.ShouldUpdate() {
 		log.V(1).Info("running upgrades")
@@ -172,7 +175,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	if !reflect.DeepEqual(spec, cluster.Spec) {
 		sErr := r.Update(context.TODO(), cluster.Unwrap())
 		if sErr != nil {
-			log.Error(sErr, "failed to update cluster spec", "cluster", cluster)
+			log.Error(sErr, "failed to update cluster spec")
 			return reconcile.Result{}, sErr
 		}
 		return reconcile.Result{}, nil
@@ -194,7 +197,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 			"ClusterNotRunning", "cluster is not running")
 
 		if sErr := r.Status().Update(context.TODO(), cluster.Unwrap()); sErr != nil {
-			log.Error(sErr, "failed to update cluster status", "cluster", cluster)
+			log.Error(sErr, "failed to update cluster status")
 			return reconcile.Result{}, sErr
 		}
 		return reconcile.Result{}, nil
@@ -213,7 +216,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		if !reflect.DeepEqual(status, cluster.Status) {
 			sErr := r.Status().Update(context.TODO(), cluster.Unwrap())
 			if sErr != nil {
-				log.Error(sErr, "failed to update cluster status", "cluster", cluster)
+				log.Error(sErr, "failed to update cluster status")
 			}
 		}
 	}()
@@ -254,7 +257,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// run the pod syncers
-	log.Info("cluster status", "status", cluster.Status)
+	log.V(1).Info("cluster status", "status", cluster.Status)
 	for _, sync := range r.getPodSyncers(cluster) {
 		if err = syncer.Sync(context.TODO(), sync, r.recorder); err != nil {
 			// if it's pod not found then skip the error
