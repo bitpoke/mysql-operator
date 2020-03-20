@@ -136,7 +136,7 @@ func (u *upgrader) ShouldUpdate() bool {
 	var ok bool
 	if version, ok = u.cluster.ObjectMeta.Annotations[VersionAnnotation]; !ok {
 		// no version annotation present, (it's a cluster older than 0.3.0) or it's a new cluster
-		log.Info("annotation not set on cluster")
+		log.Info("annotation not set on cluster", "cluster", u.cluster.String())
 		return true
 	}
 
@@ -156,7 +156,7 @@ func (u *upgrader) markUpgradeComplete() error {
 	u.cluster.Annotations[VersionAnnotation] = strconv.Itoa(u.version)
 	err := u.client.Update(context.TODO(), u.cluster.Unwrap())
 	if err != nil {
-		log.Error(err, "failed to update cluster spec", "cluster", u.cluster)
+		log.Error(err, "failed to update cluster spec", "cluster", u.cluster.String())
 		return err
 	}
 	return err
@@ -188,7 +188,7 @@ func (u *upgrader) checkNode0Ok(insts []orc.Instance) error {
 	node0 := u.getNodeFrom(insts, 0)
 	if node0 == nil {
 		// continue
-		log.Info("no node found in orchestrator")
+		log.Info("no node found in orchestrator", "cluster", u.cluster.String())
 		return fmt.Errorf("node-0 not found in orchestarotr")
 	}
 
@@ -241,6 +241,6 @@ func NewUpgrader(client client.Client, recorder record.EventRecorder, cluster *m
 		recorder:  recorder,
 		client:    client,
 		orcClient: orc.NewFromURI(opt.OrchestratorURI),
-		version:   300, // TODO
+		version:   300,
 	}
 }

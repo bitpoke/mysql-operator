@@ -18,12 +18,16 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
+	"github.com/go-logr/logr"
+	"github.com/go-test/deep"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -33,6 +37,7 @@ import (
 type podSyncer struct {
 	cluster  *mysqlcluster.MysqlCluster
 	hostname string
+	log      logr.Logger
 }
 
 const (
@@ -54,6 +59,7 @@ func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster
 	sync := &podSyncer{
 		cluster:  cluster,
 		hostname: host,
+		log:      logf.Log.WithName("pod-syncer").WithValues("cluster", cluster.String()),
 	}
 
 	return syncer.NewObjectSyncer("Pod", nil, obj, c, scheme, sync.SyncFn)
@@ -92,12 +98,18 @@ func (s *podSyncer) SyncFn(in runtime.Object) error {
 		healthy = labelHealty
 	}
 
+	oldLabels := out.ObjectMeta.Labels
+
 	if len(out.ObjectMeta.Labels) == 0 {
 		out.ObjectMeta.Labels = map[string]string{}
 	}
 
 	out.ObjectMeta.Labels["role"] = role
 	out.ObjectMeta.Labels["healthy"] = healthy
+
+	if !reflect.DeepEqual(oldLabels, out.ObjectMeta.Labels) {
+		s.log.Info("node labels updated", "node", out.Spec.Hostname, "diff", deep.Equal(oldLabels, out.ObjectMeta.Labels))
+	}
 
 	return nil
 }

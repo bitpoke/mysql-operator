@@ -178,26 +178,29 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	log.Info("syncing MySQL Node", "pod", request.NamespacedName.String())
-
 	// try to get the related MySQL Cluster for current node
 	var cluster *mysqlcluster.MysqlCluster
 	cluster, err = r.getNodeCluster(ctx, pod)
 	if err != nil {
-		log.Info("cluster is not found", "pod", pod)
+		log.V(-1).Info("cluster is not found", "host", pod.Spec.Hostname, "error", err)
 		return reconcile.Result{}, err
 	}
 
 	// if cluster is deleted then don't do anything
 	if cluster.DeletionTimestamp != nil {
-		log.Info("cluster is deleted nothing to do", "pod", pod.Spec.Hostname)
+		log.Info("cluster is deleted nothing to do", "host", pod.Spec.Hostname)
 		return reconcile.Result{}, nil
 	}
+
+	// overwrite logger with cluster info
+	// nolint: govet
+	log := log.WithValues("cluster", cluster.String(), "host", pod.Spec.Hostname)
+	log.Info("syncing MySQL Node", "pod", request.NamespacedName.String())
 
 	// if it's a old version cluster then don't do anything
 	if shouldUpdateToVersion(cluster, 300) {
 		// if the cluster is upgraded then set on the cluster an annotations that skips the GTID configuration
-		// TODO: this should be removed in the next versions
+		// TODO: this should be removed in the next versions (v0.5)
 		if cluster.Annotations == nil {
 			cluster.Annotations = make(map[string]string)
 		}
@@ -227,7 +230,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 	// check if there is an in progress failover. K8s cluster resource may be inconsistent with what exists in k8s
 	fip := cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
 	if fip != nil && fip.Status == corev1.ConditionTrue {
-		log.Info("cluster has a failover in progress, delaying new node sync", "pod", pod.Spec.Hostname, "since", fip.LastTransitionTime)
+		log.Info("cluster has a failover in progress, delaying new node sync", "since", fip.LastTransitionTime)
 		return reconcile.Result{}, fmt.Errorf("delay node sync because a failover is in progress")
 	}
 
@@ -284,7 +287,7 @@ func (r *ReconcileMysqlNode) initializeMySQL(ctx context.Context, sql SQLInterfa
 
 	// is this a slave node?
 	if cluster.GetMasterHost() != sql.Host() {
-		log.Info("run CHANGE MASTER TO on pod", "pod", sql.Host(), "master", cluster.GetMasterHost())
+		log.Info("run CHANGE MASTER TO on pod", "host", sql.Host(), "master", cluster.GetMasterHost())
 
 		if err := sql.ChangeMasterTo(ctx, cluster.GetMasterHost(), c.ReplicationUser, c.ReplicationPassword); err != nil {
 			return err
@@ -422,13 +425,13 @@ func shouldUpdateToVersion(cluster *mysqlcluster.MysqlCluster, targetVersion int
 	var ok bool
 	if version, ok = cluster.ObjectMeta.Annotations["mysql.presslabs.org/version"]; !ok {
 		// no version annotation present, (it's a cluster older than 0.3.0) or it's a new cluster
-		log.Info("annotation not set on cluster")
+		log.Info("annotation not set on cluster", "cluster", cluster.String())
 		return true
 	}
 
 	ver, err := strconv.ParseInt(version, 10, 32)
 	if err != nil {
-		log.Error(err, "annotation version can't be parsed", "value", version)
+		log.Error(err, "annotation version can't be parsed", "version", version)
 		return true
 	}
 

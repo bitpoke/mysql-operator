@@ -41,7 +41,10 @@ type job struct {
 }
 
 func (j *job) Run() {
-	log.Info("scheduled backup job started", "namespace", j.Namespace, "cluster_name", j.ClusterName)
+	clusterNamespaceName := fmt.Sprintf("%s/%s", j.Namespace, j.ClusterName)
+	// nolint: govet
+	log := log.WithValues("cluster", clusterNamespaceName)
+	log.Info("scheduled backup job started")
 
 	// run garbage collector if needed
 	if j.BackupScheduleJobsHistoryLimit != nil {
@@ -50,8 +53,7 @@ func (j *job) Run() {
 
 	// check if a backup is running
 	if j.scheduledBackupsRunningCount() > 0 {
-		log.V(1).Info("at least a backup is running",
-			"backups_len", j.scheduledBackupsRunningCount())
+		log.Info("at least a backup is running", "running_backups_count", j.scheduledBackupsRunningCount())
 		return
 	}
 

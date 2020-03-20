@@ -136,7 +136,7 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, fmt.Errorf("failed to parse schedule: %s", err)
 	}
 
-	log.V(1).Info("register cluster in cronjob", "cluster", cluster, "schedule", schedule)
+	log.V(1).Info("register cluster in cronjob", "cluster", cluster.Name, "schedule", schedule)
 
 	return reconcile.Result{}, r.updateClusterSchedule(cluster, schedule)
 }
