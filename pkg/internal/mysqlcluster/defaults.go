@@ -18,7 +18,6 @@ package mysqlcluster
 
 import (
 	"fmt"
-
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -131,12 +130,12 @@ func getRequestedStorage(pvc *core.PersistentVolumeClaimSpec) *resource.Quantity
 func humanizeSize(value int64) intstr.IntOrString {
 	var unit string
 
-	if value < gb {
+	if value < mb {
+		// small than 1M use bytes as output
+		unit = ""
+	} else {
 		value /= mb
 		unit = "M"
-	} else {
-		value /= gb
-		unit = "G"
 	}
 
 	return intstr.FromString(fmt.Sprintf("%d%s", value, unit))
