@@ -136,7 +136,7 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, fmt.Errorf("failed to parse schedule: %s", err)
 	}
 
-	log.V(1).Info("register cluster in cronjob", "cluster", cluster.Name, "schedule", schedule)
+	log.V(1).Info("register cluster in cronjob", "key", cluster, "schedule", schedule)
 
 	return reconcile.Result{}, r.updateClusterSchedule(cluster, schedule)
 }
@@ -149,12 +149,12 @@ func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.Mysq
 	for _, entry := range r.cron.Entries() {
 		j, ok := entry.Job.(*job)
 		if ok && j.ClusterName == cluster.Name && j.Namespace == cluster.Namespace {
-			log.V(1).Info("cluster already added to cron.", "cluster", cluster.Name)
+			log.V(1).Info("cluster already added to cron.", "key", cluster)
 
 			// change scheduler for already added crons
 			if !reflect.DeepEqual(entry.Schedule, schedule) {
-				log.Info("update cluster scheduler", "cluster",
-					cluster.Name, "scheduler", cluster.Spec.BackupSchedule)
+				log.Info("update cluster scheduler", "key", cluster,
+					"scheduler", cluster.Spec.BackupSchedule)
 
 				if err := r.cron.Remove(cluster.Name); err != nil {
 					return err
@@ -168,8 +168,7 @@ func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.Mysq
 				if cluster.Spec.BackupScheduleJobsHistoryLimit != nil {
 					newValFmt = fmt.Sprintf("%d", cluster.Spec.BackupScheduleJobsHistoryLimit)
 				}
-				log.Info("update cluster backup limit", "cluster",
-					cluster.Name, "limit_val", newValFmt)
+				log.Info("update cluster backup limit", "key", cluster, "limit_val", newValFmt)
 				if err := r.cron.Remove(cluster.Name); err != nil {
 					return err
 				}

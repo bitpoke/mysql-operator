@@ -179,7 +179,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
-			log.Info("cluster is deleted", "key", request.NamespacedName.String())
+			log.Info("cluster is deleted", "key", request.NamespacedName)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -188,7 +188,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 
 	// overwrite logger with cluster info
 	// nolint: govet
-	log := log.WithValues("cluster", cluster.String())
+	log := log.WithValues("key", cluster)
 
 	// save old status
 	oldStatus := *cluster.Status.DeepCopy()
