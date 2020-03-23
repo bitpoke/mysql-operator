@@ -44,6 +44,7 @@ func init() {
 		reflect.TypeOf([]corev1.LocalObjectReference{}): PodSpec.MergeListByKey("Name", mergo.WithOverride),
 		reflect.TypeOf([]corev1.HostAlias{}):            PodSpec.MergeListByKey("IP", mergo.WithOverride),
 		reflect.TypeOf([]corev1.VolumeMount{}):          PodSpec.MergeListByKey("MountPath", mergo.WithOverride),
+		reflect.TypeOf(corev1.Affinity{}):               PodSpec.OverrideFields("NodeAffinity", "PodAffinity", "PodAntiAffinity"),
 	}
 }
 

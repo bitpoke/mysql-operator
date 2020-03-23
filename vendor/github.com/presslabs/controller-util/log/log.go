@@ -21,6 +21,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/blendle/zapdriver"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
@@ -71,12 +72,12 @@ func RawZapLoggerTo(destWriter io.Writer, development bool, opts ...zap.Option) 
 	var enc zapcore.Encoder
 	var lvl zap.AtomicLevel
 	if development {
-		encCfg := zap.NewDevelopmentEncoderConfig()
+		encCfg := zapdriver.NewDevelopmentEncoderConfig()
 		enc = zapcore.NewConsoleEncoder(encCfg)
 		lvl = zap.NewAtomicLevelAt(zap.DebugLevel)
 		opts = append(opts, zap.Development(), zap.AddStacktrace(zap.ErrorLevel))
 	} else {
-		encCfg := zap.NewProductionEncoderConfig()
+		encCfg := zapdriver.NewProductionEncoderConfig()
 		enc = zapcore.NewJSONEncoder(encCfg)
 		lvl = zap.NewAtomicLevelAt(zap.InfoLevel)
 		opts = append(opts, zap.AddStacktrace(zap.WarnLevel),

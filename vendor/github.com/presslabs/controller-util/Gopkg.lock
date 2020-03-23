@@ -10,6 +10,14 @@
   version = "v2.0.0"
 
 [[projects]]
+  digest = "1:a9656e694e65f31dbb577b7def0c38beb7c42b3635ac9030d72d26a7da1aae8a"
+  name = "github.com/blendle/zapdriver"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "40e509ee21fffea4721c27da7d42ead69bfb6d5b"
+  version = "v1.3.1"
+
+[[projects]]
   digest = "1:9f42202ac457c462ad8bb9642806d275af9ab4850cf0b1960b9c6f083d4a309a"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -181,6 +189,7 @@
   packages = [
     ".",
     "config",
+    "extensions/table",
     "ginkgo",
     "ginkgo/convert",
     "ginkgo/interrupthandler",
@@ -620,12 +629,14 @@
   analyzer-version = 1
   input-imports = [
     "code.cloudfoundry.org/lager",
+    "github.com/blendle/zapdriver",
     "github.com/go-logr/logr",
     "github.com/go-logr/zapr",
     "github.com/go-test/deep",
     "github.com/iancoleman/strcase",
     "github.com/imdario/mergo",
     "github.com/onsi/ginkgo",
+    "github.com/onsi/ginkgo/extensions/table",
     "github.com/onsi/ginkgo/ginkgo",
     "github.com/onsi/gomega",
     "go.uber.org/zap",

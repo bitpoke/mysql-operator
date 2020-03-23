@@ -27,8 +27,14 @@ import (
 	"math/big"
 )
 
-const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-const ascii = letters + "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+const (
+	lowerLetters  = "abcdefghijklmnopqrstuvwxyz"
+	upperLetters  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	letters       = lowerLetters + upperLetters
+	digits        = "0123456789"
+	alphanumerics = letters + digits
+	ascii         = alphanumerics + "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+)
 
 // NewStringGenerator generate a cryptographically secure random sequence
 // generator from given characters.
@@ -49,12 +55,20 @@ func NewStringGenerator(characters string) func(int) (string, error) {
 	}
 }
 
-var alphaNumericStringGenerator = NewStringGenerator(letters)
+var alphaNumericStringGenerator = NewStringGenerator(alphanumerics)
 
 // AlphaNumericString returns a cryptographically secure random sequence of
 // alphanumeric characters.
 func AlphaNumericString(length int) (string, error) {
 	return alphaNumericStringGenerator(length)
+}
+
+var lowerAlphaNumericStringGenerator = NewStringGenerator(lowerLetters + digits)
+
+// LowerAlphaNumericString returns a cryptographically secure random sequence of
+// lower alphanumeric characters.
+func LowerAlphaNumericString(length int) (string, error) {
+	return lowerAlphaNumericStringGenerator(length)
 }
 
 var asciiStringGenerator = NewStringGenerator(ascii)
