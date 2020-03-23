@@ -101,7 +101,7 @@ var _ = Describe("MysqlBackupCron controller", func() {
 				Replicas:   &two,
 				SecretName: "a-secret",
 
-				BackupSchedule:   "0 0 0 0 * *",
+				BackupSchedule:   "0 0 0 1 * *",
 				BackupSecretName: "a-backup-secret",
 				BackupURL:        "gs://bucket/",
 			},
