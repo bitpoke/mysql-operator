@@ -59,7 +59,7 @@ func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster
 	sync := &podSyncer{
 		cluster:  cluster,
 		hostname: host,
-		log:      logf.Log.WithName("pod-syncer").WithValues("cluster", cluster.String()),
+		log:      logf.Log.WithName("pod-syncer").WithValues("key", cluster),
 	}
 
 	return syncer.NewObjectSyncer("Pod", nil, obj, c, scheme, sync.SyncFn)
@@ -108,7 +108,7 @@ func (s *podSyncer) SyncFn(in runtime.Object) error {
 	out.ObjectMeta.Labels["healthy"] = healthy
 
 	if !reflect.DeepEqual(oldLabels, out.ObjectMeta.Labels) {
-		s.log.Info("node labels updated", "node", out.Spec.Hostname, "diff", deep.Equal(oldLabels, out.ObjectMeta.Labels))
+		s.log.Info("node labels updated", "host", out.Spec.Hostname, "diff", deep.Equal(oldLabels, out.ObjectMeta.Labels))
 	}
 
 	return nil

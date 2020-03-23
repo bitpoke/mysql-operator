@@ -475,7 +475,7 @@ func (s *sfsSyncer) ensureVolumes() []core.Volume {
 		dataVolume.EmptyDir = s.cluster.Spec.VolumeSpec.EmptyDir
 	} else {
 		// warning
-		log.V(-1).Info("no volume spec is specified", "volumeSpec", s.cluster.Spec.VolumeSpec, "cluster", s.cluster.String())
+		log.V(-1).Info("no volume spec is specified", "volumeSpec", s.cluster.Spec.VolumeSpec, "key", s.cluster)
 	}
 
 	volumes := []core.Volume{

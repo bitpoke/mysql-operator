@@ -64,7 +64,7 @@ func (s *jobSyncer) SyncFn(in runtime.Object) error {
 	out := in.(*batch.Job)
 
 	if s.backup.Status.Completed {
-		log.V(1).Info("backup already completed", "backup", s.backup.String())
+		log.V(1).Info("backup already completed", "backup", s.backup, "key", s.cluster)
 		// skip doing anything
 		return syncer.ErrIgnore
 	}
@@ -110,7 +110,7 @@ func (s *jobSyncer) getBackupCandidate() string {
 	}
 
 	log.Info("no healthy slave node found so returns the master node", "master_node", s.cluster.GetMasterHost(),
-		"cluster", s.cluster.String(), "backup", s.backup.String())
+		"key", s.cluster, "backup", s.backup)
 	return s.cluster.GetMasterHost()
 }
 

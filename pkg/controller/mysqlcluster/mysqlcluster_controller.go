@@ -156,14 +156,14 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 	// overwrite logger with cluster info
 	// nolint: govet
-	log := log.WithValues("cluster", request.NamespacedName.String())
+	log := log.WithValues("key", request.NamespacedName)
 	log.V(1).Info("reconcile cluster")
 
 	// run upgrades
 	// TODO: this should be removed in next version (v0.5)
 	up := upgrades.NewUpgrader(r.Client, r.recorder, cluster, r.opt)
 	if up.ShouldUpdate() {
-		log.V(1).Info("running upgrades")
+		log.Info("the upgrader will run for this cluster")
 		if err = up.Run(context.TODO()); err != nil {
 			return reconcile.Result{}, err
 		}
