@@ -34,6 +34,14 @@
   version = "v3.6.1"
 
 [[projects]]
+  digest = "1:a9656e694e65f31dbb577b7def0c38beb7c42b3635ac9030d72d26a7da1aae8a"
+  name = "github.com/blendle/zapdriver"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "40e509ee21fffea4721c27da7d42ead69bfb6d5b"
+  version = "v1.3.1"
+
+[[projects]]
   digest = "1:9f42202ac457c462ad8bb9642806d275af9ab4850cf0b1960b9c6f083d4a309a"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -374,7 +382,7 @@
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:e759a27f8a63ab2aa0fc770135434d680c54cbaacf81a6aa55dbd31ba368d648"
+  digest = "1:dec9623483ee2d9d5102cb253bad838a21e70c4e5879692dd89c18807f51eb08"
   name = "github.com/presslabs/controller-util"
   packages = [
     "log",
@@ -383,8 +391,8 @@
     "syncer",
   ]
   pruneopts = "T"
-  revision = "5d0cd1e9e71f054ce878f5e663b6ade4bc399b42"
-  version = "v0.1.11"
+  revision = "ae3859927b0ac707d5ba14bfaab506a83c1f43ad"
+  version = "v0.1.16"
 
 [[projects]]
   digest = "1:3b5729e3fc486abc6fc16ce026331c3d196e788c3b973081ecf5d28ae3e1050d"
