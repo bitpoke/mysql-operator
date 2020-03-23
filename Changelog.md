@@ -1,8 +1,8 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project
+adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
 ## [Unreleased]
@@ -10,6 +10,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Removed
 ### Fixed
+
+
+## [0.4.0] - TBD
+### Added
+ * Added a test suite for RunCloneCommand logic, along with a mock backup server.
+ * Added checks for service availability when cloning.
+ * Added "fail fast" logic when unexpected errors occur during cloning/download.
+ * Added `dataDir` cleanup code so that interrupted cloning does not leave dataDir in an
+   inconsistent state.
+ * Added e2e test demonstrating cloning failure when PVC is removed and pod recreated.
+ * Add `MetricsExporterExtraArgs` field on MySQLCluster resource that allows to specify command line
+   arguments to pass to MySQL metrics exporter.
+ * Allow using custom secret for app credentials in `mysql-cluster` chart.
+ * Add `XbstreamExtraArgs` field on MySQLCluster resource that allows to specify extra command line
+   arguments to xbstream.
+ * Add `XtrabackupExtraArgs`, `XtrabackupPrepareExtraArgs`, `XtrabackupTargetDir` to parametrize
+   xtrabackup.
+ * Add `RcloneExtraArgs` to parametrize rclone command.
+ * Add `InitFileExtraSQL` to insert custom init SQL queries that will be run at MySQL initialization.
+### Changed
+ * [#422](https://github.com/presslabs/mysql-operator/pull/422) adds the `SidecarServerPort` to the
+   `MasterService` and introduces one new service, HealthyReplicasService, so that we can try to
+   clone from replicas first, then fall back to master.
+ * Changed the connect timeout from the default of 30s to 5s so that an empty k8s service will not
+   cause cloning attempts to hang unnecessarily for 30s.
+ * Update documentation structure and formatting.
+ * Udate Orchestrator version to v3.1.4
+ * Update orchestrator base image to `alpine:3.11`.
+ * Update FailoverInProgress condition to false when both Replicas and ReadyNodes are 0.
+ * Fall back to current master, not pod 0, when no healthy replicas found for backup candidate.
+ * Change the `mysql-operator` chart to be helm v3 compatible while keeping backward compatibility.
+ * Change logging: change `cluster` logging field to `key`; normalize logging and more details;
+   output Stackdrive compatible format.
+### Removed
+### Fixed
+ * Update and fix e2e tests
+ * Fix double date string in bakup path 
+ * Copy the nodeSelector as-is in the statefulset (fixes #454)
 
 
 ## [0.3.8] - 2020-01-22
@@ -26,7 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
  * Update `mysql-cluster` chart to support setting `backupScheduleJobsHistoryLimit`
 ### Changed
- * Increase size of `value` column in `sys.operator` table (see [#447](https://github.com/presslabs/mysql-operator/pull/447#issuecomment-572538559)) (fixes #446)
+ * Increase size of `value` column in `sys.operator` table (see
+   [#447](https://github.com/presslabs/mysql-operator/pull/447#issuecomment-572538559)) (fixes #446)
  * Determine master logic: prevent to follow infinit loops
 ### Fixed
  * Use custom server offset (`MyServerIDOffset`) when deciding to clone from bucket
@@ -52,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
  * Allow server id offset to be set via `MySQLCluster` resource by adding `MyServerIDOffset` field
 ### Changed
- * Make app credentials optional for mysql-cluster chart 
+ * Make app credentials optional for mysql-cluster chart
  * Don't create user with empty password (fixes #385)
 ### Fixed
  * Fix wrong enviroment for `mysql` container
@@ -61,7 +100,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.2] - 2019-07-26
 ### Changed
- * Update docs structure on [presslabs.com/docs/mysql-operator/](https://www.presslabs.com/docs/mysql-operator/)
+ * Update docs structure on
+   [presslabs.com/docs/mysql-operator/](https://www.presslabs.com/docs/mysql-operator/)
  * Set limit on mysql `mysql-init-only` container the same as on the `mysql` container (fixes #371)
  * Don't limit memory on sidecars containers
 
@@ -69,35 +109,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.1] - 2019-07-17
 ### Fixed
  * Upgrade path from version `v0.2.x` (#369)
- * Changes the default leader election id from `controller-leader-election-helper` to `mysql-operator-leader-election` (#368)
+ * Changes the default leader election id from `controller-leader-election-helper` to
+   `mysql-operator-leader-election` (#368)
 
 
 ## [0.3.0] - 2019-07-08
 ### Added
- * add a new cluster condition `FailoverInProgress` that marks the cluster during a failover 
- * set orchestrator related events on the cluster: `OrcFailureDetection`, `OrcPostUnsuccessfulFailover`, `OrcPostMasterFailover`, `OrcPostIntermediateMasterFailover`
- * new command line flag `--mysql-versions-to-image` to allow user to specify image for a mysql version
- * add print column in mysqlcluster CRD: `Ready`, `Replicas`, `Age` 
+ * add a new cluster condition `FailoverInProgress` that marks the cluster during a failover
+ * set orchestrator related events on the cluster: `OrcFailureDetection`,
+   `OrcPostUnsuccessfulFailover`, `OrcPostMasterFailover`, `OrcPostIntermediateMasterFailover`
+ * new command line flag `--mysql-versions-to-image` to allow user to specify image for a mysql
+   version
+ * add print column in mysqlcluster CRD: `Ready`, `Replicas`, `Age`
  * allow specifying more PodSpec on MySQL cluster (9b6b46f)
  * add a node controller for MySQL configuration (1950812)
  * add "standard" labels on services created by the operator (#299)
 ### Changed
- * merge Orchestrator chart with the mysql-operator chart. Now instead of deployment it uses a statefulset
+ * merge Orchestrator chart with the mysql-operator chart. Now instead of deployment it uses a
+   statefulset
  * nodes are removed from cluster status at scale down
- * use init container for MySQL initialization  (#342)
- * enhance Backup Job Pod for Workload Identity (#366) 
- * refactor of how the information flow works: from k8s -> Operator -> Orchestrator;  the sidecar container does not connect to Orchestrator anymore.
+ * use init container for MySQL initialization (#342)
+ * enhance Backup Job Pod for Workload Identity (#366)
+ * refactor of how the information flow works: from k8s -> Operator -> Orchestrator; the sidecar
+   container does not connect to Orchestrator anymore.
  * rename of `initBackupURI` to `initBackupURL` (a3c6556)
  * use of Percona CentOS based images (#254)
  * don't run as `root` user in containers (#291)
- * rename orchestrator finalizer (to block cluster deletion while it's registered into Orchestrator) from `OrchestratorFinalizer` to `mysql.presslabs.org/registered-in-orchestrator` (bfe4646)
+ * rename orchestrator finalizer (to block cluster deletion while it's registered into Orchestrator)
+   from `OrchestratorFinalizer` to `mysql.presslabs.org/registered-in-orchestrator` (bfe4646)
  * improvement of `getBackupCandidate` function (9ce4e68)
  * configure MySQL using `init-file` (beb41ce, e5823cb)
- * rename `AWS_SECRET_KEY` field from bucket/backup secret to `AWS_SECRET_ACCESS_KEY` (#301) 
+ * rename `AWS_SECRET_KEY` field from bucket/backup secret to `AWS_SECRET_ACCESS_KEY` (#301)
  * use an internal status table to store the MySQL status (181909f)
  * use a common headless service for all MySQL nodes to reduce the host-name length (#246)
 ### Removed
- * cleanup of deprecated fields: `bucketURI` and top-level `MySQLCluster.spec.volumeSpec` PVC specification (d909ab9, df80b28)
+ * cleanup of deprecated fields: `bucketURI` and top-level `MySQLCluster.spec.volumeSpec` PVC
+   specification (d909ab9, df80b28)
 ### Fixed
  * fix readiness probe for MySQL container
  * fix remote storage delete bug
@@ -107,6 +154,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+[Unreleased]: https://github.com/presslabs/mysql-operator/compare/v0.3.8...HEAD
 [0.3.8]: https://github.com/presslabs/mysql-operator/compare/v0.3.7...v0.3.8
 [0.3.7]: https://github.com/presslabs/mysql-operator/compare/v0.3.6...v0.3.7
 [0.3.6]: https://github.com/presslabs/mysql-operator/compare/v0.3.5...v0.3.6
