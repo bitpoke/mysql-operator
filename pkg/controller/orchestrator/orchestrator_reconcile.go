@@ -61,7 +61,7 @@ func NewOrcUpdater(cluster *mysqlcluster.MysqlCluster, r record.EventRecorder, o
 		cluster:   cluster,
 		recorder:  r,
 		orcClient: orcClient,
-		log:       logf.Log.WithName("orchestrator-reconciler").WithValues("cluster", cluster.String()),
+		log:       logf.Log.WithName("orchestrator-reconciler").WithValues("key", cluster),
 	}
 }
 

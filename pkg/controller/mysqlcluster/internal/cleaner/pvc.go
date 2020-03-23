@@ -66,7 +66,7 @@ func (p *PVCCleaner) Run(ctx context.Context) error {
 	cluster := p.cluster.Unwrap()
 
 	if cluster.DeletionTimestamp != nil {
-		log.V(4).Info("being deleted, no action", "MysqlCluster", p.cluster)
+		log.V(2).Info("being deleted, no action", "key", p.cluster)
 		return nil
 	}
 
@@ -79,12 +79,12 @@ func (p *PVCCleaner) Run(ctx context.Context) error {
 	for _, pvc := range pvcs {
 		ord, parseErr := getOrdinal(pvc.Name)
 		if parseErr == nil && ord >= *cluster.Spec.Replicas && ord != 0 {
-			log.Info("cleaning up PVC", "pvc", pvc.Name, "cluster", p.cluster.String())
+			log.Info("cleaning up PVC", "pvc", pvc.Name, "key", p.cluster)
 			if err := p.deletePVC(ctx, &pvc); err != nil {
 				return err
 			}
 		} else if parseErr != nil {
-			log.Error(parseErr, "pvc deletion error")
+			log.Error(parseErr, "pvc deletion error", "key", p.cluster)
 		}
 	}
 
@@ -119,7 +119,7 @@ func (p *PVCCleaner) getPVCs(ctx context.Context) ([]core.PersistentVolumeClaim,
 	claims := []core.PersistentVolumeClaim{}
 	for _, claim := range pvcs.Items {
 		if !isOwnedBy(claim, p.cluster.Unwrap()) {
-			log.Info("pvc not owner by cluster", "pvc", claim.Name, "cluster", p.cluster.String())
+			log.Info("pvc not owner by cluster", "pvc", claim.Name, "key", p.cluster)
 			continue // skip it's not owned by this cluster
 		}
 

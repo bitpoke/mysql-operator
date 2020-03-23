@@ -43,7 +43,7 @@ type job struct {
 func (j *job) Run() {
 	clusterNamespaceName := fmt.Sprintf("%s/%s", j.Namespace, j.ClusterName)
 	// nolint: govet
-	log := log.WithValues("cluster", clusterNamespaceName)
+	log := log.WithValues("key", clusterNamespaceName)
 	log.Info("scheduled backup job started")
 
 	// run garbage collector if needed
