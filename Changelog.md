@@ -50,11 +50,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Decrease `MASTER_CONNECT_RETRY` interval from 10 to 1 second.
  * Deprecate `TmpfsSize` because can be handled using `ExtraVolumes` and `ExtraMySQLVolumesMounts`.
  * Set default mysql to `5.7.29`.
+ * Update cron documentation
+ * Set InnoDB buffer parameter: `innodb_buffer_pool_instances` to `min(resources.limit.cpu,
+   floor(innodb_buffer_pool_size/1G))` (see #502)
 ### Removed
 ### Fixed
  * Update and fix e2e tests
  * Fix double date string in bakup path 
  * Copy the nodeSelector as-is in the statefulset (fixes #454)
+ * Fix flakines in ReadOnly cluster condition (fixes #434)
+ * Fix rounding in computing `innodb-buffer-pool-size` (fixes #501)
 
 
 ## [0.3.8] - 2020-01-22
