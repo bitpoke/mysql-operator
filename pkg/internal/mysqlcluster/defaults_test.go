@@ -18,26 +18,22 @@ package mysqlcluster
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-var _ = Describe("MySQL defaults", func() {
-	It("humanize should not round the value", func() {
-		q := resource.MustParse("1.5Gi")
+var _ = Describe("MySQL defaults unit tests", func() {
+	DescribeTable("humanize should not round the value", func(quantity, expect string) {
+		q := resource.MustParse(quantity)
 		hq := humanizeSize(q.Value())
-		Expect(hq.String()).To(Equal("1536M"))
-
-		q2 := resource.MustParse("321Mi")
-		hq2 := humanizeSize(q2.Value())
-		Expect(hq2.String()).To(Equal("321M"))
-
-		q3 := resource.MustParse("1.07Gi")
-		hq3 := humanizeSize(q3.Value())
-		Expect(hq3.String()).To(Equal("1095M"))
-
-		q4 := resource.MustParse("1200Ki")
-		hq4 := humanizeSize(q4.Value())
-		Expect(hq4.String()).To(Equal("1M"))
-	})
+		Expect(hq.String()).To(Equal(expect))
+	},
+		Entry("grater than G should use M", "1.5Gi", "1536M"),
+		Entry("smaller than G should use M", "321Mi", "321M"),
+		Entry("large values", "212Gi", "217088M"),
+		Entry("Ki convert to M", "1200Ki", "1M"),
+		Entry("smaller than M use bytes", "12Ki", "12288"),
+	)
 })

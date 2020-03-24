@@ -18,6 +18,8 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"math"
+
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,9 +83,12 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 	// https://www.percona.com/blog/2018/03/26/mysql-8-0-innodb_dedicated_server-variable-optimizes-innodb/
 
 	// set innodb-buffer-pool-size if not set
-	if mem := cluster.Spec.PodSpec.Resources.Requests.Memory(); mem != nil {
-		bufferSize := humanizeSize(computeInnodbBufferPoolSize(mem))
-		setConfigIfNotSet(cluster.Spec.MysqlConf, "innodb-buffer-pool-size", bufferSize)
+	innodbBufferPoolSize := 128 * mb // MySQL default value
+	if mem := cluster.Spec.PodSpec.Resources.Requests.Memory(); mem != nil && !mem.IsZero() {
+		var cErr error
+		if innodbBufferPoolSize, cErr = computeInnodbBufferPoolSize(mem); cErr == nil {
+			setConfigIfNotSet(cluster.Spec.MysqlConf, "innodb-buffer-pool-size", humanizeSize(innodbBufferPoolSize))
+		}
 	}
 
 	if mem := cluster.Spec.PodSpec.Resources.Requests.Memory(); mem != nil {
@@ -106,6 +111,13 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 			// max-binlog-size = min(binlog-space-limit / 4, 1*gb)
 			setConfigIfNotSet(cluster.Spec.MysqlConf, "max-binlog-size", humanizeSize(maxBinlogSize))
 		}
+	}
+
+	if cpu := cluster.Spec.PodSpec.Resources.Limits.Cpu(); cpu != nil && !cpu.IsZero() {
+		// innodb_buffer_pool_instances = min(ceil(resources.limits.cpu), floor(innodb_buffer_pool_size/1Gi))
+		cpuRounded := math.Ceil(float64(cpu.MilliValue()) / float64(1000))
+		instances := math.Max(math.Min(cpuRounded, math.Floor(float64(innodbBufferPoolSize)/float64(gb))), 1)
+		setConfigIfNotSet(cluster.Spec.MysqlConf, "innodb-buffer-pool-instances", intstr.FromInt(int(instances)))
 	}
 
 	// set default xtrabackup target directory
@@ -165,21 +177,29 @@ func computeInnodbLogFileSize(mem *resource.Quantity) int64 {
 }
 
 // computeInnodbBufferPoolSize returns a computed value, to configure MySQL, based on requested
-// memory.
-func computeInnodbBufferPoolSize(mem *resource.Quantity) int64 {
-	var bufferSize int64
-	if mem.Value() < gb {
-		// RAM < 1G => buffer size set to 128M
-		bufferSize = 128 * mb
+// memory. As described in: https://github.com/presslabs/mysql-operator/issues/502
+func computeInnodbBufferPoolSize(mem *resource.Quantity) (int64, error) {
+	availableMem := mem.Copy()
+	percentRAM := 0.75
+
+	if mem.Value() <= 512*mb {
+		// don't set innodb-buffer-pool-size leave it to mysql default (128M)
+		return 0, fmt.Errorf("memory too small to compute innodb-buffer-pool-size: %s", mem)
+	} else if mem.Value() <= 1*gb {
+		// RAM <= 1gb => buffer size set to RAM * 0.5
+		availableMem.Sub(resource.MustParse("256Mi"))
+		percentRAM = 0.5
 	} else if mem.Value() <= 4*gb {
-		// RAM <= 4gb => buffer size set to RAM * 0.5
-		bufferSize = int64(float64(mem.Value()) * 0.5)
-	} else {
-		// RAM > 4gb => buffer size set to RAM * 0.75
-		bufferSize = int64(float64(mem.Value()) * 0.75)
+		// RAM <= 4gb => buffer size set to RAM * 0.75
+		availableMem.Sub(resource.MustParse("256Mi"))
+		percentRAM = 0.75
+	} else if mem.Value() > 4*gb {
+		// RAM > 4gb => buffer size set to RAM * 0.8
+		availableMem.Sub(resource.MustParse("512Mi"))
+		percentRAM = 0.8
 	}
 
-	return bufferSize
+	return int64(float64(availableMem.Value()) * percentRAM), nil
 }
 
 func min(a, b int64) int64 {
