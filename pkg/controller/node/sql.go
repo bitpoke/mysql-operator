@@ -30,8 +30,8 @@ import (
 )
 
 const (
-	// connRetry represents the number of tries to connect to master server
-	connRetry = 10
+	// connRetry specifies the interval between reconnection attempts to master
+	connRetry = 1
 )
 
 // SQLInterface expose abstract operations that can be applied on a MySQL node
