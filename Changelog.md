@@ -43,6 +43,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Change the `mysql-operator` chart to be helm v3 compatible while keeping backward compatibility.
  * Change logging: change `cluster` logging field to `key`; normalize logging and more details;
    output Stackdrive compatible format.
+ * Decrease `MASTER_CONNECT_RETRY` interval from 10 to 1 second.
 ### Removed
 ### Fixed
  * Update and fix e2e tests
