@@ -49,6 +49,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
    output Stackdrive compatible format.
  * Decrease `MASTER_CONNECT_RETRY` interval from 10 to 1 second.
  * Deprecate `TmpfsSize` because can be handled using `ExtraVolumes` and `ExtraMySQLVolumesMounts`.
+ * Set default mysql to `5.7.29`.
 ### Removed
 ### Fixed
  * Update and fix e2e tests
