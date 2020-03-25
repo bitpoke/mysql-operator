@@ -78,13 +78,14 @@ const (
 
 var (
 	// MySQLDefaultVersion is the version for mysql that should be used
-	MySQLDefaultVersion = semver.MustParse("5.7.26")
+	MySQLDefaultVersion = semver.MustParse("5.7.29")
 	// MySQLTagsToSemVer maps simple version to semver versions
 	MySQLTagsToSemVer = map[string]string{
-		"5.7": "5.7.26",
+		"5.7": "5.7.29",
 	}
 	// MysqlImageVersions is a map of supported mysql version and their image
 	MysqlImageVersions = map[string]string{
+		"5.7.29": "percona@sha256:d801123bbfaf750924f993f5c59189d144a93feb928b8aef95e541dd61c62881",
 		// Percona:5.7.26 CentOS based image
 		"5.7.26": "percona@sha256:713c1817615b333b17d0fbd252b0ccc53c48a665d4cfcb42178167435a957322",
 		// Percona:5.7.24 CentOS based image
