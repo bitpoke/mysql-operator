@@ -30,10 +30,12 @@ var _ = Describe("MySQL defaults unit tests", func() {
 		hq := humanizeSize(q.Value())
 		Expect(hq.String()).To(Equal(expect))
 	},
-		Entry("grater than G should use M", "1.5Gi", "1536M"),
-		Entry("smaller than G should use M", "321Mi", "321M"),
-		Entry("large values", "212Gi", "217088M"),
-		Entry("Ki convert to M", "1200Ki", "1M"),
-		Entry("smaller than M use bytes", "12Ki", "12288"),
+		Entry("> 1G fixed value", "2Gi", "2G"),
+		Entry("> 1G fractional value", "1.5Gi", "1536M"),
+		Entry("should use M", "128Mi", "128M"),
+		Entry("should use K", "1.5Mi", "1536K"),
+		Entry("small values use K", "1200Ki", "1200K"),
+		Entry("small values in K use M", "1024Ki", "1M"),
+		Entry("small values in K use bytes", "0.5Ki", "512"),
 	)
 })
