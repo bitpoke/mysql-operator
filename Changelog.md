@@ -52,6 +52,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Update cron documentation
  * Set InnoDB buffer parameter: `innodb_buffer_pool_instances` to `min(resources.limit.cpu,
    floor(innodb_buffer_pool_size/1G))` (see #502)
+ * Change requested resources for sidecar containers: `sidecar`: (requested=10m/32Mi,
+   limit=`.spec.podSpec.rsources.limit`); `exporter`: (requested=10m/32Mi. limit=100m/128Mi);
+   `heartbeat`: (requested=10m/32Mi, limit=100m/64Mi)
 ### Removed
 ### Fixed
  * Update and fix e2e tests
