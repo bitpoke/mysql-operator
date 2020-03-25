@@ -404,6 +404,36 @@ func (in *PodSpec) DeepCopyInto(out *PodSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Volumes != nil {
+		in, out := &in.Volumes, &out.Volumes
+		*out = make([]v1.Volume, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.VolumeMounts != nil {
+		in, out := &in.VolumeMounts, &out.VolumeMounts
+		*out = make([]v1.VolumeMount, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.InitContainers != nil {
+		in, out := &in.InitContainers, &out.InitContainers
+		*out = make([]v1.Container, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.Containers != nil {
+		in, out := &in.Containers, &out.Containers
+		*out = make([]v1.Container, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	in.MetricsExporterResources.DeepCopyInto(&out.MetricsExporterResources)
+	in.MySQLOperatorSidecarResources.DeepCopyInto(&out.MySQLOperatorSidecarResources)
 	return
 }
 
