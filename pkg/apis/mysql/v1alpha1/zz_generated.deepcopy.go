@@ -467,6 +467,8 @@ func (in *PodSpec) DeepCopyInto(out *PodSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	in.MetricsExporterResources.DeepCopyInto(&out.MetricsExporterResources)
+	in.MySQLOperatorSidecarResources.DeepCopyInto(&out.MySQLOperatorSidecarResources)
 	return
 }
 
