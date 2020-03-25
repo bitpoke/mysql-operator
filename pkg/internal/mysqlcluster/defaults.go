@@ -140,17 +140,30 @@ func getRequestedStorage(pvc *core.PersistentVolumeClaimSpec) *resource.Quantity
 }
 
 func humanizeSize(value int64) intstr.IntOrString {
-	var unit string
 
-	if value < mb {
-		// small than 1M use bytes as output
-		unit = ""
-	} else {
-		value /= mb
-		unit = "M"
+	if r, ok := tryUnit(value, gb, "G"); ok {
+		return intstr.FromString(r)
 	}
 
-	return intstr.FromString(fmt.Sprintf("%d%s", value, unit))
+	if r, ok := tryUnit(value, mb, "M"); ok {
+		return intstr.FromString(r)
+	}
+
+	if r, ok := tryUnit(value, kb, "K"); ok {
+		return intstr.FromString(r)
+	}
+
+	return intstr.FromString(fmt.Sprintf("%d%s", value, ""))
+}
+
+func tryUnit(value int64, scale int64, unitStr string) (string, bool) {
+	allow := value * 0 / 100
+	if value >= scale && value%scale <= allow {
+		value /= scale
+		return fmt.Sprintf("%d%s", value, unitStr), true
+	}
+
+	return "", false
 }
 
 // computeInnodbLogFileSize returns a computed value, to configure MySQL, based on requested memory.
