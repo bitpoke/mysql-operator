@@ -28,9 +28,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Add `XtrabackupExtraArgs`, `XtrabackupPrepareExtraArgs`, `XtrabackupTargetDir` to parametrize
    xtrabackup.
  * Add `RcloneExtraArgs` to parametrize rclone command.
- * Add `InitFileExtraSQL` to insert custom init SQL queries that will be run at MySQL initialization.
- * Add `ExtraVolumes` and `ExtraMySQLVolumesMounts` to allow the user specifying custom volume
+ * Add `InitFileExtraSQL` to insert custom init SQL queries that will be run at MySQL
+   initialization.
+ * Add `Volumes` and `VolumesMounts` in `.Spec.PodSpec` to allow the user specifying custom volume
    mounts.
+ * Add `InitContainers` and `Containers` in `.Spec.PodSpec` to allow the user specifying custom containers.
 ### Changed
  * [#422](https://github.com/presslabs/mysql-operator/pull/422) adds the `SidecarServerPort` to the
    `MasterService` and introduces one new service, HealthyReplicasService, so that we can try to
@@ -46,6 +48,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Change logging: change `cluster` logging field to `key`; normalize logging and more details;
    output Stackdrive compatible format.
  * Decrease `MASTER_CONNECT_RETRY` interval from 10 to 1 second.
+ * Deprecate `TmpfsSize` because can be handled using `ExtraVolumes` and `ExtraMySQLVolumesMounts`.
 ### Removed
 ### Fixed
  * Update and fix e2e tests

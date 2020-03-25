@@ -108,6 +108,7 @@ type MysqlClusterSpec struct {
 	VolumeSpec VolumeSpec `json:"volumeSpec,omitempty"`
 
 	// TmpfsSize if specified, mounts a tmpfs of this size into /tmp
+	// DEPRECATED: use instead PodSpec.Volumes and PodSpec.VolumeMounts
 	// +optional
 	TmpfsSize *resource.Quantity `json:"tmpfsSize,omitempty"`
 
@@ -185,6 +186,14 @@ type PodSpec struct {
 	// VolumesMounts allows mounting extra volumes to the mysql container
 	// +optional
 	VolumeMounts []core.VolumeMount `json:"volumeMounts,omitempty"`
+
+	// InitContainers allows the user to specify extra init containers
+	// +optional
+	InitContainers []core.Container `json:"initContainers,omitempty"`
+
+	// Containers allows for user to specify extra sidecar containers to run along with mysql
+	// +optional
+	Containers []core.Container `json:"containers,omitempty"`
 }
 
 // VolumeSpec is the desired spec for storing mysql data. Only one of its

@@ -121,9 +121,21 @@ spec:
                   type: object
                 annotations:
                   type: object
+                containers:
+                  description: Containers allows for user to specify extra sidecar
+                    containers to run along with mysql
+                  items:
+                    type: object
+                  type: array
                 imagePullPolicy:
                   type: string
                 imagePullSecrets:
+                  items:
+                    type: object
+                  type: array
+                initContainers:
+                  description: InitContainers allows the user to specify extra init
+                    containers
                   items:
                     type: object
                   type: array
@@ -227,8 +239,8 @@ spec:
               format: int64
               type: integer
             tmpfsSize:
-              description: TmpfsSize if specified, mounts a tmpfs of this size into
-                /tmp
+              description: 'TmpfsSize if specified, mounts a tmpfs of this size into
+                /tmp DEPRECATED: use instead PodSpec.Volumes and PodSpec.VolumeMounts'
               type: string
             volumeSpec:
               description: PVC extra specifiaction
