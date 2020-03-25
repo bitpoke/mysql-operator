@@ -516,6 +516,11 @@ func (s *sfsSyncer) ensureVolumes() []core.Volume {
 		}))
 	}
 
+	// append the custom volumes defined by the user
+	if len(s.cluster.Spec.PodSpec.Volumes) > 0 {
+		volumes = append(volumes, s.cluster.Spec.PodSpec.Volumes...)
+	}
+
 	return volumes
 }
 
@@ -599,6 +604,11 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 		}
 		if s.cluster.Spec.TmpfsSize != nil {
 			mounts = append(mounts, core.VolumeMount{Name: tmpfsVolumeName, MountPath: DataVolumeMountPath})
+		}
+
+		// add custom volume mounts to the mysql containers
+		if len(s.cluster.Spec.PodSpec.VolumeMounts) > 0 {
+			mounts = append(mounts, s.cluster.Spec.PodSpec.VolumeMounts...)
 		}
 
 		return mounts
