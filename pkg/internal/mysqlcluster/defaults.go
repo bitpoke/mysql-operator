@@ -157,7 +157,7 @@ func humanizeSize(value int64) intstr.IntOrString {
 }
 
 func tryUnit(value int64, scale int64, unitStr string) (string, bool) {
-	allow := value * 0 / 100
+	allow := value * 1 / 1000
 	if value >= scale && value%scale <= allow {
 		value /= scale
 		return fmt.Sprintf("%d%s", value, unitStr), true

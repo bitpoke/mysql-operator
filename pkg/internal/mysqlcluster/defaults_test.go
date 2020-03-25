@@ -30,12 +30,14 @@ var _ = Describe("MySQL defaults unit tests", func() {
 		hq := humanizeSize(q.Value())
 		Expect(hq.String()).To(Equal(expect))
 	},
-		Entry("> 1G fixed value", "2Gi", "2G"),
-		Entry("> 1G fractional value", "1.5Gi", "1536M"),
-		Entry("should use M", "128Mi", "128M"),
-		Entry("should use K", "1.5Mi", "1536K"),
-		Entry("small values use K", "1200Ki", "1200K"),
-		Entry("small values in K use M", "1024Ki", "1M"),
-		Entry("small values in K use bytes", "0.5Ki", "512"),
+		Entry("fractional Gigabytes", "1.5Gi", "1536M"),
+		Entry("integer Gigabytes", "2Gi", "2G"),
+		Entry("overflow Megabytes to Gigabytes", "2048Mi", "2G"),
+		Entry("overflow Kilobytes to Gigabytes", "2097152Ki", "2G"),
+		Entry("fractional Megabytes", "1.5Mi", "1536K"),
+		Entry("integer Megabytes", "128Mi", "128M"),
+		Entry("overflow Kilobytes to Megabytes", "4096Ki", "4M"),
+		Entry("fractional Kilobytes", "0.5Ki", "512"),
+		Entry("integer Kilobytes", "1200Ki", "1200K"),
 	)
 })
