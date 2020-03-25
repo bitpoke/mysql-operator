@@ -141,6 +141,17 @@ spec:
                   items:
                     type: object
                   type: array
+                volumeMounts:
+                  description: VolumesMounts allows mounting extra volumes to the
+                    mysql container
+                  items:
+                    type: object
+                  type: array
+                volumes:
+                  description: Volumes allows adding extra volumes to the statefulset
+                  items:
+                    type: object
+                  type: array
               type: object
             queryLimits:
               description: QueryLimits represents limits for a query

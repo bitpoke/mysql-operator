@@ -177,6 +177,14 @@ type PodSpec struct {
 	PriorityClassName  string                    `json:"priorityClassName,omitempty"`
 	Tolerations        []core.Toleration         `json:"tolerations,omitempty"`
 	ServiceAccountName string                    `json:"serviceAccountName,omitempty"`
+
+	// Volumes allows adding extra volumes to the statefulset
+	// +optional
+	Volumes []core.Volume `json:"volumes,omitempty"`
+
+	// VolumesMounts allows mounting extra volumes to the mysql container
+	// +optional
+	VolumeMounts []core.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
 // VolumeSpec is the desired spec for storing mysql data. Only one of its
