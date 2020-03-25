@@ -194,6 +194,15 @@ type PodSpec struct {
 	// Containers allows for user to specify extra sidecar containers to run along with mysql
 	// +optional
 	Containers []core.Container `json:"containers,omitempty"`
+
+	// MetricsExporterResources allows you to specify resources for metrics exporter container
+	// +optional
+	MetricsExporterResources core.ResourceRequirements `json:"metricsExporterResources,omitempty"`
+
+	// MySQLOperatorSidecarResources allows you to specify resources for sidecar container
+	// used to take backups with xtrabackup
+	// +optional
+	MySQLOperatorSidecarResources core.ResourceRequirements `json:"mysqlOperatorSidecarResources,omitempty"`
 }
 
 // VolumeSpec is the desired spec for storing mysql data. Only one of its
