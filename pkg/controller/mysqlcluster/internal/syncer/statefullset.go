@@ -332,6 +332,11 @@ func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
 		initCs = append(initCs, mysqlInit)
 	}
 
+	// add user defined init containers
+	if len(s.cluster.Spec.PodSpec.InitContainers) > 0 {
+		initCs = append(initCs, s.cluster.Spec.PodSpec.InitContainers...)
+	}
+
 	return initCs
 }
 
@@ -465,6 +470,11 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		containers = append(containers, killer)
 	}
 
+	// add user defined containers
+	if len(s.cluster.Spec.PodSpec.Containers) > 0 {
+		containers = append(containers, s.cluster.Spec.PodSpec.Containers...)
+	}
+
 	return containers
 
 }
@@ -590,9 +600,6 @@ func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 			{Name: confVolumeName, MountPath: ConfVolumeMountPath},
 			{Name: confMapVolumeName, MountPath: ConfMapVolumeMountPath},
 			{Name: dataVolumeName, MountPath: DataVolumeMountPath},
-		}
-		if s.cluster.Spec.TmpfsSize != nil {
-			mounts = append(mounts, core.VolumeMount{Name: tmpfsVolumeName, MountPath: DataVolumeMountPath})
 		}
 
 		return mounts
