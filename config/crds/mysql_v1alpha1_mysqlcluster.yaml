@@ -114,6 +114,14 @@ spec:
                   type: array
                 labels:
                   type: object
+                metricsExporterResources:
+                  description: MetricsExporterResources allows you to specify resources
+                    for metrics exporter container
+                  type: object
+                mysqlOperatorSidecarResources:
+                  description: MySQLOperatorSidecarResources allows you to specify
+                    resources for sidecar container used to take backups with xtrabackup
+                  type: object
                 nodeSelector:
                   type: object
                 priorityClassName:

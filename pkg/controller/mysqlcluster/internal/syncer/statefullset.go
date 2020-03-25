@@ -584,11 +584,16 @@ func (s *sfsSyncer) ensureResources(name string) core.ResourceRequirements {
 
 	switch name {
 	case containerExporterName:
-		limits = core.ResourceList{
-			core.ResourceCPU: resource.MustParse("100m"),
-		}
+		return s.cluster.Spec.PodSpec.MetricsExporterResources
+
 	case containerMySQLInitName, containerMysqlName:
 		return s.cluster.Spec.PodSpec.Resources
+
+	case containerHeartBeatName:
+		limits[core.ResourceMemory] = resource.MustParse("64Mi")
+
+	case containerSidecarName:
+		return s.cluster.Spec.PodSpec.MySQLOperatorSidecarResources
 	}
 
 	return core.ResourceRequirements{
