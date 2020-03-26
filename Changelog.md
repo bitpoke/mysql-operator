@@ -49,7 +49,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
    output Stackdrive compatible format.
  * Decrease `MASTER_CONNECT_RETRY` interval from 10 to 1 second.
  * Deprecate `TmpfsSize` because can be handled using `ExtraVolumes` and `ExtraMySQLVolumesMounts`.
- * Set default mysql to `5.7.29`.
  * Update cron documentation
  * Set InnoDB buffer parameter: `innodb_buffer_pool_instances` to `min(resources.limit.cpu,
    floor(innodb_buffer_pool_size/1G))` (see #502)
