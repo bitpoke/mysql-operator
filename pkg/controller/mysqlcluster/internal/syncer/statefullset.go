@@ -658,6 +658,7 @@ func (s *sfsSyncer) ensureResources(name string) core.ResourceRequirements {
 
 	case containerSidecarName:
 		return s.cluster.Spec.PodSpec.MySQLOperatorSidecarResources
+
 	}
 
 	return core.ResourceRequirements{
