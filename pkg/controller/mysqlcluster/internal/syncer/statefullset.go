@@ -578,7 +578,7 @@ func (s *sfsSyncer) ensureResources(name string) core.ResourceRequirements {
 		core.ResourceCPU: resource.MustParse("100m"),
 	}
 	requests := core.ResourceList{
-		core.ResourceCPU: resource.MustParse("30m"),
+		core.ResourceCPU: resource.MustParse("10m"),
 	}
 
 	switch name {
