@@ -39,24 +39,24 @@ func pushBackupFromTo(cfg *Config, srcHost, destBucket string) error {
 	}
 
 	// nolint: gosec
-	gzip := exec.Command("gzip", "-c")
+	compressor := exec.Command(cfg.CompressorCommand(), "-c")
 
 	// nolint: gosec
 	rclone := exec.Command("rclone", append(cfg.RcloneArgs(), "rcat", tmpDestBucket)...)
 
-	gzip.Stdin = response.Body
-	gzip.Stderr = os.Stderr
+	compressor.Stdin = response.Body
+	compressor.Stderr = os.Stderr
 	rclone.Stderr = os.Stderr
 
-	if rclone.Stdin, err = gzip.StdoutPipe(); err != nil {
+	if rclone.Stdin, err = compressor.StdoutPipe(); err != nil {
 		return err
 	}
 
 	errChan := make(chan error, 2)
 
 	go func() {
-		log.V(2).Info("wait for gzip to finish")
-		errChan <- gzip.Run()
+		log.V(2).Info("wait for compressor to finish")
+		errChan <- compressor.Run()
 	}()
 
 	go func() {

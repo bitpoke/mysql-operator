@@ -135,6 +135,10 @@ type MysqlClusterSpec struct {
 	// +optional
 	MetricsExporterExtraArgs []string `json:"metricsExporterExtraArgs,omitempty"`
 
+	// CompressorCommand is a compression/decompression tool command-line compatible with gzip.
+	// +optional
+	CompressorCommand string `json:"compressorCommand,omitempty"`
+
 	// RcloneExtraArgs is a list of extra command line arguments to pass to rclone.
 	// +optional
 	RcloneExtraArgs []string `json:"rcloneExtraArgs,omitempty"`

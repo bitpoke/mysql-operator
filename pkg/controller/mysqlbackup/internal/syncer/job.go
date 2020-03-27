@@ -169,6 +169,13 @@ func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 		},
 	}
 
+	if len(s.cluster.Spec.CompressorCommand) > 0 {
+		in.Containers[0].Env = append(in.Containers[0].Env, core.EnvVar{
+			Name:  "COMPRESSOR_COMMAND",
+			Value: s.cluster.Spec.CompressorCommand,
+		})
+	}
+
 	if len(s.backup.Spec.BackupSecretName) != 0 {
 		in.Containers[0].EnvFrom = []core.EnvFromSource{
 			core.EnvFromSource{

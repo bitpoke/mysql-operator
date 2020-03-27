@@ -89,6 +89,9 @@ spec:
   #   - --collect.info_schema.userstats
   #   - --collect.perf_schema.file_events
 
+  ## Use `pigz` (https://zlib.net/pigz) for parallel compression/decompression
+  # compressorCommand: pigz
+
   ## Add extra arguments to rclone
   # rcloneExtraArgs:
   #   - --buffer-size=1G

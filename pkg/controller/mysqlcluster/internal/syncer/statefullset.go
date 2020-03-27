@@ -234,6 +234,14 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		})
 	}
 
+	hasCompressorCommand := len(s.cluster.Spec.CompressorCommand) > 0
+	if hasCompressorCommand && isCloneAndInit(name) {
+		env = append(env, core.EnvVar{
+			Name:  "COMPRESSOR_COMMAND",
+			Value: s.cluster.Spec.CompressorCommand,
+		})
+	}
+
 	hasRcloneExtraArgs := len(s.cluster.Spec.RcloneExtraArgs) > 0
 	if hasRcloneExtraArgs && (isCloneAndInit(name) || isSidecar(name)) {
 		env = append(env, core.EnvVar{

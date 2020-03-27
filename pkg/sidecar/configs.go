@@ -77,6 +77,9 @@ type Config struct {
 	// Offset for assigning MySQL Server ID
 	MyServerIDOffset int
 
+	// compressorCommand is a compression/decompression tool command-line compatible with gzip.
+	compressorCommand string
+
 	// RcloneExtraArgs is a list of extra command line arguments to pass to rclone.
 	RcloneExtraArgs []string
 
@@ -149,6 +152,14 @@ func (cfg *Config) IsFirstPodInSet() bool {
 // ShouldCloneFromBucket returns true if it's time to initialize from a bucket URL provided
 func (cfg *Config) ShouldCloneFromBucket() bool {
 	return !cfg.ExistsMySQLData && cfg.ServerID() == cfg.MyServerIDOffset && len(cfg.InitBucketURL) != 0
+}
+
+// CompressorCommand returns a command to use for compression/decompression.
+func (cfg *Config) CompressorCommand() string {
+	if cfg.compressorCommand != "" {
+		return cfg.compressorCommand
+	}
+	return "gzip"
 }
 
 // RcloneArgs returns a complete set of rclone arguments.
@@ -245,6 +256,7 @@ func NewConfig() *Config {
 
 		MyServerIDOffset: offset,
 
+		compressorCommand:          getEnvValue("COMPRESSOR_COMMAND"),
 		RcloneExtraArgs:            strings.Fields(getEnvValue("RCLONE_EXTRA_ARGS")),
 		XbstreamExtraArgs:          strings.Fields(getEnvValue("XBSTREAM_EXTRA_ARGS")),
 		XtrabackupExtraArgs:        strings.Fields(getEnvValue("XTRABACKUP_EXTRA_ARGS")),

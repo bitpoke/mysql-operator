@@ -66,6 +66,10 @@ spec:
             backupURL:
               description: Represents an URL to the location where to put backups.
               type: string
+            compressorCommand:
+              description: CompressorCommand is a compression/decompression tool command-line
+                compatible with gzip.
+              type: string
             image:
               description: To specify the image that will be used for mysql server
                 container. If this is specified then the mysqlVersion is used as source

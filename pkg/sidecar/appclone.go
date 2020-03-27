@@ -141,34 +141,34 @@ func cloneFromBucket(cfg *Config) error {
 	// nolint: gosec
 	rclone := exec.Command("rclone", append(cfg.RcloneArgs(), "cat", initBucket)...)
 
-	// gzip reads from stdin decompress and then writes to stdout
+	// compressor reads from stdin and decompresses to stdout
 	// nolint: gosec
-	gzip := exec.Command("gzip", "-d")
+	compressor := exec.Command(cfg.CompressorCommand(), "-d")
 
 	// extracts files from stdin and writes them to mysql data dir
 	// nolint: gosec
 	xbstream := exec.Command(xbstreamCommand, cfg.XbstreamArgs()...)
 
 	var err error
-	// rclone | gzip | xbstream
-	if gzip.Stdin, err = rclone.StdoutPipe(); err != nil {
+	// rclone | compressor | xbstream
+	if compressor.Stdin, err = rclone.StdoutPipe(); err != nil {
 		return err
 	}
 
-	if xbstream.Stdin, err = gzip.StdoutPipe(); err != nil {
+	if xbstream.Stdin, err = compressor.StdoutPipe(); err != nil {
 		return err
 	}
 
 	rclone.Stderr = os.Stderr
-	gzip.Stderr = os.Stderr
+	compressor.Stderr = os.Stderr
 	xbstream.Stderr = os.Stderr
 
 	if err := rclone.Start(); err != nil {
 		return fmt.Errorf("rclone start error: %s", err)
 	}
 
-	if err := gzip.Start(); err != nil {
-		return fmt.Errorf("gzip start error: %s", err)
+	if err := compressor.Start(); err != nil {
+		return fmt.Errorf("compressor start error: %s", err)
 	}
 
 	if err := xbstream.Start(); err != nil {
@@ -179,8 +179,8 @@ func cloneFromBucket(cfg *Config) error {
 		return fmt.Errorf("rclone wait error: %s", err)
 	}
 
-	if err := gzip.Wait(); err != nil {
-		return fmt.Errorf("gzip wait error: %s", err)
+	if err := compressor.Wait(); err != nil {
+		return fmt.Errorf("compressor wait error: %s", err)
 	}
 
 	if err := xbstream.Wait(); err != nil {
