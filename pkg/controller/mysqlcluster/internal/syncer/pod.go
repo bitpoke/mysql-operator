@@ -71,13 +71,15 @@ func (s *podSyncer) SyncFn(in runtime.Object) error {
 
 	// raise error if pod is not created
 	if out.CreationTimestamp.IsZero() {
+		s.log.Info("pod not found", "name", out.Name)
 		return NewPodNotFoundError()
 	}
 
 	// QUICK FIX for presslabs issue
 	// if there is only one replica then ignore the status on the resource
 	// by ignoring the status will "bypass" orchestrator
-	if s.cluster.Spec.Replicas == nil || *s.cluster.Spec.Replicas == 1 {
+	if s.cluster.Spec.Replicas != nil && int(*s.cluster.Spec.Replicas) == 1 {
+		s.log.Info("only one replica running: set master and healthy labels", "host", out.Spec.Hostname)
 		out.ObjectMeta.Labels["role"] = labelMaster
 		out.ObjectMeta.Labels["healthy"] = labelHealty
 		return nil

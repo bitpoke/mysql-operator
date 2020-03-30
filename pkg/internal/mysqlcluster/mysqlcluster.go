@@ -149,6 +149,11 @@ func (c *MysqlCluster) GetPodHostname(p int) string {
 		c.Namespace)
 }
 
+// GetPodName returns for an index the pod hostname of a cluster
+func (c *MysqlCluster) GetPodName(p int) string {
+	return fmt.Sprintf("%s-%d", c.GetNameForResource(StatefulSet), p)
+}
+
 // GetClusterAlias returns the cluster alias that as it is in orchestrator
 func (c *MysqlCluster) GetClusterAlias() string {
 	return fmt.Sprintf("%s.%s", c.Name, c.Namespace)

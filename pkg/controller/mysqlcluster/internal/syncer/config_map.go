@@ -33,7 +33,7 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
-var log = logf.Log.WithName("config-map-syncer")
+var log = logf.Log.WithName("mysqlcluster.syncers")
 
 // NewConfigMapSyncer returns config map syncer
 func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
