@@ -6,6 +6,7 @@ branches:
   # This is very useful when debugging drone related issues. Just prefix your branch with "drone-"
   # to trigger a drone build.
   - drone-*
+  - presslabs-*
 
 workspace:
   base: /root/go
