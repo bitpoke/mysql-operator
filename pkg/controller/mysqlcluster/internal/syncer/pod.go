@@ -68,6 +68,15 @@ func (s *podSyncer) SyncFn(in runtime.Object) error {
 		return NewPodNotFoundError()
 	}
 
+	// QUICK FIX for presslabs issue
+	// if there is only one replica then ignore the status on the resource
+	// by ignoring the status will "bypass" orchestrator
+	if s.cluster.Spec.Replicas == nil || *s.cluster.Spec.Replicas == 1 {
+		out.ObjectMeta.Labels["role"] = labelMaster
+		out.ObjectMeta.Labels["healthy"] = labelHealty
+		return nil
+	}
+
 	master := s.cluster.GetNodeCondition(s.hostname, api.NodeConditionMaster)
 	replicating := s.cluster.GetNodeCondition(s.hostname, api.NodeConditionReplicating)
 	lagged := s.cluster.GetNodeCondition(s.hostname, api.NodeConditionLagged)

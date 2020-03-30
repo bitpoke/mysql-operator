@@ -272,6 +272,12 @@ func (r *ReconcileMysqlCluster) getPodSyncers(cluster *mysqlcluster.MysqlCluster
 		}
 	}
 
+	// QUICKFIX: for presslabs issue
+	// if it's only one replica then register node-0 as node to reconcile
+	if len(syncers) == 0 && (cluster.Spec.Replicas == nil || *cluster.Spec.Replicas == 1) {
+		syncers = append(syncers, clustersyncer.NewPodSyncer(r.Client, r.scheme, cluster, cluster.GetPodHostname(0)))
+	}
+
 	return syncers
 
 }
