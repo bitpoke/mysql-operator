@@ -171,6 +171,7 @@ func (ou *orcUpdater) updateClusterReadyStatus() {
 		if master {
 			hasMaster = true
 		} else if !replicating {
+			// TODO: check for replicating to be not Unknown here
 			ou.cluster.UpdateStatusCondition(api.ClusterConditionReady, core.ConditionFalse, "NotReplicating",
 				fmt.Sprintf("Node %s is part of topology and not replicating", hostname))
 			return
@@ -513,7 +514,6 @@ func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet, master *orc.Ins
 	if master == nil {
 		// master is not found
 		// set cluster read only
-		ou.log.Info("setting cluster in read-only")
 		for _, inst := range insts {
 			if err = ou.setReadOnlyNode(inst); err != nil {
 				ou.log.Error(err, "failed to set read only", "instance", instToLog(&inst))
