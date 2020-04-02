@@ -90,7 +90,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	clusters := &sync.Map{}
 
 	// Create a new controller
-	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{
+		Reconciler:              r,
+		MaxConcurrentReconciles: int(options.GetOptions().OrchestratorConcurrentReconciles),
+	})
 	if err != nil {
 		return err
 	}

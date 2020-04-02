@@ -37,6 +37,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Add `InitContainers` and `Containers` in `.Spec.PodSpec` to allow the user specifying custom containers.
  * Add `MetricsExporterResources` and `MySQLOperatorSidecarResrouces` in `.Spec.PodSpec` to allow
    the user specifying resources for thos sidecars containers.
+ * Add command line flag to configure number of workers for orchestrator controller.
 ### Changed
  * [#422](https://github.com/presslabs/mysql-operator/pull/422) adds the `SidecarServerPort` to the
    `MasterService` and introduces one new service, HealthyReplicasService, so that we can try to
@@ -64,6 +65,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
    [`extra_max_connections`](https://www.percona.com/doc/percona-server/5.7/performance/threadpool.html#extra_max_connections)
    is larger than the default `1`. If MySQL server runs out of available connections, using `extra_port`
    allows the exporter to continue collecting MySQL metrics.
+ * Change the default number of workers for orchestrator controller from 1 to 10.
 ### Removed
 ### Fixed
  * Update and fix e2e tests
