@@ -69,6 +69,9 @@ type Options struct {
 	// MySQLVersionImageOverride define a map between MySQL version and image.
 	// This overrides the default versions and has priority.
 	MySQLVersionImageOverride map[string]string
+
+	// OrchestratorConcurrentReconciles sets the orchestrator controller workers
+	OrchestratorConcurrentReconciles int32
 }
 
 type pullpolicy corev1.PullPolicy
@@ -141,6 +144,9 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 	fs.StringToStringVar(&o.MySQLVersionImageOverride, "mysql-versions-to-image", map[string]string{},
 		"A map to override default image for different mysql versions. Example: 5.7.23=mysql:5.7,5.7.24=mysql:5.7")
+
+	fs.Int32Var(&o.OrchestratorConcurrentReconciles, "orchestrator-concurrent-reconciles", 10,
+		"Set the number of workers for orchestrator reconciler.")
 }
 
 var instance *Options
