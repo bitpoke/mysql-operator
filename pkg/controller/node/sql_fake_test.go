@@ -60,6 +60,10 @@ func (f *fakeSQLRunner) MarkSetGTIDPurged(ctx context.Context) error {
 	return nil
 }
 
+func (r *fakeSQLRunner) SetReadOnly(ctx context.Context, enabled bool) error {
+	return nil
+}
+
 var _ = Describe("SQL functions", func() {
 	It("should find not found error", func() {
 		err := fmt.Errorf("Error 1146: Table 'a.a' doesn't exist")
