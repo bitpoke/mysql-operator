@@ -250,6 +250,13 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
+	// QUICKFIX presslabs. If it's only one replica then let's bypass orchestrator and mark the node writable by default
+	if !cluster.Spec.ReadOnly && (cluster.Spec.Replicas == nil || *cluster.Spec.Replicas == 1) {
+		if err := sql.SetReadOnly(ctx, false); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	// initialization complete
 	updatePodStatusCondition(pod, mysqlcluster.NodeInitializedConditionType,
 		corev1.ConditionTrue, "mysqlInitializationSucceeded", "success")
@@ -300,11 +307,6 @@ func (r *ReconcileMysqlNode) initializeMySQL(ctx context.Context, sql SQLInterfa
 	// write the configuration complete flag into MySQL, this will make the node ready
 	if err := sql.MarkConfigurationDone(ctx); err != nil {
 		return err
-	}
-
-	// QUICKFIX presslabs. If it's only one replica then let's bypass orchestrator and mark the node writable by default
-	if cluster.Spec.Replicas == nil || *cluster.Spec.Replicas == 1 {
-		return sql.SetReadOnly(ctx, false)
 	}
 
 	return nil

@@ -60,7 +60,7 @@ func (f *fakeSQLRunner) MarkSetGTIDPurged(ctx context.Context) error {
 	return nil
 }
 
-func (r *fakeSQLRunner) SetReadOnly(ctx context.Context, enabled bool) error {
+func (f *fakeSQLRunner) SetReadOnly(ctx context.Context, enabled bool) error {
 	return nil
 }
 
