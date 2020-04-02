@@ -302,6 +302,11 @@ func (r *ReconcileMysqlNode) initializeMySQL(ctx context.Context, sql SQLInterfa
 		return err
 	}
 
+	// QUICKFIX presslabs. If it's only one replica then let's bypass orchestrator and mark the node writable by default
+	if cluster.Spec.Replicas == nil || *cluster.Spec.Replicas == 1 {
+		return sql.SetReadOnly(ctx, false)
+	}
+
 	return nil
 }
 

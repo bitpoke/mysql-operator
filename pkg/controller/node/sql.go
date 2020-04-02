@@ -43,6 +43,7 @@ type SQLInterface interface {
 	IsConfigured(ctx context.Context) (bool, error)
 	SetPurgedGTID(ctx context.Context) error
 	MarkSetGTIDPurged(ctx context.Context) error
+	SetReadOnly(ctx context.Context, enabled bool) error
 	Host() string
 }
 
@@ -142,6 +143,15 @@ func (r *nodeSQLRunner) MarkSetGTIDPurged(ctx context.Context) error {
 
 func (r *nodeSQLRunner) Host() string {
 	return r.host
+}
+
+func (r *nodeSQLRunner) SetReadOnly(ctx context.Context, enabled bool) error {
+	val := 0
+	if enabled {
+		val = 1
+	}
+
+	return r.runQuery(ctx, fmt.Sprintf("SET GLOBAL READ_ONLY = %d;", val))
 }
 
 // runQuery executes a query
