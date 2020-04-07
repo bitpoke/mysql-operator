@@ -18,6 +18,7 @@ package syncer
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/presslabs/controller-util/syncer"
 	batch "k8s.io/api/batch/v1"
@@ -167,6 +168,13 @@ func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 				},
 			},
 		},
+	}
+
+	if len(s.cluster.Spec.RcloneExtraArgs) > 0 {
+		in.Containers[0].Env = append(in.Containers[0].Env, core.EnvVar{
+			Name:  "RCLONE_EXTRA_ARGS",
+			Value: strings.Join(s.cluster.Spec.RcloneExtraArgs, " "),
+		})
 	}
 
 	if len(s.backup.Spec.BackupSecretName) != 0 {
