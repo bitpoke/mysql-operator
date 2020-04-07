@@ -10,6 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 ### Removed
 ### Fixed
+ * rclone extra arguments are now properly passed to the backup job.
 
 
 ## [0.4.0] - TBD
@@ -60,7 +61,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 ### Fixed
  * Update and fix e2e tests
- * Fix double date string in bakup path 
+ * Fix double date string in backup path
  * Copy the nodeSelector as-is in the statefulset (fixes #454)
  * Fix flakines in ReadOnly cluster condition (fixes #434)
  * Fix rounding in computing `innodb-buffer-pool-size` (fixes #501)
