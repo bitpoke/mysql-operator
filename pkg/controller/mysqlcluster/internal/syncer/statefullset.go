@@ -290,7 +290,7 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		env = append(env, s.envVarFromSecret(sctOpName, "PASSWORD", "METRICS_EXPORTER_PASSWORD", false))
 		env = append(env, core.EnvVar{
 			Name:  "DATA_SOURCE_NAME",
-			Value: fmt.Sprintf("$(USER):$(PASSWORD)@(127.0.0.1:%d)/", MysqlPort),
+			Value: fmt.Sprintf("$(USER):$(PASSWORD)@(127.0.0.1:%d)/", s.cluster.ExporterDataSourcePort()),
 		})
 	case containerMySQLInitName:
 		// set MySQL init only flag for init container
