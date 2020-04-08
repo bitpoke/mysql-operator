@@ -139,7 +139,9 @@ orchestrator:
     # Recover both, masters and intermediate masters
     RecoverMasterClusterFilters: ['.*']
     RecoverIntermediateMasterClusterFilters: ['.*']
-    # `reset slave all` and `set read_only=0` on promoted master
+    # `reset slave all` and `set read_only=0` on promoted master; if you use the ignoreReadOnly setting in your mysql
+    # cluster config, then you may want to set this to true, as the operator will not automatically make newly promoted
+    # master instances writable when ignoreReadOnly=true
     ApplyMySQLPromotionAfterMasterFailover: false
     MasterFailoverDetachReplicaMasterHost: true
     # https://github.com/github/orchestrator/blob/master/docs/configuration-recovery.md#promotion-actions

@@ -67,7 +67,12 @@ spec:
               description: Represents an URL to the location where to put backups.
               type: string
             ignoreReadOnly:
-              description: Makes the operator ignore the ReadOnly setting completely
+              description: Makes the operator ignore the ReadOnly setting completely.
+                This is an advanced setting that implies you take responsibility for
+                managing the R/W status of your instances. You will need to make sure
+                Orchestrator is configured to set promoted master instances to writable
+                (for example, by setting ApplyMySQLPromotionAfterMasterFailover to
+                true in your Orchestrator configuration).
               type: boolean
             image:
               description: To specify the image that will be used for mysql server
