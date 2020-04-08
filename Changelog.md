@@ -59,10 +59,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Change default resource requests/limits for `sidecar` container: requested=10m/32Mi, limit=the same as `.spec.podSpec.resources.limit`
  * Change default resource requests/limits for `exporter` container: requested=10m/32Mi, limit=100m/128Mi
  * Change default resource requests/limits for `heartbeat` container: requested=10m/32Mi, limit=100m/64Mi
+ * If [`extra_port`](https://www.percona.com/doc/percona-server/5.7/performance/threadpool.html#extra_port)
+   is defined in the cluster spec, metrics exporter will use it to connect to MySQL providing that
+   [`extra_max_connections`](https://www.percona.com/doc/percona-server/5.7/performance/threadpool.html#extra_max_connections)
+   is larger than the default `1`. If MySQL server runs out of available connections, using `extra_port`
+   allows the exporter to continue collecting MySQL metrics.
 ### Removed
 ### Fixed
  * Update and fix e2e tests
  * Fix double date string in backup path
+ * Fix double date string in bakup path
  * Copy the nodeSelector as-is in the statefulset (fixes #454)
  * Fix flakines in ReadOnly cluster condition (fixes #434)
  * Fix rounding in computing `innodb-buffer-pool-size` (fixes #501)

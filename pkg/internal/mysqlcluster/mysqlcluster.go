@@ -18,8 +18,9 @@ package mysqlcluster
 
 import (
 	"fmt"
-	"github.com/presslabs/mysql-operator/pkg/options"
 	"strings"
+
+	"github.com/presslabs/mysql-operator/pkg/options"
 
 	"github.com/blang/semver"
 	core "k8s.io/api/core/v1"
@@ -229,4 +230,25 @@ func (c *MysqlCluster) ShouldHaveInitContainerForMysql() bool {
 // String returns the cluster name and namespace
 func (c *MysqlCluster) String() string {
 	return fmt.Sprintf("%s/%s", c.Namespace, c.Name)
+}
+
+// ExporterDataSourcePort returns a MySQL port mysqld-exporter should connect to.
+// Returns `extra_port` if defined in the cluster spec and if `extra_max_connections`
+// is defined and larger than the default 1. Otherwise, returns the default MySQL port.
+// https://www.percona.com/doc/percona-server/5.7/performance/threadpool.html#extra_port
+func (c *MysqlCluster) ExporterDataSourcePort() int {
+	extraPortSettings := []string{"extra_port", "extra-port"}
+	extraMaxConnectionsSettings := []string{"extra_max_connections", "extra-max-connections"}
+
+	for _, setting := range extraPortSettings {
+		if port, ok := c.Spec.MysqlConf[setting]; ok {
+			for _, setting := range extraMaxConnectionsSettings {
+				if conns, ok := c.Spec.MysqlConf[setting]; ok && conns.IntValue() > 1 {
+					return port.IntValue()
+				}
+			}
+		}
+	}
+
+	return constants.MysqlPort
 }
