@@ -51,11 +51,12 @@ func (s *ObjectSyncer) Sync(ctx context.Context) (SyncResult, error) {
 	diff := deep.Equal(s.previousObject, s.Obj)
 
 	// don't pass to user error for owner deletion, just don't create the object
+	// nolint: gocritic
 	if err == errOwnerDeleted {
 		log.Info(string(result.Operation), "key", key, "kind", fmt.Sprintf("%T", s.Obj), "error", err)
 		err = nil
 	} else if err == ErrIgnore {
-		log.V(1).Info("syncer skiped", "key", key, "kind", fmt.Sprintf("%T", s.Obj))
+		log.V(1).Info("syncer skipped", "key", key, "kind", fmt.Sprintf("%T", s.Obj))
 		err = nil
 	} else if err != nil {
 		result.SetEventData(eventWarning, basicEventReason(s.Name, err),
