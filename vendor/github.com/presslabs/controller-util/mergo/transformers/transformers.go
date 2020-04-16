@@ -32,6 +32,7 @@ type TransformerMap map[reflect.Type]func(dst, src reflect.Value) error
 // PodSpec mergo transformers for corev1.PodSpec
 var PodSpec TransformerMap
 
+// nolint: gochecknoinits
 func init() {
 	PodSpec = TransformerMap{
 		reflect.TypeOf([]corev1.Container{}):            PodSpec.MergeListByKey("Name", mergo.WithOverride),
@@ -45,7 +46,25 @@ func init() {
 		reflect.TypeOf([]corev1.HostAlias{}):            PodSpec.MergeListByKey("IP", mergo.WithOverride),
 		reflect.TypeOf([]corev1.VolumeMount{}):          PodSpec.MergeListByKey("MountPath", mergo.WithOverride),
 		reflect.TypeOf(corev1.Affinity{}):               PodSpec.OverrideFields("NodeAffinity", "PodAffinity", "PodAntiAffinity"),
+		reflect.TypeOf(""):                              overwrite,
+		reflect.TypeOf(new(string)):                     overwrite,
+		reflect.TypeOf(new(int32)):                      overwrite,
+		reflect.TypeOf(new(int64)):                      overwrite,
 	}
+}
+
+// overwrite just overrites the dst value with the source
+// nolint: unparam
+func overwrite(dst, src reflect.Value) error {
+	if !src.IsZero() {
+		if dst.CanSet() {
+			dst.Set(src)
+		} else {
+			dst = src
+		}
+	}
+
+	return nil
 }
 
 // Transformer implements mergo.Tansformers interface for TransformenrMap
