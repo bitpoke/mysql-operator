@@ -113,9 +113,21 @@ spec:
                   type: object
                 annotations:
                   type: object
+                containers:
+                  description: Containers allows for user to specify extra sidecar
+                    containers to run along with mysql
+                  items:
+                    type: object
+                  type: array
                 imagePullPolicy:
                   type: string
                 imagePullSecrets:
+                  items:
+                    type: object
+                  type: array
+                initContainers:
+                  description: InitContainers allows the user to specify extra init
+                    containers
                   items:
                     type: object
                   type: array
@@ -138,6 +150,17 @@ spec:
                 serviceAccountName:
                   type: string
                 tolerations:
+                  items:
+                    type: object
+                  type: array
+                volumeMounts:
+                  description: VolumesMounts allows mounting extra volumes to the
+                    mysql container
+                  items:
+                    type: object
+                  type: array
+                volumes:
+                  description: Volumes allows adding extra volumes to the statefulset
                   items:
                     type: object
                   type: array
