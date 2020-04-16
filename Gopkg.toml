@@ -24,11 +24,11 @@ required = [
 
 [[override]]
   name="sigs.k8s.io/controller-tools"
-  version = "v0.1.8"
+  version = "v0.1.12"
 
 [[constraint]]
   name="github.com/presslabs/controller-util"
-  version = "v0.1.11"
+  version = "v0.1.17"
 
 # use wgliang version of cron because provides cron removal
 [[override]]

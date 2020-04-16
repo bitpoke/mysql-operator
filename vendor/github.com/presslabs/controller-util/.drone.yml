@@ -4,16 +4,16 @@ workspace:
 
 pipeline:
   dependencies:
-    image: golang:1.11
+    image: golang:1.13
     commands:
       - make dependencies
 
   lint:
-    image: golang:1.11
+    image: golang:1.13
     commands:
       - make lint
 
   test:
-    image: golang:1.11
+    image: golang:1.13
     commands:
       - make test
