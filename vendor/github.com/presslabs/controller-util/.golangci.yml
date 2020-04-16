@@ -9,6 +9,9 @@ linters-settings:
     line-length: 170
     tab-width: 4
 
+run:
+  tests: false
+
 linters:
   presets:
     - bugs
@@ -22,6 +25,8 @@ linters:
   disable:
     - goimports
     - maligned
+    - gochecknoglobals
+    - wsl
 
 issues:
   max-same-issues: 0
@@ -29,3 +34,8 @@ issues:
   exclude:
     # gosec G104, about unhandled errors. We do that with errcheck already
     - "G104: Errors unhandled"
+  exclude-rules:
+    - linters:
+      # Ignore package comments (ST1000) since most of the time are irrelevant
+      - stylecheck
+      text: "ST1000"
