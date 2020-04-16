@@ -38,7 +38,9 @@ func (o *orchestrator) makeGetRequest(path string, out interface{}) *Error {
 		return NewErrorMsg(fmt.Sprintf("can't create request: %s", err.Error()), path)
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: o.timeout,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return NewErrorMsg(err.Error(), path)

@@ -18,6 +18,7 @@ package orchestrator
 
 import (
 	"fmt"
+	"time"
 )
 
 // Interface is the orchestrator client interface
@@ -42,12 +43,14 @@ type Interface interface {
 
 type orchestrator struct {
 	connectURI string
+	timeout    time.Duration
 }
 
 // NewFromURI returns the orchestrator client configured to specified uri api endpoint
-func NewFromURI(uri string) Interface {
+func NewFromURI(uri string, timeout time.Duration) Interface {
 	return &orchestrator{
 		connectURI: uri,
+		timeout:    timeout,
 	}
 }
 

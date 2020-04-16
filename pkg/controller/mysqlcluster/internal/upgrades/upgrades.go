@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
@@ -241,7 +242,7 @@ func NewUpgrader(client client.Client, recorder record.EventRecorder, cluster *m
 		cluster:   cluster,
 		recorder:  recorder,
 		client:    client,
-		orcClient: orc.NewFromURI(opt.OrchestratorURI),
+		orcClient: orc.NewFromURI(opt.OrchestratorURI, 10*time.Second),
 		version:   300,
 	}
 }
