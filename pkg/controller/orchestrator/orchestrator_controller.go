@@ -62,13 +62,14 @@ var log = logf.Log.WithName(controllerName)
 
 // reconcileTimePeriod represents the time in which a cluster should be reconciled
 var reconcileTimePeriod = time.Second * 5
+var orcRequestsTimeout = 15 * time.Second
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 // USER ACTION REQUIRED: update cmd/manager/main.go to call this mysql.Add(mgr) to install this Controller
 func Add(mgr manager.Manager) error {
 	opt := options.GetOptions()
-	orcClient := orc.NewFromURI(opt.OrchestratorURI)
+	orcClient := orc.NewFromURI(opt.OrchestratorURI, orcRequestsTimeout)
 	return add(mgr, newReconciler(mgr, orcClient))
 }
 
@@ -127,7 +128,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// create source channel that listen for events on events chan
-	events := make(chan event.GenericEvent)
+	events := make(chan event.GenericEvent, 1024)
 	chSource := source.Channel{Source: events}
 
 	// watch for events on channel `events`
@@ -146,6 +147,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				// write all clusters to events chan to be processed
 				clusters.Range(func(key, value interface{}) bool {
 					events <- value.(event.GenericEvent)
+					log.V(1).Info("Schedule new cluster for reconciliation", "event", value)
+
 					return true
 				})
 			}
@@ -207,6 +210,8 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	// Some filed like .spec.replicas can be nil and throw a panic error.
 	// By setting defaults will ensure that all fields are set at least with a default value.
 	r.scheme.Default(cluster.Unwrap())
+
+	// TODO no sync should be triggered if no replica is available
 
 	orcSyncer := NewOrcUpdater(cluster, r.recorder, r.orcClient)
 	if err := syncer.Sync(context.TODO(), orcSyncer, r.recorder); err != nil {

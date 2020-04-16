@@ -98,7 +98,7 @@ func (f *Framework) BeforeEach() {
 	}
 
 	By("create a orchestrator client")
-	f.OrcClient = orc.NewFromURI(fmt.Sprintf(orchestratorURITemplate, OrchestratorPort))
+	f.OrcClient = orc.NewFromURI(fmt.Sprintf(orchestratorURITemplate, OrchestratorPort), 10*time.Second)
 
 }
 
