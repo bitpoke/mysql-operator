@@ -277,6 +277,7 @@ func (r *nodeSQLRunner) writeStatusValue(ctx context.Context, key, value string)
 // isMySQLError checks if a mysql error is of the given code.
 // more information about mysql error codes can be found here:
 // https://dev.mysql.com/doc/refman/8.0/en/server-error-reference.html
+// nolint:unused,deadcode
 func isMySQLError(err error, no int) bool {
 	errStr := fmt.Sprintf("Error %d:", no)
 	return strings.Contains(err.Error(), errStr)

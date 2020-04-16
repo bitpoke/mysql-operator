@@ -65,7 +65,7 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 		cluster.Spec.PodSpec.Affinity = &core.Affinity{
 			PodAntiAffinity: &core.PodAntiAffinity{
 				PreferredDuringSchedulingIgnoredDuringExecution: []core.WeightedPodAffinityTerm{
-					core.WeightedPodAffinityTerm{
+					{
 						Weight: 100,
 						PodAffinityTerm: core.PodAffinityTerm{
 							TopologyKey: "kubernetes.io/hostname",

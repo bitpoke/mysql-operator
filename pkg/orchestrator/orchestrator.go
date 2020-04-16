@@ -102,7 +102,7 @@ func (o *orchestrator) AuditRecovery(cluster string) ([]TopologyRecovery, error)
 
 func (o *orchestrator) AckRecovery(id int64, comment string) error {
 	query := map[string][]string{
-		"comment": []string{comment},
+		"comment": {comment},
 	}
 	if err := o.makeGetAPIRequest(fmt.Sprintf("ack-recovery/%d", id), query); err != nil {
 		return err

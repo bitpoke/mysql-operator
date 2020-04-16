@@ -194,7 +194,7 @@ func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 
 	if len(s.backup.Spec.BackupSecretName) != 0 {
 		in.Containers[0].EnvFrom = []core.EnvFromSource{
-			core.EnvFromSource{
+			{
 				SecretRef: &core.SecretEnvSource{
 					LocalObjectReference: core.LocalObjectReference{
 						Name: s.backup.Spec.BackupSecretName,

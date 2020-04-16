@@ -24,7 +24,7 @@ pipeline:
 
   lint:
     group: lint
-    image: quay.io/presslabs/bfc:0.1
+    image: quay.io/presslabs/bfc:0.2
     commands:
       - make lint
 
@@ -43,7 +43,7 @@ pipeline:
       - make test
 
   verify-generate:
-    image: quay.io/presslabs/bfc:0.1
+    image: quay.io/presslabs/bfc:0.2
     commands:
       - make -s fmt generate manifests
       - git diff --exit-code
