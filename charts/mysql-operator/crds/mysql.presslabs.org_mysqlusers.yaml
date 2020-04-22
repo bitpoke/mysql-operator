@@ -1,0 +1,38 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+    helm.sh/hook: crd-install
+  name: mysqlusers.mysql.presslabs.org
+  labels:
+    app: mysql-operator
+spec:
+  additionalPrinterColumns:
+    - JSONPath: .status.conditions[?(@.type == 'Ready')].status
+      description: The user status
+      name: Ready
+      type: string
+    - JSONPath: .spec.clusterRef.name
+      name: Cluster
+      type: string
+    - JSONPath: .spec.user
+      name: UserName
+      type: string
+    - JSONPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+  group: mysql.presslabs.org
+  names:
+    kind: MysqlUser
+    listKind: MysqlUserList
+    plural: mysqlusers
+    singular: mysqluser
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1alpha1
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true

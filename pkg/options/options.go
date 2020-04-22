@@ -78,6 +78,12 @@ type Options struct {
 	// FailoverBeforeShutdownEnabled if enabled inserts a pre-stop lifecycle hook into pod
 	// to trigger a failover before shutdown
 	FailoverBeforeShutdownEnabled bool
+
+	// AllowCrossNamespaceUser allow creating users resources in clusters that are not in the same namespace.
+	AllowCrossNamespaceUsers bool
+
+	// AllowCrossNamespaceDatabase allow creating users resources in clusters that are not in the same namespace.
+	AllowCrossNamespaceDatabases bool
 }
 
 type pullpolicy corev1.PullPolicy
@@ -163,6 +169,12 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 	fs.BoolVar(&o.FailoverBeforeShutdownEnabled, "failover-before-shutdown", defaultFailoverBeforeShutdownEnabled,
 		"In pre-stop hook trigger a failover from Orchestrator")
+
+	fs.BoolVar(&o.AllowCrossNamespaceUsers, "allow-cross-namespace-user", false,
+		"Allow the operator create users in clusters from other namespaces. Enabling this may be a security issue")
+
+	fs.BoolVar(&o.AllowCrossNamespaceDatabases, "allow-cross-namespace-database", false,
+		"Allow the operator create database in clusters from other namespaces. Enabling this may be a security issue")
 }
 
 var instance *Options

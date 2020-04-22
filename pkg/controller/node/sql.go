@@ -173,12 +173,7 @@ func (r *nodeSQLRunner) readFromMysql(ctx context.Context, query string, values 
 	defer close()
 
 	log.V(1).Info("running query", "query", query)
-	row := db.QueryRowContext(ctx, query)
-	if row == nil {
-		return fmt.Errorf("no row found")
-	}
-
-	err = row.Scan(values...)
+	err = db.QueryRowContext(ctx, query).Scan(values...)
 	if err != nil {
 		return err
 	}

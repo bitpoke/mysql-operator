@@ -1,0 +1,174 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: mysqlusers.mysql.presslabs.org
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.conditions[?(@.type == 'Ready')].status
+    description: The user status
+    name: Ready
+    type: string
+  - JSONPath: .spec.clusterRef.name
+    name: Cluster
+    type: string
+  - JSONPath: .spec.user
+    name: UserName
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    name: Age
+    type: date
+  group: mysql.presslabs.org
+  names:
+    kind: MysqlUser
+    listKind: MysqlUserList
+    plural: mysqlusers
+    singular: mysqluser
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: MysqlUser is the Schema for the MySQL User API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: MysqlUserSpec defines the desired state of MysqlUserSpec
+          properties:
+            allowedHosts:
+              description: AllowedHosts is the allowed host to connect from.
+              items:
+                type: string
+              type: array
+            clusterRef:
+              description: ClusterRef represents a reference to the MySQL cluster. This field should be immutable.
+              properties:
+                name:
+                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                  type: string
+                namespace:
+                  description: Namespace the MySQL cluster namespace
+                  type: string
+              type: object
+            password:
+              description: Password is the password for the user.
+              properties:
+                key:
+                  description: The key of the secret to select from.  Must be a valid secret key.
+                  type: string
+                name:
+                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                  type: string
+                optional:
+                  description: Specify whether the Secret or its key must be defined
+                  type: boolean
+              required:
+              - key
+              type: object
+            permissions:
+              description: Permissions is the list of roles that user has in the specified database.
+              items:
+                description: MysqlPermission defines a MySQL schema permission
+                properties:
+                  permissions:
+                    description: Permissions represents the permissions granted on the schema/tables
+                    items:
+                      type: string
+                    type: array
+                  schema:
+                    description: Schema represents the schema to which the permission applies
+                    type: string
+                  tables:
+                    description: Tables represents the tables inside the schema to which the permission applies
+                    items:
+                      type: string
+                    type: array
+                required:
+                - permissions
+                - schema
+                - tables
+                type: object
+              type: array
+            resourceLimits:
+              additionalProperties:
+                anyOf:
+                - type: integer
+                - type: string
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
+              description: 'ResourceLimits allow settings limit per mysql user as defined here: https://dev.mysql.com/doc/refman/5.7/en/user-resources.html'
+              type: object
+            user:
+              description: User is the name of the user that will be created with will access the specified database. This field should be immutable.
+              type: string
+          required:
+          - allowedHosts
+          - clusterRef
+          - password
+          - user
+          type: object
+        status:
+          description: MysqlUserStatus defines the observed state of MysqlUser
+          properties:
+            allowedHosts:
+              description: AllowedHosts contains the list of hosts that the user is allowed to connect from.
+              items:
+                type: string
+              type: array
+            conditions:
+              description: Conditions represents the MysqlUser resource conditions list.
+              items:
+                description: MySQLUserCondition defines the condition struct for a MysqlUser resource
+                properties:
+                  lastTransitionTime:
+                    description: Last time the condition transitioned from one status to another.
+                    format: date-time
+                    type: string
+                  lastUpdateTime:
+                    description: The last time this condition was updated.
+                    format: date-time
+                    type: string
+                  message:
+                    description: A human readable message indicating details about the transition.
+                    type: string
+                  reason:
+                    description: The reason for the condition's last transition.
+                    type: string
+                  status:
+                    description: Status of the condition, one of True, False, Unknown.
+                    type: string
+                  type:
+                    description: Type of MysqlUser condition.
+                    type: string
+                required:
+                - lastTransitionTime
+                - message
+                - reason
+                - status
+                - type
+                type: object
+              type: array
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
