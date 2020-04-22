@@ -72,6 +72,10 @@ type Options struct {
 
 	// OrchestratorConcurrentReconciles sets the orchestrator controller workers
 	OrchestratorConcurrentReconciles int32
+
+	// AllowCreateUserAcrossNamespaces allow creating users or database resources in clusters
+	// that are not in the same namespace.
+	AllowCreateUsersAcrossNamespaces bool
 }
 
 type pullpolicy corev1.PullPolicy
@@ -147,6 +151,10 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 	fs.Int32Var(&o.OrchestratorConcurrentReconciles, "orchestrator-concurrent-reconciles", 10,
 		"Set the number of workers for orchestrator reconciler.")
+
+	fs.BoolVar(&o.AllowCreateUsersAcrossNamespaces, "allow-create-user-across-naemspaces", false,
+		"Allow the operator create users/ databases in clusters from other namespaces. Enabling this may be a security issue")
+
 }
 
 var instance *Options
