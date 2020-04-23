@@ -37,7 +37,7 @@ type Config struct {
 	Password    string
 	Host        string
 	Port        int32
-	queryRunner QueryRunner
+	QueryRunner QueryRunner
 }
 
 // NewConfigFromClusterKey returns a new Config based on a MySQLCluster key
@@ -59,7 +59,7 @@ func NewConfigFromClusterKey(c client.Client, clusterKey client.ObjectKey, qr Qu
 		Password:    string(secret.Data["ROOT_PASSWORD"]),
 		Host:        fmt.Sprintf("%s-mysql-master.%s", cluster.Name, cluster.Namespace),
 		Port:        3306,
-		queryRunner: qr,
+		QueryRunner: qr,
 	}, nil
 }
 
@@ -70,7 +70,7 @@ func (c *Config) GetMysqlDSN() string {
 	)
 }
 
-// RunQuery runs the given query through the config's queryRunner
+// RunQuery runs the given query through the config's QueryRunner
 func (c *Config) RunQuery(q string, args ...interface{}) error {
-	return c.queryRunner(c.GetMysqlDSN(), q, args...)
+	return c.QueryRunner(c.GetMysqlDSN(), q, args...)
 }
