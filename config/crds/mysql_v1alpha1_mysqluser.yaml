@@ -42,6 +42,10 @@ spec:
           type: object
         spec:
           properties:
+            accountResourceLimits:
+              description: 'AccountResourceLimits allow settings limit per mysql user
+                as defined here: https://dev.mysql.com/doc/refman/5.7/en/user-resources.html'
+              type: object
             allowedHost:
               description: AllowedHost is the allowed host to connect from. This field
                 should be immutable.

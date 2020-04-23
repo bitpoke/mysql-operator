@@ -17,11 +17,7 @@ limitations under the License.
 package mysql
 
 import (
-	"errors"
-	"fmt"
 	"strings"
-
-	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 // Query contains a escaped query string with variables marked with a question mark (?) and a slice
@@ -72,46 +68,4 @@ func BuildAtomicQuery(queries ...Query) Query {
 	queries = append(queries, NewQuery("COMMIT"))
 
 	return ConcatenateQueries(queries...)
-}
-
-func permissionsToQuery(permissions []mysqlv1alpha1.MySQLPermission, user, allowedHost string) (Query, error) {
-	permQueries := []Query{}
-
-	for _, perm := range permissions {
-		for _, table := range perm.Tables {
-			args := []interface{}{}
-
-			// There are no tables so therefore no permissions are granted
-			// If you wish to grant permissions on all tables, you should explicitly use "*"
-			if len(perm.Tables) == 0 {
-				continue
-			}
-
-			// We don't allow backticks (`) in schema and tables
-			if strings.Contains(perm.Schema, "`") {
-				return Query{}, errors.New("schema is not allowed to contain backticks")
-			}
-
-			// Build tables query chunk
-			if strings.Contains(table, "`") {
-				return Query{}, errors.New("table is not allowed to contain backticks")
-			}
-
-			// Wrap the table in backticks if it's not wildcard
-			if table != "*" {
-				table = fmt.Sprintf("`%s`", table)
-			}
-
-			schemaTable := fmt.Sprintf("`%s`.%s", perm.Schema, table)
-
-			// Add the permissions to query
-			query := "GRANT " + strings.Join(perm.Permissions, ", ") + " ON " + schemaTable + " TO " + "?@?"
-
-			args = append(args, user, allowedHost)
-
-			permQueries = append(permQueries, NewQuery(query, args...))
-		}
-	}
-
-	return ConcatenateQueries(permQueries...), nil
 }

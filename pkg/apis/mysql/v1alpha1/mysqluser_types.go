@@ -47,6 +47,11 @@ type MySQLUserSpec struct {
 	AllowedHost string `json:"allowedHost,omitempty"`
 	// Permissions is the list of roles that user has in the specified database.
 	Permissions []MySQLPermission `json:"permissions,omitempty"`
+
+	// AccountResourceLimits allow settings limit per mysql user as defined here:
+	// https://dev.mysql.com/doc/refman/5.7/en/user-resources.html
+	// +optional
+	AccountResourceLimits AccountResourceLimits `json:"accountResourceLimits,omitempty"`
 }
 
 // MySQLPermission defines a MySQL schema permission
@@ -58,6 +63,11 @@ type MySQLPermission struct {
 	// Permissions represents the permissions granted on the schema/tables
 	Permissions []string `json:"permissions"`
 }
+
+// AccountResourceLimits a map that contains permission name and its value,
+// see resource_option values for ALTER USER statement:
+// https://dev.mysql.com/doc/refman/5.7/en/alter-user.html
+type AccountResourceLimits map[string]int
 
 // MySQLUserConditionType defines the condition types of a MySQLUser resource
 type MySQLUserConditionType string
