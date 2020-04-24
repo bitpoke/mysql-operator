@@ -43,4 +43,6 @@ services:
 
 trigger:
   ref:
+    - refs/heads/master
+    - refs/heads/release-*
     - refs/tags/**
