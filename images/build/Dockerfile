@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM google/cloud-sdk:274.0.1
+FROM google/cloud-sdk:290.0.0
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -21,6 +21,7 @@ COPY build-scripts /usr/local/build-scripts
 # ------------------------------------------------------------------------------------------------
 # install build and release tools
 RUN /usr/local/build-scripts/install-packages.sh \
+        apt-transport-https \
         gettext \
         jq \
         lsb-release \
@@ -28,7 +29,35 @@ RUN /usr/local/build-scripts/install-packages.sh \
         rsync \
         runit \
         sudo \
+        wget \
         zip
+# ------------------------------------------------------------------------------------------------
+# PHP
+RUN sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list' \
+    && wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg \
+    && /usr/local/build-scripts/install-packages.sh \
+        php7.4-bcmath \
+        php7.4-curl \
+        php7.4-cli \
+        php7.4-fpm \
+        php7.4-gd \
+        php7.4-mbstring \
+        php7.4-mysql \
+        php7.4-opcache \
+        php7.4-tidy \
+        php7.4-xml \
+        php7.4-xmlrpc \
+        php7.4-xsl \
+        php7.4-zip \
+        php-apcu \
+        php-apcu-bc \
+        php-geoip \
+        php-imagick \
+        php-memcached \
+        php-redis \
+        php-sodium \
+        php-yaml \
+    && rm -f /etc/apt/sources.list.d/php.list
 
 # ------------------------------------------------------------------------------------------------
 # git config
@@ -37,8 +66,8 @@ RUN git config --global user.email "bot@presslabs.com" \
 
 # ------------------------------------------------------------------------------------------------
 # Go support
-RUN GO_VERSION=1.13.4 && \
-    GO_HASH=692d17071736f74be04a72a06dab9cac1cd759377bd85316e52b2227604c004c && \
+RUN GO_VERSION=1.13.10 && \
+    GO_HASH=8a4cbc9f2b95d114c38f6cbe94a45372d48c604b707db2057c787398dfbf8e7f && \
     curl -fsSL https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz -o golang.tar.gz && \
     echo "${GO_HASH}  golang.tar.gz" | sha256sum -c - && \
     tar -C /usr/local -xzf golang.tar.gz && \
