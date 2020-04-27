@@ -150,8 +150,8 @@ var _ = Describe("MySQL user controller", func() {
 					Expect(query).To(Equal(expectedQuery))
 
 					Expect(args).To(ConsistOf(
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHost, userPassword,
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHost, userPassword,
+						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], userPassword,
+						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], userPassword,
 					))
 
 					return nil
@@ -254,11 +254,11 @@ var _ = Describe("MySQL user controller", func() {
 					Expect(query).To(Equal(expectedQuery))
 
 					Expect(args).To(ConsistOf(
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHost, userPassword, // create user
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHost, userPassword, // alter user
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHost, // grant privilege #1
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHost, // grant privilege #2
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHost, // grant privilege #3
+						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], userPassword, // create user
+						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], userPassword, // alter user
+						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], // grant privilege #1
+						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], // grant privilege #2
+						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], // grant privilege #3
 					))
 
 					return nil

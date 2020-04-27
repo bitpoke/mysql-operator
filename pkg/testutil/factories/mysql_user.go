@@ -45,8 +45,11 @@ func BuildMySQLUser(cl client.Client, cluster *mysqlv1alpha1.MysqlCluster, opts 
 			Namespace: "default",
 		},
 		Spec: mysqlv1alpha1.MySQLUserSpec{
-			ClusterRef:  corev1.ObjectReference{Namespace: cluster.Namespace, Name: cluster.Name},
-			AllowedHost: "%",
+			ClusterRef: mysqlv1alpha1.ClusterReference{
+				LocalObjectReference: corev1.LocalObjectReference{Name: cluster.Name},
+				Namespace:            cluster.Namespace,
+			},
+			AllowedHosts: []string{"%"},
 		},
 	})
 

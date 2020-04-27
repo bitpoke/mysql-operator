@@ -52,7 +52,7 @@ type MySQLDatabaseCondition struct {
 type MySQLDatabaseSpec struct {
 	// ClusterRef represents a reference to the MySQL cluster.
 	// This field should be immutable.
-	ClusterRef corev1.ObjectReference `json:"clusterRef"`
+	ClusterRef ClusterReference `json:"clusterRef"`
 	// Database represents the database name which will be created.
 	// This field should be immutable.
 	Database string `json:"database"`

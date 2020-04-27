@@ -46,13 +46,24 @@ spec:
               description: 'AccountResourceLimits allow settings limit per mysql user
                 as defined here: https://dev.mysql.com/doc/refman/5.7/en/user-resources.html'
               type: object
-            allowedHost:
-              description: AllowedHost is the allowed host to connect from. This field
-                should be immutable.
-              type: string
+            allowedHosts:
+              description: AllowedHosts is the allowed host to connect from.
+              items:
+                type: string
+              type: array
             clusterRef:
               description: ClusterRef represents a reference to the MySQL cluster.
                 This field should be immutable.
+              properties:
+                name:
+                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    TODO: Add other useful fields. apiVersion, kind, uid?'
+                  type: string
+                namespace:
+                  description: Namespace the MySQL cluster namespace
+                  type: string
+              required:
+              - namespace
               type: object
             password:
               description: Password is the password for the user.
@@ -106,6 +117,12 @@ spec:
           type: object
         status:
           properties:
+            allowedHosts:
+              description: AllowedHosts contains the list of hosts that the user is
+                allowed to connect from.
+              items:
+                type: string
+              type: array
             conditions:
               description: Conditions represents the MySQLUser resource conditions
                 list.

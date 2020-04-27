@@ -56,7 +56,7 @@ var _ = Describe("MySQL User Interface tests", func() {
 		var (
 			user            string
 			pwd             string
-			allowedHost     string
+			allowedHosts    []string
 			permissions     []mysqlv1alpha1.MySQLPermission
 			resourceOptions mysqlv1alpha1.AccountResourceLimits
 		)
@@ -64,7 +64,7 @@ var _ = Describe("MySQL User Interface tests", func() {
 		BeforeEach(func() {
 			user = "mysqlusername"
 			pwd = "random-password"
-			allowedHost = "localhost"
+			allowedHosts = []string{"localhost"}
 			permissions = []mysqlv1alpha1.MySQLPermission{
 				{
 					Schema:      "test_db",
@@ -86,9 +86,9 @@ var _ = Describe("MySQL User Interface tests", func() {
 					"GRANT PERM1, PERM2 ON `test_db`.* TO ?@?;\n",
 					"COMMIT;",
 				}, ""),
-				user, allowedHost, pwd, user, pwd, allowedHost, "MAX_USER_CONNECTIONS", 10, user, allowedHost,
+				user, allowedHosts[0], pwd, user, allowedHosts[0], pwd, "MAX_USER_CONNECTIONS", 10, user, allowedHosts[0],
 			)
-			Expect(CreateUserIfNotExists(cfg, user, pwd, allowedHost, permissions, resourceOptions)).To(Succeed())
+			Expect(CreateUserIfNotExists(cfg, user, pwd, allowedHosts, permissions, resourceOptions)).To(Succeed())
 		})
 
 		It("should build queries with no resource limits", func() {
@@ -100,10 +100,10 @@ var _ = Describe("MySQL User Interface tests", func() {
 					"GRANT PERM1, PERM2 ON `test_db`.* TO ?@?;\n",
 					"COMMIT;",
 				}, ""),
-				user, allowedHost, pwd, user, pwd, allowedHost, user, allowedHost,
+				user, allowedHosts[0], pwd, user, allowedHosts[0], pwd, user, allowedHosts[0],
 			)
 
-			Expect(CreateUserIfNotExists(cfg, user, pwd, allowedHost, permissions, nil)).To(Succeed())
+			Expect(CreateUserIfNotExists(cfg, user, pwd, allowedHosts, permissions, nil)).To(Succeed())
 		})
 
 		It("should build queries with more resource limits", func() {
@@ -116,10 +116,10 @@ var _ = Describe("MySQL User Interface tests", func() {
 					"GRANT PERM1, PERM2 ON `test_db`.* TO ?@?;\n",
 					"COMMIT;",
 				}, ""),
-				user, allowedHost, pwd, user, pwd, allowedHost, "MAX_USER_CONNECTIONS", 10, "MAX_QUERIES_PER_HOUR", 100, user, allowedHost,
+				user, allowedHosts[0], pwd, user, allowedHosts[0], pwd, "MAX_USER_CONNECTIONS", 10, "MAX_QUERIES_PER_HOUR", 100, user, allowedHosts[0],
 			)
 
-			Expect(CreateUserIfNotExists(cfg, user, pwd, allowedHost, permissions, resourceOptions)).To(Succeed())
+			Expect(CreateUserIfNotExists(cfg, user, pwd, allowedHosts, permissions, resourceOptions)).To(Succeed())
 		})
 	})
 
