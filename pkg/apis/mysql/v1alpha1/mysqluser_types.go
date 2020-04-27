@@ -54,10 +54,10 @@ type MySQLUserSpec struct {
 	// Permissions is the list of roles that user has in the specified database.
 	Permissions []MySQLPermission `json:"permissions,omitempty"`
 
-	// AccountResourceLimits allow settings limit per mysql user as defined here:
+	// ResourceLimits allow settings limit per mysql user as defined here:
 	// https://dev.mysql.com/doc/refman/5.7/en/user-resources.html
 	// +optional
-	AccountResourceLimits AccountResourceLimits `json:"accountResourceLimits,omitempty"`
+	ResourceLimits corev1.ResourceList `json:"resourceLimits,omitempty"`
 }
 
 // MySQLPermission defines a MySQL schema permission
@@ -70,10 +70,23 @@ type MySQLPermission struct {
 	Permissions []string `json:"permissions"`
 }
 
-// AccountResourceLimits a map that contains permission name and its value,
-// see resource_option values for ALTER USER statement:
-// https://dev.mysql.com/doc/refman/5.7/en/alter-user.html
-type AccountResourceLimits map[string]int
+const (
+	// AccountResourceMaxUserConnections it restricts the maximum number of simultaneous connections to the server
+	// by each account
+	AccountResourceMaxUserConnections corev1.ResourceName = "MAX_USER_CONNECTIONS"
+
+	// AccountResourceMaxQueriesPerHour it restricts how many queries to the server
+	// are permitted to each account during any given one-hour period.
+	AccountResourceMaxQueriesPerHour corev1.ResourceName = "MAX_QUERIES_PER_HOUR"
+
+	// AccountResourceMaxUpdatesPerHour it restricts how many updates to the server
+	// are permitted to each account during any given one-hour period.
+	AccountResourceMaxUpdatesPerHour corev1.ResourceName = "MAX_UPDATES_PER_HOUR"
+
+	// AccountResourceMaxConnectionsPerHour it restricts how many connections to the server
+	// are permitted to each account during any given one-hour period.
+	AccountResourceMaxConnectionsPerHour corev1.ResourceName = " MAX_CONNECTIONS_PER_HOUR"
+)
 
 // MySQLUserConditionType defines the condition types of a MySQLUser resource
 type MySQLUserConditionType string

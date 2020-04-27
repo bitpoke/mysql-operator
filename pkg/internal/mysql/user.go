@@ -19,6 +19,7 @@ package mysql
 import (
 	"errors"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"strings"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -27,7 +28,7 @@ import (
 // CreateUserIfNotExists creates a user if it doesn't already exist and it gives it the specified permissions
 func CreateUserIfNotExists(
 	cfg *Config, user, pass string, allowedHosts []string, permissions []mysqlv1alpha1.MySQLPermission,
-	resourceOptions mysqlv1alpha1.AccountResourceLimits,
+	resourceOptions corev1.ResourceList,
 ) error {
 	queries := []Query{
 		getCreateUserQuery(user, pass, allowedHosts),
@@ -52,7 +53,7 @@ func CreateUserIfNotExists(
 	return nil
 }
 
-func getAlterUserQuery(user, pwd string, allowedHosts []string, resourceOptions mysqlv1alpha1.AccountResourceLimits) Query {
+func getAlterUserQuery(user, pwd string, allowedHosts []string, resourceOptions corev1.ResourceList) Query {
 	args := []interface{}{}
 	q := "ALTER USER"
 
@@ -64,9 +65,10 @@ func getAlterUserQuery(user, pwd string, allowedHosts []string, resourceOptions 
 	// add WITH statement for resource options
 	if len(resourceOptions) > 0 {
 		q += " WITH"
-		for key, value := range resourceOptions {
+		for key, valQ := range resourceOptions {
 			q += " ?=?"
-			args = append(args, key, value)
+			value, _ := valQ.AsInt64()
+			args = append(args, string(key), int(value))
 		}
 	}
 

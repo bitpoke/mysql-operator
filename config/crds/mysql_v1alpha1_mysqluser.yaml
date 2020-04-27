@@ -42,10 +42,6 @@ spec:
           type: object
         spec:
           properties:
-            accountResourceLimits:
-              description: 'AccountResourceLimits allow settings limit per mysql user
-                as defined here: https://dev.mysql.com/doc/refman/5.7/en/user-resources.html'
-              type: object
             allowedHosts:
               description: AllowedHosts is the allowed host to connect from.
               items:
@@ -106,6 +102,10 @@ spec:
                 - permissions
                 type: object
               type: array
+            resourceLimits:
+              description: 'ResourceLimits allow settings limit per mysql user as
+                defined here: https://dev.mysql.com/doc/refman/5.7/en/user-resources.html'
+              type: object
             user:
               description: User is the name of the user that will be created with
                 will access the specified database. This field should be immutable.

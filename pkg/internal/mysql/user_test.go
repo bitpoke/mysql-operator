@@ -23,6 +23,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	. "github.com/presslabs/mysql-operator/pkg/internal/mysql"
@@ -58,7 +60,7 @@ var _ = Describe("MySQL User Interface tests", func() {
 			pwd             string
 			allowedHosts    []string
 			permissions     []mysqlv1alpha1.MySQLPermission
-			resourceOptions mysqlv1alpha1.AccountResourceLimits
+			resourceOptions corev1.ResourceList
 		)
 
 		BeforeEach(func() {
@@ -72,8 +74,8 @@ var _ = Describe("MySQL User Interface tests", func() {
 					Permissions: []string{"PERM1", "PERM2"},
 				},
 			}
-			resourceOptions = mysqlv1alpha1.AccountResourceLimits{
-				"MAX_USER_CONNECTIONS": 10,
+			resourceOptions = corev1.ResourceList{
+				mysqlv1alpha1.AccountResourceMaxUserConnections: resource.MustParse("10"),
 			}
 		})
 
@@ -107,7 +109,7 @@ var _ = Describe("MySQL User Interface tests", func() {
 		})
 
 		It("should build queries with more resource limits", func() {
-			resourceOptions["MAX_QUERIES_PER_HOUR"] = 100
+			resourceOptions["MAX_QUERIES_PER_HOUR"] = resource.MustParse("100")
 			assertQuery(qr,
 				strings.Join([]string{
 					"BEGIN;\n",
