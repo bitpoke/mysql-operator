@@ -26,16 +26,16 @@ import (
 
 // CreateUserIfNotExists creates a user if it doesn't already exist and it gives it the specified permissions
 func CreateUserIfNotExists(
-	cfg *Config, user, pass, allowedHost string, permissions []mysqlv1alpha1.MySQLPermission,
+	cfg *Config, user, pass string, allowedHosts []string, permissions []mysqlv1alpha1.MySQLPermission,
 	resourceOptions mysqlv1alpha1.AccountResourceLimits,
 ) error {
 	queries := []Query{
-		NewQuery("CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?", user, allowedHost, pass),
-		getAlterUserQuery(user, pass, allowedHost, resourceOptions),
+		getCreateUserQuery(user, pass, allowedHosts),
+		getAlterUserQuery(user, pass, allowedHosts, resourceOptions),
 	}
 
 	if len(permissions) > 0 {
-		permissionsQuery, err := permissionsToQuery(permissions, user, allowedHost)
+		permissionsQuery, err := permissionsToQuery(permissions, user, allowedHosts)
 		if err != nil {
 			return err
 		}
@@ -52,10 +52,16 @@ func CreateUserIfNotExists(
 	return nil
 }
 
-func getAlterUserQuery(user, pwd, allowedHost string, resourceOptions mysqlv1alpha1.AccountResourceLimits) Query {
-	q := "ALTER USER ?@? IDENTIFIED BY ?"
-	args := []interface{}{user, pwd, allowedHost}
+func getAlterUserQuery(user, pwd string, allowedHosts []string, resourceOptions mysqlv1alpha1.AccountResourceLimits) Query {
+	args := []interface{}{}
+	q := "ALTER USER"
 
+	// add user identifications (user@allowedHost) pairs
+	ids, idsArgs := getUsersIdentification(user, &pwd, allowedHosts)
+	q += ids
+	args = append(args, idsArgs...)
+
+	// add WITH statement for resource options
 	if len(resourceOptions) > 0 {
 		q += " WITH"
 		for key, value := range resourceOptions {
@@ -67,9 +73,42 @@ func getAlterUserQuery(user, pwd, allowedHost string, resourceOptions mysqlv1alp
 	return NewQuery(q, args...)
 }
 
+func getCreateUserQuery(user, pwd string, allowedHosts []string) Query {
+	idsTmpl, idsArgs := getUsersIdentification(user, &pwd, allowedHosts)
+
+	return NewQuery(fmt.Sprintf("CREATE USER IF NOT EXISTS%s", idsTmpl), idsArgs...)
+}
+
+func getUsersIdentification(user string, pwd *string, allowedHosts []string) (ids string, args []interface{}) {
+	for i, host := range allowedHosts {
+		// add comma if more than one allowed hosts are used
+		if i > 0 {
+			ids += ","
+		}
+
+		if pwd != nil {
+			ids += " ?@? IDENTIFIED BY ?"
+			args = append(args, user, host, *pwd)
+		} else {
+			ids += " ?@?"
+			args = append(args, user, host)
+		}
+	}
+
+	return ids, args
+}
+
 // DropUser removes a MySQL user if it exists, along with its privileges
-func DropUser(cfg *Config, user string) error {
-	query := NewQuery("DROP USER IF EXISTS ?;", user)
+func DropUser(cfg *Config, user string, host *string) error {
+	usrTmpl := "?"
+	args := []interface{}{user}
+
+	if host != nil {
+		usrTmpl = "?@?"
+		args = append(args, *host)
+	}
+
+	query := NewQuery(fmt.Sprintf("DROP USER IF EXISTS %s;", usrTmpl), args...)
 
 	if err := cfg.RunQuery(query.escapedQuery, query.args...); err != nil {
 		return fmt.Errorf("failed to delete user, err: %s", err)
@@ -78,7 +117,7 @@ func DropUser(cfg *Config, user string) error {
 	return nil
 }
 
-func permissionsToQuery(permissions []mysqlv1alpha1.MySQLPermission, user, allowedHost string) (Query, error) {
+func permissionsToQuery(permissions []mysqlv1alpha1.MySQLPermission, user string, allowedHosts []string) (Query, error) {
 	permQueries := []Query{}
 
 	for _, perm := range permissions {
@@ -108,10 +147,11 @@ func permissionsToQuery(permissions []mysqlv1alpha1.MySQLPermission, user, allow
 
 			schemaTable := fmt.Sprintf("`%s`.%s", perm.Schema, table)
 
-			// Add the permissions to query
-			query := "GRANT " + strings.Join(perm.Permissions, ", ") + " ON " + schemaTable + " TO " + "?@?"
+			// Build GRANT query
+			idsTmpl, idsArgs := getUsersIdentification(user, nil, allowedHosts)
 
-			args = append(args, user, allowedHost)
+			query := "GRANT " + strings.Join(perm.Permissions, ", ") + " ON " + schemaTable + " TO" + idsTmpl
+			args = append(args, idsArgs...)
 
 			permQueries = append(permQueries, NewQuery(query, args...))
 		}

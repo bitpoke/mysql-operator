@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysql"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -138,9 +139,16 @@ func (r *ReconcileMySQLUser) reconcileUser(ctx context.Context, user *mysqluser.
 	// Reconcile the user
 	err := r.reconcileUserInDB(ctx, user)
 
-	var conditionUpdated bool
+	var shouldUpdate bool
+
+	// update status for allowedHosts if needed, mark that status need to be updated
+	if !reflect.DeepEqual(user.Status.AllowedHosts, user.Spec.AllowedHosts) {
+		user.Status.AllowedHosts = user.Spec.AllowedHosts
+		shouldUpdate = true
+	}
 
 	// Update the status according to the result
+	var conditionUpdated bool
 	if err == nil {
 		_, conditionUpdated = user.UpdateStatusCondition(
 			mysqlv1alpha1.MySQLUserReady, corev1.ConditionTrue,
@@ -153,7 +161,7 @@ func (r *ReconcileMySQLUser) reconcileUser(ctx context.Context, user *mysqluser.
 		)
 	}
 
-	if conditionUpdated {
+	if conditionUpdated || shouldUpdate {
 		statusUpdateErr := r.Update(ctx, user.Unwrap())
 		if statusUpdateErr != nil {
 			return reconcile.Result{}, statusUpdateErr
@@ -181,10 +189,43 @@ func (r *ReconcileMySQLUser) reconcileUserInDB(ctx context.Context, user *mysqlu
 		return errors.New("the MySQL user's password must not be empty")
 	}
 
-	return mysql.CreateUserIfNotExists(cfg, user.Spec.User, password, user.Spec.AllowedHost,
-		user.Spec.Permissions, user.Spec.AccountResourceLimits)
+	// create/ update user in database
+	if err := mysql.CreateUserIfNotExists(cfg, user.Spec.User, password, user.Spec.AllowedHosts,
+		user.Spec.Permissions, user.Spec.AccountResourceLimits); err != nil {
+		return err
+	}
+
+	// remove allowed hosts for user
+	toRemove := stringDiffIn(user.Status.AllowedHosts, user.Spec.AllowedHosts)
+	for _, host := range toRemove {
+		if err := mysql.DropUser(cfg, user.Spec.User, &host); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
+func stringDiffIn(actual, desired []string) []string {
+	diff := []string{}
+	for _, aStr := range actual {
+		// if is not in the desired list remove it
+		if _, exists := stringIn(aStr, desired); !exists {
+			diff = append(diff, aStr)
+		}
+	}
+
+	return diff
+}
+
+func stringIn(str string, strs []string) (int, bool) {
+	for i, s := range strs {
+		if s == str {
+			return i, true
+		}
+	}
+	return 0, false
+}
 func (r *ReconcileMySQLUser) dropUserFromDB(user *mysqluser.MySQLUser) error {
 	cfg, err := mysql.NewConfigFromClusterKey(r.Client, user.GetClusterKey(), r.QueryRunner)
 	if apierrors.IsNotFound(err) {
@@ -199,7 +240,7 @@ func (r *ReconcileMySQLUser) dropUserFromDB(user *mysqluser.MySQLUser) error {
 		return err
 	}
 
-	return mysql.DropUser(cfg, user.Spec.User)
+	return mysql.DropUser(cfg, user.Spec.User, nil)
 }
 
 // newReconciler returns a new reconcile.Reconciler

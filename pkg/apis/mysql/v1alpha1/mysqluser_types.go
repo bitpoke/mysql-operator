@@ -32,19 +32,25 @@ type SecretKeySelector struct {
 	Key string `json:"key"`
 }
 
+// ClusterReference represents a cross namespace object reference
+type ClusterReference struct {
+	corev1.LocalObjectReference `json:",inline"`
+	// Namespace the MySQL cluster namespace
+	Namespace string `json:"namespace"`
+}
+
 // MySQLUserSpec defines the desired state of MySQLUserSpec
 type MySQLUserSpec struct {
 	// ClusterRef represents a reference to the MySQL cluster.
 	// This field should be immutable.
-	ClusterRef corev1.ObjectReference `json:"clusterRef"`
+	ClusterRef ClusterReference `json:"clusterRef"`
 	// User is the name of the user that will be created with will access the specified database.
 	// This field should be immutable.
 	User string `json:"user"`
 	// Password is the password for the user.
 	Password SecretKeySelector `json:"password"`
-	// AllowedHost is the allowed host to connect from.
-	// This field should be immutable.
-	AllowedHost string `json:"allowedHost,omitempty"`
+	// AllowedHosts is the allowed host to connect from.
+	AllowedHosts []string `json:"allowedHosts,omitempty"`
 	// Permissions is the list of roles that user has in the specified database.
 	Permissions []MySQLPermission `json:"permissions,omitempty"`
 
@@ -98,6 +104,9 @@ type MySQLUserStatus struct {
 	// Conditions represents the MySQLUser resource conditions list.
 	// +optional
 	Conditions []MySQLUserCondition `json:"conditions,omitempty"`
+
+	// AllowedHosts contains the list of hosts that the user is allowed to connect from.
+	AllowedHosts []string `json:"allowedHosts,omitempty"`
 }
 
 // +genclient

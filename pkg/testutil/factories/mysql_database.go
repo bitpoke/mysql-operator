@@ -80,9 +80,9 @@ func NewDatabase(opts ...MysqlDBOption) *mysqldatabase.Database {
 			Namespace: "default",
 		},
 		Spec: mysqlv1alpha1.MySQLDatabaseSpec{
-			ClusterRef: corev1.ObjectReference{
-				Name:      "does-not-exist",
-				Namespace: "default",
+			ClusterRef: mysqlv1alpha1.ClusterReference{
+				LocalObjectReference: corev1.LocalObjectReference{Name: "does-not-exists"},
+				Namespace:            "default",
 			},
 			Database: name,
 		},
