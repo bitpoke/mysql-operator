@@ -191,7 +191,7 @@ func (r *ReconcileMySQLUser) reconcileUserInDB(ctx context.Context, user *mysqlu
 
 	// create/ update user in database
 	if err := mysql.CreateUserIfNotExists(cfg, user.Spec.User, password, user.Spec.AllowedHosts,
-		user.Spec.Permissions, user.Spec.AccountResourceLimits); err != nil {
+		user.Spec.Permissions, user.Spec.ResourceLimits); err != nil {
 		return err
 	}
 
