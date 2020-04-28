@@ -84,7 +84,7 @@ func (r *ReconcileMySQLUser) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	if !r.opt.AllowCreateUsersAcrossNamespaces && user.Namespace != user.Spec.ClusterRef.Namespace {
+	if !r.opt.AllowCrossNamespaceUsers && user.Namespace != user.Spec.ClusterRef.Namespace {
 		err = fmt.Errorf("cross namespace user creation is disabled")
 		return reconcile.Result{}, err
 	}

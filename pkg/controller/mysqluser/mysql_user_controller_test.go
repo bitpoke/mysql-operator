@@ -136,9 +136,11 @@ var _ = Describe("MySQL user controller", func() {
 				expectedQueryRunnerCall := func(dsn string, query string, args ...interface{}) error {
 					defer GinkgoRecover()
 
+					By("Checking finalizer")
 					Expect(c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap())).To(Succeed())
 					Expect(meta.HasFinalizer(&mySQLUser.ObjectMeta, userFinalizer))
 
+					By("Creating user")
 					Expect(dsn).To(Equal(expectedDSN))
 
 					expectedQuery := strings.Join([]string{
@@ -237,11 +239,7 @@ var _ = Describe("MySQL user controller", func() {
 				expectedQueryRunnerCall := func(dsn string, query string, args ...interface{}) error {
 					defer GinkgoRecover()
 
-					Expect(c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap())).To(Succeed())
-					Expect(meta.HasFinalizer(&mySQLUser.ObjectMeta, userFinalizer))
-
-					Expect(dsn).To(Equal(expectedDSN))
-
+					By("Creating the user")
 					expectedQuery := strings.Join([]string{
 						"BEGIN;\n",
 						"CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?;\n",
@@ -260,6 +258,8 @@ var _ = Describe("MySQL user controller", func() {
 						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], // grant privilege #2
 						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], // grant privilege #3
 					))
+
+					Expect(dsn).To(Equal(expectedDSN))
 
 					return nil
 				}
@@ -406,12 +406,11 @@ var _ = Describe("MySQL user controller", func() {
 				expectedQueryRunnerCall := func(dsn string, query string, args ...interface{}) error {
 					defer GinkgoRecover()
 
-					Expect(dsn).To(Equal(expectedDSN))
-
+					By("Deleting the user")
 					expectedQuery := "DROP USER IF EXISTS ?;"
 					Expect(query).To(Equal(expectedQuery))
-
 					Expect(args).To(ConsistOf(mySQLUser.Spec.User))
+					Expect(dsn).To(Equal(expectedDSN))
 
 					return deletionResult
 				}

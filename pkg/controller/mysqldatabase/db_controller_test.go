@@ -92,6 +92,7 @@ var _ = Describe("MySQL database controller", func() {
 				func(dsn string, query string, args ...interface{}) error {
 					defer GinkgoRecover()
 
+					By("Creating the database")
 					Expect(dsn).To(Equal(getExpectedDSN(clusterName)))
 					Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", db.Name)))
 					Expect(args).To(HaveLen(0))
@@ -164,6 +165,7 @@ var _ = Describe("MySQL database controller", func() {
 					func(dsn string, query string, args ...interface{}) error {
 						defer GinkgoRecover()
 
+						By("Deleting the database")
 						Expect(dsn).To(Equal(getExpectedDSN(clusterName)))
 						Expect(query).To(Equal(fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", db.Name)))
 						Expect(args).To(HaveLen(0))
@@ -217,6 +219,7 @@ var _ = Describe("MySQL database controller", func() {
 			func(dsn string, query string, args ...interface{}) error {
 				defer GinkgoRecover()
 
+				By("Creating the database")
 				Expect(dsn).To(Equal(getExpectedDSN(clusterName)))
 				Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", db.Name)))
 				Expect(args).To(HaveLen(0))
@@ -226,6 +229,7 @@ var _ = Describe("MySQL database controller", func() {
 			func(dsn string, query string, args ...interface{}) error {
 				defer GinkgoRecover()
 
+				By("Creating the database second run")
 				Expect(dsn).To(Equal(getExpectedDSN(clusterName)))
 				Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", db.Name)))
 				Expect(args).To(HaveLen(0))
