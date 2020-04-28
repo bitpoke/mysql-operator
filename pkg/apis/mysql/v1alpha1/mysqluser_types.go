@@ -24,14 +24,6 @@ import (
 // NOTE: json tags are required. Any new fields you add must have json tags for
 // the fields to be serialized.
 
-// SecretKeySelector contains a key of the secret to select from.
-type SecretKeySelector struct {
-	// The name of the secret in the pod's namespace to select from.
-	corev1.LocalObjectReference `json:",inline"`
-	// The key of the secret to select from.  Must be a valid secret key.
-	Key string `json:"key"`
-}
-
 // ClusterReference represents a cross namespace object reference
 type ClusterReference struct {
 	corev1.LocalObjectReference `json:",inline"`
@@ -48,7 +40,7 @@ type MySQLUserSpec struct {
 	// This field should be immutable.
 	User string `json:"user"`
 	// Password is the password for the user.
-	Password SecretKeySelector `json:"password"`
+	Password corev1.SecretKeySelector `json:"password"`
 	// AllowedHosts is the allowed host to connect from.
 	AllowedHosts []string `json:"allowedHosts,omitempty"`
 	// Permissions is the list of roles that user has in the specified database.

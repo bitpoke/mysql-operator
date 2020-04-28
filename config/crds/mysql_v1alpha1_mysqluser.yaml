@@ -63,17 +63,6 @@ spec:
               type: object
             password:
               description: Password is the password for the user.
-              properties:
-                key:
-                  description: The key of the secret to select from.  Must be a valid
-                    secret key.
-                  type: string
-                name:
-                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    TODO: Add other useful fields. apiVersion, kind, uid?'
-                  type: string
-              required:
-              - key
               type: object
             permissions:
               description: Permissions is the list of roles that user has in the specified
