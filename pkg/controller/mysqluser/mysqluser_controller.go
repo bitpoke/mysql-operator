@@ -44,7 +44,7 @@ import (
 
 const (
 	controllerName = "mysql-user"
-	userFinalizer  = "finalizers.mysql.presslabs.org/created-in-mysql"
+	userFinalizer  = "mysql-operator.presslabs.org/user/created-in-mysql"
 )
 
 var log = logf.Log.WithName("controller.mysql-user")
@@ -229,6 +229,8 @@ func stringIn(str string, strs []string) (int, bool) {
 func (r *ReconcileMySQLUser) dropUserFromDB(user *mysqluser.MySQLUser) error {
 	cfg, err := mysql.NewConfigFromClusterKey(r.Client, user.GetClusterKey(), r.QueryRunner)
 	if apierrors.IsNotFound(err) {
+		// if the mysql cluster does not exists then we can safely assume that
+		// the user is deleted so exist successfully
 		statusErr, ok := err.(*apierrors.StatusError)
 		if ok && statusErr.Status().Details.Kind == "MysqlCluster" {
 			// it seems the cluster is not to be found, so we assume it has been deleted

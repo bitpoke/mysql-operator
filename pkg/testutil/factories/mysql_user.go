@@ -93,7 +93,7 @@ func WithPassword(cl client.Client, password string) MySQLUserOption {
 
 		Expect(cl.Create(context.TODO(), secret))
 
-		mu.Spec.Password = mysqlv1alpha1.SecretKeySelector{
+		mu.Spec.Password = corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name},
 			Key:                  "password",
 		}

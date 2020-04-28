@@ -43,7 +43,7 @@ import (
 )
 
 const (
-	mysqlPreventDeletionFinalizer = "finalizers.dashboard.presslabs.com/created-in-mysql"
+	mysqlPreventDeletionFinalizer = "mysql-operator.presslabs.org/database/created-in-mysql"
 	controllerName                = "mysql-database"
 )
 
@@ -128,6 +128,8 @@ func (r *ReconcileMySQLDatabase) deleteDatabase(_ context.Context, db *mysqldata
 
 	cfg, err := mysql.NewConfigFromClusterKey(r.Client, db.GetClusterKey(), r.QueryRunner)
 	if apierrors.IsNotFound(err) {
+		// if the mysql cluster does not exists then we can safely assume that
+		// the db is deleted so exist successfully
 		statusErr, ok := err.(*apierrors.StatusError)
 		if ok && statusErr.Status().Details.Kind == "MysqlCluster" {
 			// it seems the cluster is not to be found, so we assume it has been deleted
@@ -160,7 +162,7 @@ func (r *ReconcileMySQLDatabase) createDatabase(_ context.Context, db *mysqldata
 func (r *ReconcileMySQLDatabase) updateReadyCondition(
 	ctx context.Context, oldDBStatus mysqlv1alpha1.MySQLDatabaseStatus, db *mysqldatabase.Database, err error) error {
 	if err == nil {
-		db.UpdateCondition(mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionTrue, mysqldatabase.ProvisionSucceeded, "User successfully created.")
+		db.UpdateCondition(mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionTrue, mysqldatabase.ProvisionSucceeded, "Database successfully created.")
 	} else {
 		db.UpdateCondition(mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionFalse, mysqldatabase.ProvisionFailed, err.Error())
 	}
