@@ -87,7 +87,7 @@ func (r *ReconcileMySQLDatabase) Reconcile(request reconcile.Request) (reconcile
 
 	oldDBStatus := db.DeepCopy().Status
 
-	if !r.opt.AllowCreateUsersAcrossNamespaces && db.Namespace != db.Spec.ClusterRef.Namespace {
+	if !r.opt.AllowCrossNamespaceDatabases && db.Namespace != db.Spec.ClusterRef.Namespace {
 		err = fmt.Errorf("cross namespace database creation is disabled")
 		return reconcile.Result{}, r.updateReadyCondition(ctx, oldDBStatus, db, err)
 	}
