@@ -18,8 +18,8 @@ package mysql
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
-
 	// this import  needs to be done otherwise the mysql driver don't work
 	_ "github.com/go-sql-driver/mysql"
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -33,15 +33,14 @@ var log = logf.Log.WithName("mysql-internal")
 
 // Config is used to connect to a MysqlCluster
 type Config struct {
-	User        string
-	Password    string
-	Host        string
-	Port        int32
-	QueryRunner QueryRunner
+	User     string
+	Password string
+	Host     string
+	Port     int32
 }
 
 // NewConfigFromClusterKey returns a new Config based on a MySQLCluster key
-func NewConfigFromClusterKey(c client.Client, clusterKey client.ObjectKey, qr QueryRunner) (*Config, error) {
+func NewConfigFromClusterKey(c client.Client, clusterKey client.ObjectKey) (*Config, error) {
 	cluster := &mysqlv1alpha1.MysqlCluster{}
 	if err := c.Get(context.TODO(), clusterKey, cluster); err != nil {
 		return nil, err
@@ -55,11 +54,10 @@ func NewConfigFromClusterKey(c client.Client, clusterKey client.ObjectKey, qr Qu
 	}
 
 	return &Config{
-		User:        "root",
-		Password:    string(secret.Data["ROOT_PASSWORD"]),
-		Host:        fmt.Sprintf("%s-mysql-master.%s", cluster.Name, cluster.Namespace),
-		Port:        3306,
-		QueryRunner: qr,
+		User:     "root",
+		Password: string(secret.Data["ROOT_PASSWORD"]),
+		Host:     fmt.Sprintf("%s-mysql-master.%s", cluster.Name, cluster.Namespace),
+		Port:     3306,
 	}, nil
 }
 
@@ -70,7 +68,64 @@ func (c *Config) GetMysqlDSN() string {
 	)
 }
 
-// RunQuery runs the given query through the config's QueryRunner
-func (c *Config) RunQuery(q string, args ...interface{}) error {
-	return c.QueryRunner(c.GetMysqlDSN(), q, args...)
+// Rows interface is a subset of mysql.Rows
+type Rows interface {
+	Err() error
+	Next() bool
+	Scan(dest ...interface{}) error
+}
+
+// SQLRunner interface is a subset of mysql.DB
+type SQLRunner interface {
+	QueryExec(ctx context.Context, query Query) error
+	QueryRow(ctx context.Context, query Query, dest ...interface{}) error
+	QueryRows(ctx context.Context, query Query) (Rows, error)
+}
+
+type sqlRunner struct {
+	db *sql.DB
+}
+
+// SQLRunnerFactory a function that generates a new SQLRunner
+type SQLRunnerFactory func(cfg *Config, errs ...error) (SQLRunner, func(), error)
+
+// NewSQLRunner opens a connections using the given DSN
+func NewSQLRunner(cfg *Config, errs ...error) (SQLRunner, func(), error) {
+	var db *sql.DB
+	var close func()
+
+	// make this factory accept a functions that tries to generate a config
+	if len(errs) > 0 && errs[0] != nil {
+		return nil, close, errs[0]
+	}
+
+	db, err := sql.Open("mysql", cfg.GetMysqlDSN())
+	if err != nil {
+		return nil, close, err
+	}
+
+	// close connection function
+	close = func() {
+		if cErr := db.Close(); cErr != nil {
+			log.Error(cErr, "failed closing the database connection")
+		}
+	}
+
+	return &sqlRunner{db: db}, close, nil
+}
+
+func (sr sqlRunner) QueryExec(ctx context.Context, query Query) error {
+	_, err := sr.db.ExecContext(ctx, query.escapedQuery, query.args)
+	return err
+}
+func (sr sqlRunner) QueryRow(ctx context.Context, query Query, dest ...interface{}) error {
+	return sr.db.QueryRowContext(ctx, query.escapedQuery, query.args).Scan(dest...)
+}
+func (sr sqlRunner) QueryRows(ctx context.Context, query Query) (Rows, error) {
+	rows, err := sr.db.QueryContext(ctx, query.escapedQuery, query.args)
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, rows.Err()
 }

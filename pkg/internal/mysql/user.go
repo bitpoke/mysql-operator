@@ -17,6 +17,7 @@ limitations under the License.
 package mysql
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	corev1 "k8s.io/api/core/v1"
@@ -26,8 +27,8 @@ import (
 )
 
 // CreateUserIfNotExists creates a user if it doesn't already exist and it gives it the specified permissions
-func CreateUserIfNotExists(
-	cfg *Config, user, pass string, allowedHosts []string, permissions []mysqlv1alpha1.MySQLPermission,
+func CreateUserIfNotExists(ctx context.Context, sql SQLRunner,
+	user, pass string, allowedHosts []string, permissions []mysqlv1alpha1.MySQLPermission,
 	resourceOptions corev1.ResourceList,
 ) error {
 	queries := []Query{
@@ -46,7 +47,7 @@ func CreateUserIfNotExists(
 
 	query := BuildAtomicQuery(queries...)
 
-	if err := cfg.RunQuery(query.escapedQuery, query.args...); err != nil {
+	if err := sql.QueryExec(ctx, query); err != nil {
 		return fmt.Errorf("failed to configure user (user/pass/access), err: %s", err)
 	}
 
@@ -101,7 +102,7 @@ func getUsersIdentification(user string, pwd *string, allowedHosts []string) (id
 }
 
 // DropUser removes a MySQL user if it exists, along with its privileges
-func DropUser(cfg *Config, user string, host *string) error {
+func DropUser(ctx context.Context, sql SQLRunner, user string, host *string) error {
 	usrTmpl := "?"
 	args := []interface{}{user}
 
@@ -112,7 +113,7 @@ func DropUser(cfg *Config, user string, host *string) error {
 
 	query := NewQuery(fmt.Sprintf("DROP USER IF EXISTS %s;", usrTmpl), args...)
 
-	if err := cfg.RunQuery(query.escapedQuery, query.args...); err != nil {
+	if err := sql.QueryExec(ctx, query); err != nil {
 		return fmt.Errorf("failed to delete user, err: %s", err)
 	}
 

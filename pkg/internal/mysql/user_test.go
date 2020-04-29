@@ -18,6 +18,7 @@ limitations under the License.
 package mysql_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -38,20 +39,11 @@ func TestMySQLInterface(t *testing.T) {
 
 var _ = Describe("MySQL User Interface tests", func() {
 	var (
-		cfg *Config
-		qr  *fake.QueryRunner
+		sql *fake.SQLRunner
 	)
 
 	BeforeEach(func() {
-		qr = fake.NewQueryRunner(false)
-
-		cfg = &Config{
-			User:        "root",
-			Password:    "root-pwd",
-			Host:        "host",
-			Port:        3306,
-			QueryRunner: qr.Run,
-		}
+		sql = fake.NewQueryRunner(false)
 	})
 
 	Context("user related", func() {
@@ -80,7 +72,7 @@ var _ = Describe("MySQL User Interface tests", func() {
 		})
 
 		It("should build the right queries for user creation", func() {
-			assertQuery(qr,
+			assertQuery(sql,
 				strings.Join([]string{
 					"BEGIN;\n",
 					"CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?;\n",
@@ -90,11 +82,32 @@ var _ = Describe("MySQL User Interface tests", func() {
 				}, ""),
 				user, allowedHosts[0], pwd, user, allowedHosts[0], pwd, "MAX_USER_CONNECTIONS", 10, user, allowedHosts[0],
 			)
-			Expect(CreateUserIfNotExists(cfg, user, pwd, allowedHosts, permissions, resourceOptions)).To(Succeed())
+			Expect(CreateUserIfNotExists(context.TODO(), sql, user, pwd, allowedHosts, permissions, resourceOptions)).To(Succeed())
+		})
+
+		It("should build the right queries for user creation", func() {
+			allowedHosts = []string{"test1", "test2"}
+			assertQuery(sql,
+				strings.Join([]string{
+					"BEGIN;\n",
+					"CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?, ?@? IDENTIFIED BY ?;\n",
+					"ALTER USER ?@? IDENTIFIED BY ?, ?@? IDENTIFIED BY ? WITH ?=?;\n",
+					"GRANT PERM1, PERM2 ON `test_db`.* TO ?@?, ?@?;\n",
+					"COMMIT;",
+				}, ""),
+				user, allowedHosts[0], pwd,
+				user, allowedHosts[1], pwd,
+				user, allowedHosts[0], pwd,
+				user, allowedHosts[1], pwd,
+				"MAX_USER_CONNECTIONS", 10,
+				user, allowedHosts[0],
+				user, allowedHosts[1],
+			)
+			Expect(CreateUserIfNotExists(context.TODO(), sql, user, pwd, allowedHosts, permissions, resourceOptions)).To(Succeed())
 		})
 
 		It("should build queries with no resource limits", func() {
-			assertQuery(qr,
+			assertQuery(sql,
 				strings.Join([]string{
 					"BEGIN;\n",
 					"CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?;\n",
@@ -105,12 +118,12 @@ var _ = Describe("MySQL User Interface tests", func() {
 				user, allowedHosts[0], pwd, user, allowedHosts[0], pwd, user, allowedHosts[0],
 			)
 
-			Expect(CreateUserIfNotExists(cfg, user, pwd, allowedHosts, permissions, nil)).To(Succeed())
+			Expect(CreateUserIfNotExists(context.TODO(), sql, user, pwd, allowedHosts, permissions, nil)).To(Succeed())
 		})
 
 		It("should build queries with more resource limits", func() {
 			resourceOptions["MAX_QUERIES_PER_HOUR"] = resource.MustParse("100")
-			assertQuery(qr,
+			assertQuery(sql,
 				strings.Join([]string{
 					"BEGIN;\n",
 					"CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?;\n",
@@ -121,14 +134,14 @@ var _ = Describe("MySQL User Interface tests", func() {
 				user, allowedHosts[0], pwd, user, allowedHosts[0], pwd, "MAX_USER_CONNECTIONS", 10, "MAX_QUERIES_PER_HOUR", 100, user, allowedHosts[0],
 			)
 
-			Expect(CreateUserIfNotExists(cfg, user, pwd, allowedHosts, permissions, resourceOptions)).To(Succeed())
+			Expect(CreateUserIfNotExists(context.TODO(), sql, user, pwd, allowedHosts, permissions, resourceOptions)).To(Succeed())
 		})
 	})
 
 })
 
-func assertQuery(qr *fake.QueryRunner, expectedQuery string, expectedArgs ...interface{}) {
-	expectedQueryRunnerCall := func(dsn string, query string, args ...interface{}) error {
+func assertQuery(qr *fake.SQLRunner, expectedQuery string, expectedArgs ...interface{}) {
+	expectedQueryRunnerCall := func(query string, args ...interface{}) error {
 		defer GinkgoRecover()
 
 		Expect(query).To(Equal(expectedQuery))

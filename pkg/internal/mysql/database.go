@@ -16,13 +16,16 @@ limitations under the License.
 
 package mysql
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // CreateDatabaseIfNotExists creates a database if it doesn't already exist
-func CreateDatabaseIfNotExists(cfg *Config, database string) error {
-	query := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", database)
+func CreateDatabaseIfNotExists(ctx context.Context, sql SQLRunner, database string) error {
+	query := NewQuery("CREATE DATABASE IF NOT EXISTS ? CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", database)
 
-	if err := cfg.RunQuery(query); err != nil {
+	if err := sql.QueryExec(ctx, query); err != nil {
 		return fmt.Errorf("failed to create database, err: %s", err)
 	}
 
@@ -30,10 +33,10 @@ func CreateDatabaseIfNotExists(cfg *Config, database string) error {
 }
 
 // DropDatabase deletes the database
-func DropDatabase(cfg *Config, database string) error {
-	query := fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", database)
+func DropDatabase(ctx context.Context, sql SQLRunner, database string) error {
+	query := NewQuery("DROP DATABASE IF EXISTS ?", database)
 
-	if err := cfg.RunQuery(query); err != nil {
+	if err := sql.QueryExec(ctx, query); err != nil {
 		return fmt.Errorf("failed to remove database, err: %s", err)
 	}
 

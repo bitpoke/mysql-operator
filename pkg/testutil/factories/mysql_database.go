@@ -40,7 +40,7 @@ func WithMySQLCluster(ctx context.Context, cl client.Client, name string) MysqlD
 	cluster := NewMySQLCluster(func(cluster *mysqlv1alpha1.MysqlCluster) error {
 		cluster.Name = name
 		return nil
-	}, CreateMySQLClusterSecret(ctx, cl, &corev1.Secret{}), CreateMySQLCluster(ctx, cl))
+	}, CreateMySQLClusterSecret(cl, &corev1.Secret{}), CreateMySQLClusterInK8s(cl))
 
 	return func(db *mysqldatabase.Database) error {
 		db.Spec.ClusterRef.Name = cluster.Name

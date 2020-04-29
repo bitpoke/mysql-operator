@@ -27,6 +27,16 @@ type Query struct {
 	args         []interface{}
 }
 
+// String representation of the query
+func (q *Query) String() string {
+	return q.escapedQuery
+}
+
+// Args is used in test
+func (q *Query) Args() []interface{} {
+	return q.args
+}
+
 // NewQuery returns a new Query object
 func NewQuery(q string, args ...interface{}) Query {
 	if q == "" {

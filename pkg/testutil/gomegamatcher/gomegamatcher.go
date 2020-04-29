@@ -27,11 +27,11 @@ import (
 )
 
 // HaveCondition is a helper func that returns
-func HaveCondition(kind interface{}, status corev1.ConditionStatus) gomegatypes.GomegaMatcher {
+func HaveCondition(condType interface{}, status corev1.ConditionStatus) gomegatypes.GomegaMatcher {
 	return PointTo(MatchFields(IgnoreExtras, Fields{
 		"Status": MatchFields(IgnoreExtras, Fields{
 			"Conditions": ContainElement(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(kind),
+				"Type":   Equal(condType),
 				"Status": Equal(status),
 			})),
 		}),
