@@ -20,11 +20,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysql"
 	"reflect"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"time"
 
+	"github.com/go-test/deep"
 	logf "github.com/presslabs/controller-util/log"
 	"github.com/presslabs/controller-util/meta"
 	corev1 "k8s.io/api/core/v1"
@@ -33,18 +32,21 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysql"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqluser"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
 
 const (
 	controllerName = "mysql-user"
-	userFinalizer  = "mysql-operator.presslabs.org/user/created-in-mysql"
+	userFinalizer  = "mysql-operator.presslabs.org/user"
 )
 
 var log = logf.Log.WithName("controller.mysql-user")
@@ -57,7 +59,7 @@ type ReconcileMySQLUser struct {
 	opt      *options.Options
 
 	// mysql query runner
-	mysql.QueryRunner
+	mysql.SQLRunnerFactory
 }
 
 // check for reconciler to implement reconciler.Reconciler interface
@@ -85,97 +87,98 @@ func (r *ReconcileMySQLUser) Reconcile(request reconcile.Request) (reconcile.Res
 	}
 
 	if !r.opt.AllowCrossNamespaceUsers && user.Namespace != user.Spec.ClusterRef.Namespace {
-		err = fmt.Errorf("cross namespace user creation is disabled")
+		return reconcile.Result{}, errors.New("cross namespace user creation is disabled")
+	}
+
+	oldStatus := user.Status.DeepCopy()
+
+	// if the user has been deleted then remove it from mysql cluster
+	if !user.ObjectMeta.DeletionTimestamp.IsZero() {
+		return reconcile.Result{}, r.removeUser(ctx, user)
+	}
+
+	// get the actual state from mysql cluster
+	//	usErr := r.updateUserStatusFromCluster(ctx, user)
+	//	if err := r.updateStatusAndErr(ctx, user, oldStatus, usErr); err != nil {
+	//		return reconcile.Result{}, err
+	//	}
+
+	// write the desired status into mysql cluster
+	ruErr := r.reconcileUserInCluster(ctx, user)
+	if err := r.updateStatusAndErr(ctx, user, oldStatus, ruErr); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if user.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.reconcileUser(ctx, user)
-	}
+	// enqueue the resource again after to keep the resource up to date in mysql
+	// in case is changed directly into mysql
+	return reconcile.Result{
+		Requeue:      true,
+		RequeueAfter: 2 * time.Minute,
+	}, nil
+}
 
+func (r *ReconcileMySQLUser) removeUser(ctx context.Context, user *mysqluser.MySQLUser) error {
 	// The resource has been deleted
 	if meta.HasFinalizer(&user.ObjectMeta, userFinalizer) {
 		// Drop the user if the finalizer is still present
-		if err := r.dropUserFromDB(user); err != nil {
-			return reconcile.Result{}, err
+		if err := r.dropUserFromDB(ctx, user); err != nil {
+			return err
 		}
 
 		meta.RemoveFinalizer(&user.ObjectMeta, userFinalizer)
 
+		// update resource so it will remove the finalizer
 		if err := r.Update(ctx, user.Unwrap()); err != nil {
-			return reconcile.Result{}, err
+			return err
 		}
 	}
-
-	return reconcile.Result{}, nil
+	return nil
 }
 
-func (r *ReconcileMySQLUser) reconcileUser(ctx context.Context, user *mysqluser.MySQLUser) (reconcile.Result, error) {
-	log.Info("creating MySQL user", "name", user.Name, "database", user.Spec.User)
-	resourceHasChanges := false
+//func (r *ReconcileMySQLUser) updateUserStatusFromCluster(ctx context.Context, user *mysqluser.MySQLUser) (err error) {
+//	// catch the error and set the failed status
+//	defer setFailedStatus(&err, user)
+//
+//	return nil
+//}
 
-	// Set the user provisioning status to not ready if necessary
-	_, exists := user.ConditionExists(mysqlv1alpha1.MySQLUserReady)
-	if !exists {
-		_, resourceHasChanges = user.UpdateStatusCondition(
-			mysqlv1alpha1.MySQLUserReady, corev1.ConditionFalse,
-			mysqluser.ProvisionInProgressReason, "The user provisioning has started.",
-		)
+func (r *ReconcileMySQLUser) reconcileUserInCluster(ctx context.Context, user *mysqluser.MySQLUser) (err error) {
+	// catch the error and set the failed status
+	defer setFailedStatus(&err, user)
+
+	// Reconcile the user into mysql
+	if err = r.reconcileUserInDB(ctx, user); err != nil {
+		return
 	}
 
-	// Add the user finalizer if it doesn't exist
+	// add finalizer if is not added on the resource
 	if !meta.HasFinalizer(&user.ObjectMeta, userFinalizer) {
 		meta.AddFinalizer(&user.ObjectMeta, userFinalizer)
-
-		resourceHasChanges = true
-	}
-
-	if resourceHasChanges {
-		if err := r.Update(ctx, user.Unwrap()); err != nil {
-			return reconcile.Result{}, err
+		if err = r.Update(ctx, user.Unwrap()); err != nil {
+			return
 		}
 	}
-
-	// Reconcile the user
-	err := r.reconcileUserInDB(ctx, user)
-
-	var shouldUpdate bool
 
 	// update status for allowedHosts if needed, mark that status need to be updated
 	if !reflect.DeepEqual(user.Status.AllowedHosts, user.Spec.AllowedHosts) {
 		user.Status.AllowedHosts = user.Spec.AllowedHosts
-		shouldUpdate = true
 	}
 
 	// Update the status according to the result
-	var conditionUpdated bool
-	if err == nil {
-		_, conditionUpdated = user.UpdateStatusCondition(
-			mysqlv1alpha1.MySQLUserReady, corev1.ConditionTrue,
-			mysqluser.ProvisionSucceededReason, "The user provisioning has succeeded.",
-		)
-	} else {
-		_, conditionUpdated = user.UpdateStatusCondition(
-			mysqlv1alpha1.MySQLUserReady, corev1.ConditionFalse,
-			mysqluser.ProvisionFailedReason, "The user provisioning has failed.",
-		)
-	}
+	user.UpdateStatusCondition(
+		mysqlv1alpha1.MySQLUserReady, corev1.ConditionTrue,
+		mysqluser.ProvisionSucceededReason, "The user provisioning has succeeded.",
+	)
 
-	if conditionUpdated || shouldUpdate {
-		statusUpdateErr := r.Update(ctx, user.Unwrap())
-		if statusUpdateErr != nil {
-			return reconcile.Result{}, statusUpdateErr
-		}
-	}
-
-	return reconcile.Result{}, err
+	return
 }
 
 func (r *ReconcileMySQLUser) reconcileUserInDB(ctx context.Context, user *mysqluser.MySQLUser) error {
-	cfg, err := mysql.NewConfigFromClusterKey(r.Client, user.GetClusterKey(), r.QueryRunner)
+	sql, closeConn, err := r.SQLRunnerFactory(mysql.NewConfigFromClusterKey(r.Client, user.GetClusterKey()))
 	if err != nil {
 		return err
 	}
+	defer closeConn()
 
 	secret := &corev1.Secret{}
 	secretKey := client.ObjectKey{Name: user.Spec.Password.Name, Namespace: user.Namespace}
@@ -190,7 +193,8 @@ func (r *ReconcileMySQLUser) reconcileUserInDB(ctx context.Context, user *mysqlu
 	}
 
 	// create/ update user in database
-	if err := mysql.CreateUserIfNotExists(cfg, user.Spec.User, password, user.Spec.AllowedHosts,
+	log.Info("creating mysql user", "key", user.MySQLUser, "database", user.Spec.User)
+	if err := mysql.CreateUserIfNotExists(ctx, sql, user.Spec.User, password, user.Spec.AllowedHosts,
 		user.Spec.Permissions, user.Spec.ResourceLimits); err != nil {
 		return err
 	}
@@ -198,7 +202,7 @@ func (r *ReconcileMySQLUser) reconcileUserInDB(ctx context.Context, user *mysqlu
 	// remove allowed hosts for user
 	toRemove := stringDiffIn(user.Status.AllowedHosts, user.Spec.AllowedHosts)
 	for _, host := range toRemove {
-		if err := mysql.DropUser(cfg, user.Spec.User, &host); err != nil {
+		if err := mysql.DropUser(ctx, sql, user.Spec.User, &host); err != nil {
 			return err
 		}
 	}
@@ -226,8 +230,10 @@ func stringIn(str string, strs []string) (int, bool) {
 	}
 	return 0, false
 }
-func (r *ReconcileMySQLUser) dropUserFromDB(user *mysqluser.MySQLUser) error {
-	cfg, err := mysql.NewConfigFromClusterKey(r.Client, user.GetClusterKey(), r.QueryRunner)
+
+func (r *ReconcileMySQLUser) dropUserFromDB(ctx context.Context, user *mysqluser.MySQLUser) error {
+	sql, closeConn, err := r.SQLRunnerFactory(mysql.NewConfigFromClusterKey(r.Client, user.GetClusterKey()))
+	defer closeConn()
 	if apierrors.IsNotFound(err) {
 		// if the mysql cluster does not exists then we can safely assume that
 		// the user is deleted so exist successfully
@@ -242,17 +248,33 @@ func (r *ReconcileMySQLUser) dropUserFromDB(user *mysqluser.MySQLUser) error {
 		return err
 	}
 
-	return mysql.DropUser(cfg, user.Spec.User, nil)
+	return mysql.DropUser(ctx, sql, user.Spec.User, nil)
+}
+
+func (r *ReconcileMySQLUser) updateStatusAndErr(ctx context.Context, user *mysqluser.MySQLUser, oldStatus *mysqlv1alpha1.MySQLUserStatus, prevErr error) error {
+	if !reflect.DeepEqual(oldStatus, &user.Status) {
+		log.V(1).Info("update mysql user status", "key", user.MySQLUser, "diff", deep.Equal(oldStatus, &user.Status))
+
+		if err := r.Status().Update(ctx, user.Unwrap()); err != nil {
+			if prevErr != nil {
+				return fmt.Errorf("failed to update status: %s, previous error was: %s", err, prevErr)
+			}
+
+			return err
+		}
+	}
+
+	return prevErr
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, qr mysql.QueryRunner) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, sqlFactory mysql.SQLRunnerFactory) reconcile.Reconciler {
 	return &ReconcileMySQLUser{
-		Client:      mgr.GetClient(),
-		scheme:      mgr.GetScheme(),
-		recorder:    mgr.GetRecorder(controllerName),
-		opt:         options.GetOptions(),
-		QueryRunner: qr,
+		Client:           mgr.GetClient(),
+		scheme:           mgr.GetScheme(),
+		recorder:         mgr.GetRecorder(controllerName),
+		opt:              options.GetOptions(),
+		SQLRunnerFactory: sqlFactory,
 	}
 }
 
@@ -275,5 +297,14 @@ func add(mgr ctrl.Manager, r reconcile.Reconciler) error {
 
 // Add will register the controller to the manager
 func Add(mgr ctrl.Manager) error {
-	return add(mgr, newReconciler(mgr, mysql.StandardQueryRunner))
+	return add(mgr, newReconciler(mgr, mysql.NewSQLRunner))
+}
+
+func setFailedStatus(err *error, user *mysqluser.MySQLUser) {
+	if *err != nil {
+		user.UpdateStatusCondition(
+			mysqlv1alpha1.MySQLUserReady, corev1.ConditionFalse,
+			mysqluser.ProvisionFailedReason, fmt.Sprintf("The user provisioning has failed: %s", *err),
+		)
+	}
 }

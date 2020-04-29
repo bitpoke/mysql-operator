@@ -43,7 +43,7 @@ import (
 )
 
 const (
-	mysqlPreventDeletionFinalizer = "mysql-operator.presslabs.org/database/created-in-mysql"
+	mysqlPreventDeletionFinalizer = "mysql-operator.presslabs.org/database"
 	controllerName                = "mysql-database"
 )
 
@@ -57,7 +57,7 @@ type ReconcileMySQLDatabase struct {
 	opt      *options.Options
 
 	// mysql query runner
-	mysql.QueryRunner
+	mysql.SQLRunnerFactory
 }
 
 // check for reconciler to implement reconciler.Reconciler interface
@@ -123,10 +123,10 @@ func (r *ReconcileMySQLDatabase) Reconcile(request reconcile.Request) (reconcile
 	return reconcile.Result{}, r.updateReadyCondition(ctx, oldDBStatus, db, err)
 }
 
-func (r *ReconcileMySQLDatabase) deleteDatabase(_ context.Context, db *mysqldatabase.Database) error {
+func (r *ReconcileMySQLDatabase) deleteDatabase(ctx context.Context, db *mysqldatabase.Database) error {
 	log.Info("deleting MySQL database", "name", db.Name, "database", db.Spec.Database)
 
-	cfg, err := mysql.NewConfigFromClusterKey(r.Client, db.GetClusterKey(), r.QueryRunner)
+	sql, close, err := r.SQLRunnerFactory(mysql.NewConfigFromClusterKey(r.Client, db.GetClusterKey()))
 	if apierrors.IsNotFound(err) {
 		// if the mysql cluster does not exists then we can safely assume that
 		// the db is deleted so exist successfully
@@ -139,24 +139,28 @@ func (r *ReconcileMySQLDatabase) deleteDatabase(_ context.Context, db *mysqldata
 		return err
 	}
 
+	defer close()
+
 	// Remove database from MySQL then remove finalizer
-	if err = mysql.DropDatabase(cfg, db.Spec.Database); err != nil {
+	if err = mysql.DropDatabase(ctx, sql, db.Spec.Database); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (r *ReconcileMySQLDatabase) createDatabase(_ context.Context, db *mysqldatabase.Database) error {
+func (r *ReconcileMySQLDatabase) createDatabase(ctx context.Context, db *mysqldatabase.Database) error {
 	log.Info("creating MySQL database", "name", db.Name, "database", db.Spec.Database)
 
-	cfg, err := mysql.NewConfigFromClusterKey(r, db.GetClusterKey(), r.QueryRunner)
+	sql, close, err := r.SQLRunnerFactory(mysql.NewConfigFromClusterKey(r, db.GetClusterKey()))
 	if err != nil {
 		return err
 	}
 
+	defer close()
+
 	// Create database if does not exists
-	return mysql.CreateDatabaseIfNotExists(cfg, db.Spec.Database)
+	return mysql.CreateDatabaseIfNotExists(ctx, sql, db.Spec.Database)
 }
 
 func (r *ReconcileMySQLDatabase) updateReadyCondition(
@@ -180,13 +184,13 @@ func (r *ReconcileMySQLDatabase) updateReadyCondition(
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, qr mysql.QueryRunner) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, sqlFactory mysql.SQLRunnerFactory) reconcile.Reconciler {
 	return &ReconcileMySQLDatabase{
-		Client:      mgr.GetClient(),
-		scheme:      mgr.GetScheme(),
-		recorder:    mgr.GetRecorder(controllerName),
-		opt:         options.GetOptions(),
-		QueryRunner: qr,
+		Client:           mgr.GetClient(),
+		scheme:           mgr.GetScheme(),
+		recorder:         mgr.GetRecorder(controllerName),
+		opt:              options.GetOptions(),
+		SQLRunnerFactory: sqlFactory,
 	}
 }
 
@@ -209,5 +213,5 @@ func add(mgr ctrl.Manager, r reconcile.Reconciler) error {
 
 // Add will register the controller to the manager
 func Add(mgr ctrl.Manager) error {
-	return add(mgr, newReconciler(mgr, mysql.StandardQueryRunner))
+	return add(mgr, newReconciler(mgr, mysql.NewSQLRunner))
 }

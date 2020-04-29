@@ -126,5 +126,7 @@ spec:
     kind: MySQLUser
     plural: mysqlusers
   scope: Namespaced
+  subresources:
+    status: {}
   version: v1alpha1
 {{- end }}

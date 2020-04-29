@@ -50,7 +50,7 @@ var _ = Describe("MySQL database controller", func() {
 		// controller k8s client
 		c client.Client
 
-		fakeQR *fake.QueryRunner
+		fakeQR *fake.SQLRunner
 	)
 
 	BeforeEach(func() {
@@ -68,7 +68,7 @@ var _ = Describe("MySQL database controller", func() {
 		fakeQR = fake.NewQueryRunner(false)
 
 		var recFn reconcile.Reconciler
-		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, fakeQR.Run))
+		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, fake.NewFakeFactory(fakeQR)))
 		Expect(add(mgr, recFn)).To(Succeed())
 
 		stop = testutil.StartTestManager(mgr)
@@ -89,17 +89,16 @@ var _ = Describe("MySQL database controller", func() {
 			db = factories.NewDatabase(factories.WithMySQLCluster(context.TODO(), c, clusterName))
 
 			fakeQR.AddExpectedCalls(
-				func(dsn string, query string, args ...interface{}) error {
+				func(query string, args ...interface{}) error {
 					defer GinkgoRecover()
 
 					By("Creating the database")
-					Expect(dsn).To(Equal(getExpectedDSN(clusterName)))
-					Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", db.Name)))
-					Expect(args).To(HaveLen(0))
+					Expect(query).To(Equal("CREATE DATABASE IF NOT EXISTS ? CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"))
+					Expect(args).To(ConsistOf(db.Name))
 
 					return nil
 				},
-				func(dsn string, query string, args ...interface{}) error {
+				func(query string, args ...interface{}) error {
 					defer GinkgoRecover()
 
 					return nil
@@ -143,7 +142,7 @@ var _ = Describe("MySQL database controller", func() {
 		Context("and when the resource is deleted", func() {
 			It("should not delete the db if query returns error", func() {
 				fakeQR.AddExpectedCalls(
-					func(dsn string, query string, args ...interface{}) error {
+					func(query string, args ...interface{}) error {
 						defer GinkgoRecover()
 
 						return fmt.Errorf("fake db connection error")
@@ -162,13 +161,13 @@ var _ = Describe("MySQL database controller", func() {
 
 			It("should drop the database when deleted ", func() {
 				fakeQR.AddExpectedCalls(
-					func(dsn string, query string, args ...interface{}) error {
+					func(query string, args ...interface{}) error {
 						defer GinkgoRecover()
 
 						By("Deleting the database")
-						Expect(dsn).To(Equal(getExpectedDSN(clusterName)))
-						Expect(query).To(Equal(fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", db.Name)))
-						Expect(args).To(HaveLen(0))
+						//Expect(dsn).To(Equal(getExpectedDSN(clusterName)))
+						Expect(query).To(Equal("DROP DATABASE IF EXISTS ?;"))
+						Expect(args).To(ConsistOf(db.Name))
 
 						return nil
 					},
@@ -216,23 +215,21 @@ var _ = Describe("MySQL database controller", func() {
 		db := factories.NewDatabase(factories.WithMySQLCluster(context.TODO(), c, clusterName))
 
 		fakeQR.AddExpectedCalls(
-			func(dsn string, query string, args ...interface{}) error {
+			func(query string, args ...interface{}) error {
 				defer GinkgoRecover()
 
 				By("Creating the database")
-				Expect(dsn).To(Equal(getExpectedDSN(clusterName)))
-				Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", db.Name)))
-				Expect(args).To(HaveLen(0))
+				Expect(query).To(Equal("CREATE DATABASE IF NOT EXISTS ? CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"))
+				Expect(args).To(ConsistOf(db.Name))
 
 				return nil
 			},
-			func(dsn string, query string, args ...interface{}) error {
+			func(query string, args ...interface{}) error {
 				defer GinkgoRecover()
 
 				By("Creating the database second run")
-				Expect(dsn).To(Equal(getExpectedDSN(clusterName)))
-				Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", db.Name)))
-				Expect(args).To(HaveLen(0))
+				Expect(query).To(Equal("CREATE DATABASE IF NOT EXISTS ? CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"))
+				Expect(args).To(ConsistOf(db.Name))
 
 				return nil
 			},

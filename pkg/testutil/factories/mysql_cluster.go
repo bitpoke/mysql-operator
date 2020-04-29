@@ -34,10 +34,10 @@ import (
 // MySQLClusterOption is the option type for for the invite factory
 type MySQLClusterOption func(*mysqlv1alpha1.MysqlCluster) error
 
-// CreateMySQLCluster is the option for creating mysql cluster k8s resource
-func CreateMySQLCluster(ctx context.Context, c client.Client) MySQLClusterOption {
+// CreateMySQLClusterInK8s is the option for creating mysql cluster k8s resource
+func CreateMySQLClusterInK8s(c client.Client) MySQLClusterOption {
 	return func(mc *mysqlv1alpha1.MysqlCluster) error {
-		if err := c.Create(ctx, mc); err != nil {
+		if err := c.Create(context.TODO(), mc); err != nil {
 			return err
 		}
 
@@ -46,7 +46,7 @@ func CreateMySQLCluster(ctx context.Context, c client.Client) MySQLClusterOption
 }
 
 // CreateMySQLClusterSecret is the option for creating mysql cluster secret
-func CreateMySQLClusterSecret(ctx context.Context, c client.Client, secret *corev1.Secret) MySQLClusterOption {
+func CreateMySQLClusterSecret(c client.Client, secret *corev1.Secret) MySQLClusterOption {
 	return func(mc *mysqlv1alpha1.MysqlCluster) error {
 		if secret == nil {
 			return errors.New("secret may not be nil")
@@ -62,7 +62,7 @@ func CreateMySQLClusterSecret(ctx context.Context, c client.Client, secret *core
 			"ROOT_PASSWORD": "password",
 		}
 
-		return c.Create(ctx, secret)
+		return c.Create(context.TODO(), secret)
 	}
 }
 

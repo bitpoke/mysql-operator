@@ -119,6 +119,7 @@ type MySQLUserStatus struct {
 
 // MySQLUser is the Schema for the MySQL User API
 // +k8s:openapi-gen=true
+// +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type == "Ready")].status",description="The user status"
 // +kubebuilder:printcolumn:name="Cluster",type="date",JSONPath=".spec.clusterRef.name"
 // +kubebuilder:printcolumn:name="UserName",type="date",JSONPath=".spec.user"

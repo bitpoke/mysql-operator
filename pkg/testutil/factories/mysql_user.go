@@ -34,8 +34,8 @@ import (
 // MySQLUserOption is the option type for for the invite factory
 type MySQLUserOption func(*mysqluser.MySQLUser) error
 
-// BuildMySQLUser is a helper func that builds a mysql user
-func BuildMySQLUser(cl client.Client, cluster *mysqlv1alpha1.MysqlCluster, opts ...MySQLUserOption) *mysqluser.MySQLUser {
+// MySQLUser is a helper func that builds a mysql user
+func MySQLUser(cluster *mysqlv1alpha1.MysqlCluster, opts ...MySQLUserOption) *mysqluser.MySQLUser {
 	// Set a default user and implicitly a resource name
 	user := fmt.Sprintf("user-%d", rand.Int31())
 	opts = append([]MySQLUserOption{WithUser(user)}, opts...)
@@ -60,12 +60,11 @@ func BuildMySQLUser(cl client.Client, cluster *mysqlv1alpha1.MysqlCluster, opts 
 	return mu
 }
 
-// CreateMySQLUser is a helper func that builds a mysql user
-func CreateMySQLUser(cl client.Client, cluster *mysqlv1alpha1.MysqlCluster, opts ...MySQLUserOption) *mysqluser.MySQLUser {
-	mu := BuildMySQLUser(cl, cluster, opts...)
-	Expect(cl.Create(context.TODO(), mu.Unwrap())).To(Succeed())
-
-	return mu
+// CreateMySQLUserInK8s is a options func that creates in k8s the user
+func CreateMySQLUserInK8s(cl client.Client) MySQLUserOption {
+	return func(user *mysqluser.MySQLUser) error {
+		return cl.Create(context.TODO(), user.Unwrap())
+	}
 }
 
 // WithUser is an option to specify a user when creating the MySQLUser

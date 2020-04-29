@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"github.com/presslabs/mysql-operator/pkg/testutil/factories"
+	"github.com/presslabs/mysql-operator/pkg/testutil/gomegamatcher"
 	"strings"
 	"time"
 
@@ -54,7 +55,7 @@ var _ = Describe("MySQL user controller", func() {
 		// controller k8s client
 		c client.Client
 		// fake query runner
-		fakeQueryRunner *fake.QueryRunner
+		fakeSQL *fake.SQLRunner
 	)
 
 	BeforeEach(func() {
@@ -69,10 +70,10 @@ var _ = Describe("MySQL user controller", func() {
 		c, err = client.New(cfg, client.Options{})
 		Expect(err).To(Succeed())
 
-		fakeQueryRunner = fake.NewQueryRunner(false)
+		fakeSQL = fake.NewQueryRunner(false)
 
 		var recFn reconcile.Reconciler
-		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, fakeQueryRunner.Run))
+		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, fake.NewFakeFactory(fakeSQL)))
 		Expect(add(mgr, recFn)).To(Succeed())
 
 		stop = testutil.StartTestManager(mgr)
@@ -81,51 +82,53 @@ var _ = Describe("MySQL user controller", func() {
 
 	AfterEach(func() {
 		close(stop)
-		fakeQueryRunner.DisallowExtraCalls()
+		fakeSQL.DisallowExtraCalls()
 	})
 
 	var (
 		expectedRequest reconcile.Request
-		mySQLUser       *mysqluser.MySQLUser
-		mySQLUserKey    client.ObjectKey
+		user            *mysqluser.MySQLUser
+		userKey         client.ObjectKey
 		cluster         *mysqlv1alpha1.MysqlCluster
 		userPassword    string
 	)
+
+	BeforeEach(func() {
+		var err error
+		userPassword, err = rand.AlphaNumericString(64)
+		Expect(err).To(BeNil())
+	})
 
 	When("creating the MySQLUser", func() {
 		AfterEach(func() {
 			// Cleanup resources
 			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
 			// Delete resource even if it's deleted or has finalizer on it
-			c.Delete(context.TODO(), mySQLUser.Unwrap())
-			if c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap()) == nil {
-				mySQLUser.Finalizers = []string{}
-				c.Update(context.TODO(), mySQLUser.Unwrap())
+			c.Delete(context.TODO(), user.Unwrap())
+			if c.Get(context.TODO(), userKey, user.Unwrap()) == nil {
+				user.Finalizers = []string{}
+				c.Update(context.TODO(), user.Unwrap())
 			}
 			Eventually(func() error {
-				return c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap())
+				return c.Get(context.TODO(), userKey, user.Unwrap())
 			}).ShouldNot(Succeed())
-			fakeQueryRunner.AssertNoCallsLeft()
+			fakeSQL.AssertNoCallsLeft()
 		})
 
 		Context("without permissions", func() {
 			BeforeEach(func() {
 				// Create prerequisite resources
 				cluster = factories.NewMySQLCluster(
-					factories.CreateMySQLClusterSecret(context.TODO(), c, &corev1.Secret{}),
-					factories.CreateMySQLCluster(context.TODO(), c),
+					factories.CreateMySQLClusterSecret(c, &corev1.Secret{}),
+					factories.CreateMySQLClusterInK8s(c),
 				)
 
-				var err error
-				userPassword, err = rand.AlphaNumericString(64)
-				Expect(err).To(BeNil())
-
-				mySQLUser = factories.BuildMySQLUser(c, cluster, factories.WithPassword(c, userPassword))
-				mySQLUserKey = client.ObjectKey{Name: mySQLUser.Name, Namespace: mySQLUser.Namespace}
+				user = factories.MySQLUser(cluster, factories.WithPassword(c, userPassword))
+				userKey = client.ObjectKey{Name: user.Name, Namespace: user.Namespace}
 				expectedRequest = reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Namespace: "default",
-						Name:      mySQLUser.Name,
+						Name:      user.Name,
 					},
 				}
 			})
@@ -133,15 +136,14 @@ var _ = Describe("MySQL user controller", func() {
 			It("reconciles the mysql user, but not before the finalizer has been set", func() {
 				expectedDSN := "root:password@tcp(" + cluster.Name + "-mysql-master." + cluster.Namespace + ":3306)" +
 					"/?timeout=5s&multiStatements=true&interpolateParams=true"
-				expectedQueryRunnerCall := func(dsn string, query string, args ...interface{}) error {
+				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
 					defer GinkgoRecover()
 
 					By("Checking finalizer")
-					Expect(c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap())).To(Succeed())
-					Expect(meta.HasFinalizer(&mySQLUser.ObjectMeta, userFinalizer))
+					Expect(c.Get(context.TODO(), userKey, user.Unwrap())).To(Succeed())
+					Expect(meta.HasFinalizer(&user.ObjectMeta, userFinalizer))
 
 					By("Creating user")
-					Expect(dsn).To(Equal(expectedDSN))
 
 					expectedQuery := strings.Join([]string{
 						"BEGIN;\n",
@@ -152,31 +154,32 @@ var _ = Describe("MySQL user controller", func() {
 					Expect(query).To(Equal(expectedQuery))
 
 					Expect(args).To(ConsistOf(
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], userPassword,
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], userPassword,
+						user.Spec.User, user.Spec.AllowedHosts[0], userPassword,
+						user.Spec.User, user.Spec.AllowedHosts[0], userPassword,
 					))
 
 					return nil
 				}
 
-				fakeQueryRunner.AddExpectedCalls(expectedQueryRunnerCall)
+				fakeSQL.AssertDSN(expectedDSN)
+				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 
-				Expect(c.Create(context.TODO(), mySQLUser.Unwrap())).To(Succeed())
+				Expect(c.Create(context.TODO(), user.Unwrap())).To(Succeed())
 
 				// Wait for initial reconciliation
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 				// Wait for reconciliation triggered by finalizer being set
-				fakeQueryRunner.AddExpectedCalls(expectedQueryRunnerCall)
+				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 				// We need to make sure that the controller does not create infinite loops
 				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 			})
 			It("sets the ready status to true", func() {
-				fakeQueryRunner.AllowExtraCalls()
+				fakeSQL.AllowExtraCalls()
 
-				Expect(c.Create(context.TODO(), mySQLUser.Unwrap())).To(Succeed())
+				Expect(c.Create(context.TODO(), user.Unwrap())).To(Succeed())
 
 				// Wait for initial reconciliation
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
@@ -187,10 +190,8 @@ var _ = Describe("MySQL user controller", func() {
 				// We need to make sure that the controller does not create infinite loops
 				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 
-				Expect(c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap())).To(Succeed())
-				cond, exists := mySQLUser.ConditionExists(mysqlv1alpha1.MySQLUserReady)
-				Expect(exists).To(BeTrue())
-				Expect(cond.Status).To(Equal(corev1.ConditionTrue))
+				Expect(c.Get(context.TODO(), userKey, user.Unwrap())).To(Succeed())
+				Expect(user.Unwrap()).To(gomegamatcher.HaveCondition(mysqlv1alpha1.MySQLUserReady, corev1.ConditionTrue))
 			})
 		})
 
@@ -198,16 +199,12 @@ var _ = Describe("MySQL user controller", func() {
 			BeforeEach(func() {
 				// Create prerequisite resources
 				cluster = factories.NewMySQLCluster(
-					factories.CreateMySQLClusterSecret(context.TODO(), c, &corev1.Secret{}),
-					factories.CreateMySQLCluster(context.TODO(), c),
+					factories.CreateMySQLClusterSecret(c, &corev1.Secret{}),
+					factories.CreateMySQLClusterInK8s(c),
 				)
 
-				var err error
-				userPassword, err = rand.AlphaNumericString(64)
-				Expect(err).To(BeNil())
-
-				mySQLUser = factories.BuildMySQLUser(
-					c, cluster,
+				user = factories.MySQLUser(
+					cluster,
 					factories.WithPassword(c, userPassword),
 					factories.WithPermissions(
 						mysqlv1alpha1.MySQLPermission{
@@ -224,11 +221,11 @@ var _ = Describe("MySQL user controller", func() {
 						},
 					),
 				)
-				mySQLUserKey = client.ObjectKey{Name: mySQLUser.Name, Namespace: mySQLUser.Namespace}
+				userKey = client.ObjectKey{Name: user.Name, Namespace: user.Namespace}
 				expectedRequest = reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Namespace: "default",
-						Name:      mySQLUser.Name,
+						Name:      user.Name,
 					},
 				}
 			})
@@ -236,7 +233,7 @@ var _ = Describe("MySQL user controller", func() {
 			It("reconciles the mysql user, but not before the finalizer has been set", func() {
 				expectedDSN := "root:password@tcp(" + cluster.Name + "-mysql-master." + cluster.Namespace + ":3306)" +
 					"/?timeout=5s&multiStatements=true&interpolateParams=true"
-				expectedQueryRunnerCall := func(dsn string, query string, args ...interface{}) error {
+				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
 					defer GinkgoRecover()
 
 					By("Creating the user")
@@ -252,36 +249,35 @@ var _ = Describe("MySQL user controller", func() {
 					Expect(query).To(Equal(expectedQuery))
 
 					Expect(args).To(ConsistOf(
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], userPassword, // create user
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], userPassword, // alter user
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], // grant privilege #1
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], // grant privilege #2
-						mySQLUser.Spec.User, mySQLUser.Spec.AllowedHosts[0], // grant privilege #3
+						user.Spec.User, user.Spec.AllowedHosts[0], userPassword, // create user
+						user.Spec.User, user.Spec.AllowedHosts[0], userPassword, // alter user
+						user.Spec.User, user.Spec.AllowedHosts[0], // grant privilege #1
+						user.Spec.User, user.Spec.AllowedHosts[0], // grant privilege #2
+						user.Spec.User, user.Spec.AllowedHosts[0], // grant privilege #3
 					))
-
-					Expect(dsn).To(Equal(expectedDSN))
 
 					return nil
 				}
 
-				fakeQueryRunner.AddExpectedCalls(expectedQueryRunnerCall)
+				fakeSQL.AssertDSN(expectedDSN)
+				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 
-				Expect(c.Create(context.TODO(), mySQLUser.Unwrap())).To(Succeed())
+				Expect(c.Create(context.TODO(), user.Unwrap())).To(Succeed())
 
 				// Wait for initial reconciliation
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 				// Wait for reconciliation triggered by finalizer being set
-				fakeQueryRunner.AddExpectedCalls(expectedQueryRunnerCall)
+				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 				// We need to make sure that the controller does not create infinite loops
 				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 			})
 			It("sets the ready status to true", func() {
-				fakeQueryRunner.AllowExtraCalls()
+				fakeSQL.AllowExtraCalls()
 
-				Expect(c.Create(context.TODO(), mySQLUser.Unwrap())).To(Succeed())
+				Expect(c.Create(context.TODO(), user.Unwrap())).To(Succeed())
 
 				// Wait for initial reconciliation
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
@@ -292,10 +288,108 @@ var _ = Describe("MySQL user controller", func() {
 				// We need to make sure that the controller does not create infinite loops
 				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 
-				Expect(c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap())).To(Succeed())
-				cond, exists := mySQLUser.ConditionExists(mysqlv1alpha1.MySQLUserReady)
-				Expect(exists).To(BeTrue())
-				Expect(cond.Status).To(Equal(corev1.ConditionTrue))
+				Expect(c.Get(context.TODO(), userKey, user.Unwrap())).To(Succeed())
+				Expect(user.Unwrap()).To(gomegamatcher.HaveCondition(mysqlv1alpha1.MySQLUserReady, corev1.ConditionTrue))
+			})
+		})
+
+		Context("user is created with multiple allowed hosts", func() {
+			BeforeEach(func() {
+				fakeSQL.AllowExtraCalls()
+
+				// Create prerequisite resources
+				cluster = factories.NewMySQLCluster(
+					factories.CreateMySQLClusterSecret(c, &corev1.Secret{}),
+					factories.CreateMySQLClusterInK8s(c),
+				)
+
+				user = factories.MySQLUser(cluster, factories.WithPassword(c, userPassword),
+					func(user *mysqluser.MySQLUser) error {
+						user.Spec.AllowedHosts = []string{"test1", "test2"}
+						return nil
+					},
+					factories.CreateMySQLUserInK8s(c),
+				)
+				userKey = client.ObjectKey{Name: user.Name, Namespace: user.Namespace}
+				expectedRequest = reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: "default",
+						Name:      user.Name,
+					},
+				}
+
+				// Wait for initial reconciliation
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+				// Wait for reconciliation triggered by finalizer being set
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
+			})
+
+			It("should update status with allowed hosts", func() {
+				Expect(c.Get(context.TODO(), userKey, user.Unwrap())).To(Succeed())
+				Expect(user.Status.AllowedHosts).To(ConsistOf("test1", "test2"))
+				// copy user name because is used in other goroutines
+				// an may end up in a data-race
+				userName := user.Spec.User
+
+				fakeSQL.AddExpectedCalls(func(query string, args ...interface{}) error {
+					defer GinkgoRecover()
+
+					By("Updating the user with new allowed host (first reconciliation)")
+					expectedQuery := strings.Join([]string{
+						"BEGIN;\n",
+						"CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?, ?@? IDENTIFIED BY ?;\n",
+						"ALTER USER ?@? IDENTIFIED BY ?, ?@? IDENTIFIED BY ?;\n",
+						"COMMIT;",
+					}, "")
+
+					Expect(query).To(Equal(expectedQuery))
+					Expect(args).To(ConsistOf(
+						userName, "test1", userPassword,
+						userName, "new-host", userPassword,
+						userName, "test1", userPassword,
+						userName, "new-host", userPassword,
+					))
+
+					return nil
+				}, func(query string, args ...interface{}) error {
+					defer GinkgoRecover()
+
+					By("Remove user old allowed host (first reconciliation)")
+					Expect(query).To(Equal("DROP USER IF EXISTS ?@?;"))
+					Expect(args).To(ConsistOf(userName, "test2"))
+					return nil
+				}, func(query string, args ...interface{}) error {
+					defer GinkgoRecover()
+
+					By("Updating the user with new allowed host (second reconciliation)")
+					expectedQuery := strings.Join([]string{
+						"BEGIN;\n",
+						"CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?, ?@? IDENTIFIED BY ?;\n",
+						"ALTER USER ?@? IDENTIFIED BY ?, ?@? IDENTIFIED BY ?;\n",
+						"COMMIT;",
+					}, "")
+
+					Expect(query).To(Equal(expectedQuery))
+					Expect(args).To(ConsistOf(
+						userName, "test1", userPassword,
+						userName, "new-host", userPassword,
+						userName, "test1", userPassword,
+						userName, "new-host", userPassword,
+					))
+					return nil
+				})
+				fakeSQL.DisallowExtraCalls()
+
+				user.Spec.AllowedHosts = []string{"test1", "new-host"}
+				Expect(c.Update(context.TODO(), user.Unwrap())).To(Succeed())
+
+				// updates the user
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+				// status get updated (second reconciliation)
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 			})
 		})
 
@@ -303,45 +397,40 @@ var _ = Describe("MySQL user controller", func() {
 			BeforeEach(func() {
 				// Create prerequisite resources
 				cluster = factories.NewMySQLCluster(
-					factories.CreateMySQLClusterSecret(context.TODO(), c, &corev1.Secret{}),
-					factories.CreateMySQLCluster(context.TODO(), c),
+					factories.CreateMySQLClusterSecret(c, &corev1.Secret{}), factories.CreateMySQLClusterInK8s(c),
 				)
 
-				var err error
-				userPassword, err = rand.AlphaNumericString(64)
-				Expect(err).To(BeNil())
-
 				// The mysql user creation fails
-				expectedQueryRunnerCall := func(dsn string, query string, args ...interface{}) error {
+				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
 					defer GinkgoRecover()
 
 					return errors.New("couldn't create user")
 				}
-				fakeQueryRunner.AddExpectedCalls(expectedQueryRunnerCall, expectedQueryRunnerCall)
+				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall, expectedQueryRunnerCall)
 
-				mySQLUser = factories.CreateMySQLUser(c, cluster, factories.WithPassword(c, userPassword))
-				mySQLUserKey = client.ObjectKey{Name: mySQLUser.Name, Namespace: mySQLUser.Namespace}
+				user = factories.MySQLUser(cluster, factories.WithPassword(c, userPassword), factories.CreateMySQLUserInK8s(c))
+				userKey = client.ObjectKey{Name: user.Name, Namespace: user.Namespace}
 				expectedRequest = reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Namespace: "default",
-						Name:      mySQLUser.Name,
+						Name:      user.Name,
 					},
 				}
 			})
 
-			It("doesn't remove the user finalizer and it tries to reconcile again", func() {
+			It("tries to reconcile again", func() {
 				// Wait for initial reconciliation
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 				// Check that the finalizer is still there
-				Expect(c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap())).To(Succeed())
-				Expect(meta.HasFinalizer(&mySQLUser.ObjectMeta, userFinalizer)).To(BeTrue())
+				Expect(c.Get(context.TODO(), userKey, user.Unwrap())).To(Succeed())
+				Expect(user.Finalizers).ToNot(ContainElement(userFinalizer))
 
 				// Wait for second reconciliation, since the first one failed
 				Eventually(requests, "2s").Should(Receive(Equal(expectedRequest)))
 			})
 			It("sets the ready status to false", func() {
-				fakeQueryRunner.AllowExtraCalls()
+				fakeSQL.AllowExtraCalls()
 
 				// Wait for initial reconciliation
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
@@ -350,11 +439,8 @@ var _ = Describe("MySQL user controller", func() {
 				Eventually(requests, "2s").Should(Receive(Equal(expectedRequest)))
 
 				// check status
-				Expect(c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap())).To(Succeed())
-				cond, exists := mySQLUser.ConditionExists(mysqlv1alpha1.MySQLUserReady)
-				Expect(exists).To(BeTrue())
-				Expect(cond.Status).To(Equal(corev1.ConditionFalse))
-				Expect(cond.Reason).To(Equal("ProvisionFailed"))
+				Expect(c.Get(context.TODO(), userKey, user.Unwrap())).To(Succeed())
+				Expect(user.Unwrap()).To(gomegamatcher.HaveCondition(mysqlv1alpha1.MySQLUserReady, corev1.ConditionFalse))
 			})
 		})
 	})
@@ -362,30 +448,26 @@ var _ = Describe("MySQL user controller", func() {
 		BeforeEach(func() {
 			// Create prerequisite resources
 			cluster = factories.NewMySQLCluster(
-				factories.CreateMySQLClusterSecret(context.TODO(), c, &corev1.Secret{}),
-				factories.CreateMySQLCluster(context.TODO(), c),
+				factories.CreateMySQLClusterSecret(c, &corev1.Secret{}),
+				factories.CreateMySQLClusterInK8s(c),
 			)
 
-			var err error
-			userPassword, err = rand.AlphaNumericString(64)
-			Expect(err).To(BeNil())
-
-			mySQLUser = factories.CreateMySQLUser(c, cluster, factories.WithPassword(c, userPassword),
+			user = factories.MySQLUser(cluster, factories.WithPassword(c, userPassword),
 				func(user *mysqluser.MySQLUser) error {
 					meta.AddFinalizer(&user.ObjectMeta, userFinalizer)
 
 					return nil
-				})
-			mySQLUserKey = client.ObjectKey{Name: mySQLUser.Name, Namespace: mySQLUser.Namespace}
+				}, factories.CreateMySQLUserInK8s(c))
+			userKey = client.ObjectKey{Name: user.Name, Namespace: user.Namespace}
 			expectedRequest = reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: "default",
-					Name:      mySQLUser.Name,
+					Name:      user.Name,
 				},
 			}
 
 			// Allow creation reconciliation to proceed
-			allowReconciliation(fakeQueryRunner, requests, expectedRequest)
+			allowReconciliation(fakeSQL, requests, expectedRequest)
 		})
 
 		AfterEach(func() {
@@ -394,7 +476,7 @@ var _ = Describe("MySQL user controller", func() {
 			if err != nil {
 				Expect(apierrors.IsNotFound(err)).To(BeTrue())
 			}
-			fakeQueryRunner.AssertNoCallsLeft()
+			fakeSQL.AssertNoCallsLeft()
 		})
 
 		Context("and the user can be deleted in mysql", func() {
@@ -403,21 +485,21 @@ var _ = Describe("MySQL user controller", func() {
 			It("deletes the mysql user", func() {
 				expectedDSN := "root:password@tcp(" + cluster.Name + "-mysql-master." + cluster.Namespace + ":3306)" +
 					"/?timeout=5s&multiStatements=true&interpolateParams=true"
-				expectedQueryRunnerCall := func(dsn string, query string, args ...interface{}) error {
+				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
 					defer GinkgoRecover()
 
 					By("Deleting the user")
 					expectedQuery := "DROP USER IF EXISTS ?;"
 					Expect(query).To(Equal(expectedQuery))
-					Expect(args).To(ConsistOf(mySQLUser.Spec.User))
-					Expect(dsn).To(Equal(expectedDSN))
+					Expect(args).To(ConsistOf(user.Spec.User))
 
 					return deletionResult
 				}
 
-				fakeQueryRunner.AddExpectedCalls(expectedQueryRunnerCall)
+				fakeSQL.AssertDSN(expectedDSN)
+				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 
-				Expect(c.Delete(context.TODO(), mySQLUser.Unwrap())).To(Succeed())
+				Expect(c.Delete(context.TODO(), user.Unwrap())).To(Succeed())
 				// Wait for initial reconciliation
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
@@ -429,9 +511,9 @@ var _ = Describe("MySQL user controller", func() {
 			})
 
 			It("removes the user finalizer, and the resource is deleted", func() {
-				fakeQueryRunner.AllowExtraCalls()
+				fakeSQL.AllowExtraCalls()
 
-				Expect(c.Delete(context.TODO(), mySQLUser.Unwrap())).To(Succeed())
+				Expect(c.Delete(context.TODO(), user.Unwrap())).To(Succeed())
 				// Wait for initial reconciliation
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
@@ -441,7 +523,7 @@ var _ = Describe("MySQL user controller", func() {
 				// We need to make sure that the controller does not create infinite loops
 				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 
-				err := c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap())
+				err := c.Get(context.TODO(), userKey, user.Unwrap())
 				Expect(apierrors.IsNotFound(err)).To(BeTrue())
 			})
 		})
@@ -450,34 +532,34 @@ var _ = Describe("MySQL user controller", func() {
 
 			AfterEach(func() {
 				// Delete resource even if it's deleted or has finalizer on it
-				c.Delete(context.TODO(), mySQLUser.Unwrap())
-				if c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap()) == nil {
-					mySQLUser.Finalizers = []string{}
-					c.Update(context.TODO(), mySQLUser.Unwrap())
+				c.Delete(context.TODO(), user.Unwrap())
+				if c.Get(context.TODO(), userKey, user.Unwrap()) == nil {
+					user.Finalizers = []string{}
+					c.Update(context.TODO(), user.Unwrap())
 				}
 				Eventually(func() error {
-					return c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap())
+					return c.Get(context.TODO(), userKey, user.Unwrap())
 				}).ShouldNot(Succeed())
 			})
 
 			It("doesn't remove the user finalizer and it tries to reconcile again", func() {
-				expectedQueryRunnerCall := func(dsn string, query string, args ...interface{}) error {
+				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
 					defer GinkgoRecover()
 
 					return deletionResult
 				}
-				fakeQueryRunner.AddExpectedCalls(expectedQueryRunnerCall)
+				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 
-				Expect(c.Delete(context.TODO(), mySQLUser.Unwrap())).To(Succeed())
+				Expect(c.Delete(context.TODO(), user.Unwrap())).To(Succeed())
 				// Wait for initial reconciliation
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 				// Check that the finalizer is still there
-				Expect(c.Get(context.TODO(), mySQLUserKey, mySQLUser.Unwrap())).To(Succeed())
-				Expect(meta.HasFinalizer(&mySQLUser.ObjectMeta, userFinalizer)).To(BeTrue())
+				Expect(c.Get(context.TODO(), userKey, user.Unwrap())).To(Succeed())
+				Expect(user.Finalizers).To(ContainElement(userFinalizer))
 
 				// Wait for second reconciliation, since the first one failed
-				fakeQueryRunner.AddExpectedCalls(expectedQueryRunnerCall)
+				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 				Eventually(requests, "2s").Should(Receive(Equal(expectedRequest)))
 			})
 		})
@@ -487,7 +569,7 @@ var _ = Describe("MySQL user controller", func() {
 				Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
 			})
 			It("assumes the user has been deleted", func() {
-				Expect(c.Delete(context.TODO(), mySQLUser.Unwrap())).To(Succeed())
+				Expect(c.Delete(context.TODO(), user.Unwrap())).To(Succeed())
 				// Wait for initial reconciliation
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
@@ -501,7 +583,7 @@ var _ = Describe("MySQL user controller", func() {
 	})
 })
 
-func allowReconciliation(fakeQueryRunner *fake.QueryRunner, requests chan reconcile.Request, expectedRequest reconcile.Request) {
+func allowReconciliation(fakeQueryRunner *fake.SQLRunner, requests chan reconcile.Request, expectedRequest reconcile.Request) {
 	fakeQueryRunner.AllowExtraCalls()
 	done := time.After(500 * time.Millisecond)
 drain:
