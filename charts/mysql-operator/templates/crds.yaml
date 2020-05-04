@@ -78,16 +78,16 @@ spec:
     type: string
   - JSONPath: .spec.clusterRef.name
     name: Cluster
-    type: date
+    type: string
   - JSONPath: .spec.database
     name: Database
-    type: date
+    type: string
   - JSONPath: .metadata.creationTimestamp
     name: Age
     type: date
   group: mysql.presslabs.org
   names:
-    kind: MySQLDatabase
+    kind: MysqlDatabase
     plural: mysqldatabases
   scope: Namespaced
   subresources:
@@ -114,16 +114,16 @@ spec:
     type: string
   - JSONPath: .spec.clusterRef.name
     name: Cluster
-    type: date
+    type: string
   - JSONPath: .spec.user
     name: UserName
-    type: date
+    type: string
   - JSONPath: .metadata.creationTimestamp
     name: Age
     type: date
   group: mysql.presslabs.org
   names:
-    kind: MySQLUser
+    kind: MysqlUser
     plural: mysqlusers
   scope: Namespaced
   subresources:

@@ -28,23 +28,27 @@ import (
 type ClusterReference struct {
 	corev1.LocalObjectReference `json:",inline"`
 	// Namespace the MySQL cluster namespace
-	Namespace string `json:"namespace"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
-// MySQLUserSpec defines the desired state of MySQLUserSpec
-type MySQLUserSpec struct {
+// MysqlUserSpec defines the desired state of MysqlUserSpec
+type MysqlUserSpec struct {
 	// ClusterRef represents a reference to the MySQL cluster.
 	// This field should be immutable.
 	ClusterRef ClusterReference `json:"clusterRef"`
+
 	// User is the name of the user that will be created with will access the specified database.
 	// This field should be immutable.
 	User string `json:"user"`
+
 	// Password is the password for the user.
 	Password corev1.SecretKeySelector `json:"password"`
+
 	// AllowedHosts is the allowed host to connect from.
-	AllowedHosts []string `json:"allowedHosts,omitempty"`
+	AllowedHosts []string `json:"allowedHosts"`
+
 	// Permissions is the list of roles that user has in the specified database.
-	Permissions []MySQLPermission `json:"permissions,omitempty"`
+	Permissions []MysqlPermission `json:"permissions,omitempty"`
 
 	// ResourceLimits allow settings limit per mysql user as defined here:
 	// https://dev.mysql.com/doc/refman/5.7/en/user-resources.html
@@ -52,8 +56,8 @@ type MySQLUserSpec struct {
 	ResourceLimits corev1.ResourceList `json:"resourceLimits,omitempty"`
 }
 
-// MySQLPermission defines a MySQL schema permission
-type MySQLPermission struct {
+// MysqlPermission defines a MySQL schema permission
+type MysqlPermission struct {
 	// Schema represents the schema to which the permission applies
 	Schema string `json:"schema"`
 	// Tables represents the tables inside the schema to which the permission applies
@@ -77,21 +81,21 @@ const (
 
 	// AccountResourceMaxConnectionsPerHour it restricts how many connections to the server
 	// are permitted to each account during any given one-hour period.
-	AccountResourceMaxConnectionsPerHour corev1.ResourceName = " MAX_CONNECTIONS_PER_HOUR"
+	AccountResourceMaxConnectionsPerHour corev1.ResourceName = "MAX_CONNECTIONS_PER_HOUR"
 )
 
-// MySQLUserConditionType defines the condition types of a MySQLUser resource
-type MySQLUserConditionType string
+// MysqlUserConditionType defines the condition types of a MysqlUser resource
+type MysqlUserConditionType string
 
 const (
 	// MySQLUserReady means the MySQL user is ready when database exists.
-	MySQLUserReady MySQLUserConditionType = "Ready"
+	MySQLUserReady MysqlUserConditionType = "Ready"
 )
 
-// MySQLUserCondition defines the condition struct for a MySQLUser resource
+// MySQLUserCondition defines the condition struct for a MysqlUser resource
 type MySQLUserCondition struct {
-	// Type of MySQLUser condition.
-	Type MySQLUserConditionType `json:"type"`
+	// Type of MysqlUser condition.
+	Type MysqlUserConditionType `json:"type"`
 	// Status of the condition, one of True, False, Unknown.
 	Status corev1.ConditionStatus `json:"status"`
 	// The last time this condition was updated.
@@ -104,9 +108,9 @@ type MySQLUserCondition struct {
 	Message string `json:"message"`
 }
 
-// MySQLUserStatus defines the observed state of MySQLUser
-type MySQLUserStatus struct {
-	// Conditions represents the MySQLUser resource conditions list.
+// MysqlUserStatus defines the observed state of MysqlUser
+type MysqlUserStatus struct {
+	// Conditions represents the MysqlUser resource conditions list.
 	// +optional
 	Conditions []MySQLUserCondition `json:"conditions,omitempty"`
 
@@ -117,29 +121,29 @@ type MySQLUserStatus struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// MySQLUser is the Schema for the MySQL User API
+// MysqlUser is the Schema for the MySQL User API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type == "Ready")].status",description="The user status"
-// +kubebuilder:printcolumn:name="Cluster",type="date",JSONPath=".spec.clusterRef.name"
-// +kubebuilder:printcolumn:name="UserName",type="date",JSONPath=".spec.user"
+// +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".spec.clusterRef.name"
+// +kubebuilder:printcolumn:name="UserName",type="string",JSONPath=".spec.user"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-type MySQLUser struct {
+type MysqlUser struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              MySQLUserSpec   `json:"spec,omitempty"`
-	Status            MySQLUserStatus `json:"status,omitempty"`
+	Spec              MysqlUserSpec   `json:"spec,omitempty"`
+	Status            MysqlUserStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// MySQLUserList contains a list of MySQLUser
-type MySQLUserList struct {
+// MysqlUserList contains a list of MysqlUser
+type MysqlUserList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []MySQLUser `json:"items,omitempty"`
+	Items           []MysqlUser `json:"items,omitempty"`
 }
 
 func init() {
-	SchemeBuilder.Register(&MySQLUser{}, &MySQLUserList{})
+	SchemeBuilder.Register(&MysqlUser{}, &MysqlUserList{})
 }

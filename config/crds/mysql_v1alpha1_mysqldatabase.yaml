@@ -13,16 +13,16 @@ spec:
     type: string
   - JSONPath: .spec.clusterRef.name
     name: Cluster
-    type: date
+    type: string
   - JSONPath: .spec.database
     name: Database
-    type: date
+    type: string
   - JSONPath: .metadata.creationTimestamp
     name: Age
     type: date
   group: mysql.presslabs.org
   names:
-    kind: MySQLDatabase
+    kind: MysqlDatabase
     plural: mysqldatabases
   scope: Namespaced
   subresources:
@@ -55,8 +55,6 @@ spec:
                 namespace:
                   description: Namespace the MySQL cluster namespace
                   type: string
-              required:
-              - namespace
               type: object
             database:
               description: Database represents the database name which will be created.
@@ -69,7 +67,7 @@ spec:
         status:
           properties:
             conditions:
-              description: Conditions represents the MySQLDatabase  resource conditions
+              description: Conditions represents the MysqlDatabase  resource conditions
                 list.
               items:
                 properties:
@@ -93,7 +91,7 @@ spec:
                     description: Status of the condition, one of True, False, Unknown.
                     type: string
                   type:
-                    description: Type of MySQLDatabase condition.
+                    description: Type of MysqlDatabase condition.
                     type: string
                 required:
                 - type

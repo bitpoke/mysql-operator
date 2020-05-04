@@ -34,28 +34,28 @@ const (
 	ProvisionFailed = "ProvisionFailed"
 )
 
-// Database is a wrapper over MySQLDatabase k8s resource
+// Database is a wrapper over MysqlDatabase k8s resource
 type Database struct {
-	*mysqlv1alpha1.MySQLDatabase
+	*mysqlv1alpha1.MysqlDatabase
 }
 
-// Wrap wraps a MySQLDatabase
-func Wrap(db *mysqlv1alpha1.MySQLDatabase) *Database {
+// Wrap wraps a MysqlDatabase
+func Wrap(db *mysqlv1alpha1.MysqlDatabase) *Database {
 	return &Database{
-		MySQLDatabase: db,
+		MysqlDatabase: db,
 	}
 }
 
-// Unwrap returns the MySQLDatabase object
-func (db *Database) Unwrap() *mysqlv1alpha1.MySQLDatabase {
-	return db.MySQLDatabase
+// Unwrap returns the MysqlDatabase object
+func (db *Database) Unwrap() *mysqlv1alpha1.MysqlDatabase {
+	return db.MysqlDatabase
 }
 
 // ConditionExists returns a condition and whether it exists
 func (db *Database) ConditionExists(
-	ct mysqlv1alpha1.MySQLDatabaseConditionType,
+	ct mysqlv1alpha1.MysqlDatabaseConditionType,
 ) (
-	*mysqlv1alpha1.MySQLDatabaseCondition, bool,
+	*mysqlv1alpha1.MysqlDatabaseCondition, bool,
 ) {
 	for i := range db.Status.Conditions {
 		cond := &db.Status.Conditions[i]
@@ -69,15 +69,15 @@ func (db *Database) ConditionExists(
 
 // UpdateCondition updates the site's condition matching the given type
 func (db *Database) UpdateCondition(
-	condType mysqlv1alpha1.MySQLDatabaseConditionType, status corev1.ConditionStatus, reason, message string,
+	condType mysqlv1alpha1.MysqlDatabaseConditionType, status corev1.ConditionStatus, reason, message string,
 ) (
-	cond *mysqlv1alpha1.MySQLDatabaseCondition, changed bool,
+	cond *mysqlv1alpha1.MysqlDatabaseCondition, changed bool,
 ) {
 	t := metav1.NewTime(time.Now())
 
 	existingCondition, exists := db.ConditionExists(condType)
 	if !exists {
-		newCondition := mysqlv1alpha1.MySQLDatabaseCondition{
+		newCondition := mysqlv1alpha1.MysqlDatabaseCondition{
 			Type:               condType,
 			Status:             status,
 			Reason:             reason,
@@ -109,8 +109,13 @@ func (db *Database) UpdateCondition(
 
 // GetClusterKey is a helper function that returns the mysql cluster object key
 func (db *Database) GetClusterKey() client.ObjectKey {
+	ns := db.Spec.ClusterRef.Namespace
+	if ns == "" {
+		ns = db.Namespace
+	}
+
 	return client.ObjectKey{
 		Name:      db.Spec.ClusterRef.Name,
-		Namespace: db.Spec.ClusterRef.Namespace,
+		Namespace: ns,
 	}
 }

@@ -27,10 +27,10 @@ import (
 )
 
 const (
-	// ProvisionFailedReason is the condition reason when MySQLUser provisioning
+	// ProvisionFailedReason is the condition reason when MysqlUser provisioning
 	// has failed.
 	ProvisionFailedReason = "ProvisionFailed"
-	// ProvisionInProgressReason is the reason when MySQLUser provisioning has
+	// ProvisionInProgressReason is the reason when MysqlUser provisioning has
 	// started.
 	ProvisionInProgressReason = "ProvisionInProgress"
 
@@ -38,25 +38,25 @@ const (
 	ProvisionSucceededReason = "ProvisionSucceeded"
 )
 
-// MySQLUser embeds mysqlv1alpha1.MySQLUser and adds utility functions
+// MySQLUser embeds mysqlv1alpha1.MysqlUser and adds utility functions
 type MySQLUser struct {
-	*mysqlv1alpha1.MySQLUser
+	*mysqlv1alpha1.MysqlUser
 }
 
 // Wrap wraps a mysqlv1alpha1.AccountBinding into an AccountBinding object
-func Wrap(u *mysqlv1alpha1.MySQLUser) *MySQLUser {
+func Wrap(u *mysqlv1alpha1.MysqlUser) *MySQLUser {
 	return &MySQLUser{u}
 }
 
 // Unwrap returns the wrapped AccountBinding object
-func (u *MySQLUser) Unwrap() *mysqlv1alpha1.MySQLUser {
-	return u.MySQLUser
+func (u *MySQLUser) Unwrap() *mysqlv1alpha1.MysqlUser {
+	return u.MysqlUser
 }
 
 // UpdateStatusCondition sets the condition to a status.
 // for example Ready condition to True, or False
 func (u *MySQLUser) UpdateStatusCondition(
-	condType mysqlv1alpha1.MySQLUserConditionType,
+	condType mysqlv1alpha1.MysqlUserConditionType,
 	status v1.ConditionStatus, reason, message string,
 ) (
 	cond *mysqlv1alpha1.MySQLUserCondition, changed bool,
@@ -97,7 +97,7 @@ func (u *MySQLUser) UpdateStatusCondition(
 
 // ConditionExists returns a condition and whether it exists
 func (u *MySQLUser) ConditionExists(
-	ct mysqlv1alpha1.MySQLUserConditionType,
+	ct mysqlv1alpha1.MysqlUserConditionType,
 ) (
 	*mysqlv1alpha1.MySQLUserCondition, bool,
 ) {
@@ -111,10 +111,15 @@ func (u *MySQLUser) ConditionExists(
 	return nil, false
 }
 
-// GetClusterKey returns the MySQLUser's MySQLCluster key
+// GetClusterKey returns the MysqlUser's MySQLCluster key
 func (u *MySQLUser) GetClusterKey() client.ObjectKey {
+	ns := u.Spec.ClusterRef.Namespace
+	if ns == "" {
+		ns = u.Namespace
+	}
+
 	return client.ObjectKey{
 		Name:      u.Spec.ClusterRef.Name,
-		Namespace: u.Spec.ClusterRef.Namespace,
+		Namespace: ns,
 	}
 }

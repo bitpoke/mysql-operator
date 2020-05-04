@@ -93,8 +93,8 @@ var _ = Describe("MySQL database controller", func() {
 					defer GinkgoRecover()
 
 					By("Creating the database")
-					Expect(query).To(Equal("CREATE DATABASE IF NOT EXISTS ? CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"))
-					Expect(args).To(ConsistOf(db.Name))
+					Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;", db.Name)))
+					Expect(args).To(BeEmpty())
 
 					return nil
 				},
@@ -135,7 +135,7 @@ var _ = Describe("MySQL database controller", func() {
 		It("should mark the resource ready", func() {
 			// refresh resource
 			Expect(c.Get(context.TODO(), dbObjKey(db), db.Unwrap())).To(Succeed())
-			Expect(db.Unwrap()).To(gm.HaveCondition(mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionTrue))
+			Expect(db.Unwrap()).To(gm.HaveCondition(mysqlv1alpha1.MysqlDatabaseReady, corev1.ConditionTrue))
 
 		})
 
@@ -219,8 +219,7 @@ var _ = Describe("MySQL database controller", func() {
 				defer GinkgoRecover()
 
 				By("Creating the database")
-				Expect(query).To(Equal("CREATE DATABASE IF NOT EXISTS ? CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"))
-				Expect(args).To(ConsistOf(db.Name))
+				Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;", db.Name)))
 
 				return nil
 			},
@@ -228,8 +227,7 @@ var _ = Describe("MySQL database controller", func() {
 				defer GinkgoRecover()
 
 				By("Creating the database second run")
-				Expect(query).To(Equal("CREATE DATABASE IF NOT EXISTS ? CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"))
-				Expect(args).To(ConsistOf(db.Name))
+				Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;", db.Name)))
 
 				return nil
 			},
@@ -256,7 +254,7 @@ var _ = Describe("MySQL database controller", func() {
 		Eventually(requests).Should(Receive(Equal(expectedRequest)))
 
 		Expect(c.Get(context.TODO(), dbObjKey(db), db.Unwrap())).To(Succeed())
-		Expect(db.Unwrap()).To(gm.HaveCondition(mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionFalse))
+		Expect(db.Unwrap()).To(gm.HaveCondition(mysqlv1alpha1.MysqlDatabaseReady, corev1.ConditionFalse))
 
 		Expect(c.Delete(context.TODO(), db.Unwrap())).To(Succeed())
 
@@ -266,11 +264,11 @@ var _ = Describe("MySQL database controller", func() {
 	It("should update status", func() {
 		db := factories.NewDatabase()
 
-		db.UpdateCondition(mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionTrue, mysqldatabase.ProvisionSucceeded, "success")
-		Expect(db.Unwrap()).To(gm.HaveCondition(mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionTrue))
+		db.UpdateCondition(mysqlv1alpha1.MysqlDatabaseReady, corev1.ConditionTrue, mysqldatabase.ProvisionSucceeded, "success")
+		Expect(db.Unwrap()).To(gm.HaveCondition(mysqlv1alpha1.MysqlDatabaseReady, corev1.ConditionTrue))
 
-		db.UpdateCondition(mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionFalse, mysqldatabase.ProvisionFailed, "error")
-		Expect(db.Unwrap()).To(gm.HaveCondition(mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionFalse))
+		db.UpdateCondition(mysqlv1alpha1.MysqlDatabaseReady, corev1.ConditionFalse, mysqldatabase.ProvisionFailed, "error")
+		Expect(db.Unwrap()).To(gm.HaveCondition(mysqlv1alpha1.MysqlDatabaseReady, corev1.ConditionFalse))
 	})
 
 	It("should not reconcile resource across namespaces", func() {
@@ -285,7 +283,7 @@ var _ = Describe("MySQL database controller", func() {
 		Eventually(requests).Should(Receive(Equal(expectedRequest)))
 
 		Expect(c.Get(context.TODO(), dbObjKey(db), db.Unwrap())).To(Succeed())
-		Expect(db.Unwrap()).To(gm.HaveCondition(mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionFalse))
+		Expect(db.Unwrap()).To(gm.HaveCondition(mysqlv1alpha1.MysqlDatabaseReady, corev1.ConditionFalse))
 
 		forceDeleteDb(c, db)
 	})

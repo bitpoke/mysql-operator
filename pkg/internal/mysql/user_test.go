@@ -51,7 +51,7 @@ var _ = Describe("MySQL User Interface tests", func() {
 			user            string
 			pwd             string
 			allowedHosts    []string
-			permissions     []mysqlv1alpha1.MySQLPermission
+			permissions     []mysqlv1alpha1.MysqlPermission
 			resourceOptions corev1.ResourceList
 		)
 
@@ -59,7 +59,7 @@ var _ = Describe("MySQL User Interface tests", func() {
 			user = "mysqlusername"
 			pwd = "random-password"
 			allowedHosts = []string{"localhost"}
-			permissions = []mysqlv1alpha1.MySQLPermission{
+			permissions = []mysqlv1alpha1.MysqlPermission{
 				{
 					Schema:      "test_db",
 					Tables:      []string{"*"},
@@ -135,6 +135,22 @@ var _ = Describe("MySQL User Interface tests", func() {
 			)
 
 			Expect(CreateUserIfNotExists(context.TODO(), sql, user, pwd, allowedHosts, permissions, resourceOptions)).To(Succeed())
+		})
+		It("should not accept a user without allowedHosts", func() {
+			Expect(CreateUserIfNotExists(context.TODO(), sql, user, pwd, []string{}, []mysqlv1alpha1.MysqlPermission{}, corev1.ResourceList{})).ToNot(Succeed())
+		})
+
+		It("should create the user without permissions", func() {
+			assertQuery(sql,
+				strings.Join([]string{
+					"BEGIN;\n",
+					"CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?;\n",
+					"ALTER USER ?@? IDENTIFIED BY ?;\n",
+					"COMMIT;",
+				}, ""),
+				user, allowedHosts[0], pwd, user, allowedHosts[0], pwd,
+			)
+			Expect(CreateUserIfNotExists(context.TODO(), sql, user, pwd, allowedHosts, []mysqlv1alpha1.MysqlPermission{}, corev1.ResourceList{})).To(Succeed())
 		})
 	})
 

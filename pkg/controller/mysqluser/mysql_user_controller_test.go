@@ -99,7 +99,7 @@ var _ = Describe("MySQL user controller", func() {
 		Expect(err).To(BeNil())
 	})
 
-	When("creating the MySQLUser", func() {
+	When("creating the MysqlUser", func() {
 		AfterEach(func() {
 			// Cleanup resources
 			Expect(c.Delete(context.TODO(), cluster)).To(Succeed())
@@ -207,14 +207,14 @@ var _ = Describe("MySQL user controller", func() {
 					cluster,
 					factories.WithPassword(c, userPassword),
 					factories.WithPermissions(
-						mysqlv1alpha1.MySQLPermission{
+						mysqlv1alpha1.MysqlPermission{
 							Permissions: []string{
 								"SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "INDEX", "ALTER",
 							},
 							Tables: []string{"*"},
 							Schema: "db",
 						},
-						mysqlv1alpha1.MySQLPermission{
+						mysqlv1alpha1.MysqlPermission{
 							Schema:      "sys_operator",
 							Tables:      []string{"heartbeat", "eyeblink"},
 							Permissions: []string{"SELECT", "CREATE"},

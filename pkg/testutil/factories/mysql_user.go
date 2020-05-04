@@ -40,11 +40,11 @@ func MySQLUser(cluster *mysqlv1alpha1.MysqlCluster, opts ...MySQLUserOption) *my
 	user := fmt.Sprintf("user-%d", rand.Int31())
 	opts = append([]MySQLUserOption{WithUser(user)}, opts...)
 
-	mu := mysqluser.Wrap(&mysqlv1alpha1.MySQLUser{
+	mu := mysqluser.Wrap(&mysqlv1alpha1.MysqlUser{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
 		},
-		Spec: mysqlv1alpha1.MySQLUserSpec{
+		Spec: mysqlv1alpha1.MysqlUserSpec{
 			ClusterRef: mysqlv1alpha1.ClusterReference{
 				LocalObjectReference: corev1.LocalObjectReference{Name: cluster.Name},
 				Namespace:            cluster.Namespace,
@@ -67,7 +67,7 @@ func CreateMySQLUserInK8s(cl client.Client) MySQLUserOption {
 	}
 }
 
-// WithUser is an option to specify a user when creating the MySQLUser
+// WithUser is an option to specify a user when creating the MysqlUser
 func WithUser(user string) MySQLUserOption {
 	return func(mu *mysqluser.MySQLUser) error {
 		mu.ObjectMeta.Name = user //mysqluser.UserToName(user)
@@ -77,7 +77,7 @@ func WithUser(user string) MySQLUserOption {
 	}
 }
 
-// WithPassword is an option to specify a password when creating the MySQLUser
+// WithPassword is an option to specify a password when creating the MysqlUser
 func WithPassword(cl client.Client, password string) MySQLUserOption {
 	return func(mu *mysqluser.MySQLUser) error {
 		secret := &corev1.Secret{
@@ -101,8 +101,8 @@ func WithPassword(cl client.Client, password string) MySQLUserOption {
 	}
 }
 
-// WithPermissions is an option to specify user permissions when creating the MySQLUser
-func WithPermissions(permissions ...mysqlv1alpha1.MySQLPermission) MySQLUserOption {
+// WithPermissions is an option to specify user permissions when creating the MysqlUser
+func WithPermissions(permissions ...mysqlv1alpha1.MysqlPermission) MySQLUserOption {
 	return func(mu *mysqluser.MySQLUser) error {
 		mu.Spec.Permissions = append(mu.Spec.Permissions, permissions...)
 

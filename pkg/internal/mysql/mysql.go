@@ -115,14 +115,14 @@ func NewSQLRunner(cfg *Config, errs ...error) (SQLRunner, func(), error) {
 }
 
 func (sr sqlRunner) QueryExec(ctx context.Context, query Query) error {
-	_, err := sr.db.ExecContext(ctx, query.escapedQuery, query.args)
+	_, err := sr.db.ExecContext(ctx, query.escapedQuery, query.args...)
 	return err
 }
 func (sr sqlRunner) QueryRow(ctx context.Context, query Query, dest ...interface{}) error {
-	return sr.db.QueryRowContext(ctx, query.escapedQuery, query.args).Scan(dest...)
+	return sr.db.QueryRowContext(ctx, query.escapedQuery, query.args...).Scan(dest...)
 }
 func (sr sqlRunner) QueryRows(ctx context.Context, query Query) (Rows, error) {
-	rows, err := sr.db.QueryContext(ctx, query.escapedQuery, query.args)
+	rows, err := sr.db.QueryContext(ctx, query.escapedQuery, query.args...)
 	if err != nil {
 		return nil, err
 	}
