@@ -92,6 +92,7 @@ rules:
   - mysql.presslabs.org
   resources:
   - mysqldatabases
+  - mysqldatabases/status
   verbs:
   - get
   - list

@@ -1,0 +1,9 @@
+apiVersion: mysql.presslabs.org/v1alpha1
+kind: MysqlDatabase
+metadata:
+  name: my-database
+spec:
+  database: db-name-in-mysql
+  clusterRef:
+    name: my-cluster
+    namespace: default

@@ -66,12 +66,12 @@ var _ reconcile.Reconciler = &ReconcileMySQLDatabase{}
 // Reconcile reads that state of the cluster for a Wordpress object and makes changes based on the state read
 // and what is in the Wordpress.Spec
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
-// +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqldatabases,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqldatabases;mysqldatabases/status,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileMySQLDatabase) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx := context.Background()
 
-	// Fetch the MySQLDatabase instance
-	db := mysqldatabase.Wrap(&mysqlv1alpha1.MySQLDatabase{})
+	// Fetch the MysqlDatabase instance
+	db := mysqldatabase.Wrap(&mysqlv1alpha1.MysqlDatabase{})
 
 	err := r.Get(ctx, request.NamespacedName, db.Unwrap())
 	if err != nil {
@@ -87,7 +87,7 @@ func (r *ReconcileMySQLDatabase) Reconcile(request reconcile.Request) (reconcile
 
 	oldDBStatus := db.DeepCopy().Status
 
-	if !r.opt.AllowCrossNamespaceDatabases && db.Namespace != db.Spec.ClusterRef.Namespace {
+	if !r.opt.AllowCrossNamespaceDatabases && db.Namespace != db.GetClusterKey().Namespace {
 		err = fmt.Errorf("cross namespace database creation is disabled")
 		return reconcile.Result{}, r.updateReadyCondition(ctx, oldDBStatus, db, err)
 	}
@@ -164,11 +164,11 @@ func (r *ReconcileMySQLDatabase) createDatabase(ctx context.Context, db *mysqlda
 }
 
 func (r *ReconcileMySQLDatabase) updateReadyCondition(
-	ctx context.Context, oldDBStatus mysqlv1alpha1.MySQLDatabaseStatus, db *mysqldatabase.Database, err error) error {
+	ctx context.Context, oldDBStatus mysqlv1alpha1.MysqlDatabaseStatus, db *mysqldatabase.Database, err error) error {
 	if err == nil {
-		db.UpdateCondition(mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionTrue, mysqldatabase.ProvisionSucceeded, "Database successfully created.")
+		db.UpdateCondition(mysqlv1alpha1.MysqlDatabaseReady, corev1.ConditionTrue, mysqldatabase.ProvisionSucceeded, "Database successfully created.")
 	} else {
-		db.UpdateCondition(mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionFalse, mysqldatabase.ProvisionFailed, err.Error())
+		db.UpdateCondition(mysqlv1alpha1.MysqlDatabaseReady, corev1.ConditionFalse, mysqldatabase.ProvisionFailed, err.Error())
 	}
 
 	if !reflect.DeepEqual(oldDBStatus, db.Status) {
@@ -202,8 +202,8 @@ func add(mgr ctrl.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to MySQLUser
-	err = c.Watch(&source.Kind{Type: &mysqlv1alpha1.MySQLDatabase{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to MysqlUser
+	err = c.Watch(&source.Kind{Type: &mysqlv1alpha1.MysqlDatabase{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}

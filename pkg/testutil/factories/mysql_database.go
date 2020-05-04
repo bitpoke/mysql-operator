@@ -52,7 +52,7 @@ func WithMySQLCluster(ctx context.Context, cl client.Client, name string) MysqlD
 func WithDBReadyCondition() MysqlDBOption {
 	return func(db *mysqldatabase.Database) error {
 		db.UpdateCondition(
-			mysqlv1alpha1.MySQLDatabaseReady, corev1.ConditionTrue,
+			mysqlv1alpha1.MysqlDatabaseReady, corev1.ConditionTrue,
 			mysqldatabase.ProvisionSucceeded, "success",
 		)
 
@@ -74,12 +74,12 @@ func CreateDatabase(ctx context.Context, c client.Client) MysqlDBOption {
 // NewDatabase returns a database object
 func NewDatabase(opts ...MysqlDBOption) *mysqldatabase.Database {
 	name := fmt.Sprintf("db-%d", rand.Int()) // nolint: gosec
-	db := mysqldatabase.Wrap(&mysqlv1alpha1.MySQLDatabase{
+	db := mysqldatabase.Wrap(&mysqlv1alpha1.MysqlDatabase{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: "default",
 		},
-		Spec: mysqlv1alpha1.MySQLDatabaseSpec{
+		Spec: mysqlv1alpha1.MysqlDatabaseSpec{
 			ClusterRef: mysqlv1alpha1.ClusterReference{
 				LocalObjectReference: corev1.LocalObjectReference{Name: "does-not-exists"},
 				Namespace:            "default",

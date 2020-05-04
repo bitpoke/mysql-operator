@@ -26,18 +26,19 @@ import (
 )
 
 var _ = Describe("MysqlUser CRUD", func() {
-	var created *MySQLUser
+	var created *MysqlUser
 	var key types.NamespacedName
 
 	BeforeEach(func() {
 		key = types.NamespacedName{Name: "foo", Namespace: "default"}
-		created = &MySQLUser{
+		created = &MysqlUser{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "default",
 			},
-			Spec: MySQLUserSpec{
-				User: "foo",
+			Spec: MysqlUserSpec{
+				User:         "foo",
+				AllowedHosts: []string{"%"},
 			},
 		}
 	})
@@ -49,7 +50,7 @@ var _ = Describe("MysqlUser CRUD", func() {
 	Context("for a valid config", func() {
 		It("should provide CRUD access to the object", func() {
 			// Test Create
-			fetched := &MySQLUser{}
+			fetched := &MysqlUser{}
 			Expect(c.Create(context.TODO(), created)).NotTo(HaveOccurred())
 
 			Expect(c.Get(context.TODO(), key, fetched)).NotTo(HaveOccurred())

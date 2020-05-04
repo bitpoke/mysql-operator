@@ -13,16 +13,16 @@ spec:
     type: string
   - JSONPath: .spec.clusterRef.name
     name: Cluster
-    type: date
+    type: string
   - JSONPath: .spec.user
     name: UserName
-    type: date
+    type: string
   - JSONPath: .metadata.creationTimestamp
     name: Age
     type: date
   group: mysql.presslabs.org
   names:
-    kind: MySQLUser
+    kind: MysqlUser
     plural: mysqlusers
   scope: Namespaced
   subresources:
@@ -60,8 +60,6 @@ spec:
                 namespace:
                   description: Namespace the MySQL cluster namespace
                   type: string
-              required:
-              - namespace
               type: object
             password:
               description: Password is the password for the user.
@@ -105,6 +103,7 @@ spec:
           - clusterRef
           - user
           - password
+          - allowedHosts
           type: object
         status:
           properties:
@@ -115,7 +114,7 @@ spec:
                 type: string
               type: array
             conditions:
-              description: Conditions represents the MySQLUser resource conditions
+              description: Conditions represents the MysqlUser resource conditions
                 list.
               items:
                 properties:
@@ -139,7 +138,7 @@ spec:
                     description: Status of the condition, one of True, False, Unknown.
                     type: string
                   type:
-                    description: Type of MySQLUser condition.
+                    description: Type of MysqlUser condition.
                     type: string
                 required:
                 - type

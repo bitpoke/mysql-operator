@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-user-password
+data:
+  PASSWORD: bXlzcWwtcGFzc3dvcmQtZm9yLXVzZXI=
+
+---
+apiVersion: mysql.presslabs.org/v1alpha1
+kind: MysqlUser
+metadata:
+  name: my-user
+spec:
+  user: user-name-in-mysql
+  clusterRef:
+    name: my-cluster
+    namespace: default
+  password:
+    name: my-user-password
+    key: PASSWORD
+  allowedHosts:
+    - localhost
+  permissions:
+    - schema: db-name-in-mysql
+      tables: ["table1", "table2"]
+      permissions:
+        - SELECT
+        - UPDATE
+        - CREATE

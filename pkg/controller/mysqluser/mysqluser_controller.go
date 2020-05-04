@@ -51,7 +51,7 @@ const (
 
 var log = logf.Log.WithName("controller.mysql-user")
 
-// ReconcileMySQLUser reconciles a MySQLUser object
+// ReconcileMySQLUser reconciles a MysqlUser object
 type ReconcileMySQLUser struct {
 	client.Client
 	scheme   *runtime.Scheme
@@ -65,15 +65,15 @@ type ReconcileMySQLUser struct {
 // check for reconciler to implement reconciler.Reconciler interface
 var _ reconcile.Reconciler = &ReconcileMySQLUser{}
 
-// Reconcile reads that state of the cluster for a MySQLUser object and makes changes based on the state read
-// and what is in the MySQLUser.Spec
+// Reconcile reads that state of the cluster for a MysqlUser object and makes changes based on the state read
+// and what is in the MysqlUser.Spec
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlusers;mysqlusers/status,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileMySQLUser) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx := context.Background()
 
-	// Fetch the MySQLUser instance
-	user := mysqluser.Wrap(&mysqlv1alpha1.MySQLUser{})
+	// Fetch the MysqlUser instance
+	user := mysqluser.Wrap(&mysqlv1alpha1.MysqlUser{})
 
 	err := r.Get(ctx, request.NamespacedName, user.Unwrap())
 	if err != nil {
@@ -86,7 +86,7 @@ func (r *ReconcileMySQLUser) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	if !r.opt.AllowCrossNamespaceUsers && user.Namespace != user.Spec.ClusterRef.Namespace {
+	if !r.opt.AllowCrossNamespaceUsers && user.Namespace != user.GetClusterKey().Namespace {
 		return reconcile.Result{}, errors.New("cross namespace user creation is disabled")
 	}
 
@@ -135,7 +135,7 @@ func (r *ReconcileMySQLUser) removeUser(ctx context.Context, user *mysqluser.MyS
 	return nil
 }
 
-//func (r *ReconcileMySQLUser) updateUserStatusFromCluster(ctx context.Context, user *mysqluser.MySQLUser) (err error) {
+//func (r *ReconcileMySQLUser) updateUserStatusFromCluster(ctx context.Context, user *mysqluser.MysqlUser) (err error) {
 //	// catch the error and set the failed status
 //	defer setFailedStatus(&err, user)
 //
@@ -193,7 +193,7 @@ func (r *ReconcileMySQLUser) reconcileUserInDB(ctx context.Context, user *mysqlu
 	}
 
 	// create/ update user in database
-	log.Info("creating mysql user", "key", user.MySQLUser, "database", user.Spec.User)
+	log.Info("creating mysql user", "key", user.MysqlUser, "database", user.Spec.User)
 	if err := mysql.CreateUserIfNotExists(ctx, sql, user.Spec.User, password, user.Spec.AllowedHosts,
 		user.Spec.Permissions, user.Spec.ResourceLimits); err != nil {
 		return err
@@ -251,9 +251,9 @@ func (r *ReconcileMySQLUser) dropUserFromDB(ctx context.Context, user *mysqluser
 	return mysql.DropUser(ctx, sql, user.Spec.User, nil)
 }
 
-func (r *ReconcileMySQLUser) updateStatusAndErr(ctx context.Context, user *mysqluser.MySQLUser, oldStatus *mysqlv1alpha1.MySQLUserStatus, prevErr error) error {
+func (r *ReconcileMySQLUser) updateStatusAndErr(ctx context.Context, user *mysqluser.MySQLUser, oldStatus *mysqlv1alpha1.MysqlUserStatus, prevErr error) error {
 	if !reflect.DeepEqual(oldStatus, &user.Status) {
-		log.V(1).Info("update mysql user status", "key", user.MySQLUser, "diff", deep.Equal(oldStatus, &user.Status))
+		log.V(1).Info("update mysql user status", "key", user.MysqlUser, "diff", deep.Equal(oldStatus, &user.Status))
 
 		if err := r.Status().Update(ctx, user.Unwrap()); err != nil {
 			if prevErr != nil {
@@ -286,8 +286,8 @@ func add(mgr ctrl.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to MySQLUser
-	err = c.Watch(&source.Kind{Type: &mysqlv1alpha1.MySQLUser{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to MysqlUser
+	err = c.Watch(&source.Kind{Type: &mysqlv1alpha1.MysqlUser{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}

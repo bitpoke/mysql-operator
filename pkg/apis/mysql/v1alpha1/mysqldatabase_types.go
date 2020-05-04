@@ -24,18 +24,18 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for
 // the fields to be serialized.
 
-// MySQLDatabaseConditionType defines the condition types of a MySQLDatabase resource
-type MySQLDatabaseConditionType string
+// MysqlDatabaseConditionType defines the condition types of a MysqlDatabase resource
+type MysqlDatabaseConditionType string
 
 const (
-	// MySQLDatabaseReady means the MySQL database is ready when database exists.
-	MySQLDatabaseReady MySQLDatabaseConditionType = "Ready"
+	// MysqlDatabaseReady means the MySQL database is ready when database exists.
+	MysqlDatabaseReady MysqlDatabaseConditionType = "Ready"
 )
 
-// MySQLDatabaseCondition defines the condition struct for a MySQLDatabase resource
-type MySQLDatabaseCondition struct {
-	// Type of MySQLDatabase condition.
-	Type MySQLDatabaseConditionType `json:"type"`
+// MysqlDatabaseCondition defines the condition struct for a MysqlDatabase resource
+type MysqlDatabaseCondition struct {
+	// Type of MysqlDatabase condition.
+	Type MysqlDatabaseConditionType `json:"type"`
 	// Status of the condition, one of True, False, Unknown.
 	Status corev1.ConditionStatus `json:"status"`
 	// The last time this condition was updated.
@@ -48,8 +48,8 @@ type MySQLDatabaseCondition struct {
 	Message string `json:"message"`
 }
 
-// MySQLDatabaseSpec defines the desired state of MySQLDatabaseSpec
-type MySQLDatabaseSpec struct {
+// MysqlDatabaseSpec defines the desired state of MysqlDatabaseSpec
+type MysqlDatabaseSpec struct {
 	// ClusterRef represents a reference to the MySQL cluster.
 	// This field should be immutable.
 	ClusterRef ClusterReference `json:"clusterRef"`
@@ -58,38 +58,38 @@ type MySQLDatabaseSpec struct {
 	Database string `json:"database"`
 }
 
-// MySQLDatabaseStatus defines the observed state of MySQLDatabase
-type MySQLDatabaseStatus struct {
-	// Conditions represents the MySQLDatabase  resource conditions list.
-	Conditions []MySQLDatabaseCondition `json:"conditions,omitempty"`
+// MysqlDatabaseStatus defines the observed state of MysqlDatabase
+type MysqlDatabaseStatus struct {
+	// Conditions represents the MysqlDatabase  resource conditions list.
+	Conditions []MysqlDatabaseCondition `json:"conditions,omitempty"`
 }
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// MySQLDatabase is the Schema for the MySQL database API
+// MysqlDatabase is the Schema for the MySQL database API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type == "Ready")].status",description="The database status"
-// +kubebuilder:printcolumn:name="Cluster",type="date",JSONPath=".spec.clusterRef.name"
-// +kubebuilder:printcolumn:name="Database",type="date",JSONPath=".spec.database"
+// +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".spec.clusterRef.name"
+// +kubebuilder:printcolumn:name="Database",type="string",JSONPath=".spec.database"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-type MySQLDatabase struct {
+type MysqlDatabase struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              MySQLDatabaseSpec   `json:"spec,omitempty"`
-	Status            MySQLDatabaseStatus `json:"status,omitempty"`
+	Spec              MysqlDatabaseSpec   `json:"spec,omitempty"`
+	Status            MysqlDatabaseStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// MySQLDatabaseList contains a list of MySQLDatabase
-type MySQLDatabaseList struct {
+// MysqlDatabaseList contains a list of MysqlDatabase
+type MysqlDatabaseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []MySQLDatabase `json:"items"`
+	Items           []MysqlDatabase `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&MySQLDatabase{}, &MySQLDatabaseList{})
+	SchemeBuilder.Register(&MysqlDatabase{}, &MysqlDatabaseList{})
 }

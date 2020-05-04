@@ -28,9 +28,15 @@ import (
 
 // CreateUserIfNotExists creates a user if it doesn't already exist and it gives it the specified permissions
 func CreateUserIfNotExists(ctx context.Context, sql SQLRunner,
-	user, pass string, allowedHosts []string, permissions []mysqlv1alpha1.MySQLPermission,
+	user, pass string, allowedHosts []string, permissions []mysqlv1alpha1.MysqlPermission,
 	resourceOptions corev1.ResourceList,
 ) error {
+
+	// throw error if there are no allowed hosts
+	if len(allowedHosts) == 0 {
+		return errors.New("no allowedHosts specified")
+	}
+
 	queries := []Query{
 		getCreateUserQuery(user, pass, allowedHosts),
 		getAlterUserQuery(user, pass, allowedHosts, resourceOptions),
@@ -120,7 +126,7 @@ func DropUser(ctx context.Context, sql SQLRunner, user string, host *string) err
 	return nil
 }
 
-func permissionsToQuery(permissions []mysqlv1alpha1.MySQLPermission, user string, allowedHosts []string) (Query, error) {
+func permissionsToQuery(permissions []mysqlv1alpha1.MysqlPermission, user string, allowedHosts []string) (Query, error) {
 	permQueries := []Query{}
 
 	for _, perm := range permissions {
@@ -148,12 +154,17 @@ func permissionsToQuery(permissions []mysqlv1alpha1.MySQLPermission, user string
 				table = fmt.Sprintf("`%s`", table)
 			}
 
-			schemaTable := fmt.Sprintf("`%s`.%s", perm.Schema, table)
+			escPerms := []string{}
+			for _, perm := range perm.Permissions {
+				escPerms = append(escPerms, Escape(perm))
+			}
+
+			schemaTable := fmt.Sprintf("`%s`.%s", Escape(perm.Schema), Escape(table))
 
 			// Build GRANT query
 			idsTmpl, idsArgs := getUsersIdentification(user, nil, allowedHosts)
 
-			query := "GRANT " + strings.Join(perm.Permissions, ", ") + " ON " + schemaTable + " TO" + idsTmpl
+			query := "GRANT " + strings.Join(escPerms, ", ") + " ON " + schemaTable + " TO" + idsTmpl
 			args = append(args, idsArgs...)
 
 			permQueries = append(permQueries, NewQuery(query, args...))
