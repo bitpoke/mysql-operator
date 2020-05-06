@@ -15,6 +15,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.4.0] - TBD
 ### Added
+ * Added a `ServiceMonitor` to the operator chart that scrapes all MySQL instances.
  * Added a test suite for RunCloneCommand logic, along with a mock backup server.
  * Added checks for service availability when cloning.
  * Added "fail fast" logic when unexpected errors occur during cloning/download.

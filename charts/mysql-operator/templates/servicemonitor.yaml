@@ -1,0 +1,30 @@
+# This is a ServicMonitor for the MySQL clusters, not the operator itself.
+# To scrape the operator, we need https://github.com/presslabs/mysql-operator/issues/151 first.
+{{ if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" -}}{{ if .Values.serviceMonitor.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ template "mysql-operator.fullname" . }}
+  labels:
+    {{- include "mysql-operator.labels" . | nindent 4 }}
+    {{- if .Values.serviceMonitor.additionalLabels }}
+    {{ toYaml .Values.serviceMonitor.additionalLabels }}
+    {{- end }}
+spec:
+  {{- if .Values.serviceMonitor.jobLabel }}
+  jobLabel: {{ .Values.serviceMonitor.jobLabel }}
+  {{- end }}
+  {{- if .Values.serviceMonitor.targetLabels }}
+  targetLabels: {{ .Values.serviceMonitor.targetLabels }}
+  {{- end }}
+  {{- if .Values.serviceMonitor.podTargetLabels }}
+  podTargetLabels: {{ .Values.serivceMonitor.podTargetLabels }}
+  {{- end }}
+  endpoints:
+    - interval: {{ .Values.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
+      port: prometheus
+      path: /metrics
+  namespaceSelector: {{ toYaml .Values.serviceMonitor.namespaceSelector | nindent 4 }}
+  selector: {{ toYaml .Values.serviceMonitor.selector | nindent 4 }}
+{{ end -}}{{ end -}}

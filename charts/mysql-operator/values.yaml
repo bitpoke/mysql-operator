@@ -12,6 +12,24 @@ installCRDs: true
 # in which namespace to watch for resource, leave empty to watch in all namespaces
 watchNamespace:
 
+# The operator will install a ServiceMonitor if you have prometheus-operator installed.
+serviceMonitor:
+  enabled: true
+  ## Additional labels for the serviceMonitor. Useful if you have multiple prometheus operators running to select only specific ServiceMonitors
+  # additionalLabels:
+  #   prometheus: prom-internal
+  interval: 10s
+  scrapeTimeout: 3s
+  # jobLabel:
+  # targetLabels:
+  # podTargetLabels:
+  namespaceSelector:
+    any: true
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: mysql.presslabs.org
+      app.kubernetes.io/name: mysql
+
 nodeSelector: {}
 tolerations: []
 resources: {}
