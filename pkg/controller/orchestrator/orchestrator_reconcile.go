@@ -502,6 +502,14 @@ func (ou *orcUpdater) setReadOnlyNode(inst orc.Instance) error {
 
 // nolint: gocyclo
 func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet, master *orc.Instance) {
+	// If the user has set IgnoreReadOnly option to true, we will not interfere with Orchestrator's control of RW status
+	if ou.cluster.Spec.IgnoreReadOnly {
+		if ou.cluster.Spec.ReadOnly {
+			log.Info("IgnoreReadOnly=true takes precedence over ReadOnly=true, will not change RW status of any instances in Orchestrator",
+				"IgnoreReadOnly", ou.cluster.Spec.IgnoreReadOnly, "ReadOnly", ou.cluster.Spec.ReadOnly)
+		}
+		return
+	}
 	// If there is an in-progress failover, we will not interfere with readable/writable status on this iteration.
 	fip := ou.cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
 	if fip != nil && fip.Status == core.ConditionTrue {

@@ -93,6 +93,7 @@ Some important fields of `MySQLCluster` resource from `spec` are described in th
 | `maxSlaveLatency`                | The allowed slave lag until it's removed from read service. (in seconds)                    | `30`                       | nil                     |
 | `queryLimits`                    | Parameters for pt-kill to ensure some query run limits. (e.g. idle time)                    | `idelTime: 60`             | nil                     |
 | `readOnly`                       | A Boolean value that sets the cluster in read-only state.                                   | `True`                     | False                   |
+| `ignoreReadOnly`                 | A Boolean value that prevents the operator from changing the R/W status of mysql instances. | `False`                    | False                   |
 
 
 For more detailed information about cluster structure and configuration fields can be found in [godoc](https://godoc.org/github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1#MysqlClusterSpec).

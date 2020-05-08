@@ -126,6 +126,13 @@ type MysqlClusterSpec struct {
 	// +optional
 	ReadOnly bool `json:"readOnly,omitempty"`
 
+	// Makes the operator ignore the ReadOnly setting completely. This is an advanced setting that implies you take
+	// responsibility for managing the R/W status of your instances. You will need to make sure Orchestrator is configured
+	// to set promoted master instances to writable (for example, by setting ApplyMySQLPromotionAfterMasterFailover to
+	// true in your Orchestrator configuration).
+	// +optional
+	IgnoreReadOnly bool `json:"ignoreReadOnly,omitempty"`
+
 	// Set a custom offset for Server IDs.  ServerID for each node will be the index of the statefulset, plus offset
 	// +optional
 	ServerIDOffset *int `json:"serverIDOffset,omitempty"`
