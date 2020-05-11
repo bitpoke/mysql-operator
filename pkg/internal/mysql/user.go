@@ -73,9 +73,9 @@ func getAlterUserQuery(user, pwd string, allowedHosts []string, resourceOptions 
 	if len(resourceOptions) > 0 {
 		q += " WITH"
 		for key, valQ := range resourceOptions {
-			q += " ?=?"
+			q += fmt.Sprintf(" %s=?", Escape(string(key)))
 			value, _ := valQ.AsInt64()
-			args = append(args, string(key), int(value))
+			args = append(args, int(value))
 		}
 	}
 
