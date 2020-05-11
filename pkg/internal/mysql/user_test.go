@@ -76,7 +76,7 @@ var _ = Describe("MySQL User Interface tests", func() {
 				strings.Join([]string{
 					"BEGIN;\n",
 					"CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?;\n",
-					"ALTER USER ?@? IDENTIFIED BY ? WITH MAX_USER_CONNECTIONS=?;\n",
+					"ALTER USER ?@? IDENTIFIED BY ? WITH MAX_USER_CONNECTIONS ?;\n",
 					"GRANT PERM1, PERM2 ON `test_db`.* TO ?@?;\n",
 					"COMMIT;",
 				}, ""),
@@ -91,7 +91,7 @@ var _ = Describe("MySQL User Interface tests", func() {
 				strings.Join([]string{
 					"BEGIN;\n",
 					"CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?, ?@? IDENTIFIED BY ?;\n",
-					"ALTER USER ?@? IDENTIFIED BY ?, ?@? IDENTIFIED BY ? WITH MAX_USER_CONNECTIONS=?;\n",
+					"ALTER USER ?@? IDENTIFIED BY ?, ?@? IDENTIFIED BY ? WITH MAX_USER_CONNECTIONS ?;\n",
 					"GRANT PERM1, PERM2 ON `test_db`.* TO ?@?, ?@?;\n",
 					"COMMIT;",
 				}, ""),
@@ -128,8 +128,8 @@ var _ = Describe("MySQL User Interface tests", func() {
 				defer GinkgoRecover()
 
 				// check it like this because we don't know the order
-				Expect(query).To(ContainSubstring("MAX_USER_CONNECTIONS=?"))
-				Expect(query).To(ContainSubstring("MAX_QUERIES_PER_HOUR=?"))
+				Expect(query).To(ContainSubstring("MAX_USER_CONNECTIONS ?"))
+				Expect(query).To(ContainSubstring("MAX_QUERIES_PER_HOUR ?"))
 
 				Expect(args).To(ConsistOf(
 					user, allowedHosts[0], pwd, user, allowedHosts[0], pwd, 10, 100, user, allowedHosts[0],
