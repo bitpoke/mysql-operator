@@ -604,7 +604,7 @@ func (s *sfsSyncer) ensureResources(name string) core.ResourceRequirements {
 		return s.cluster.Spec.PodSpec.MySQLOperatorSidecarResources
 	}
 
-	// pt-heartbeat
+	// pt-heartbeat, pt-kill, ...
 	return core.ResourceRequirements{
 		Limits:   limits,
 		Requests: requests,

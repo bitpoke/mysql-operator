@@ -28,7 +28,7 @@ required = [
 
 [[constraint]]
   name="github.com/presslabs/controller-util"
-  version = "v0.1.17"
+  version = "v0.1.18"
 
 # use wgliang version of cron because provides cron removal
 [[override]]
