@@ -155,6 +155,47 @@ var _ = Describe("MySQL User Interface tests", func() {
 			)
 			Expect(CreateUserIfNotExists(context.TODO(), sql, user, pwd, allowedHosts, []mysqlv1alpha1.MysqlPermission{}, corev1.ResourceList{})).To(Succeed())
 		})
+
+		It("should create different GRANT statement and test ID escaping", func() {
+			// this test also tests id escaping
+
+			assertQuery(sql,
+				strings.Join([]string{
+					"BEGIN;\n",
+					"CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?;\n",
+					"ALTER USER ?@? IDENTIFIED BY ?;\n",
+					"GRANT SELECT, INSERT ON `database1`.* TO ?@?;\n",
+					"GRANT SELECT, CREATE ON `database2`.`table'2` TO ?@?;\n",
+					"GRANT REPLICATION CLIENT ON *.* TO ?@?;\n",
+					"COMMIT;",
+				}, ""),
+				user, allowedHosts[0], pwd, user, allowedHosts[0], pwd,
+				user, allowedHosts[0],
+				user, allowedHosts[0],
+				user, allowedHosts[0],
+			)
+
+			perms := []mysqlv1alpha1.MysqlPermission{
+				{
+					Schema:      "database1",
+					Tables:      []string{"*"},
+					Permissions: []string{"SELECT", "INSERT"},
+				},
+				// proxy sql permissions
+				{
+					Schema:      "database2",
+					Tables:      []string{"table'2"},
+					Permissions: []string{"SELECT", "CREATE"},
+				},
+				{
+					Schema:      "*",
+					Tables:      []string{"*"},
+					Permissions: []string{"REPLICATION CLIENT"},
+				},
+			}
+
+			Expect(CreateUserIfNotExists(context.TODO(), sql, user, pwd, allowedHosts, perms, corev1.ResourceList{})).To(Succeed())
+		})
 	})
 
 })
