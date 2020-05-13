@@ -146,9 +146,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			case <-time.After(reconcileTimePeriod):
 				// write all clusters to events chan to be processed
 				clusters.Range(func(key, value interface{}) bool {
-					events <- value.(event.GenericEvent)
-					log.V(1).Info("Schedule new cluster for reconciliation", "event", value)
+					evt := value.(event.GenericEvent)
+					log.V(1).Info("Schedule new cluster for reconciliation",
+						"name", evt.Meta.GetName(), "namespace", evt.Meta.GetNamespace())
 
+					events <- evt
 					return true
 				})
 			}
