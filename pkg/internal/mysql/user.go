@@ -43,12 +43,7 @@ func CreateUserIfNotExists(ctx context.Context, sql SQLRunner,
 	}
 
 	if len(permissions) > 0 {
-		permissionsQuery, err := permissionsToQuery(permissions, user, allowedHosts)
-		if err != nil {
-			return err
-		}
-
-		queries = append(queries, permissionsQuery)
+		queries = append(queries, permissionsToQuery(permissions, user, allowedHosts))
 	}
 
 	query := BuildAtomicQuery(queries...)
@@ -126,40 +121,20 @@ func DropUser(ctx context.Context, sql SQLRunner, user string, host *string) err
 	return nil
 }
 
-func permissionsToQuery(permissions []mysqlv1alpha1.MysqlPermission, user string, allowedHosts []string) (Query, error) {
+func permissionsToQuery(permissions []mysqlv1alpha1.MysqlPermission, user string, allowedHosts []string) Query {
 	permQueries := []Query{}
 
 	for _, perm := range permissions {
+		// If you wish to grant permissions on all tables, you should explicitly use "*"
 		for _, table := range perm.Tables {
 			args := []interface{}{}
-
-			// There are no tables so therefore no permissions are granted
-			// If you wish to grant permissions on all tables, you should explicitly use "*"
-			if len(perm.Tables) == 0 {
-				continue
-			}
-
-			// We don't allow backticks (`) in schema and tables
-			if strings.Contains(perm.Schema, "`") {
-				return Query{}, errors.New("schema is not allowed to contain backticks")
-			}
-
-			// Build tables query chunk
-			if strings.Contains(table, "`") {
-				return Query{}, errors.New("table is not allowed to contain backticks")
-			}
-
-			// Wrap the table in backticks if it's not wildcard
-			if table != "*" {
-				table = fmt.Sprintf("`%s`", table)
-			}
 
 			escPerms := []string{}
 			for _, perm := range perm.Permissions {
 				escPerms = append(escPerms, Escape(perm))
 			}
 
-			schemaTable := fmt.Sprintf("`%s`.%s", Escape(perm.Schema), Escape(table))
+			schemaTable := fmt.Sprintf("%s.%s", escapeID(perm.Schema), escapeID(table))
 
 			// Build GRANT query
 			idsTmpl, idsArgs := getUsersIdentification(user, nil, allowedHosts)
@@ -171,5 +146,16 @@ func permissionsToQuery(permissions []mysqlv1alpha1.MysqlPermission, user string
 		}
 	}
 
-	return ConcatenateQueries(permQueries...), nil
+	return ConcatenateQueries(permQueries...)
+}
+
+func escapeID(id string) string {
+	if id == "*" {
+		return id
+	}
+
+	// don't allow using ` in id name
+	id = strings.ReplaceAll(id, "`", "")
+
+	return fmt.Sprintf("`%s`", id)
 }
