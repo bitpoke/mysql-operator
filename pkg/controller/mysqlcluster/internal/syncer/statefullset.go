@@ -596,13 +596,15 @@ func (s *sfsSyncer) ensureResources(name string) core.ResourceRequirements {
 	case containerMySQLInitName, containerMysqlName:
 		return s.cluster.Spec.PodSpec.Resources
 
-	case containerHeartBeatName:
-		limits[core.ResourceMemory] = resource.MustParse("64Mi")
+	// TODO: quick fix to prevent restart
+	//case containerHeartBeatName:
+	//	limits[core.ResourceMemory] = resource.MustParse("64Mi")
 
 	case containerSidecarName:
 		return s.cluster.Spec.PodSpec.MySQLOperatorSidecarResources
 	}
 
+	// pt-heartbeat
 	return core.ResourceRequirements{
 		Limits:   limits,
 		Requests: requests,
