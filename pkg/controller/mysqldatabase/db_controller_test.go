@@ -167,8 +167,7 @@ var _ = Describe("MySQL database controller", func() {
 
 						By("Deleting the database")
 						//Expect(dsn).To(Equal(getExpectedDSN(clusterName)))
-						Expect(query).To(Equal("DROP DATABASE IF EXISTS ?;"))
-						Expect(args).To(ConsistOf(db.Name))
+						Expect(query).To(Equal(fmt.Sprintf("DROP DATABASE IF EXISTS `%s`;", db.Spec.Database)))
 
 						return nil
 					},
