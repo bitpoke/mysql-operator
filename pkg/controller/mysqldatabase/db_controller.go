@@ -141,6 +141,8 @@ func (r *ReconcileMySQLDatabase) deleteDatabase(ctx context.Context, db *mysqlda
 
 	defer close()
 
+	log.Info("removing database from mysql cluster", "key", db.Unwrap(), "database", db.Spec.Database)
+
 	// Remove database from MySQL then remove finalizer
 	if err = mysql.DropDatabase(ctx, sql, db.Spec.Database); err != nil {
 		return err
