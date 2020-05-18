@@ -34,7 +34,7 @@ func CreateDatabaseIfNotExists(ctx context.Context, sql SQLRunner, database stri
 
 // DropDatabase deletes the database
 func DropDatabase(ctx context.Context, sql SQLRunner, database string) error {
-	query := NewQuery("DROP DATABASE IF EXISTS ?", database)
+	query := NewQuery(fmt.Sprintf("DROP DATABASE IF EXISTS %s", escapeID(database)))
 
 	if err := sql.QueryExec(ctx, query); err != nil {
 		return fmt.Errorf("failed to remove database, err: %s", err)

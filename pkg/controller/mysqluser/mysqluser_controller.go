@@ -248,6 +248,7 @@ func (r *ReconcileMySQLUser) dropUserFromDB(ctx context.Context, user *mysqluser
 		return err
 	}
 
+	log.Info("removing user from mysql cluster", "key", user.Unwrap(), "username", user.Spec.User)
 	return mysql.DropUser(ctx, sql, user.Spec.User, nil)
 }
 
