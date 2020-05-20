@@ -202,7 +202,7 @@ func (r *ReconcileMySQLUser) reconcileUserInDB(ctx context.Context, user *mysqlu
 	// remove allowed hosts for user
 	toRemove := stringDiffIn(user.Status.AllowedHosts, user.Spec.AllowedHosts)
 	for _, host := range toRemove {
-		if err := mysql.DropUser(ctx, sql, user.Spec.User, &host); err != nil {
+		if err := mysql.DropUser(ctx, sql, user.Spec.User, host); err != nil {
 			return err
 		}
 	}
@@ -248,8 +248,13 @@ func (r *ReconcileMySQLUser) dropUserFromDB(ctx context.Context, user *mysqluser
 		return err
 	}
 
-	log.Info("removing user from mysql cluster", "key", user.Unwrap(), "username", user.Spec.User)
-	return mysql.DropUser(ctx, sql, user.Spec.User, nil)
+	for _, host := range user.Status.AllowedHosts {
+		log.Info("removing user from mysql cluster", "key", user.Unwrap(), "username", user.Spec.User)
+		if err := mysql.DropUser(ctx, sql, user.Spec.User, host); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *ReconcileMySQLUser) updateStatusAndErr(ctx context.Context, user *mysqluser.MySQLUser, oldStatus *mysqlv1alpha1.MysqlUserStatus, prevErr error) error {
