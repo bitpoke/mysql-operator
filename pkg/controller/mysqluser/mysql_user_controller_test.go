@@ -489,9 +489,9 @@ var _ = Describe("MySQL user controller", func() {
 					defer GinkgoRecover()
 
 					By("Deleting the user")
-					expectedQuery := "DROP USER IF EXISTS ?;"
+					expectedQuery := "DROP USER IF EXISTS ?@?;"
 					Expect(query).To(Equal(expectedQuery))
-					Expect(args).To(ConsistOf(user.Spec.User))
+					Expect(args).To(ConsistOf(user.Spec.User, user.Spec.AllowedHosts[0]))
 
 					return deletionResult
 				}
