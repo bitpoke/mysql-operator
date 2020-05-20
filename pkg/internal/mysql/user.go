@@ -103,16 +103,8 @@ func getUsersIdentification(user string, pwd *string, allowedHosts []string) (id
 }
 
 // DropUser removes a MySQL user if it exists, along with its privileges
-func DropUser(ctx context.Context, sql SQLRunner, user string, host *string) error {
-	usrTmpl := "?"
-	args := []interface{}{user}
-
-	if host != nil {
-		usrTmpl = "?@?"
-		args = append(args, *host)
-	}
-
-	query := NewQuery(fmt.Sprintf("DROP USER IF EXISTS %s;", usrTmpl), args...)
+func DropUser(ctx context.Context, sql SQLRunner, user, host string) error {
+	query := NewQuery("DROP USER IF EXISTS ?@?;", user, host)
 
 	if err := sql.QueryExec(ctx, query); err != nil {
 		return fmt.Errorf("failed to delete user, err: %s", err)
