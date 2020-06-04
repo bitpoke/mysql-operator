@@ -46,6 +46,7 @@ func init() {
 		reflect.TypeOf([]corev1.HostAlias{}):            PodSpec.MergeListByKey("IP", mergo.WithOverride),
 		reflect.TypeOf([]corev1.VolumeMount{}):          PodSpec.MergeListByKey("MountPath", mergo.WithOverride),
 		reflect.TypeOf(corev1.Affinity{}):               PodSpec.OverrideFields("NodeAffinity", "PodAffinity", "PodAntiAffinity"),
+		reflect.TypeOf(corev1.ResourceList{}):           overwriteListWithNonEmptySource,
 		reflect.TypeOf(""):                              overwrite,
 		reflect.TypeOf(new(string)):                     overwrite,
 		reflect.TypeOf(new(int32)):                      overwrite,
@@ -57,6 +58,20 @@ func init() {
 // nolint: unparam
 func overwrite(dst, src reflect.Value) error {
 	if !src.IsZero() {
+		if dst.CanSet() {
+			dst.Set(src)
+		} else {
+			dst = src
+		}
+	}
+
+	return nil
+}
+
+// overwrite a list only if the source is not empty
+// nolint: unparam
+func overwriteListWithNonEmptySource(dst, src reflect.Value) error {
+	if src.Len() > 0 {
 		if dst.CanSet() {
 			dst.Set(src)
 		} else {
