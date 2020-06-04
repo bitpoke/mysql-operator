@@ -37,6 +37,7 @@ import (
 var log = logf.Log.WithName("mysqlbackup.syncer.job")
 
 type jobSyncer struct {
+	job     *batch.Job
 	backup  *mysqlbackup.MysqlBackup
 	cluster *mysqlcluster.MysqlCluster
 
@@ -53,6 +54,7 @@ func NewJobSyncer(c client.Client, s *runtime.Scheme, backup *mysqlbackup.MysqlB
 	}
 
 	sync := &jobSyncer{
+		job:     obj,
 		backup:  backup,
 		cluster: cluster,
 		opt:     opt,
@@ -61,9 +63,7 @@ func NewJobSyncer(c client.Client, s *runtime.Scheme, backup *mysqlbackup.MysqlB
 	return syncer.NewObjectSyncer("Job", backup.Unwrap(), obj, c, s, sync.SyncFn)
 }
 
-func (s *jobSyncer) SyncFn(in runtime.Object) error {
-	out := in.(*batch.Job)
-
+func (s *jobSyncer) SyncFn() error {
 	if s.backup.Status.Completed {
 		log.V(1).Info("backup already completed", "backup", s.backup, "key", s.cluster)
 		// skip doing anything
@@ -75,16 +75,16 @@ func (s *jobSyncer) SyncFn(in runtime.Object) error {
 	}
 
 	// check if job is already created an just update the status
-	if !out.ObjectMeta.CreationTimestamp.IsZero() {
-		s.updateStatus(out)
+	if !s.job.ObjectMeta.CreationTimestamp.IsZero() {
+		s.updateStatus(s.job)
 		return nil
 	}
 
-	out.Labels = map[string]string{
+	s.job.Labels = map[string]string{
 		"cluster": s.backup.Spec.ClusterName,
 	}
 
-	out.Spec.Template.Spec = s.ensurePodSpec(out.Spec.Template.Spec)
+	s.job.Spec.Template.Spec = s.ensurePodSpec(s.job.Spec.Template.Spec)
 	return nil
 }
 

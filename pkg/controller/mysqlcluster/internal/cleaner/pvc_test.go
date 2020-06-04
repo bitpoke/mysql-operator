@@ -183,11 +183,11 @@ var _ = Describe("PVC cleaner", func() {
 
 func listClaimsForCluster(c client.Client, cluster *mysqlcluster.MysqlCluster) *corev1.PersistentVolumeClaimList {
 	pvcs := &corev1.PersistentVolumeClaimList{}
-	lo := &client.ListOptions{
+	opts := &client.ListOptions{
 		Namespace:     cluster.Namespace,
 		LabelSelector: labels.SelectorFromSet(cluster.GetSelectorLabels()),
 	}
 
-	Expect(c.List(context.TODO(), lo, pvcs)).To(Succeed())
+	Expect(c.List(context.TODO(), pvcs, opts)).To(Succeed())
 	return pvcs
 }

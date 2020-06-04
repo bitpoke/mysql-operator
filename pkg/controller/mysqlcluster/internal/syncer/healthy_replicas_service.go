@@ -28,37 +28,35 @@ import (
 
 // NewHealthyReplicasSVCSyncer returns a service syncer for healthy replicas service
 func NewHealthyReplicasSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
-	obj := &core.Service{
+	service := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(mysqlcluster.HealthyReplicasService),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("HealthyReplicasSVC", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
-		out := in.(*core.Service)
-
+	return syncer.NewObjectSyncer("HealthyReplicasSVC", cluster.Unwrap(), service, c, scheme, func() error {
 		// set service labels
-		out.Labels = cluster.GetLabels()
-		out.Labels["mysql.presslabs.org/service-type"] = "ready-replicas"
+		service.Labels = cluster.GetLabels()
+		service.Labels["mysql.presslabs.org/service-type"] = "ready-replicas"
 
 		// set selectors for healthy replica (non-master) mysql pods only
-		out.Spec.Selector = cluster.GetSelectorLabels()
-		out.Spec.Selector["role"] = "replica"
-		out.Spec.Selector["healthy"] = "yes"
+		service.Spec.Selector = cluster.GetSelectorLabels()
+		service.Spec.Selector["role"] = "replica"
+		service.Spec.Selector["healthy"] = "yes"
 
-		if len(out.Spec.Ports) != 2 {
-			out.Spec.Ports = make([]core.ServicePort, 2)
+		if len(service.Spec.Ports) != 2 {
+			service.Spec.Ports = make([]core.ServicePort, 2)
 		}
 
-		out.Spec.Ports[0].Name = MysqlPortName
-		out.Spec.Ports[0].Port = MysqlPort
-		out.Spec.Ports[0].TargetPort = TargetPort
-		out.Spec.Ports[0].Protocol = core.ProtocolTCP
+		service.Spec.Ports[0].Name = MysqlPortName
+		service.Spec.Ports[0].Port = MysqlPort
+		service.Spec.Ports[0].TargetPort = TargetPort
+		service.Spec.Ports[0].Protocol = core.ProtocolTCP
 
-		out.Spec.Ports[1].Name = SidecarServerPortName
-		out.Spec.Ports[1].Port = SidecarServerPort
-		out.Spec.Ports[1].Protocol = core.ProtocolTCP
+		service.Spec.Ports[1].Name = SidecarServerPortName
+		service.Spec.Ports[1].Port = SidecarServerPort
+		service.Spec.Ports[1].Protocol = core.ProtocolTCP
 
 		return nil
 	})

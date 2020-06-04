@@ -37,25 +37,23 @@ var log = logf.Log.WithName("config-map-syncer")
 
 // NewConfigMapSyncer returns config map syncer
 func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
-	obj := &core.ConfigMap{
+	cm := &core.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(mysqlcluster.ConfigMap),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("ConfigMap", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
-		out := in.(*core.ConfigMap)
-
-		out.ObjectMeta.Labels = cluster.GetLabels()
-		out.ObjectMeta.Labels["generated"] = "true"
+	return syncer.NewObjectSyncer("ConfigMap", cluster.Unwrap(), cm, c, scheme, func() error {
+		cm.ObjectMeta.Labels = cluster.GetLabels()
+		cm.ObjectMeta.Labels["generated"] = "true"
 
 		data, err := buildMysqlConfData(cluster)
 		if err != nil {
 			return fmt.Errorf("failed to create mysql configs: %s", err)
 		}
 
-		out.Data = map[string]string{
+		cm.Data = map[string]string{
 			"my.cnf": data,
 		}
 

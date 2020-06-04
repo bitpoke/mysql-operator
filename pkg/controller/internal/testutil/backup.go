@@ -35,7 +35,7 @@ import (
 func ListAllBackupsFn(c client.Client, options *client.ListOptions) func() []api.MysqlBackup {
 	return func() []api.MysqlBackup {
 		backups := &api.MysqlBackupList{}
-		Expect(c.List(context.TODO(), options, backups)).To(Succeed())
+		Expect(c.List(context.TODO(), backups, options)).To(Succeed())
 		return backups.Items
 	}
 }

@@ -85,8 +85,8 @@ func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 		opt:               opt,
 	}
 
-	return syncer.NewObjectSyncer("StatefulSet", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
-		return sync.SyncFn(in)
+	return syncer.NewObjectSyncer("StatefulSet", cluster.Unwrap(), obj, c, scheme, func() error {
+		return sync.SyncFn(obj)
 	})
 }
 

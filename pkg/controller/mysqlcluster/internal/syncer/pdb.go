@@ -29,22 +29,21 @@ import (
 
 // NewPDBSyncer returns the syncer for pdb
 func NewPDBSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
-	obj := &policy.PodDisruptionBudget{
+	pdb := &policy.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(mysqlcluster.PodDisruptionBudget),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("PDB", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
-		out := in.(*policy.PodDisruptionBudget)
-		if out.Spec.MinAvailable != nil {
+	return syncer.NewObjectSyncer("PDB", cluster.Unwrap(), pdb, c, scheme, func() error {
+		if pdb.Spec.MinAvailable != nil {
 			// this mean that pdb is created and should return because spec is imutable
 			return nil
 		}
 		ma := intstr.FromString(cluster.Spec.MinAvailable)
-		out.Spec.MinAvailable = &ma
-		out.Spec.Selector = metav1.SetAsLabelSelector(cluster.GetSelectorLabels())
+		pdb.Spec.MinAvailable = &ma
+		pdb.Spec.Selector = metav1.SetAsLabelSelector(cluster.GetSelectorLabels())
 		return nil
 	})
 }

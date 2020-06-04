@@ -33,18 +33,16 @@ import (
 // nolint: gocyclo
 // TODO: this syncer is not needed anymore and can be removed in future version (v0.4)
 func NewSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, opt *options.Options) syncer.Interface {
-	obj := &core.Secret{
+	secret := &core.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.Spec.SecretName,
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("Secret", nil, obj, c, scheme, func(in runtime.Object) error {
-		out := in.(*core.Secret)
-
-		if _, ok := out.Data["ROOT_PASSWORD"]; !ok {
-			return fmt.Errorf("ROOT_PASSWORD not set in secret: %s", out.Name)
+	return syncer.NewObjectSyncer("Secret", nil, secret, c, scheme, func() error {
+		if _, ok := secret.Data["ROOT_PASSWORD"]; !ok {
+			return fmt.Errorf("ROOT_PASSWORD not set in secret: %s", secret.Name)
 		}
 
 		return nil
