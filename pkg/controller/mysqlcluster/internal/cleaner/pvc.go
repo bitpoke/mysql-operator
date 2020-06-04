@@ -34,10 +34,10 @@ import (
 )
 
 const (
-	reasonPVCCleanupSuccessfull = "SucessfulPVCCleanup"
-	reasonPVCCleanupFailed      = "FailedPVCCleanup"
-	messageCleanupSuccessfull   = "delete Claim %s in StatefulSet %s successful"
-	messageCleanupFailed        = "delete Claim %s in StatefulSet %s failed"
+	reasonPVCCleanupSuccessful = "SuccessfulPVCCleanup"
+	reasonPVCCleanupFailed     = "FailedPVCCleanup"
+	messageCleanupSuccessful   = "delete Claim %s in StatefulSet %s successful"
+	messageCleanupFailed       = "delete Claim %s in StatefulSet %s failed"
 )
 
 var log = logf.Log.WithName("mysqlcluster.pvccleaner")
@@ -99,19 +99,19 @@ func (p *PVCCleaner) deletePVC(ctx context.Context, pvc *core.PersistentVolumeCl
 		return err
 	}
 
-	p.recorder.Event(p.cluster, core.EventTypeNormal, reasonPVCCleanupSuccessfull,
-		fmt.Sprintf(messageCleanupSuccessfull, pvc.Name, p.cluster.Name))
+	p.recorder.Event(p.cluster, core.EventTypeNormal, reasonPVCCleanupSuccessful,
+		fmt.Sprintf(messageCleanupSuccessful, pvc.Name, p.cluster.Name))
 	return nil
 }
 
 func (p *PVCCleaner) getPVCs(ctx context.Context) ([]core.PersistentVolumeClaim, error) {
 	pvcs := &core.PersistentVolumeClaimList{}
-	lo := &client.ListOptions{
+	opts := &client.ListOptions{
 		Namespace:     p.cluster.Namespace,
 		LabelSelector: labels.SelectorFromSet(p.cluster.GetSelectorLabels()),
 	}
 
-	if err := p.client.List(ctx, lo, pvcs); err != nil {
+	if err := p.client.List(ctx, pvcs, opts); err != nil {
 		return nil, err
 	}
 

@@ -59,7 +59,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileMysqlBackup{
 		Client:   mgr.GetClient(),
 		scheme:   mgr.GetScheme(),
-		recorder: mgr.GetRecorder(controllerName),
+		recorder: mgr.GetEventRecorderFor(controllerName),
 		opt:      options.GetOptions(),
 	}
 }

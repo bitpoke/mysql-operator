@@ -31,7 +31,7 @@ var log = logf.Log.WithName("orchestrator.client")
 
 func (o *orchestrator) makeGetRequest(path string, out interface{}) *Error {
 	uri := fmt.Sprintf("%s/%s", o.connectURI, path)
-	log.V(2).Info("orchestrator request info", "uri", uri, "outobj", out)
+	log.V(2).Info("orchestrator request info", "uri", uri)
 
 	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {

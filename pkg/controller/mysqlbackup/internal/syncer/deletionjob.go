@@ -74,13 +74,13 @@ func NewDeleteJobSyncer(c client.Client, s *runtime.Scheme, backup *mysqlbackup.
 		recorder: r,
 	}
 
-	return syncer.NewObjectSyncer("BackupCleaner", nil, job, c, s, jobSyncer.SyncFn)
+	return syncer.NewObjectSyncer("BackupCleaner", nil, job, c, s, func() error {
+		return jobSyncer.SyncFn(job)
+	})
 }
 
 // nolint: gocyclo
-func (s *deletionJobSyncer) SyncFn(in runtime.Object) error {
-	out := in.(*batch.Job)
-
+func (s *deletionJobSyncer) SyncFn(job *batch.Job) error {
 	if s.backup.Spec.RemoteDeletePolicy == api.Retain {
 		// do nothing
 		return syncer.ErrIgnore
@@ -105,13 +105,13 @@ func (s *deletionJobSyncer) SyncFn(in runtime.Object) error {
 	}
 
 	// check if the job is created and if not create it
-	if out.ObjectMeta.CreationTimestamp.IsZero() {
-		out.Labels = map[string]string{
+	if job.ObjectMeta.CreationTimestamp.IsZero() {
+		job.Labels = map[string]string{
 			"backup":      s.backup.Name,
 			"cleanup-job": "true",
 		}
 
-		err := mergo.Merge(&out.Spec.Template.Spec, s.ensurePodSpec(),
+		err := mergo.Merge(&job.Spec.Template.Spec, s.ensurePodSpec(),
 			mergo.WithTransformers(transformers.PodSpec))
 		if err != nil {
 			return err
@@ -119,13 +119,13 @@ func (s *deletionJobSyncer) SyncFn(in runtime.Object) error {
 
 		// explicit set owner reference on job because  the owner has set deletionTimestamp, at this point, and
 		// the syncer will not set it
-		err = controllerutil.SetControllerReference(s.backup.Unwrap(), out, s.schema)
+		err = controllerutil.SetControllerReference(s.backup.Unwrap(), job, s.schema)
 		if err != nil {
 			return err
 		}
 	}
 
-	completed, failed := getJobStatus(out)
+	completed, failed := getJobStatus(job)
 	if completed {
 		removeFinalizer(s.backup.Unwrap(), RemoteStorageFinalizer)
 	}

@@ -65,8 +65,10 @@ func NewOrcUpdater(cluster *mysqlcluster.MysqlCluster, r record.EventRecorder, o
 	}
 }
 
-func (ou *orcUpdater) GetObject() interface{}   { return nil }
-func (ou *orcUpdater) GetOwner() runtime.Object { return ou.cluster }
+func (ou *orcUpdater) Object() interface{}         { return nil }
+func (ou *orcUpdater) ObjectOwner() runtime.Object { return ou.cluster }
+func (ou *orcUpdater) GetObject() interface{}      { return nil }
+func (ou *orcUpdater) GetOwner() runtime.Object    { return ou.cluster }
 func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 	// get instances from orchestrator
 	var (

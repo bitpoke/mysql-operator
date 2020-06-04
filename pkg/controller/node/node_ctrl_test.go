@@ -145,7 +145,7 @@ var _ = Describe("MysqlNode controller", func() {
 			Expect(c.Delete(context.TODO(), secret)).To(Succeed())
 			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
 			podList := &corev1.PodList{}
-			Expect(c.List(context.TODO(), nil, podList)).To(Succeed())
+			Expect(c.List(context.TODO(), podList)).To(Succeed())
 			for _, pod := range podList.Items {
 				Expect(c.Delete(context.TODO(), &pod)).To(Succeed())
 			}

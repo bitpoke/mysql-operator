@@ -74,7 +74,7 @@ func newReconciler(mgr manager.Manager, sqlI sqlFactoryFunc) reconcile.Reconcile
 		Client:         mgr.GetClient(),
 		unCachedClient: newClient,
 		scheme:         mgr.GetScheme(),
-		recorder:       mgr.GetRecorder(controllerName),
+		recorder:       mgr.GetEventRecorderFor(controllerName),
 		opt:            options.GetOptions(),
 		sqlFactory:     sqlI,
 	}

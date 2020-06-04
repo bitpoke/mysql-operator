@@ -192,7 +192,7 @@ func computeInnodbLogFileSize(mem *resource.Quantity) int64 {
 // computeInnodbBufferPoolSize returns a computed value, to configure MySQL, based on requested
 // memory. As described in: https://github.com/presslabs/mysql-operator/issues/502
 func computeInnodbBufferPoolSize(mem *resource.Quantity) (int64, error) {
-	availableMem := mem.Copy()
+	availableMem := mem.DeepCopy()
 	percentRAM := 0.75
 
 	if mem.Value() <= 512*mb {

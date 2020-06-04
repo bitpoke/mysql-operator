@@ -152,7 +152,7 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 var instance *Options
 var once sync.Once
 
-// GetOptions returns a singlethon that contains all options
+// GetOptions returns a singleton that contains all options
 func GetOptions() *Options {
 	once.Do(func() {
 		instance = &Options{

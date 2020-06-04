@@ -75,7 +75,7 @@ func newReconciler(mgr manager.Manager, cron *cron.Cron) reconcile.Reconciler {
 	return &ReconcileMysqlBackup{
 		Client:          mgr.GetClient(),
 		scheme:          mgr.GetScheme(),
-		recorder:        mgr.GetRecorder(controllerName),
+		recorder:        mgr.GetEventRecorderFor(controllerName),
 		opt:             options.GetOptions(),
 		cron:            cron,
 		lockJobRegister: new(sync.Mutex),
@@ -204,7 +204,7 @@ func (r *ReconcileMysqlBackup) unregisterCluster(clusterKey types.NamespacedName
 }
 
 func addBackupFieldIndexers(mgr manager.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(&mysqlv1alpha1.MysqlBackup{}, "status.completed", func(b runtime.Object) []string {
+	return mgr.GetFieldIndexer().IndexField(context.TODO(), &mysqlv1alpha1.MysqlBackup{}, "status.completed", func(b runtime.Object) []string {
 		completed := "false"
 		if b.(*mysqlv1alpha1.MysqlBackup).Status.Completed {
 			completed = "true"

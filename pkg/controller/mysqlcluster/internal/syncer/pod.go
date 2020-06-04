@@ -49,7 +49,7 @@ const (
 
 // NewPodSyncer returns the syncer for pod
 func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, host string) syncer.Interface {
-	obj := &core.Pod{
+	pod := &core.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      getPodNameForHost(host),
 			Namespace: cluster.Namespace,
@@ -62,13 +62,13 @@ func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster
 		log:      logf.Log.WithName("pod-syncer").WithValues("key", cluster),
 	}
 
-	return syncer.NewObjectSyncer("Pod", nil, obj, c, scheme, sync.SyncFn)
+	return syncer.NewObjectSyncer("Pod", nil, pod, c, scheme, func() error {
+		return sync.SyncFn(pod)
+	})
 }
 
 // nolint: gocyclo
-func (s *podSyncer) SyncFn(in runtime.Object) error {
-	out := in.(*core.Pod)
-
+func (s *podSyncer) SyncFn(out *core.Pod) error {
 	// raise error if pod is not created
 	if out.CreationTimestamp.IsZero() {
 		return NewPodNotFoundError()

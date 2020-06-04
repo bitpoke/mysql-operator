@@ -61,7 +61,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileMysqlCluster{
 		Client:   mgr.GetClient(),
 		scheme:   mgr.GetScheme(),
-		recorder: mgr.GetRecorder(controllerName),
+		recorder: mgr.GetEventRecorderFor(controllerName),
 		opt:      options.GetOptions(),
 	}
 }
@@ -231,8 +231,8 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	cmRev := configMapSyncer.GetObject().(*corev1.ConfigMap).ResourceVersion
-	sctRev := secretSyncer.GetObject().(*corev1.Secret).ResourceVersion
+	cmRev := configMapSyncer.Object().(*corev1.ConfigMap).ResourceVersion
+	sctRev := secretSyncer.Object().(*corev1.Secret).ResourceVersion
 
 	// run the syncers for services, pdb and statefulset
 	syncers := []syncer.Interface{
@@ -300,7 +300,6 @@ func (r *ReconcileMysqlCluster) getPodSyncers(cluster *mysqlcluster.MysqlCluster
 	}
 
 	return syncers
-
 }
 
 func getCondAsBool(status *mysqlv1alpha1.NodeStatus, cond mysqlv1alpha1.NodeConditionType) bool {

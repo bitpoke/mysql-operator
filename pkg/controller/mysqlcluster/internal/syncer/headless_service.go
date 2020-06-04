@@ -29,44 +29,42 @@ import (
 
 // NewHeadlessSVCSyncer returns a service syncer
 func NewHeadlessSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
-	obj := &core.Service{
+	service := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(mysqlcluster.HeadlessSVC),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("HeadlessSVC", nil, obj, c, scheme, func(in runtime.Object) error {
-		out := in.(*core.Service)
-
+	return syncer.NewObjectSyncer("HeadlessSVC", nil, service, c, scheme, func() error {
 		// add general labels to this service
-		out.Labels = map[string]string{
+		service.Labels = map[string]string{
 			"app.kubernetes.io/name":       "mysql",
 			"app.kubernetes.io/managed-by": "mysql.presslabs.org",
 		}
-		out.Labels["mysql.presslabs.org/service-type"] = "namespace-nodes"
+		service.Labels["mysql.presslabs.org/service-type"] = "namespace-nodes"
 
-		out.Spec.ClusterIP = "None"
-		out.Spec.Selector = labels.Set{
+		service.Spec.ClusterIP = "None"
+		service.Spec.Selector = labels.Set{
 			"app.kubernetes.io/name":       "mysql",
 			"app.kubernetes.io/managed-by": "mysql.presslabs.org",
 		}
 		// we want to be able to access pods even if the pod is not ready because the operator should update
 		// the in memory table to mark the pod ready.
-		out.Spec.PublishNotReadyAddresses = true
+		service.Spec.PublishNotReadyAddresses = true
 
-		if len(out.Spec.Ports) != 2 {
-			out.Spec.Ports = make([]core.ServicePort, 2)
+		if len(service.Spec.Ports) != 2 {
+			service.Spec.Ports = make([]core.ServicePort, 2)
 		}
-		out.Spec.Ports[0].Name = MysqlPortName
-		out.Spec.Ports[0].Port = MysqlPort
-		out.Spec.Ports[0].TargetPort = TargetPort
-		out.Spec.Ports[0].Protocol = core.ProtocolTCP
+		service.Spec.Ports[0].Name = MysqlPortName
+		service.Spec.Ports[0].Port = MysqlPort
+		service.Spec.Ports[0].TargetPort = TargetPort
+		service.Spec.Ports[0].Protocol = core.ProtocolTCP
 
-		out.Spec.Ports[1].Name = ExporterPortName
-		out.Spec.Ports[1].Port = ExporterPort
-		out.Spec.Ports[1].TargetPort = ExporterTargetPort
-		out.Spec.Ports[1].Protocol = core.ProtocolTCP
+		service.Spec.Ports[1].Name = ExporterPortName
+		service.Spec.Ports[1].Port = ExporterPort
+		service.Spec.Ports[1].TargetPort = ExporterTargetPort
+		service.Spec.Ports[1].Protocol = core.ProtocolTCP
 
 		return nil
 	})
