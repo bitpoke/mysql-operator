@@ -111,6 +111,8 @@ func isServiceAvailable(svc string) bool {
 		return false
 	}
 
+	defer func() { _ = resp.Body.Close() }()
+
 	if resp.StatusCode != 200 {
 		log.Info("service not available", "service", svc, "HTTP status code", resp.StatusCode)
 		return false
