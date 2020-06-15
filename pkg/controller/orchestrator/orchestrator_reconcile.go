@@ -221,12 +221,18 @@ func (ou *orcUpdater) updateNodesStatus(insts InstancesSet, master *orc.Instance
 		}
 
 		// set node Lagged conditions
-		if !node.SlaveLagSeconds.Valid {
-			ou.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionUnknown)
-		} else if node.SlaveLagSeconds.Int64 <= maxSlaveLatency {
+		if master != nil && host == master.Key.Hostname {
+			// sometimes the pt-hearbeat is slowed down, but it doesn't mean the master
+			// is lagging (it's not replicating). So always set False for master.
 			ou.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionFalse)
-		} else { // node is behind master
-			ou.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionTrue)
+		} else {
+			if !node.SlaveLagSeconds.Valid {
+				ou.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionUnknown)
+			} else if node.SlaveLagSeconds.Int64 <= maxSlaveLatency {
+				ou.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionFalse)
+			} else { // node is behind master
+				ou.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionTrue)
+			}
 		}
 
 		// set node replicating condition
