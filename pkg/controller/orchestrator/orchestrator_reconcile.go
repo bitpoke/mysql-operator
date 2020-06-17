@@ -635,6 +635,10 @@ func makeRecoveryMessage(acks []orc.TopologyRecovery) string {
 }
 
 func instToLog(inst *orc.Instance) map[string]string {
+	if inst == nil {
+		return nil
+	}
+
 	return map[string]string{
 		"Hostname":       inst.Key.Hostname,
 		"MasterHostname": inst.MasterKey.Hostname,
