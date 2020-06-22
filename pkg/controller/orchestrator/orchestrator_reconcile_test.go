@@ -121,6 +121,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 				Slave_SQL_Running: false,
 				Slave_IO_Running:  false,
 				IsUpToDate:        true,
+				IsRecentlyChecked: true,
 				IsLastCheckValid:  true,
 			})
 		})
@@ -378,8 +379,9 @@ var _ = Describe("Orchestrator reconciler", func() {
 				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
 				ReadOnly:    false, // mark node as master
 				// mark instance as uptodate
-				IsUpToDate:       true,
-				IsLastCheckValid: true,
+				IsUpToDate:        true,
+				IsRecentlyChecked: true,
+				IsLastCheckValid:  true,
 			})
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
@@ -390,8 +392,9 @@ var _ = Describe("Orchestrator reconciler", func() {
 				Slave_SQL_Running: true,
 				Slave_IO_Running:  true,
 				// mark instance as uptodate
-				IsUpToDate:       true,
-				IsLastCheckValid: true,
+				IsUpToDate:        true,
+				IsRecentlyChecked: true,
+				IsLastCheckValid:  true,
 			})
 
 			// update cluster nodes status
@@ -524,8 +527,9 @@ var _ = Describe("Orchestrator reconciler", func() {
 					Slave_SQL_Running: false,
 					Slave_IO_Running:  false,
 					// mark instance as uptodate
-					IsUpToDate:       true,
-					IsLastCheckValid: true,
+					IsUpToDate:        true,
+					IsRecentlyChecked: true,
+					IsLastCheckValid:  true,
 				})
 				insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
 				master, _ := orcClient.Master(cluster.GetClusterAlias())
@@ -565,8 +569,9 @@ var _ = Describe("Orchestrator reconciler", func() {
 				Key:         orc.InstanceKey{Hostname: oldPodHostname(cluster, 0)},
 				ReadOnly:    false, // mark node as master
 				// mark instance as uptodate
-				IsUpToDate:       true,
-				IsLastCheckValid: true,
+				IsUpToDate:        true,
+				IsRecentlyChecked: true,
+				IsLastCheckValid:  true,
 			})
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
