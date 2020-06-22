@@ -461,7 +461,8 @@ func (ou *orcUpdater) removeNodeConditionNotInOrc(insts InstancesSet) {
 		if err != nil {
 			ou.log.Info("failed to parse hostname for index - won't be removed", "error", err)
 		}
-		if index < *ou.cluster.Spec.Replicas || err != nil {
+
+		if !shouldRemoveOldNode(&ns, ou.cluster) && index < *ou.cluster.Spec.Replicas || err != nil {
 			ou.cluster.Status.Nodes[validIndex] = ns
 			validIndex++
 		}
@@ -644,4 +645,12 @@ func instToLog(inst *orc.Instance) map[string]string {
 		"MasterHostname": inst.MasterKey.Hostname,
 		"IsUpToDate":     strconv.FormatBool(inst.IsUpToDate),
 	}
+}
+
+func shouldRemoveOldNode(node *api.NodeStatus, cluster *mysqlcluster.MysqlCluster) bool {
+	if version, ok := cluster.ObjectMeta.Annotations["mysql.presslabs.org/version"]; ok && version == "300" {
+		return strings.Contains(node.Name, "-mysql-nodes")
+	}
+
+	return false
 }
