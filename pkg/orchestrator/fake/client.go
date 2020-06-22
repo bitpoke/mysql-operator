@@ -207,8 +207,9 @@ func (o *OrcFakeClient) Discover(host string, port int) error {
 			Valid: false,
 			Int64: 0,
 		},
-		IsUpToDate:       true,
-		IsLastCheckValid: true,
+		IsUpToDate:        true,
+		IsRecentlyChecked: true,
+		IsLastCheckValid:  true,
 	})
 
 	return nil

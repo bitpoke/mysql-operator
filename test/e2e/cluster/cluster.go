@@ -356,10 +356,11 @@ func testClusterRegistrationInOrchestrator(f *framework.Framework, cluster *api.
 				Hostname: f.GetPodHostname(cluster, 0),
 				Port:     3306,
 			}),
-			"GTIDMode":      Equal("ON"),
-			"IsUpToDate":    Equal(true),
-			"Binlog_format": Equal("ROW"),
-			"ReadOnly":      Equal(clusterReadOnly),
+			"GTIDMode":          Equal("ON"),
+			"IsUpToDate":        Equal(true),
+			"IsRecentlyChecked": Equal(true),
+			"Binlog_format":     Equal("ROW"),
+			"ReadOnly":          Equal(clusterReadOnly),
 		}), // master node
 	}
 	for i := 1; i < int(*cluster.Spec.Replicas); i++ {
@@ -368,10 +369,11 @@ func testClusterRegistrationInOrchestrator(f *framework.Framework, cluster *api.
 				Hostname: f.GetPodHostname(cluster, i),
 				Port:     3306,
 			}),
-			"GTIDMode":      Equal("ON"),
-			"IsUpToDate":    Equal(true),
-			"Binlog_format": Equal("ROW"),
-			"ReadOnly":      Equal(true),
+			"GTIDMode":          Equal("ON"),
+			"IsUpToDate":        Equal(true),
+			"IsRecentlyChecked": Equal(true),
+			"Binlog_format":     Equal("ROW"),
+			"ReadOnly":          Equal(true),
 		})) // slave node
 	}
 

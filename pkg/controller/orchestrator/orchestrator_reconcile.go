@@ -208,8 +208,11 @@ func (ou *orcUpdater) updateNodesStatus(insts InstancesSet, master *orc.Instance
 		host := node.Key.Hostname
 
 		// nodes that are not up to date in orchestrator should be marked as unknown
-		if !node.IsUpToDate {
+		if !node.IsRecentlyChecked {
+			log.V(1).Info("Orchestrator detected host as stale", "host", host)
+
 			if !node.IsLastCheckValid {
+				log.V(1).Info("Last orchestrator host check invalid", "host", host)
 				ou.updateNodeCondition(host, api.NodeConditionLagged, core.ConditionUnknown)
 				ou.updateNodeCondition(host, api.NodeConditionReplicating, core.ConditionUnknown)
 				ou.updateNodeCondition(host, api.NodeConditionMaster, core.ConditionUnknown)
