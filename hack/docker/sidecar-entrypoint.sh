@@ -46,19 +46,19 @@ VERBOSE="--debug"
 case "$1" in
     clone-and-init)
         shift 1
-        $SIDECAR_BIN $VERBOSE clone-and-init "$@"
+        exec $SIDECAR_BIN $VERBOSE clone-and-init "$@"
         ;;
     config-and-serve)
         shift 1
-        $SIDECAR_BIN $VERBOSE run "$@"
+        exec $SIDECAR_BIN $VERBOSE run "$@"
         ;;
     take-backup-to)
         shift 1
-        $SIDECAR_BIN $VERBOSE take-backup-to "$@"
+        exec $SIDECAR_BIN $VERBOSE take-backup-to "$@"
         ;;
     schedule-backup)
         shift 1
-        $SIDECAR_BIN $VERBOSE schedule-backup "$@"
+        exec $SIDECAR_BIN $VERBOSE schedule-backup "$@"
         ;;
     *)
         echo "Usage: $0 {files-config|clone|config-and-serve}"
