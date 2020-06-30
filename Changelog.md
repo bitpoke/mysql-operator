@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 ### Added
+ * Add `backupAffinity`, `backupNodeSelector`, `backupPriorityClassName`, `backupTolerations`
+   to `.Spec.PodSpec` to allow specifying custom scheduling constraints for backup jobs.
 ### Changed
 ### Removed
 ### Fixed

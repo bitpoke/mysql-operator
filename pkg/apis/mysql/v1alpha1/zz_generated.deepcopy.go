@@ -439,6 +439,25 @@ func (in *PodSpec) DeepCopyInto(out *PodSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.BackupAffinity != nil {
+		in, out := &in.BackupAffinity, &out.BackupAffinity
+		*out = new(v1.Affinity)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.BackupNodeSelector != nil {
+		in, out := &in.BackupNodeSelector, &out.BackupNodeSelector
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
+	if in.BackupTolerations != nil {
+		in, out := &in.BackupTolerations, &out.BackupTolerations
+		*out = make([]v1.Toleration, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Volumes != nil {
 		in, out := &in.Volumes, &out.Volumes
 		*out = make([]v1.Volume, len(*in))

@@ -179,6 +179,11 @@ type PodSpec struct {
 	Tolerations        []core.Toleration         `json:"tolerations,omitempty"`
 	ServiceAccountName string                    `json:"serviceAccountName,omitempty"`
 
+	BackupAffinity          *core.Affinity    `json:"backupAffinity,omitempty"`
+	BackupNodeSelector      map[string]string `json:"backupNodeSelector,omitempty"`
+	BackupPriorityClassName string            `json:"backupPriorityClassName,omitempty"`
+	BackupTolerations       []core.Toleration `json:"backupTolerations,omitempty"`
+
 	// Volumes allows adding extra volumes to the statefulset
 	// +optional
 	Volumes []core.Volume `json:"volumes,omitempty"`

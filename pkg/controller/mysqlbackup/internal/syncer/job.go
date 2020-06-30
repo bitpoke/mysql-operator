@@ -134,13 +134,28 @@ func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 		s.backup.GetBackupURL(s.cluster),
 	}
 
+	in.ImagePullSecrets = s.cluster.Spec.PodSpec.ImagePullSecrets
 	in.ServiceAccountName = s.cluster.Spec.PodSpec.ServiceAccountName
 
-	in.Affinity = s.cluster.Spec.PodSpec.Affinity
-	in.ImagePullSecrets = s.cluster.Spec.PodSpec.ImagePullSecrets
-	in.NodeSelector = s.cluster.Spec.PodSpec.NodeSelector
-	in.PriorityClassName = s.cluster.Spec.PodSpec.PriorityClassName
-	in.Tolerations = s.cluster.Spec.PodSpec.Tolerations
+	in.Affinity = s.cluster.Spec.PodSpec.BackupAffinity
+	if s.cluster.Spec.PodSpec.BackupAffinity == nil {
+		in.Affinity = s.cluster.Spec.PodSpec.Affinity
+	}
+
+	in.NodeSelector = s.cluster.Spec.PodSpec.BackupNodeSelector
+	if s.cluster.Spec.PodSpec.BackupNodeSelector == nil {
+		in.NodeSelector = s.cluster.Spec.PodSpec.NodeSelector
+	}
+
+	in.PriorityClassName = s.cluster.Spec.PodSpec.BackupPriorityClassName
+	if len(s.cluster.Spec.PodSpec.BackupPriorityClassName) == 0 {
+		in.PriorityClassName = s.cluster.Spec.PodSpec.PriorityClassName
+	}
+
+	in.Tolerations = s.cluster.Spec.PodSpec.BackupTolerations
+	if s.cluster.Spec.PodSpec.BackupTolerations == nil {
+		in.Tolerations = s.cluster.Spec.PodSpec.Tolerations
+	}
 
 	boolTrue := true
 	in.Containers[0].Env = []core.EnvVar{
