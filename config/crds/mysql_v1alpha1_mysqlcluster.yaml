@@ -121,6 +121,16 @@ spec:
                   type: object
                 annotations:
                   type: object
+                backupAffinity:
+                  type: object
+                backupNodeSelector:
+                  type: object
+                backupPriorityClassName:
+                  type: string
+                backupTolerations:
+                  items:
+                    type: object
+                  type: array
                 containers:
                   description: Containers allows for user to specify extra sidecar
                     containers to run along with mysql

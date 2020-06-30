@@ -45,6 +45,10 @@ spec:
   #           topologyKey: "kubernetes.io/hostname"
   #           labelSelector:
   #             matchlabels: <cluster-labels>
+  #   backupAffinity: {}
+  #   backupNodeSelector: {}
+  #   backupPriorityClassName:
+  #   backupTolerations: []
   #   nodeSelector: {}
   #   resources:
   #     requests:
