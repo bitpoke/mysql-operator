@@ -23,7 +23,7 @@ We welcome all contributions in the form of new issues for feature requests, bug
 
 ## Documentation
 
-* [Getting started](docs/getting-started.md) provides an overview over deploying and using the MySQL operator
+* [Getting started](docs/_index.md) provides an overview over deploying and using the MySQL operator
 * [Deploy a MySQL cluster](docs/deploy-mysql-cluster.md) describes in detail how a cluster can be installed and configured
 * [Configure backups](docs/backups.md) shows how to configure and take backups of a cluster
 * [Recurrent backups](docs/cluster-recurrent-backups.md) describes how to setup recurrent backups for the cluster
