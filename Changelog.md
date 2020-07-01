@@ -10,10 +10,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 ### Removed
 ### Fixed
- * rclone extra arguments are now properly passed to the backup job.
 
 
-## [0.4.0] - TBD
+## [0.4.0] - 2020-06-17
 ### Added
  * Added a `ServiceMonitor` to the operator chart that scrapes all MySQL instances.
  * Added a test suite for RunCloneCommand logic, along with a mock backup server.
@@ -74,6 +73,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Copy the nodeSelector as-is in the statefulset (fixes #454)
  * Fix flakines in ReadOnly cluster condition (fixes #434)
  * Fix rounding in computing `innodb-buffer-pool-size` (fixes #501)
+ * rclone extra arguments are now properly passed to the backup job.
 
 
 ## [0.3.8] - 2020-01-22
@@ -180,7 +180,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
 
-[Unreleased]: https://github.com/presslabs/mysql-operator/compare/v0.3.8...HEAD
+[Unreleased]: https://github.com/presslabs/mysql-operator/compare/v0.4.0...HEAD
 [0.3.8]: https://github.com/presslabs/mysql-operator/compare/v0.3.7...v0.3.8
 [0.3.7]: https://github.com/presslabs/mysql-operator/compare/v0.3.6...v0.3.7
 [0.3.6]: https://github.com/presslabs/mysql-operator/compare/v0.3.5...v0.3.6
