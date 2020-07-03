@@ -68,6 +68,7 @@ deploy: manifests
 MANIFESTS_DIR ?= config
 CRD_DIR ?= $(MANIFESTS_DIR)/crds
 RBAC_DIR ?= $(MANIFESTS_DIR)/rbac
+BOILERPLATE_FILE ?= ./hack/boilerplate.go.txt
 
 GEN_CRD_OPTIONS ?= crd:trivialVersions=true
 GEN_RBAC_OPTIONS ?= rbac:roleName=manager-role
