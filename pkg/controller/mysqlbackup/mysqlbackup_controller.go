@@ -30,9 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -99,13 +99,12 @@ type ReconcileMysqlBackup struct {
 	opt      *options.Options
 }
 
-// Reconcile reads that state of the cluster for a MysqlBackup object and makes changes based on the state read
-// and what is in the MysqlBackup.Spec
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlbackups,verbs=get;list;watch;create;update;patch;delete
 
-// nolint: gocyclo
+// Reconcile reads that state of the cluster for a MysqlBackup object and makes changes based on the state read
+// and what is in the MysqlBackup.Spec
 func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlBackup instance
 	backup := mysqlbackup.New(&mysqlv1alpha1.MysqlBackup{})
