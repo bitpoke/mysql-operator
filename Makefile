@@ -7,8 +7,10 @@ IMAGE_TAGS := $(APP_VERSION)
 PKG_NAME := github.com/presslabs/mysql-operator
 
 BINDIR := $(PWD)/bin
-KUBEBUILDER_VERSION ?= 1.0.7
-HELM_VERSION ?= 2.11.0
+KUBEBUILDER_VERSION ?= 2.3.1
+HELM_VERSION ?= 3.2.4
+GOLANGCI_LINTER_VERSION ?= 1.24.0
+YQ_VERSION ?= 3.3.2
 
 GOOS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 GOARCH ?= amd64
@@ -62,9 +64,25 @@ install: manifests
 deploy: manifests
 	kubectl apply -f config/crds
 
+
+MANIFESTS_DIR ?= config
+CRD_DIR ?= $(MANIFESTS_DIR)/crds
+RBAC_DIR ?= $(MANIFESTS_DIR)/rbac
+
+GEN_CRD_OPTIONS ?= crd:trivialVersions=true
+GEN_RBAC_OPTIONS ?= rbac:roleName=manager-role
+GEN_WEBHOOK_OPTIONS ?= webhook
+GEN_OBJECT_OPTIONS ?= object:headerFile=$(BOILERPLATE_FILE)
+GEN_OUTPUTS_OPTIONS ?= output:crd:artifacts:config=$(CRD_DIR) output:rbac:artifacts:config=$(RBAC_DIR)
+
+
 # Generate manifests e.g. CRD, RBAC etc.
-manifests:
-	go run vendor/sigs.k8s.io/controller-tools/cmd/controller-gen/main.go all
+manifests: $(CONTROLLER_GEN)
+	@rm -rf $(CRD_DIR)
+	@rm -rf $(RBAC_DIR)
+
+	$(BINDIR)/controller-gen paths="./pkg/..." $(GEN_CRD_OPTIONS) $(GEN_RBAC_OPTIONS) $(GEN_WEBHOOK_OPTIONS) $(GEN_OBJECT_OPTIONS) $(GEN_OUTPUTS_OPTIONS)
+
 	cd hack && ./generate_chart_manifests.sh
 
 # Run go fmt against code
@@ -76,8 +94,7 @@ vet:
 	go vet ./pkg/... ./cmd/...
 
 # Generate code
-generate:
-	go generate ./pkg/... ./cmd/...
+generate: manifests
 
 lint:
 	$(BINDIR)/golangci-lint run ./pkg/... ./cmd/...
@@ -89,16 +106,18 @@ chart: generate manifests
 
 dependencies:
 	test -d $(BINDIR) || mkdir $(BINDIR)
-	GOBIN=$(BINDIR) go install ./vendor/github.com/onsi/ginkgo/ginkgo
-	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v1.24.0
+	GOBIN=$(BINDIR) go get github.com/onsi/ginkgo/ginkgo
+
+	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v$(GOLANGCI_LINTER_VERSION)
+
+	GOBIN=$(BINDIR) go get sigs.k8s.io/controller-tools/cmd/controller-gen
 
 dependencies-local: dependencies
-	curl -sL https://github.com/mikefarah/yq/releases/download/2.4.0/yq_$(GOOS)_$(GOARCH) -o $(BINDIR)/yq
+	curl -sL https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$(GOOS)_$(GOARCH) -o $(BINDIR)/yq
 	chmod +x $(BINDIR)/yq
-	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v1.24.0
 	curl -sL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_$(GOOS)_$(GOARCH).tar.gz | \
 				tar -zx -C $(BINDIR) --strip-components=2
-	curl -sL https://kubernetes-helm.storage.googleapis.com/helm-v$(HELM_VERSION)-$(GOOS)-$(GOARCH).tar.gz | \
+	curl -sL https://get.helm.sh/helm-v$(HELM_VERSION)-$(GOOS)-$(GOARCH).tar.gz | \
 		tar -C $(BINDIR) -xz --strip-components 1 $(GOOS)-$(GOARCH)/helm
 	chmod +x $(BINDIR)/helm
 

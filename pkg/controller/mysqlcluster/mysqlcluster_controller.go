@@ -133,14 +133,15 @@ type ReconcileMysqlCluster struct {
 	opt      *options.Options
 }
 
-// Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
-// and what is in the MysqlCluster.Spec
-// nolint: gocyclo
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps;secrets;services;events;jobs;pods;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlclusters;mysqlclusters/status,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
+
+// Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
+// and what is in the MysqlCluster.Spec
+// nolint: gocyclo
 func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlCluster instance
 	cluster := mysqlcluster.New(&mysqlv1alpha1.MysqlCluster{})

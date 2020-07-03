@@ -20,7 +20,7 @@ for file in ${CONFIG_PATH}/crds/*.yaml; do
 done
 
 # templates/rbac.yaml update
-cp ${CONFIG_PATH}/rbac/rbac_role.yaml ${CHART_PATH}/templates/rbac.yaml
+cp ${CONFIG_PATH}/rbac/role.yaml ${CHART_PATH}/templates/rbac.yaml
 yq m -d'*' -i ${CHART_PATH}/templates/rbac.yaml chart-metadata.yaml
 yq d -d'*' -i ${CHART_PATH}/templates/rbac.yaml metadata.creationTimestamp
 yq w -d'*' -i ${CHART_PATH}/templates/rbac.yaml metadata.name '{{ template "mysql-operator.fullname" . }}'

@@ -104,6 +104,7 @@ type ReconcileMysqlBackup struct {
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlbackups,verbs=get;list;watch;create;update;patch;delete
+
 // nolint: gocyclo
 func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlBackup instance
