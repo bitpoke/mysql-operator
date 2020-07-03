@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Generate deepcopy for apis
-//
 // Package v1alpha1 contains API Schema definitions for the mysql v1alpha1 API group
 // +kubebuilder:object:generate:=true
 // +groupName=mysql.presslabs.org

@@ -23,7 +23,7 @@ import (
 
 	logf "github.com/presslabs/controller-util/log"
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/presslabs/mysql-operator/pkg/sidecar"
 )
