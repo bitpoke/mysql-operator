@@ -126,24 +126,24 @@ var _ = Describe("PVC cleaner", func() {
 
 		AfterEach(func() {
 			for _, pvc := range pvcs {
-				c.Delete(context.TODO(), &pvc)
+				deletePVC(&pvc)
 			}
 		})
 
 		It("should remove extra PVCs when cluster is scaled down", func() {
 			// assert that here are multiple PVCs than needed
-			Expect(listClaimsForCluster(c, cluster).Items).To(HaveLen(5))
+			Expect(listClaimsForCluster(c, cluster)).To(HaveLen(5))
 
 			// run cleaner
 			pvcCleaner := NewPVCCleaner(cluster, options.GetOptions(), rec, c)
 			Expect(pvcCleaner.Run(context.TODO())).To(Succeed())
 
-			Expect(listClaimsForCluster(c, cluster).Items).To(HaveLen(3))
+			Expect(listClaimsForCluster(c, cluster)).To(HaveLen(3))
 
 			// run cleaner again, should result in no changes
 			Expect(pvcCleaner.Run(context.TODO())).To(Succeed())
 
-			Expect(listClaimsForCluster(c, cluster).Items).To(HaveLen(3))
+			Expect(listClaimsForCluster(c, cluster)).To(HaveLen(3))
 		})
 
 		It("should not remove pvc with 0 index", func() {
@@ -156,8 +156,7 @@ var _ = Describe("PVC cleaner", func() {
 			pvcCleaner := NewPVCCleaner(cluster, options.GetOptions(), rec, c)
 			Expect(pvcCleaner.Run(context.TODO())).To(Succeed())
 
-			pvcs2 := listClaimsForCluster(c, cluster)
-			Expect(pvcs2.Items).To(HaveLen(1))
+			Expect(listClaimsForCluster(c, cluster)).To(HaveLen(1))
 		})
 	})
 	It("should do nothing when cluster has no claims that belongs to him", func() {
@@ -176,12 +175,11 @@ var _ = Describe("PVC cleaner", func() {
 		Expect(pvcCleaner.Run(context.TODO())).To(Succeed())
 
 		// check that the pvc is not deleted
-		pvcs2 := listClaimsForCluster(c, cluster)
-		Expect(pvcs2.Items).To(HaveLen(1))
+		Expect(listClaimsForCluster(c, cluster)).To(HaveLen(1))
 	})
 })
 
-func listClaimsForCluster(c client.Client, cluster *mysqlcluster.MysqlCluster) *corev1.PersistentVolumeClaimList {
+func listClaimsForCluster(c client.Client, cluster *mysqlcluster.MysqlCluster) []corev1.PersistentVolumeClaim {
 	pvcs := &corev1.PersistentVolumeClaimList{}
 	opts := &client.ListOptions{
 		Namespace:     cluster.Namespace,
@@ -189,5 +187,28 @@ func listClaimsForCluster(c client.Client, cluster *mysqlcluster.MysqlCluster) *
 	}
 
 	Expect(c.List(context.TODO(), pvcs, opts)).To(Succeed())
-	return pvcs
+
+	// filter only not deleted PVCs
+	filteredPVCs := []corev1.PersistentVolumeClaim{}
+	for _, pvc := range pvcs.Items {
+		if pvc.DeletionTimestamp.IsZero() {
+			filteredPVCs = append(filteredPVCs, pvc)
+		}
+	}
+
+	return filteredPVCs
+}
+
+func deletePVC(pvc *corev1.PersistentVolumeClaim) error {
+	if err := c.Delete(context.TODO(), pvc); err != nil {
+		return err
+	}
+
+	pvc.Finalizers = nil
+
+	if err := c.Update(context.TODO(), pvc); err != nil {
+		return err
+	}
+
+	return nil
 }
