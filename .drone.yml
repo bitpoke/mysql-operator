@@ -24,7 +24,7 @@ pipeline:
 
   lint:
     group: lint
-    image: quay.io/presslabs/bfc:0.2
+    image: quay.io/presslabs/bfc:0.3
     commands:
       - make lint
 
@@ -38,12 +38,12 @@ pipeline:
 
   test:
     group: test
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.3
     commands:
       - make test
 
   verify-generate:
-    image: quay.io/presslabs/bfc:0.2
+    image: quay.io/presslabs/bfc:0.3
     commands:
       - make -s fmt generate manifests
       - git diff --exit-code
@@ -179,7 +179,7 @@ pipeline:
 #
 
   start-kubernetes:
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.3
     group: publish
     secrets:
       - GOOGLE_CREDENTIALS
@@ -192,18 +192,14 @@ pipeline:
       - gcloud container clusters create $CLUSTER_NAME
           --zone europe-west3-b --project testing-reactor
           --preemptible  --cluster-version 1.14
-      # initialize cluster
-      - kubectl create serviceaccount -n kube-system tiller
-      - kubectl create clusterrolebinding tiller --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-      - helm init --service-account tiller --wait
-      - helm repo add presslabs https://presslabs.github.io/charts
+      # update chart deps
       - helm dependency update charts/mysql-operator
     when:
       branch: master
       event: push
 
   e2e-tests:
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.3
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
@@ -226,7 +222,7 @@ pipeline:
       event: push
 
   stop-kubernetes:
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.3
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
