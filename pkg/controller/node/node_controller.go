@@ -157,10 +157,11 @@ type ReconcileMysqlNode struct {
 	sqlFactory sqlFactoryFunc
 }
 
-// Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
-// and what is in the MysqlCluster.Spec
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=core,resources=pods/status,verbs=get;list;watch;create;update;patch;delete
+
+// Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
+// and what is in the MysqlCluster.Spec
 // nolint: gocyclo
 func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), mysqlReconciliationTimeout)
