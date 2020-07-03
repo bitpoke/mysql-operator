@@ -39,7 +39,7 @@ In your chart add in `requirements.yaml` under `dependencies` section the follow
 ```yaml
 dependencies:
   - name: mysql-cluster
-    version: 0.1.0
+    version: 0.2.0
     repository: https://presslabs.github.io/charts
     condition: mysql.enabled
     alias: mysql
