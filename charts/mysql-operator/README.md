@@ -35,7 +35,7 @@ The following table contains the configuration parameters for mysql-operator and
 | `podDisruptionBudget.enabled`   | Set PDB for Controller and Orchestrator nodes                                                 | `true`                                    |
 | `podSecurityPolicy.enabled`     | Enfoce pod security policy                                                                    | `false`                                   |
 | `orchestrator.image`            | Orchestrator container image                                                                  | `quay.io/presslabs/orchestrator:latest`   |
-| `orchestrator.topologyUser`     | Set a user for orchestrator to use it to connect to the MySQL cluster                         | `sys_operator`                            |
+| `orchestrator.topologyUser`     | Set a user for orchestrator to use it to connect to the MySQL cluster                         | `orchestrator`                |
 | `orchestrator.topologyPassword` | Set a password for the orchestrator user to connect to MySQL cluster                          | `<random string>`                         |
 | `orchestrator.*`                | More ochestrator values that can be tuned. Check in values.yaml                               |                                           |
 
