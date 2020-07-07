@@ -169,7 +169,7 @@ var mysqlMasterSlaveConfigs = map[string]string{
 	"max-allowed-packet": "16M",
 	"max-connect-errors": "1000000",
 	"sql-mode": "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER," +
-		"NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
+		"NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY",
 	"sysdate-is-now": "1",
 
 	// Binary logging
