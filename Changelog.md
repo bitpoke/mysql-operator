@@ -12,6 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
  * Set timeout of 15s on connection between the operator and Orchestrator
  * Bump controller-util dependency to 0.1.18 which fixes some updates on pod spec.
+ * Removed `NO_AUTO_VALUE_ON_ZERO` from `sql-mode` to be inline with MySQL default value
 ### Removed
 ### Fixed
 
