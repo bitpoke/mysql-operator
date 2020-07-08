@@ -435,6 +435,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			"--create-table",
 			"--database", constants.OperatorDbName,
 			"--table", "heartbeat",
+			"--utc",
 			"--defaults-file", constants.ConfHeartBeatPath,
 			// it's important to exit when exceeding more than 20 failed attempts otherwise
 			// pt-heartbeat will run forever using old connection.
