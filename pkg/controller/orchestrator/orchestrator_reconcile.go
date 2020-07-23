@@ -61,7 +61,7 @@ func NewOrcUpdater(cluster *mysqlcluster.MysqlCluster, r record.EventRecorder, o
 		cluster:   cluster,
 		recorder:  r,
 		orcClient: orcClient,
-		log:       logf.Log.WithName("orchestrator-reconciler").WithValues("key", cluster),
+		log:       logf.Log.WithName("orchestrator-reconciler").WithValues("key", cluster.GetNamespacedName()),
 	}
 }
 
@@ -348,7 +348,7 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) (InstancesSet, []
 
 func (ou *orcUpdater) forgetNodesFromOrc(keys []orc.InstanceKey) {
 	if len(keys) != 0 {
-		ou.log.Info("forget nodes in Orchestrator", "keys", keys)
+		ou.log.Info("forget nodes in Orchestrator", "instances", keys)
 	}
 	// the only allowed state in which a node can be removed from orchestrator is
 	// weather the cluster is ready or if it's deleted
@@ -359,7 +359,7 @@ func (ou *orcUpdater) forgetNodesFromOrc(keys []orc.InstanceKey) {
 		// remove all instances from orchestrator that does not exists in k8s
 		for _, key := range keys {
 			if err := ou.orcClient.Forget(key.Hostname, key.Port); err != nil {
-				ou.log.Error(err, "failed to forget host with orchestrator", "key", key.Hostname)
+				ou.log.Error(err, "failed to forget host with orchestrator", "instance", key.Hostname)
 			}
 		}
 	}
@@ -367,11 +367,11 @@ func (ou *orcUpdater) forgetNodesFromOrc(keys []orc.InstanceKey) {
 
 func (ou *orcUpdater) discoverNodesInOrc(keys []orc.InstanceKey) {
 	if len(keys) != 0 {
-		ou.log.Info("discovering nodes in Orchestrator", "keys", keys)
+		ou.log.Info("discovering nodes in Orchestrator", "instances", keys)
 	}
 	for _, key := range keys {
 		if err := ou.orcClient.Discover(key.Hostname, key.Port); err != nil {
-			ou.log.Error(err, "failed to discover host with orchestrator", "key", key)
+			ou.log.Error(err, "failed to discover host with orchestrator", "instance", key)
 		}
 	}
 }

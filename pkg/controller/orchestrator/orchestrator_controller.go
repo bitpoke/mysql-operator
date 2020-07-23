@@ -194,7 +194,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 
 	// overwrite logger with cluster info
 	// nolint: govet
-	log := log.WithValues("key", cluster)
+	log := log.WithValues("key", cluster.GetNamespacedName())
 
 	// save old status
 	oldStatus := *cluster.Status.DeepCopy()

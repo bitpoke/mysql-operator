@@ -20,13 +20,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/presslabs/mysql-operator/pkg/options"
-
 	"github.com/blang/semver"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/options"
 	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
@@ -251,4 +251,12 @@ func (c *MysqlCluster) ExporterDataSourcePort() int {
 	}
 
 	return constants.MysqlPort
+}
+
+// GetNamespacedName return the cluster key. Usually used for logging or for runtime.Client.Get as key
+func (c *MysqlCluster) GetNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: c.Namespace,
+		Name:      c.Name,
+	}
 }
