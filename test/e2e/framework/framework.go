@@ -23,10 +23,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/go-logr/logr"
 	core "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/presslabs/mysql-operator/pkg/apis"
 	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
@@ -53,6 +55,8 @@ type Framework struct {
 	OrcClient orc.Interface
 
 	Timeout time.Duration
+
+	Log logr.Logger
 }
 
 func NewFramework(baseName string) *Framework {
@@ -60,6 +64,7 @@ func NewFramework(baseName string) *Framework {
 	f := &Framework{
 		BaseName:              baseName,
 		SkipNamespaceCreation: false,
+		Log:                   log,
 	}
 
 	BeforeEach(f.BeforeEach)

@@ -17,9 +17,14 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 	"testing"
 
 	"github.com/golang/glog"
@@ -48,17 +53,32 @@ const (
 var orcTunnel *pf.Tunnel
 
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
-	// ginkgo node 1
-	ginkgo.By("Install operator")
-	framework.HelmInstallChart(releaseName, operatorNamespace)
-
 	kubeCfg, err := framework.LoadConfig()
 	gomega.Expect(err).To(gomega.Succeed())
+	restClient := core.NewForConfigOrDie(kubeCfg).RESTClient()
+
+	c, err := client.New(kubeCfg, client.Options{})
+	if err != nil {
+		ginkgo.Fail("can't instantiate k8s client")
+	}
+
+	// ginkgo node 1
+	ginkgo.By("Install operator")
+	operatorNsObj := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: operatorNamespace,
+		},
+	}
+	if err := c.Create(context.TODO(), operatorNsObj); err != nil {
+		if !strings.Contains(err.Error(), "already exists") {
+			ginkgo.Fail(fmt.Sprintf("can't create mysql-operator namespace: %s", err))
+		}
+	}
+	framework.HelmInstallChart(releaseName, operatorNamespace)
 
 	// Create a tunnel, port-forward orchestrator port to local port
 	ginkgo.By("Port-forward orchestrator")
-	client := core.NewForConfigOrDie(kubeCfg).RESTClient()
-	orcTunnel = pf.NewTunnel(client, kubeCfg, operatorNamespace,
+	orcTunnel = pf.NewTunnel(restClient, kubeCfg, operatorNamespace,
 		fmt.Sprintf("%s-mysql-operator-0", releaseName),
 		orchestratorPort,
 	)
@@ -98,7 +118,7 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	ginkgo.By("Remove operator release")
-	framework.HelmPurgeRelease(releaseName)
+	framework.HelmPurgeRelease(releaseName, operatorNamespace)
 
 	ginkgo.By("Delete operator namespace")
 

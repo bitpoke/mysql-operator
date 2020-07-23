@@ -43,9 +43,10 @@ func HelmInstallChart(release, ns string) {
 	Expect(cmd.Run()).Should(Succeed())
 }
 
-func HelmPurgeRelease(release string) {
+func HelmPurgeRelease(release, ns string) {
 	args := []string{
 		"delete", release,
+		"--namespace", ns,
 		"--kube-context", TestContext.KubeContext,
 	}
 	cmd := exec.Command("helm", args...)

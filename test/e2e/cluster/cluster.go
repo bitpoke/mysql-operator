@@ -110,7 +110,7 @@ var _ = Describe("Mysql cluster tests", func() {
 
 		// remove master pod
 		podName := framework.GetNameForResource("sts", cluster) + "-0"
-		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(podName, &meta.DeleteOptions{})
+		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), podName, meta.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete pod %s", podName)
 
 		// check failover done, this is a regression test
@@ -150,7 +150,7 @@ var _ = Describe("Mysql cluster tests", func() {
 		deletePVCSynchronously(f, pvcName, cluster.Namespace, 60*time.Second)
 
 		// now delete master pod
-		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(podName, &meta.DeleteOptions{})
+		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), podName, meta.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete pod %s", podName)
 
 		failoverTimeout := 60 * time.Second
@@ -286,7 +286,7 @@ var _ = Describe("Mysql cluster tests", func() {
 
 		// remove master pod
 		podName := framework.GetNameForResource("sts", cluster) + "-0"
-		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(podName, &meta.DeleteOptions{})
+		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), podName, meta.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete pod %s", podName)
 
 		// check failover to not be started
@@ -382,6 +382,7 @@ func testClusterRegistrationInOrchestrator(f *framework.Framework, cluster *api.
 	Eventually(func() []orc.Instance {
 		insts, err := f.OrcClient.Cluster(framework.OrcClusterName(cluster))
 		if err != nil {
+			f.Log.Error(err, "can't find nodes in orchestrator")
 			return nil
 		}
 
@@ -414,7 +415,7 @@ func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster, mas
 	// a helper function that return a callback that returns ips for a specific service
 	getAddrForSVC := func(name string, ready bool) func() []string {
 		return func() []string {
-			endpoints, err := f.ClientSet.CoreV1().Endpoints(cluster.Namespace).Get(name, meta.GetOptions{})
+			endpoints, err := f.ClientSet.CoreV1().Endpoints(cluster.Namespace).Get(context.TODO(), name, meta.GetOptions{})
 			if err != nil {
 				return nil
 			}
