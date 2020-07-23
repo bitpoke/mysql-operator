@@ -17,6 +17,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -113,7 +114,7 @@ func (r *podLogReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
 }
 
 func LogPodsWithLabels(c clientset.Interface, ns string, match map[string]string, since time.Duration, out io.Writer) {
-	podList, err := c.CoreV1().Pods(ns).List(metav1.ListOptions{LabelSelector: labels.SelectorFromSet(match).String()})
+	podList, err := c.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labels.SelectorFromSet(match).String()})
 	if err != nil {
 		fmt.Fprintf(out, "error listing pods: %s", err)
 		return
@@ -138,7 +139,7 @@ func runLogs(client clientset.Interface, namespace, name, container string, prev
 		Param("previous", strconv.FormatBool(previous)).
 		Param("since", strconv.FormatInt(int64(sinceStart.Round(time.Second).Seconds()), 10))
 
-	readCloser, err := req.Stream()
+	readCloser, err := req.Stream(context.TODO())
 	if err != nil {
 		return err
 	}

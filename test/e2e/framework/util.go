@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -52,7 +53,7 @@ func CreateTestingNS(baseName string, c clientset.Interface, labels map[string]s
 	var got *corev1.Namespace
 	if err := wait.PollImmediate(Poll, 30*time.Second, func() (bool, error) {
 		var err error
-		got, err = c.CoreV1().Namespaces().Create(namespaceObj)
+		got, err = c.CoreV1().Namespaces().Create(context.TODO(), namespaceObj, metav1.CreateOptions{})
 		if err != nil {
 			Logf("Unexpected error while creating namespace: %v", err)
 			return false, nil
@@ -98,7 +99,7 @@ func waitTimeoutForPodReadyInNamespace(c clientset.Interface, podName, namespace
 
 func podRunningAndReady(c clientset.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+		pod, err := c.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -126,7 +127,7 @@ func podRunningAndReadyByPhase(pod corev1.Pod) (bool, error) {
 // whether there are any pods remaining in a non-terminating state.
 func DeleteNS(c clientset.Interface, namespace string, timeout time.Duration) error {
 	startTime := time.Now()
-	if err := c.CoreV1().Namespaces().Delete(namespace, nil); err != nil {
+	if err := c.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 
@@ -176,7 +177,7 @@ func getPodLogsInternal(c clientset.Interface, namespace, podName, containerName
 		Name(podName).SubResource("log").
 		Param("container", containerName).
 		Param("previous", strconv.FormatBool(previous)).
-		Do().
+		Do(context.TODO()).
 		Raw()
 	if err != nil {
 		return "", err
@@ -207,7 +208,7 @@ func kubectlLogPod(c clientset.Interface, pod corev1.Pod, containerNameSubstr st
 }
 
 func LogPodsWithLabels(c clientset.Interface, ns string, match map[string]string, logFunc func(ftm string, args ...interface{})) {
-	podList, err := c.CoreV1().Pods(ns).List(metav1.ListOptions{LabelSelector: labels.SelectorFromSet(match).String()})
+	podList, err := c.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labels.SelectorFromSet(match).String()})
 	if err != nil {
 		logFunc("Error getting pods in namespace %q: %v", ns, err)
 		return
@@ -219,7 +220,7 @@ func LogPodsWithLabels(c clientset.Interface, ns string, match map[string]string
 }
 
 func LogContainersInPodsWithLabels(c clientset.Interface, ns string, match map[string]string, containerSubstr string, logFunc func(ftm string, args ...interface{})) {
-	podList, err := c.CoreV1().Pods(ns).List(metav1.ListOptions{LabelSelector: labels.SelectorFromSet(match).String()})
+	podList, err := c.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labels.SelectorFromSet(match).String()})
 	if err != nil {
 		Logf("Error getting pods in namespace %q: %v", ns, err)
 		return

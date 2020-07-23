@@ -110,7 +110,7 @@ func (f *Framework) ExecSQLOnNode(cluster *api.MysqlCluster, i int, user, passwo
 
 func (f *Framework) GetPodForNode(cluster *api.MysqlCluster, i int) *corev1.Pod {
 	selector := labels.SelectorFromSet(cluster.GetLabels())
-	podList, err := f.ClientSet.CoreV1().Pods(cluster.Namespace).List(metav1.ListOptions{
+	podList, err := f.ClientSet.CoreV1().Pods(cluster.Namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: selector.String(),
 	})
 	Expect(err).NotTo(HaveOccurred(), "Failed listing pods for cluster '%s'", cluster.Name)
@@ -247,7 +247,7 @@ func (f *Framework) GetClusterPVCsFn(cluster *api.MysqlCluster) func() []corev1.
 			Namespace:     cluster.Namespace,
 			LabelSelector: labels.SelectorFromSet(GetClusterLabels(cluster)),
 		}
-		f.Client.List(context.TODO(), lo, pvcList)
+		f.Client.List(context.TODO(), pvcList, lo)
 		return pvcList.Items
 	}
 }
