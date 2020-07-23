@@ -18,13 +18,13 @@ clone:
 
 pipeline:
   dependencies:
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.4
     commands:
       - make dependencies
 
   lint:
     group: lint
-    image: quay.io/presslabs/bfc:0.3
+    image: quay.io/presslabs/bfc:0.4
     commands:
       - make lint
 
@@ -38,19 +38,19 @@ pipeline:
 
   test:
     group: test
-    image: quay.io/presslabs/bfc:0.3
+    image: quay.io/presslabs/bfc:0.4
     commands:
       - make test
 
   verify-generate:
-    image: quay.io/presslabs/bfc:0.3
+    image: quay.io/presslabs/bfc:0.4
     commands:
       - make -s fmt generate manifests
       - git diff --exit-code
 
   build-chart:
     group: build
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.4
     commands:
       - make chart
 
@@ -179,7 +179,7 @@ pipeline:
 #
 
   start-kubernetes:
-    image: quay.io/presslabs/bfc:0.3
+    image: quay.io/presslabs/bfc:0.4
     group: publish
     secrets:
       - GOOGLE_CREDENTIALS
@@ -199,7 +199,7 @@ pipeline:
       event: push
 
   e2e-tests:
-    image: quay.io/presslabs/bfc:0.3
+    image: quay.io/presslabs/bfc:0.4
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
@@ -222,7 +222,7 @@ pipeline:
       event: push
 
   stop-kubernetes:
-    image: quay.io/presslabs/bfc:0.3
+    image: quay.io/presslabs/bfc:0.4
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
