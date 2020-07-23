@@ -13,6 +13,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Set timeout of 15s on connection between the operator and Orchestrator
  * Bump controller-util dependency to 0.1.18 which fixes some updates on pod spec.
  * Removed `NO_AUTO_VALUE_ON_ZERO` from `sql-mode` to be inline with MySQL default value
+ * Remove use go module instead of dep
+ * Update k8s client to `v0.18.2`
+ * Update kubebuilder (to `v2.3.1`) along with controller-runtime (to `v0.6.0`) and controller-gen
 ### Removed
 ### Fixed
 
