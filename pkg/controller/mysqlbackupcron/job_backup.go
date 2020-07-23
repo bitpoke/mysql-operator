@@ -23,6 +23,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -41,9 +42,11 @@ type job struct {
 }
 
 func (j *job) Run() {
-	clusterNamespaceName := fmt.Sprintf("%s/%s", j.Namespace, j.ClusterName)
 	// nolint: govet
-	log := log.WithValues("key", clusterNamespaceName)
+	log := log.WithValues("key", types.NamespacedName{
+		Namespace: j.Namespace,
+		Name:      j.ClusterName,
+	})
 	log.Info("scheduled backup job started")
 
 	// run garbage collector if needed

@@ -402,17 +402,8 @@ var _ = Describe("MysqlCluster controller", func() {
 				Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
-				newCluster := api.MysqlCluster{}
-				Expect(c.Get(context.TODO(), clusterKey, &newCluster)).To(Succeed())
-
-				var fipCond api.ClusterCondition
-				for _, cond := range newCluster.Status.Conditions {
-					if cond.Type == api.ClusterConditionFailoverInProgress {
-						fipCond = cond
-						break
-					}
-				}
-				Expect(fipCond.Status).To(Equal(corev1.ConditionFalse))
+				Eventually(testutil.RefreshFn(c, cluster.Unwrap())).Should(
+					testutil.HaveClusterCond(api.ClusterConditionFailoverInProgress, corev1.ConditionFalse))
 			})
 		})
 	})

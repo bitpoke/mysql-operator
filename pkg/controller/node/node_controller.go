@@ -181,7 +181,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 
 	// overwrite logger with cluster info
 	// nolint: govet
-	log := log.WithValues("host", pod.Spec.Hostname)
+	log := log.WithValues("key", request.NamespacedName, "host", pod.Spec.Hostname)
 
 	// try to get the related MySQL Cluster for current node
 	var cluster *mysqlcluster.MysqlCluster
@@ -197,8 +197,7 @@ func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, nil
 	}
 
-	// add key label
-	log = log.WithValues("key", cluster)
+	log.WithValues("cluster", cluster.GetNamespacedName())
 	log.Info("Syncing MySQL Node")
 
 	// if it's a old version cluster then don't do anything
