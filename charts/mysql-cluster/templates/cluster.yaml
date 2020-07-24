@@ -29,7 +29,7 @@ spec:
   {{- end }}
 
   {{- if .Values.backupSchedule }}
-  backupSchedule: {{ .Values.backupSchedule }}
+  backupSchedule: "{{ .Values.backupSchedule }}"
   backupRemoteDeletePolicy: {{ .Values.backupRemoteDeletePolicy }}
   backupURL: {{ required ".mysql.backupURL is missing" .Values.backupURL }}
   {{- end }}
