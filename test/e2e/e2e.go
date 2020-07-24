@@ -59,7 +59,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 
 	c, err := client.New(kubeCfg, client.Options{})
 	if err != nil {
-		ginkgo.Fail("can't instantiate k8s client")
+		ginkgo.Fail(fmt.Sprintf("can't instantiate k8s client: %s", err))
 	}
 
 	// ginkgo node 1
