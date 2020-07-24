@@ -1,13 +1,13 @@
 ###############################################################################
 #  Build the mysql-oerator related binaries
 ###############################################################################
-FROM golang:1.13.7 as builder
+FROM golang:1.13.14 as builder
 
 # Copy in the go src
 WORKDIR /go/src/github.com/presslabs/mysql-operator
 COPY pkg/    pkg/
 COPY cmd/    cmd/
-COPY vendor/ vendor/
+COPY go.mod go.sum ./
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator github.com/presslabs/mysql-operator/cmd/mysql-operator
