@@ -24,14 +24,12 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/logr"
+	"github.com/presslabs/mysql-operator/pkg/apis"
+	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 	core "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/presslabs/mysql-operator/pkg/apis"
-	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
 )
 
 const (
