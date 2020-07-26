@@ -58,6 +58,8 @@ const (
 	ConfDPath = constants.ConfDPath
 
 	confClientPath = constants.ConfClientPath
+
+	ShPreStopFile = constants.ShPreStop
 )
 
 var (
