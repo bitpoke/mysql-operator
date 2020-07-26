@@ -98,10 +98,14 @@ func (s *podSyncer) SyncFn(out *core.Pod) error {
 		healthy = labelHealty
 	}
 
-	oldLabels := out.ObjectMeta.Labels
-
 	if len(out.ObjectMeta.Labels) == 0 {
 		out.ObjectMeta.Labels = map[string]string{}
+	}
+
+	oldLabels := map[string]string{}
+
+	for k, v := range out.ObjectMeta.Labels {
+		oldLabels[k] = v
 	}
 
 	out.ObjectMeta.Labels["role"] = role

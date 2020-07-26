@@ -18,6 +18,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Update kubebuilder (to `v2.3.1`) along with controller-runtime (to `v0.6.0`) and controller-gen
 ### Removed
 ### Fixed
+ * Fix pod labels diff of map
 
 
 ## [0.4.0] - 2020-06-17
