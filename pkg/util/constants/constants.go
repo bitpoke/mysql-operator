@@ -74,6 +74,8 @@ const (
 	// configs. This path should be the same as defined in docker entrypoint
 	// script from mysql-operator-sidecar/docker-entrypoint.sh. /tmp/rclone.conf
 	RcloneConfigFile = "/tmp/rclone.conf"
+
+	ShPreStop = "pre-shutdown-ha.sh"
 )
 
 var (

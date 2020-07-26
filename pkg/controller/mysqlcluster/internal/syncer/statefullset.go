@@ -301,6 +301,15 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 	case containerCloneAndInitName:
 		env = append(env, s.envVarFromSecret(sctOpName, "BACKUP_USER", "BACKUP_USER", true))
 		env = append(env, s.envVarFromSecret(sctOpName, "BACKUP_PASSWORD", "BACKUP_PASSWORD", true))
+	case containerMysqlName:
+		env = append(env, core.EnvVar{
+			Name:  "ORCH_CLUSTER_ALIAS",
+			Value: s.cluster.GetClusterAlias(),
+		})
+		env = append(env, core.EnvVar{
+			Name:  "ORCH_HTTP_API",
+			Value: s.opt.OrchestratorURI,
+		})
 	}
 
 	// set MySQL root and application credentials
@@ -360,6 +369,13 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			},
 		},
 	})
+
+	mysql.Lifecycle = &core.Lifecycle{
+		PreStop: &core.Handler{
+			Exec: &core.ExecAction{
+				Command: []string{"bash", fmt.Sprint("%s/%s", ConfVolumeMountPath, ShPreStopFile)},
+			},
+		}}
 
 	// nolint: gosec
 	mysqlTestCmd := fmt.Sprintf(`mysql --defaults-file=%s -NB -e 'SELECT COUNT(*) FROM %s.%s WHERE name="configured" AND value="1"'`,

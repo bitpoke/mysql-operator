@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/go-ini/ini"
 	core "k8s.io/api/core/v1"
@@ -53,12 +54,48 @@ func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 			return fmt.Errorf("failed to create mysql configs: %s", err)
 		}
 
+		preStopSh, err := buildBashPreStop(cluster)
+		if err != nil {
+			return fmt.Errorf("failed to create %s: %s", ShPreStopFile, err)
+		}
 		cm.Data = map[string]string{
-			"my.cnf": data,
+			"my.cnf":      data,
+			ShPreStopFile: preStopSh,
 		}
 
 		return nil
 	})
+}
+
+// buildBashPreStop TODO
+func buildBashPreStop(cluster *mysqlcluster.MysqlCluster) (string, error) {
+	data := `#!/bin/bash
+set -ex
+
+current=$(date "+%Y-%m-%d %H:%M:%S")
+echo "[${current}]preStop is ongoing"
+read_only_status=$(mysql --defaults-file=ConfClientPathHolder -NB -e 'SELECT @@read_only')
+replica_status=$(mysql --defaults-file=ConfClientPathHolder -NB -e 'show slave status\G')
+# orchestrator will isolate old master during failover
+has_replica_hosts=$(mysql --defaults-file=ConfClientPathHolder -NB -e 'show slave hosts\G')
+replica_status_count=$(echo -n "$replica_status" | wc -l )
+has_replica_count=$(echo -n "$has_replica_hosts" | wc -l )
+echo "hostname=$(hostname) readonly=${read_only_status} show_slave_status=${replica_status_count}"
+echo "has_replica_hosts=${has_replica_count}"
+if [ ${read_only_status} -eq 0  ] && [ ${replica_status_count} -eq 0 ] && [ ${has_replica_count} -gt 0 ]
+then
+		masterhostname=$( curl  -s "${ORCH_HTTP_API}/master/${ORCH_CLUSTER_ALIAS}" |  awk -F":" '{print $3}' | awk -F'"' '{print $2}' )
+        echo "master from orchestrator: ${masterhostname}"
+        if [ "${FQDN}" == "${masterhostname}" ]
+        then
+                curl  -s "${ORCH_HTTP_API}/graceful-master-takeover-auto/${ORCH_CLUSTER_ALIAS}"
+				echo "graceful-master-takeover-auto is ongoing, sleep 5 seconds in order to make sure service can work well."
+				sleep 5
+        fi
+fi
+`
+	data = strings.Replace(data, "old", confClientPath, -1)
+	return data, nil
 }
 
 func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
