@@ -54,21 +54,20 @@ func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 			return fmt.Errorf("failed to create mysql configs: %s", err)
 		}
 
-		preStopSh, err := buildBashPreStop(cluster)
+		preStopSh, err := buildBashPreStop()
 		if err != nil {
-			return fmt.Errorf("failed to create %s: %s", ShPreStopFile, err)
+			return fmt.Errorf("failed to create %s: %s", shPreStopFile, err)
 		}
 		cm.Data = map[string]string{
 			"my.cnf":      data,
-			ShPreStopFile: preStopSh,
+			shPreStopFile: preStopSh,
 		}
 
 		return nil
 	})
 }
 
-// buildBashPreStop TODO
-func buildBashPreStop(cluster *mysqlcluster.MysqlCluster) (string, error) {
+func buildBashPreStop() (string, error) {
 	data := `#!/bin/bash
 set -ex
 
