@@ -21,6 +21,7 @@ The following table contains the configuration parameters for mysql-operator and
 | `replicas`                      | Replicas for controller                                                                       | `1`                                       |
 | `image`                         | Controller container image                                                                    | `quay.io/presslabs/mysql-operator:v0.1.5` |
 | `imagePullPolicy`               | Controller image pull policy                                                                  | `IfNotPresent`                            |
+| `imagePullSecrets`              | Controller image pull secret                                                                  |                                         |
 | `sidecarImage`                  | Mysql operator sidecar image                                                                  | `quay.io/presslabs/mysql-helper:v0.1.5`   |
 | `installCRDs`                   | Whether or not to install CRDS, Regardless of value of this, Helm v3+ will install the CRDs if those are not present already. Use `--skip-crds` with `helm install` if you want to skip CRD creation                                                                | `true`                                    |
 | `resources`                     | Controller and Orchestrator pod resources limits and requests                                 | `{}`                                      |

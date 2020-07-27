@@ -7,6 +7,9 @@ image: quay.io/presslabs/mysql-operator:latest
 sidecarImage: quay.io/presslabs/mysql-operator-sidecar:latest
 imagePullPolicy: IfNotPresent
 
+imagePullSecrets:
+# - name: "image-pull-secret"
+
 # whether or not to install CRDs
 installCRDs: true
 # in which namespace to watch for resource, leave empty to watch in all namespaces

@@ -25,6 +25,10 @@ spec:
         checksum/secret: {{ include (print $.Template.BasePath "/orc-secret.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ template "mysql-operator.serviceAccountName" . }}
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{ toYaml .Values.imagePullSecrets | indent 2 }}
+      {{- end }}
       containers:
         - name: operator
           image: "{{ .Values.image }}"
