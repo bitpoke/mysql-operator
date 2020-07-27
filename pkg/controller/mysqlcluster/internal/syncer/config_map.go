@@ -86,8 +86,8 @@ then
         if [ "${FQDN}" == "${masterhostname}" ]
         then
                 curl  -s "${ORCH_HTTP_API}/graceful-master-takeover-auto/${ORCH_CLUSTER_ALIAS}"
-				echo "graceful-master-takeover-auto is ongoing, sleep 5 seconds in order to make sure service can work well."
-				sleep 5
+                echo "graceful-master-takeover-auto is ongoing, sleep 5 seconds in order to make sure service can work well."
+                sleep 5
         fi
 fi
 `
