@@ -373,7 +373,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 	mysql.Lifecycle = &core.Lifecycle{
 		PreStop: &core.Handler{
 			Exec: &core.ExecAction{
-				Command: []string{"bash", fmt.Sprint("%s/%s", ConfVolumeMountPath, ShPreStopFile)},
+				Command: []string{"bash", fmt.Sprint("%s/%s", ConfVolumeMountPath, shPreStopFile)},
 			},
 		}}
 
