@@ -75,6 +75,8 @@ const (
 	// script from mysql-operator-sidecar/docker-entrypoint.sh. /tmp/rclone.conf
 	RcloneConfigFile = "/tmp/rclone.conf"
 
+	// ShPreStop used in mysql container, if the pod to be deleted is master, then preStop would do GracefulMasterTakeover
+	// before mysql container is deleted.
 	ShPreStop = "pre-shutdown-ha.sh"
 )
 
