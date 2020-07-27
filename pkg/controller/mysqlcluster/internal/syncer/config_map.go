@@ -91,7 +91,7 @@ then
         fi
 fi
 `
-	data = strings.Replace(data, "old", confClientPath, -1)
+	data = strings.Replace(data, "ConfClientPathHolder", confClientPath, -1)
 	return data
 }
 
