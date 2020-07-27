@@ -81,7 +81,7 @@ echo "hostname=$(hostname) readonly=${read_only_status} show_slave_status=${repl
 echo "has_replica_hosts=${has_replica_count}"
 if [ ${read_only_status} -eq 0  ] && [ ${replica_status_count} -eq 0 ] && [ ${has_replica_count} -gt 0 ]
 then
-		masterhostname=$( curl  -s "${ORCH_HTTP_API}/master/${ORCH_CLUSTER_ALIAS}" |  awk -F":" '{print $3}' | awk -F'"' '{print $2}' )
+    masterhostname=$( curl  -s "${ORCH_HTTP_API}/master/${ORCH_CLUSTER_ALIAS}" |  awk -F":" '{print $3}' | awk -F'"' '{print $2}' )
         echo "master from orchestrator: ${masterhostname}"
         if [ "${FQDN}" == "${masterhostname}" ]
         then
