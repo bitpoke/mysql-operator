@@ -74,6 +74,50 @@ $ kubectl apply -f example-backup-secret.yaml
 >
 > `GCS_SERVICE_ACCOUNT_JSON_KEY` and `GCS_PROJECT_ID` must be base64 encoded.
 
+### Setup a backup to Google Drive
+
+Create a [Google Service Account](https://cloud.google.com/iam/docs/service-accounts) and ensure it has access to a
+[Google Drive](https://drive.google.com) (owned by the account or shared). Save the provided JSON file for future
+reference.
+
+To configure the backup you need to specify the `backupBucketURL` for the cluster to an URL like
+`gd://FOLDER_NAME` and a secret.
+
+Create a file named `example-backup-secret.yaml` and copy into it the following YAML code:
+
+``` yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-cluster-backup-secret
+type: Opaque
+data:
+  GDRIVE_CLIENT_ID: #
+  GDRIVE_ROOT_FOLDER_ID: #
+  GDRIVE_IMPERSONATOR: #
+  GDRIVE_SERVICE_ACCOUNT: #
+```
+
+Then run this command:
+
+``` shell
+$ kubectl apply -f example-backup-secret.yaml
+```
+
+In the above configuration `GDRIVE_CLIENT_ID` is a required numeric value identical to the `client_id` value in your
+service account JSON.
+
+The `GDRIVE_SERVICE_ACCOUNT` is also required and must be set to the contents of your service account JSON.
+
+Optionally you can set a `GDRIVE_ROOT_FOLDER_ID` equal to the ID of a Google Drive folder the service account has
+access to. This can come from the default account drive, or any other drive shared with the account. This will be
+considered as the *root* folder for the backup.
+
+To find out the ID of a folder, navigate to it in your browser and inspect the URL: `https://drive.google.com/drive/u/1/folders/1_8-KN2Ew-I4L54nSmenKapE_yfPs2As1` - here the ID of the folder is `1_8-KN2Ew-I4L54nSmenKapE_yfPs2As1`.
+
+In some cases (if you get access denied errors) you might also need to *impersonate* as the service account user. To
+do this set the `GDRIVE_IMPERSONATOR` to the value of `client_email` in your service account JSON.
+
 ### Setup a backup to Azure Blob Storage
 
 You need to specify the `backupBucketURL` for the cluster to an URL like `azure://STORAGE_ACCOUNT`, and a secret.
