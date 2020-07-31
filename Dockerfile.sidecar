@@ -26,8 +26,8 @@ RUN apt-get update \
 COPY hack/docker/rclone.gpg /root/rclone.gpg
 RUN gpg --import /root/rclone.gpg
 
-RUN wget -nv https://github.com/ncw/rclone/releases/download/v1.48.0/rclone-v1.48.0-linux-amd64.zip \
-    && wget -nv https://github.com/ncw/rclone/releases/download/v1.48.0/SHA256SUMS \
+RUN wget -nv https://github.com/ncw/rclone/releases/download/v1.52.1/rclone-v1.52.1-linux-amd64.zip \
+    && wget -nv https://github.com/ncw/rclone/releases/download/v1.52.1/SHA256SUMS \
     && gpg --verify --output=- SHA256SUMS > sums \
     && sha256sum -c --ignore-missing sums \
     && unzip rclone-*-linux-amd64.zip \
