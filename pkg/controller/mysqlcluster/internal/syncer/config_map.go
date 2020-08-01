@@ -56,7 +56,7 @@ func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 
 		cm.Data = map[string]string{
 			"my.cnf":      data,
-			ShPreStopFile: buildBashPreStop(),
+			shPreStopFile: buildBashPreStop(),
 		}
 
 		return nil
