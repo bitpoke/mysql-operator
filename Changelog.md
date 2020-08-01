@@ -20,7 +20,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 ### Fixed
  * Fix pod labels diff of map
- * Add a lifecycle preStop hook for the  `mysql` container. In `preStop` hook, before killing the master MySQL process, it triggers a `graceful-master-takeover` from Orchestrator.
  * Add a lifecycle preStop hook for the  `mysql` container. In `preStop` hook, before killing the master MySQL process, it triggers a `gracefaul-master-takeover-auto` from Orchestrator.
 
 
