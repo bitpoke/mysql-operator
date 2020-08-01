@@ -54,11 +54,9 @@ func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 			return fmt.Errorf("failed to create mysql configs: %s", err)
 		}
 
-		preStopSh := buildBashPreStop()
-
 		cm.Data = map[string]string{
 			"my.cnf":      data,
-			shPreStopFile: buildBashPreStop(),
+			ShPreStopFile: buildBashPreStop(),
 		}
 
 		return nil
@@ -81,18 +79,17 @@ echo "hostname=$(hostname) readonly=${read_only_status} show_slave_status=${repl
 echo "has_replica_hosts=${has_replica_count}"
 if [ ${read_only_status} -eq 0  ] && [ ${replica_status_count} -eq 0 ] && [ ${has_replica_count} -gt 0 ]
 then
-    masterhostname=$( curl  -s "${ORCH_HTTP_API}/master/${ORCH_CLUSTER_ALIAS}" |  awk -F":" '{print $3}' | awk -F'"' '{print $2}' )
+		masterhostname=$( curl  -s "${ORCH_HTTP_API}/master/${ORCH_CLUSTER_ALIAS}" |  awk -F":" '{print $3}' | awk -F'"' '{print $2}' )
         echo "master from orchestrator: ${masterhostname}"
         if [ "${FQDN}" == "${masterhostname}" ]
         then
                 curl  -s "${ORCH_HTTP_API}/graceful-master-takeover-auto/${ORCH_CLUSTER_ALIAS}"
-                echo "graceful-master-takeover-auto is ongoing, sleep 5 seconds in order to make sure service can work well."
-                sleep 5
+				echo "graceful-master-takeover-auto is ongoing, sleep 5 seconds in order to make sure service can work well."
+				sleep 5
         fi
 fi
 `
-	data = strings.Replace(data, "ConfClientPathHolder", confClientPath, -1)
-	return data
+	return strings.Replace(data, "ConfClientPathHolder", confClientPath, -1)
 }
 
 func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
