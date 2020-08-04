@@ -16,9 +16,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Remove use go module instead of dep
  * Update k8s client to `v0.18.2`
  * Update kubebuilder (to `v2.3.1`) along with controller-runtime (to `v0.6.0`) and controller-gen
+ * Update mysql-cluster helm chart to (`0.2.1`)
 ### Removed
 ### Fixed
-
+* Fix mysql-cluster helm chart - surrounding Values.backupSchedule by quotes
 
 ## [0.4.0] - 2020-06-17
 ### Added
