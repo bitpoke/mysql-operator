@@ -20,6 +20,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
  * Fix pod labels diff of map
  * Add a lifecycle preStop hook for the  `mysql` container. In `preStop` hook, before killing the master MySQL process, it triggers a `gracefaul-master-takeover-auto` from Orchestrator.
+ * Update `Orchestrator` version from `v3.1.2` to `v3.2.2`
 
 
 ## [0.4.0] - 2020-06-17
@@ -54,7 +55,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Changed the connect timeout from the default of 30s to 5s so that an empty k8s service will not
    cause cloning attempts to hang unnecessarily for 30s.
  * Update documentation structure and formatting.
- * Udate Orchestrator version to v3.1.4
+ * Update Orchestrator version to v3.1.4
  * Update orchestrator base image to `alpine:3.11`.
  * Update FailoverInProgress condition to false when both Replicas and ReadyNodes are 0.
  * Fall back to current master, not pod 0, when no healthy replicas found for backup candidate.
