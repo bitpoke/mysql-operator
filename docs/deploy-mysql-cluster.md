@@ -87,11 +87,12 @@ Some important fields of `MySQLCluster` resource from `spec` are described in th
 | `backupURL`                      | The bucket URL where to put the backup.                                                     | `gs://bucket/app`          | ""                      |
 | `backupSecretName`               | The name of the secret that contains credentials for connecting to the storage provider.    | `backups-secret`           | ""                      |
 | `backupScheduleJobsHistoryLimit` | The number of many backups to keep.                                                         | `10`                       | inf                     |
+| `image` | Specify a custom Docker image to be used for the MySQL server container. | `percona:5.7-centos` | nil |
 | `mysqlConf`                      | Key-value configs for MySQL that will be set in `my.cnf` under `mysqld` section.            | `max_allowed_packet: 128M` | {}                      |
 | `podSpec`                        | This allows to specify pod-related configs. (e.g. `imagePullSecrets`, `labels` )            |                            | {}                      |
 | `volumeSpec`                     | Specifications for PVC, HostPath or EmptyDir, used to store data.                           |                            | (a PVC with size = 1GB) |
 | `maxSlaveLatency`                | The allowed slave lag until it's removed from read service. (in seconds)                    | `30`                       | nil                     |
-| `queryLimits`                    | Parameters for pt-kill to ensure some query run limits. (e.g. idle time)                    | `idelTime: 60`             | nil                     |
+| `queryLimits`                    | Parameters for pt-kill to ensure some query run limits. (e.g. idle time)                    | `idleTime: 60`             | nil                     |
 | `readOnly`                       | A Boolean value that sets the cluster in read-only state.                                   | `True`                     | False                   |
 
 

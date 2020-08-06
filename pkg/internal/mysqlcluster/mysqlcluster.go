@@ -207,7 +207,7 @@ func (c *MysqlCluster) GetMysqlImage() string {
 	}
 
 	// this means the cluster has a wrong MysqlVersion set
-	log.Error(nil, "no image found with given MySQL version, the image can manually be set by setting .spec.mysqlImage on cluster",
+	log.Error(nil, "no image found with given MySQL version, the image can manually be set by setting .spec.image on cluster",
 		"version", c.GetMySQLSemVer())
 	return ""
 }
