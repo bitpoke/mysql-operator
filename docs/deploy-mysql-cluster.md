@@ -79,21 +79,23 @@ $ kubectl apply -f example-cluster.yaml
 
 Some important fields of `MySQLCluster` resource from `spec` are described in the following table:
 
-| Field Name                       | Description                                                                                 | Example                    | Default value           |
-| ---                              | ---                                                                                         | ---                        | ---                     |
-| `replicas`                       | The cluster replicas, how many nodes to deploy.                                             | 2                          | 1 (a single node)       |
-| `secretName`                     | The name of the credentials secret. Should be in the same namespace with the cluster.       | `my-secret`                | *is required*           |
-| `backupSchedule`                 | Represents the time and frequency of making cluster backups, in a cron format with seconds. | `0 0 0 * * *`              | ""                      |
-| `backupURL`                      | The bucket URL where to put the backup.                                                     | `gs://bucket/app`          | ""                      |
-| `backupSecretName`               | The name of the secret that contains credentials for connecting to the storage provider.    | `backups-secret`           | ""                      |
-| `backupScheduleJobsHistoryLimit` | The number of many backups to keep.                                                         | `10`                       | inf                     |
-| `image` | Specify a custom Docker image to be used for the MySQL server container. | `percona:5.7-centos` | nil |
-| `mysqlConf`                      | Key-value configs for MySQL that will be set in `my.cnf` under `mysqld` section.            | `max_allowed_packet: 128M` | {}                      |
-| `podSpec`                        | This allows to specify pod-related configs. (e.g. `imagePullSecrets`, `labels` )            |                            | {}                      |
-| `volumeSpec`                     | Specifications for PVC, HostPath or EmptyDir, used to store data.                           |                            | (a PVC with size = 1GB) |
-| `maxSlaveLatency`                | The allowed slave lag until it's removed from read service. (in seconds)                    | `30`                       | nil                     |
-| `queryLimits`                    | Parameters for pt-kill to ensure some query run limits. (e.g. idle time)                    | `idleTime: 60`             | nil                     |
-| `readOnly`                       | A Boolean value that sets the cluster in read-only state.                                   | `True`                     | False                   |
+| Field Name                       | Description                                                                                 | Example                            | Default value           |
+| ---                              | ---                                                                                         | ---                                | ---                     |
+| `replicas`                       | The cluster replicas, how many nodes to deploy.                                             | 2                                  | 1 (a single node)       |
+| `secretName`                     | The name of the credentials secret. Should be in the same namespace with the cluster.       | `my-secret`                        | *is required*           |
+| `initBucketURL`                  | The S3 URL that the cluster initialization backup is taken from                             | `s3://my-bucket/backup.xbackup.gz` | ""                      |
+| `initBucketSecretName`           | The secret that the S3 credentials for the initialization are read from                     | `backups-secret`                   | ""                      |
+| `backupSchedule`                 | Represents the time and frequency of making cluster backups, in a cron format with seconds. | `0 0 0 * * *`                      | ""                      |
+| `backupURL`                      | The bucket URL where to put the backup.                                                     | `gs://bucket/app`                  | ""                      |
+| `backupSecretName`               | The name of the secret that contains credentials for connecting to the storage provider.    | `backups-secret`                   | ""                      |
+| `backupScheduleJobsHistoryLimit` | The number of many backups to keep.                                                         | `10`                               | inf                     |
+| `image`                          | Specify a custom Docker image to be used for the MySQL server container.                    | `percona:5.7-centos`               | nil                     |
+| `mysqlConf`                      | Key-value configs for MySQL that will be set in `my.cnf` under `mysqld` section.            | `max_allowed_packet: 128M`         | {}                      |
+| `podSpec`                        | This allows to specify pod-related configs. (e.g. `imagePullSecrets`, `labels` )            |                                    | {}                      |
+| `volumeSpec`                     | Specifications for PVC, HostPath or EmptyDir, used to store data.                           |                                    | (a PVC with size = 1GB) |
+| `maxSlaveLatency`                | The allowed slave lag until it's removed from read service. (in seconds)                    | `30`                               | nil                     |
+| `queryLimits`                    | Parameters for pt-kill to ensure some query run limits. (e.g. idle time)                    | `idleTime: 60`                     | nil                     |
+| `readOnly`                       | A Boolean value that sets the cluster in read-only state.                                   | `True`                             | False                   |
 
 
 For more detailed information about cluster structure and configuration fields can be found in [godoc](https://godoc.org/github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1#MysqlClusterSpec).

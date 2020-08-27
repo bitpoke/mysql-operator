@@ -17,6 +17,9 @@ volumeSpec:
 
 serverIDOffset:
 
+initBucketURL:
+initBucketSecretName:
+
 backupSchedule:
 backupScheduleJobsHistoryLimit:
 backupURL:
