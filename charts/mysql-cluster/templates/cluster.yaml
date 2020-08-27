@@ -16,6 +16,13 @@ spec:
   secretName: {{ include "mysql-cluster.secretName" . }}
   {{- end }}
 
+  {{- if .Values.initBucketURL }}
+  initBucketURL: {{ .Values.initBucketURL }}
+  {{- end }}
+  {{- if .Values.initBucketSecretName }}
+  initBucketSecretName: {{ .Values.initBucketSecretName }}
+  {{- end }}
+
   {{- if .Values.backupSecretName }}
   backupSecretName: {{ .Values.backupSecretName }}
   {{- else if .Values.backupCredentials }}
