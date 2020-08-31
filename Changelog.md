@@ -18,12 +18,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Remove use go module instead of dep
  * Update k8s client to `v0.18.2`
  * Update kubebuilder (to `v2.3.1`) along with controller-runtime (to `v0.6.0`) and controller-gen
- * Update rclone to `v1.52.1`
+ * Update rclone to `v1.52.3`
 ### Removed
 ### Fixed
  * Fix pod labels diff of map
  * Add a lifecycle preStop hook for the  `mysql` container. In `preStop` hook, before killing the master MySQL process, it triggers a `gracefaul-master-takeover-auto` from Orchestrator.
  * Update `Orchestrator` version from `v3.1.2` to `v3.2.2`
+ * Fixed backup cleanup job bug (#577)
 
 
 ## [0.4.0] - 2020-06-17
