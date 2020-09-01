@@ -39,7 +39,7 @@ func TestMySQLClusterWrapper(t *testing.T) {
 	logf.SetLogger(logf.ZapLoggerTo(GinkgoWriter, true))
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Sidecar App Suite")
+	RunSpecs(t, "MySQL Cluster wrapper unit tests")
 }
 
 var _ = Describe("Test MySQL cluster wrapper", func() {

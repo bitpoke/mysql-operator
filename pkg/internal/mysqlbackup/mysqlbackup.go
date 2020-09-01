@@ -18,6 +18,7 @@ package mysqlbackup
 
 import (
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -85,7 +86,7 @@ func (b *MysqlBackup) GetNameForJob() string {
 func (b *MysqlBackup) GetNameForDeletionJob() string {
 	prefix := b.Name
 	if len(prefix) >= 55 {
-		prefix = prefix[:55]
+		prefix = fmt.Sprintf("%s-%d", prefix[:44], hash(prefix))
 	}
 	return fmt.Sprintf("%s-cleanup", prefix)
 }
@@ -93,4 +94,13 @@ func (b *MysqlBackup) GetNameForDeletionJob() string {
 // String returns the backup name and namespace
 func (b *MysqlBackup) String() string {
 	return fmt.Sprintf("%s/%s", b.Namespace, b.Name)
+}
+
+// hash returns a uint32 number (max value can be: 4294967295)
+func hash(s string) uint32 {
+	h := fnv.New32a()
+	if _, err := h.Write([]byte(s)); err != nil {
+		return 0
+	}
+	return h.Sum32()
 }
