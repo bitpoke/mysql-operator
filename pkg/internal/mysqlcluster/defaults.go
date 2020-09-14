@@ -19,6 +19,7 @@ package mysqlcluster
 import (
 	"fmt"
 	"math"
+	"regexp"
 
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -105,8 +106,10 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 				maxBinlogSize = min(binlogSpaceLimit/3, 1*gb)
 			}
 
-			// binlog-space-limit = totalSpace / 2
-			setConfigIfNotSet(cluster.Spec.MysqlConf, "binlog-space-limit", humanizeSize(binlogSpaceLimit))
+			if matched, err := regexp.MatchString("([a-z.]+/)*percona(:.+)?", cluster.Spec.Image); err != nil && matched {
+				// binlog-space-limit = totalSpace / 2
+				setConfigIfNotSet(cluster.Spec.MysqlConf, "binlog-space-limit", humanizeSize(binlogSpaceLimit))
+			}
 
 			// max-binlog-size = min(binlog-space-limit / 4, 1*gb)
 			setConfigIfNotSet(cluster.Spec.MysqlConf, "max-binlog-size", humanizeSize(maxBinlogSize))

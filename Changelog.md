@@ -13,6 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Add Google Drive via service account as backup option.
  * Add `initBucketURL` and `initBucketSecretName` options to MysqlCluster chart. This bumps the chart version to `0.3.0`
 ### Changed
+ * Only add `binlog-space-limit` for `percona` image
  * Set timeout of 15s on connection between the operator and Orchestrator
  * Bump controller-util dependency to 0.1.18 which fixes some updates on pod spec.
  * Removed `NO_AUTO_VALUE_ON_ZERO` from `sql-mode` to be inline with MySQL default value
