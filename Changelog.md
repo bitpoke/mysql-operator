@@ -12,6 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Add the ability to set the `imagePullSecrets` for the operator statefulset.
  * Add Google Drive via service account as backup option.
 ### Changed
+ * Only add `binlog-space-limit` for `percona` image
  * Set timeout of 15s on connection between the operator and Orchestrator
  * Bump controller-util dependency to 0.1.18 which fixes some updates on pod spec.
  * Removed `NO_AUTO_VALUE_ON_ZERO` from `sql-mode` to be inline with MySQL default value
