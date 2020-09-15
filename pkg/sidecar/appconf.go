@@ -191,6 +191,11 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 	// CSV engine for this table can't be used because we use REPLACE statement that requires PRIMARY KEY or
 	// UNIQUE KEY index
 	// nolint: gosec
+    if !strings.HasSuffix(cfg.Hostname, "-0") {
+        queries = append(queries, fmt.Sprintf("DROP TABLE IF EXISTS %s.%s",
+            constants.OperatorDbName, constants.OperatorStatusTableName))
+    }
+
 	queries = append(queries, fmt.Sprintf(
 		"CREATE TABLE IF NOT EXISTS %[1]s.%[2]s ("+
 			"  name varchar(64) PRIMARY KEY,"+
