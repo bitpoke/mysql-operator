@@ -324,13 +324,19 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 }
 
 func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
-	initCs := []core.Container{
-		// clone and init container
-		s.ensureContainer(containerCloneAndInitName,
-			s.opt.SidecarImage,
-			[]string{"clone-and-init"},
-		),
+	initCs := []core.Container{}
+
+	// add user defined init containers
+	if len(s.cluster.Spec.PodSpec.InitContainers) > 0 {
+		initCs = append(initCs, s.cluster.Spec.PodSpec.InitContainers...)
 	}
+
+	// clone and init container
+	cloneInit := s.ensureContainer(containerCloneAndInitName,
+		s.opt.SidecarImage,
+		[]string{"clone-and-init"},
+	)
+	initCs = append(initCs, cloneInit)
 
 	// add init container for MySQL if docker image supports this
 	if s.cluster.ShouldHaveInitContainerForMysql() {
@@ -339,11 +345,6 @@ func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
 			[]string{})
 		mysqlInit.Resources = s.ensureResources(containerMySQLInitName)
 		initCs = append(initCs, mysqlInit)
-	}
-
-	// add user defined init containers
-	if len(s.cluster.Spec.PodSpec.InitContainers) > 0 {
-		initCs = append(initCs, s.cluster.Spec.PodSpec.InitContainers...)
 	}
 
 	return initCs
