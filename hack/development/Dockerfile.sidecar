@@ -10,15 +10,22 @@ RUN apt-get update \
 COPY hack/docker/rclone.gpg /root/rclone.gpg
 RUN gpg --import /root/rclone.gpg
 
-RUN wget -nv https://github.com/ncw/rclone/releases/download/v1.48.0/rclone-v1.48.0-linux-amd64.zip \
-    && wget -nv https://github.com/ncw/rclone/releases/download/v1.48.0/SHA256SUMS \
+ENV RCLONE_VERSION=1.52.3
+
+RUN wget -nv https://github.com/ncw/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip \
+    && wget -nv https://github.com/ncw/rclone/releases/download/v${RCLONE_VERSION}/SHA256SUMS \
     && gpg --verify --output=- SHA256SUMS > sums \
     && sha256sum -c --ignore-missing sums \
     && unzip rclone-*-linux-amd64.zip \
     && mv rclone-*-linux-amd64/rclone /usr/local/bin/ \
     && chmod 755 /usr/local/bin/rclone
 
+
 ###############################################################################
+#  Docker image for sidecar containers
+###############################################################################
+
+##############################################################################
 #  Docker image for sidecar containers
 ###############################################################################
 FROM debian:stretch-slim as sidecar
