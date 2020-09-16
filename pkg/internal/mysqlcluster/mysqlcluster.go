@@ -220,11 +220,16 @@ func (c *MysqlCluster) UpdateSpec() {
 	}
 }
 
+// IsPerconaImage checks the MySQL image is percona or not
+func (c *MysqlCluster) IsPerconaImage() bool {
+	return strings.Contains(c.GetMysqlImage(), "percona")
+}
+
 // ShouldHaveInitContainerForMysql checks the MySQL version and returns true or false if the docker image supports or not init only
 func (c *MysqlCluster) ShouldHaveInitContainerForMysql() bool {
 	expectedRange := semver.MustParseRange(">=5.7.26 <8.0.0 || >=8.0.15")
 
-	return strings.Contains(c.GetMysqlImage(), "percona") && expectedRange(c.GetMySQLSemVer())
+	return c.IsPerconaImage() && expectedRange(c.GetMySQLSemVer())
 }
 
 // String returns the cluster name and namespace
