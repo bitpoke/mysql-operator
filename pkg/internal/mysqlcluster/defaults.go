@@ -19,7 +19,6 @@ package mysqlcluster
 import (
 	"fmt"
 	"math"
-	"regexp"
 
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -106,7 +105,7 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 				maxBinlogSize = min(binlogSpaceLimit/3, 1*gb)
 			}
 
-			if matched, err := regexp.MatchString("([a-z.]+/)*percona(:.+)?", cluster.Spec.Image); err != nil && matched {
+			if cluster.IsPerconaImage() {
 				// binlog-space-limit = totalSpace / 2
 				setConfigIfNotSet(cluster.Spec.MysqlConf, "binlog-space-limit", humanizeSize(binlogSpaceLimit))
 			}
