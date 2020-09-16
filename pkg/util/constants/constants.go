@@ -86,10 +86,11 @@ var (
 	// MySQLTagsToSemVer maps simple version to semver versions
 	MySQLTagsToSemVer = map[string]string{
 		"5.7": "5.7.26",
-		"8.0": "8.0.15",
+		"8.0": "8.0.20",
 	}
 	// MysqlImageVersions is a map of supported mysql version and their image
 	MysqlImageVersions = map[string]string{
+
 		// This version of mysql has a bug and doesn't work with the operator,
 		// see: https://github.com/presslabs/mysql-operator/issues/509
 		"5.7.29": "percona@sha256:d801123bbfaf750924f993f5c59189d144a93feb928b8aef95e541dd61c62881",
@@ -97,7 +98,7 @@ var (
 		"5.7.26": "percona@sha256:713c1817615b333b17d0fbd252b0ccc53c48a665d4cfcb42178167435a957322",
 		// Percona:5.7.24 CentOS based image
 		"5.7.24": "percona@sha256:b3b7fb177b416563c46fe012298e042ec1607cc0539ce6014146380b0d27b08c",
-		// Percona:8.0.15-6 CentOS based image
-		"8.0.15": "percona@sha256:6bbb0e2830793107bae90569f34e59d4b442b250703b5d4b1e8a8996f61c8f2c",
+		// Percona:8.0.20-11 CentOS based image
+		"8.0.20": "percona@sha256:6d4524eccd26af7bd7fb623c567159dfbd7f3d9a0e2f7bebd54af1e9ca9903dc",
 	}
 )
