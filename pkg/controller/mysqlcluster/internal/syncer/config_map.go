@@ -208,7 +208,7 @@ var mysqlCommonConfigs = map[string]string{
 	"max-allowed-packet": "16M",
 	"max-connect-errors": "1000000",
 
-	"sysdate-is-now":     "1",
+	"sysdate-is-now": "1",
 
 	// Binary logging
 	"sync-binlog":   "1",
