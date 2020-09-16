@@ -17,26 +17,27 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o orc-helper github.com/p
 ##############################################################################
 #  Build Orchestrator
 ###############################################################################
-FROM golang:1.13.7-alpine as builder-orc
+FROM golang:1.15.2-alpine as builder
 
 RUN set -ex \
     && apk add --no-cache \
         bash gcc git musl-dev openssl rsync perl-utils
 
-ARG ORCHESTRATOR_VERSION=v3.1.4
-ARG ORCHESTRATOR_REPO=https://github.com/github/orchestrator.git
+ARG ORCHESTRATOR_VERSION=v3.2.3
+ARG ORCHESTRATOR_REPO=https://github.com/openark/orchestrator.git
 RUN set -ex \
-    && mkdir -p $GOPATH/src/github.com/github/orchestrator \
-    && cd $GOPATH/src/github.com/github/orchestrator \
+    && mkdir -p $GOPATH/src/github.com/openark/orchestrator \
+    && cd $GOPATH/src/github.com/openark/orchestrator \
     && git init && git remote add origin $ORCHESTRATOR_REPO \
     && git fetch --tags \
     && git checkout $ORCHESTRATOR_VERSION
 
-WORKDIR $GOPATH/src/github.com/github/orchestrator
+WORKDIR $GOPATH/src/github.com/openark/orchestrator
 
 RUN set -ex \
     && ls -l \
-    && ./script/build
+    && DEBUG=True ./script/build
+
 
 ###############################################################################
 #  Docker image for orchestrator
