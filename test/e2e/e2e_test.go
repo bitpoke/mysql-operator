@@ -28,6 +28,7 @@ import (
 
 func init() {
 	// framework.ViperizeFlags()
+	testing.Init()
 	framework.RegisterParseFlags()
 }
 

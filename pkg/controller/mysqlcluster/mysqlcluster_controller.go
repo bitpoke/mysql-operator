@@ -30,13 +30,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	cleaner "github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/cleaner"
 	clustersyncer "github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/upgrades"
@@ -60,7 +61,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileMysqlCluster{
 		Client:   mgr.GetClient(),
 		scheme:   mgr.GetScheme(),
-		recorder: mgr.GetRecorder(controllerName),
+		recorder: mgr.GetEventRecorderFor(controllerName),
 		opt:      options.GetOptions(),
 	}
 }
@@ -132,14 +133,15 @@ type ReconcileMysqlCluster struct {
 	opt      *options.Options
 }
 
-// Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
-// and what is in the MysqlCluster.Spec
-// nolint: gocyclo
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps;secrets;services;events;jobs;pods;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlclusters;mysqlclusters/status,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
+
+// Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
+// and what is in the MysqlCluster.Spec
+// nolint: gocyclo
 func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlCluster instance
 	cluster := mysqlcluster.New(&mysqlv1alpha1.MysqlCluster{})
@@ -153,13 +155,16 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	log.Info("syncing cluster", "cluster", request.NamespacedName.String())
+	// overwrite logger with cluster info
+	// nolint: govet
+	log := log.WithValues("key", request.NamespacedName)
+	log.V(1).Info("reconcile cluster")
 
 	// run upgrades
-	// TODO: this should be removed in next version (v0.4)
+	// TODO: this should be removed in next version (v0.5)
 	up := upgrades.NewUpgrader(r.Client, r.recorder, cluster, r.opt)
 	if up.ShouldUpdate() {
-		log.V(1).Info("running upgrades")
+		log.Info("the upgrader will run for this cluster")
 		if err = up.Run(context.TODO()); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -171,7 +176,29 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	if !reflect.DeepEqual(spec, cluster.Spec) {
 		sErr := r.Update(context.TODO(), cluster.Unwrap())
 		if sErr != nil {
-			log.Error(sErr, "failed to update cluster spec", "cluster", cluster)
+			log.Error(sErr, "failed to update cluster spec")
+			return reconcile.Result{}, sErr
+		}
+		return reconcile.Result{}, nil
+	}
+
+	// Update FailoverInProgress condition to false when both Replicas and ReadyNodes are 0
+	//
+	// When a cluster's replica is set to 0, pods will be shutdown one by one,
+	// during this process, orchestrator will try to do failover on this cluster
+	// and set FailoverInProgress to True. Since all pods are deleted, the FailoverInProgress
+	// condition will be true all the time. When user set cluster's replicas to a value greater than 0,
+	// the pods of the cluster will boot one by one, but node controller will not init mysql when FailoverInProgress
+	// is true.
+	fip := cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
+	if fip != nil && fip.Status == corev1.ConditionTrue &&
+		*cluster.Spec.Replicas == 0 && cluster.Status.ReadyNodes == 0 {
+
+		cluster.UpdateStatusCondition(api.ClusterConditionFailoverInProgress, corev1.ConditionFalse,
+			"ClusterNotRunning", "cluster is not running")
+
+		if sErr := r.Status().Update(context.TODO(), cluster.Unwrap()); sErr != nil {
+			log.Error(sErr, "failed to update cluster status")
 			return reconcile.Result{}, sErr
 		}
 		return reconcile.Result{}, nil
@@ -190,7 +217,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		if !reflect.DeepEqual(status, cluster.Status) {
 			sErr := r.Status().Update(context.TODO(), cluster.Unwrap())
 			if sErr != nil {
-				log.Error(sErr, "failed to update cluster status", "cluster", cluster)
+				log.Error(sErr, "failed to update cluster status")
 			}
 		}
 	}()
@@ -205,8 +232,8 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	cmRev := configMapSyncer.GetObject().(*corev1.ConfigMap).ResourceVersion
-	sctRev := secretSyncer.GetObject().(*corev1.Secret).ResourceVersion
+	cmRev := configMapSyncer.Object().(*corev1.ConfigMap).ResourceVersion
+	sctRev := secretSyncer.Object().(*corev1.Secret).ResourceVersion
 
 	// run the syncers for services, pdb and statefulset
 	syncers := []syncer.Interface{
@@ -214,6 +241,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		clustersyncer.NewHeadlessSVCSyncer(r.Client, r.scheme, cluster),
 		clustersyncer.NewMasterSVCSyncer(r.Client, r.scheme, cluster),
 		clustersyncer.NewHealthySVCSyncer(r.Client, r.scheme, cluster),
+		clustersyncer.NewHealthyReplicasSVCSyncer(r.Client, r.scheme, cluster),
 
 		clustersyncer.NewStatefulSetSyncer(r.Client, r.scheme, cluster, cmRev, sctRev, r.opt),
 	}
@@ -230,7 +258,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// run the pod syncers
-	log.Info("cluster status", "status", cluster.Status)
+	log.V(1).Info("cluster status", "status", cluster.Status)
 	for _, sync := range r.getPodSyncers(cluster) {
 		if err = syncer.Sync(context.TODO(), sync, r.recorder); err != nil {
 			// if it's pod not found then skip the error
@@ -273,7 +301,6 @@ func (r *ReconcileMysqlCluster) getPodSyncers(cluster *mysqlcluster.MysqlCluster
 	}
 
 	return syncers
-
 }
 
 func getCondAsBool(status *mysqlv1alpha1.NodeStatus, cond mysqlv1alpha1.NodeConditionType) bool {

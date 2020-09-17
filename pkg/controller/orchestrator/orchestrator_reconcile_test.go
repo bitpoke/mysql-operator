@@ -121,6 +121,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 				Slave_SQL_Running: false,
 				Slave_IO_Running:  false,
 				IsUpToDate:        true,
+				IsRecentlyChecked: true,
 				IsLastCheckValid:  true,
 			})
 		})
@@ -314,6 +315,29 @@ var _ = Describe("Orchestrator reconciler", func() {
 			Expect(master).To(BeNil())
 
 		})
+		It("should be unable to find a clear master even if the CoMaster is not set by orchestrator", func() {
+			// Topology:
+			//  0
+			//  |
+			//  1
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
+			})
+			orcClient.AddInstance(orc.Instance{
+				ClusterName: cluster.GetClusterAlias(),
+				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(1)},
+				MasterKey:   orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
+			})
+
+			var insts InstancesSet
+			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+
+			// should not determine any master because there are two masters
+			master := insts.DetermineMaster()
+			Expect(master).To(BeNil())
+		})
 	})
 
 	It("should not determine the master when master is not in orc", func() {
@@ -348,19 +372,16 @@ var _ = Describe("Orchestrator reconciler", func() {
 		)
 
 		BeforeEach(func() {
-			updater = &orcUpdater{
-				cluster:   cluster,
-				recorder:  rec,
-				orcClient: orcClient,
-			}
+			updater = NewOrcUpdater(cluster, rec, orcClient).(*orcUpdater)
 			// set cluster on readonly, master should be in read only state
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
 				Key:         orc.InstanceKey{Hostname: cluster.GetPodHostname(0)},
 				ReadOnly:    false, // mark node as master
 				// mark instance as uptodate
-				IsUpToDate:       true,
-				IsLastCheckValid: true,
+				IsUpToDate:        true,
+				IsRecentlyChecked: true,
+				IsLastCheckValid:  true,
 			})
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
@@ -371,14 +392,15 @@ var _ = Describe("Orchestrator reconciler", func() {
 				Slave_SQL_Running: true,
 				Slave_IO_Running:  true,
 				// mark instance as uptodate
-				IsUpToDate:       true,
-				IsLastCheckValid: true,
+				IsUpToDate:        true,
+				IsRecentlyChecked: true,
+				IsLastCheckValid:  true,
 			})
 
 			// update cluster nodes status
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
 			master, _ := orcClient.Master(cluster.GetClusterAlias())
-			updater.updateStatusFromOrc(insts, master)
+			updater.updateNodesStatus(insts, master)
 		})
 
 		It("should update status for nodes on cluster", func() {
@@ -411,6 +433,37 @@ var _ = Describe("Orchestrator reconciler", func() {
 			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
 			node0 := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
 			Expect(node0.ReadOnly).To(Equal(false))
+
+			// check slave (node-1) to be read-only
+			node1 := InstancesSet(insts).GetInstance(cluster.GetPodHostname(1))
+			Expect(node1.ReadOnly).To(Equal(true))
+		})
+
+		It("should not set the master writable during failover", func() {
+			// Get master
+			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
+			master := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
+
+			// Simulate failover status:
+			//  1. Orchestrator would have set read-only on the master, and
+			//  2. ClusterConditionFailoverInProgress would be set to true
+			err := updater.setReadOnlyNode(*master)
+			Expect(err).To(Succeed())
+
+			cluster.UpdateStatusCondition(api.ClusterConditionFailoverInProgress, core.ConditionTrue,
+				"TestFailover", "Failover is in progress")
+
+			// check master (node-0) to be read-only before
+			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+			node0 := InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
+			Expect(node0.ReadOnly).To(Equal(true))
+
+			updater.markReadOnlyNodesInOrc(insts, master)
+
+			// check master (node-0) to be read-only after
+			insts, _ = orcClient.Cluster(cluster.GetClusterAlias())
+			node0 = InstancesSet(insts).GetInstance(cluster.GetPodHostname(0))
+			Expect(node0.ReadOnly).To(Equal(true))
 
 			// check slave (node-1) to be read-only
 			node1 := InstancesSet(insts).GetInstance(cluster.GetPodHostname(1))
@@ -474,14 +527,15 @@ var _ = Describe("Orchestrator reconciler", func() {
 					Slave_SQL_Running: false,
 					Slave_IO_Running:  false,
 					// mark instance as uptodate
-					IsUpToDate:       true,
-					IsLastCheckValid: true,
+					IsUpToDate:        true,
+					IsRecentlyChecked: true,
+					IsLastCheckValid:  true,
 				})
 				insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
 				master, _ := orcClient.Master(cluster.GetClusterAlias())
 				cluster.Spec.Replicas = &three
 				cluster.Status.ReadyNodes = 3
-				updater.updateStatusFromOrc(insts, master)
+				updater.updateNodesStatus(insts, master)
 				updater.updateClusterReadyStatus()
 
 				Expect(cluster.Status).To(haveCondWithStatus(api.ClusterConditionReady, core.ConditionFalse, "NotReplicating"))
@@ -508,19 +562,16 @@ var _ = Describe("Orchestrator reconciler", func() {
 		)
 
 		BeforeEach(func() {
-			updater = &orcUpdater{
-				cluster:   cluster,
-				recorder:  rec,
-				orcClient: orcClient,
-			}
+			updater = NewOrcUpdater(cluster, rec, orcClient).(*orcUpdater)
 			// set cluster on readonly, master should be in read only state
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
 				Key:         orc.InstanceKey{Hostname: oldPodHostname(cluster, 0)},
 				ReadOnly:    false, // mark node as master
 				// mark instance as uptodate
-				IsUpToDate:       true,
-				IsLastCheckValid: true,
+				IsUpToDate:        true,
+				IsRecentlyChecked: true,
+				IsLastCheckValid:  true,
 			})
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
@@ -531,7 +582,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 			// update cluster nodes status
 			insts, _ := orcClient.Cluster(cluster.GetClusterAlias())
 			master, _ := orcClient.Master(cluster.GetClusterAlias())
-			updater.updateStatusFromOrc(insts, master)
+			updater.updateNodesStatus(insts, master)
 		})
 
 		It("should not remove nodes from cluster when upgrading", func() {

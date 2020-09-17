@@ -23,7 +23,7 @@ import (
 
 	logf "github.com/presslabs/controller-util/log"
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/presslabs/mysql-operator/pkg/sidecar"
 )
@@ -65,7 +65,7 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := sidecar.RunCloneCommand(cfg); err != nil {
 				log.Error(err, "clone command failed")
-				os.Exit(1)
+				os.Exit(8)
 			}
 			if err := sidecar.RunConfigCommand(cfg); err != nil {
 				log.Error(err, "init command failed")

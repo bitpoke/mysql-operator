@@ -34,45 +34,43 @@ const (
 
 // NewOperatedSecretSyncer returns secret syncer
 func NewOperatedSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, opt *options.Options) syncer.Interface {
-	obj := &core.Secret{
+	secret := &core.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(mysqlcluster.Secret),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("OperatedSecret", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
-		out := in.(*core.Secret)
-
-		if out.Data == nil {
-			out.Data = make(map[string][]byte)
+	return syncer.NewObjectSyncer("OperatedSecret", cluster.Unwrap(), secret, c, scheme, func() error {
+		if secret.Data == nil {
+			secret.Data = make(map[string][]byte)
 		}
 
 		// the user used for operator to connect to the mysql node for configuration
-		out.Data["OPERATOR_USER"] = []byte("sys_operator")
-		if err := addRandomPassword(out.Data, "OPERATOR_PASSWORD"); err != nil {
+		secret.Data["OPERATOR_USER"] = []byte("sys_operator")
+		if err := addRandomPassword(secret.Data, "OPERATOR_PASSWORD"); err != nil {
 			return err
 		}
 
 		// the user that is used to configure replication between nodes
-		out.Data["REPLICATION_USER"] = []byte("sys_replication")
-		if err := addRandomPassword(out.Data, "REPLICATION_PASSWORD"); err != nil {
+		secret.Data["REPLICATION_USER"] = []byte("sys_replication")
+		if err := addRandomPassword(secret.Data, "REPLICATION_PASSWORD"); err != nil {
 			return err
 		}
 
 		// the user that is used by the metrics exporter sidecar to collect mysql metrics
-		out.Data["METRICS_EXPORTER_USER"] = []byte("sys_exporter")
-		if err := addRandomPassword(out.Data, "METRICS_EXPORTER_PASSWORD"); err != nil {
+		secret.Data["METRICS_EXPORTER_USER"] = []byte("sys_exporter")
+		if err := addRandomPassword(secret.Data, "METRICS_EXPORTER_PASSWORD"); err != nil {
 			return err
 		}
 
 		// the user that is used by orchestrator to manage topology and failover
-		out.Data["ORC_TOPOLOGY_USER"] = []byte(opt.OrchestratorTopologyUser)
-		out.Data["ORC_TOPOLOGY_PASSWORD"] = []byte(opt.OrchestratorTopologyPassword)
+		secret.Data["ORC_TOPOLOGY_USER"] = []byte(opt.OrchestratorTopologyUser)
+		secret.Data["ORC_TOPOLOGY_PASSWORD"] = []byte(opt.OrchestratorTopologyPassword)
 
 		// the user that is used to serve backups over HTTP
-		out.Data["BACKUP_USER"] = []byte("sys_backups")
-		if err := addRandomPassword(out.Data, "BACKUP_PASSWORD"); err != nil {
+		secret.Data["BACKUP_USER"] = []byte("sys_backups")
+		if err := addRandomPassword(secret.Data, "BACKUP_PASSWORD"); err != nil {
 			return err
 		}
 

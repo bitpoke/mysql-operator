@@ -24,21 +24,23 @@ import (
 	"net/http"
 	"net/url"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var log = logf.Log.WithName("orchestrator.client")
 
 func (o *orchestrator) makeGetRequest(path string, out interface{}) *Error {
 	uri := fmt.Sprintf("%s/%s", o.connectURI, path)
-	log.V(2).Info("orchestrator request info", "uri", uri, "outobj", out)
+	log.V(2).Info("orchestrator request info", "uri", uri)
 
 	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return NewErrorMsg(fmt.Sprintf("can't create request: %s", err.Error()), path)
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: o.timeout,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return NewErrorMsg(err.Error(), path)

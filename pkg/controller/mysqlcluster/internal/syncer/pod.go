@@ -18,12 +18,16 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
+	"github.com/go-logr/logr"
+	"github.com/go-test/deep"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/presslabs/controller-util/syncer"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -33,6 +37,7 @@ import (
 type podSyncer struct {
 	cluster  *mysqlcluster.MysqlCluster
 	hostname string
+	log      logr.Logger
 }
 
 const (
@@ -44,7 +49,7 @@ const (
 
 // NewPodSyncer returns the syncer for pod
 func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, host string) syncer.Interface {
-	obj := &core.Pod{
+	pod := &core.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      getPodNameForHost(host),
 			Namespace: cluster.Namespace,
@@ -54,15 +59,16 @@ func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster
 	sync := &podSyncer{
 		cluster:  cluster,
 		hostname: host,
+		log:      logf.Log.WithName("pod-syncer").WithValues("key", cluster.GetNamespacedName()),
 	}
 
-	return syncer.NewObjectSyncer("Pod", nil, obj, c, scheme, sync.SyncFn)
+	return syncer.NewObjectSyncer("Pod", nil, pod, c, scheme, func() error {
+		return sync.SyncFn(pod)
+	})
 }
 
 // nolint: gocyclo
-func (s *podSyncer) SyncFn(in runtime.Object) error {
-	out := in.(*core.Pod)
-
+func (s *podSyncer) SyncFn(out *core.Pod) error {
 	// raise error if pod is not created
 	if out.CreationTimestamp.IsZero() {
 		return NewPodNotFoundError()
@@ -96,8 +102,18 @@ func (s *podSyncer) SyncFn(in runtime.Object) error {
 		out.ObjectMeta.Labels = map[string]string{}
 	}
 
+	oldLabels := map[string]string{}
+
+	for k, v := range out.ObjectMeta.Labels {
+		oldLabels[k] = v
+	}
+
 	out.ObjectMeta.Labels["role"] = role
 	out.ObjectMeta.Labels["healthy"] = healthy
+
+	if !reflect.DeepEqual(oldLabels, out.ObjectMeta.Labels) {
+		s.log.Info("node labels updated", "host", out.Spec.Hostname, "diff", deep.Equal(oldLabels, out.ObjectMeta.Labels))
+	}
 
 	return nil
 }

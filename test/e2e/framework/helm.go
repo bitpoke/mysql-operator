@@ -27,9 +27,9 @@ import (
 
 func HelmInstallChart(release, ns string) {
 	args := []string{
-		"install", "./" + TestContext.ChartPath,
+		"install", release, "./" + TestContext.ChartPath,
 		"--namespace", ns,
-		"--name", release, "--values", TestContext.ChartValues, "--wait",
+		"--values", TestContext.ChartValues, "--wait",
 		"--kube-context", TestContext.KubeContext,
 		"--set", fmt.Sprintf("image=%s", TestContext.OperatorImage),
 		"--set", fmt.Sprintf("sidecarImage=%s", TestContext.SidecarImage),
@@ -43,9 +43,10 @@ func HelmInstallChart(release, ns string) {
 	Expect(cmd.Run()).Should(Succeed())
 }
 
-func HelmPurgeRelease(release string) {
+func HelmPurgeRelease(release, ns string) {
 	args := []string{
-		"delete", "--purge", release,
+		"delete", release,
+		"--namespace", ns,
 		"--kube-context", TestContext.KubeContext,
 	}
 	cmd := exec.Command("helm", args...)

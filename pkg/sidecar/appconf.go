@@ -24,9 +24,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
-
 	"github.com/go-ini/ini"
+
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
 // RunConfigCommand generates my.cnf, client.cnf and 10-dynamic.cnf files.
@@ -62,7 +62,7 @@ func RunConfigCommand(cfg *Config) error {
 	gtidPurged, err = readPurgedGTID()
 	if err != nil {
 		// not a fatal error, log it and continue
-		log.Info("error while reading PURGE GTID from xtrabackup info file", "error", err)
+		log.Info("error while reading PURGE GTID from xtrabackup_binlog_info", "error", err)
 	}
 
 	initFilePath := path.Join(confDPath, "operator-init.sql")
@@ -196,12 +196,13 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 
 	// create the status table used by the operator to configure or to mask MySQL node ready
 	// CSV engine for this table can't be used because we use REPLACE statement that requires PRIMARY KEY or
-	// UNIQUE KEY index
+	// UNIQUE KEY index. Also, the table may exists (in case of pod restart) and should not be changed.
+	// NOTE: value column should be big enough to contain all GTIDs from xtrabackup_slave_info file
 	// nolint: gosec
 	queries = append(queries, fmt.Sprintf(
 		"CREATE TABLE IF NOT EXISTS %[1]s.%[2]s ("+
 			"  name varchar(64) PRIMARY KEY,"+
-			"  value varchar(512) NOT NULL )",
+			"  value varchar(8192) NOT NULL\n)",
 		constants.OperatorDbName, constants.OperatorStatusTableName))
 
 	// mark node as not configured at startup, the operator will mark it configured
@@ -220,6 +221,10 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 	// to avoid not replicate from previous master.
 	if cfg.ShouldCloneFromBucket() {
 		queries = append(queries, "RESET SLAVE ALL")
+	}
+
+	if len(cfg.InitFileExtraSQL[0]) > 0 {
+		queries = append(queries, cfg.InitFileExtraSQL...)
 	}
 
 	return []byte(strings.Join(queries, ";\n") + ";\n")

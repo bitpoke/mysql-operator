@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	core "k8s.io/api/core/v1"
@@ -108,4 +109,16 @@ func HaveClusterStatusReadyNodes(nodes int) gomegatypes.GomegaMatcher {
 			"ReadyNodes": Equal(nodes),
 		}),
 	}))
+}
+
+// HaveClusterCond is a helper func that returns a matcher to check for an existing condition in a ClusterCondition list.
+func HaveClusterCond(condType api.ClusterConditionType, status corev1.ConditionStatus) gomegatypes.GomegaMatcher {
+	return PointTo(MatchFields(IgnoreExtras, Fields{
+		"Status": MatchFields(IgnoreExtras, Fields{
+			"Conditions": ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(condType),
+				"Status": Equal(status),
+			})),
+		})},
+	))
 }

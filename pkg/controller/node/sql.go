@@ -30,8 +30,8 @@ import (
 )
 
 const (
-	// connRetry represents the number of tries to connect to master server
-	connRetry = 10
+	// connRetry specifies the interval between reconnection attempts to master
+	connRetry = 1
 )
 
 // SQLInterface expose abstract operations that can be applied on a MySQL node
@@ -109,7 +109,7 @@ func (r *nodeSQLRunner) ChangeMasterTo(ctx context.Context, masterHost, user, pa
 
 	query = "START SLAVE;"
 	if err := r.runQuery(ctx, query); err != nil {
-		log.Info("failed to start slave in the simple mode, trying a second method")
+		log.Info("failed to start slave in the simple mode, trying a second method", "host", r.Host())
 		// TODO: https://bugs.mysql.com/bug.php?id=83713
 		query2 := `
 		  reset slave;
@@ -152,7 +152,7 @@ func (r *nodeSQLRunner) runQuery(ctx context.Context, q string, args ...interfac
 	}
 	defer close()
 
-	log.V(1).Info("running query", "query", q)
+	log.V(1).Info("running query", "query", q, "host", r.Host())
 
 	if !r.enableBinLog {
 		q = "SET @@SESSION.SQL_LOG_BIN = 0;\n" + q
@@ -195,7 +195,7 @@ func (r *nodeSQLRunner) dbConn() (*sql.DB, func(), error) {
 	}
 	close := func() {
 		if cErr := db.Close(); cErr != nil {
-			log.Error(cErr, "failed closing the database connection")
+			log.Error(cErr, "failed closing the database connection", "host", r.Host())
 		}
 	}
 
@@ -213,6 +213,7 @@ func (r *nodeSQLRunner) SetPurgedGTID(ctx context.Context) error {
 	if setGTID, err = r.readStatusValue(ctx, "set_gtid_purged"); err != nil {
 		return err
 	} else if len(setGTID) != 0 {
+
 		log.V(1).Info("GTID purged was already set", "host", r.Host(), "gtid_purged", setGTID)
 		return nil
 	}
@@ -276,6 +277,7 @@ func (r *nodeSQLRunner) writeStatusValue(ctx context.Context, key, value string)
 // isMySQLError checks if a mysql error is of the given code.
 // more information about mysql error codes can be found here:
 // https://dev.mysql.com/doc/refman/8.0/en/server-error-reference.html
+// nolint:unused,deadcode
 func isMySQLError(err error, no int) bool {
 	errStr := fmt.Sprintf("Error %d:", no)
 	return strings.Contains(err.Error(), errStr)

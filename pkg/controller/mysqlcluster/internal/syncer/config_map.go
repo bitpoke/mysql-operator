@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/go-ini/ini"
 	core "k8s.io/api/core/v1"
@@ -27,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/presslabs/controller-util/syncer"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
@@ -37,30 +38,58 @@ var log = logf.Log.WithName("config-map-syncer")
 
 // NewConfigMapSyncer returns config map syncer
 func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
-	obj := &core.ConfigMap{
+	cm := &core.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(mysqlcluster.ConfigMap),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("ConfigMap", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
-		out := in.(*core.ConfigMap)
-
-		out.ObjectMeta.Labels = cluster.GetLabels()
-		out.ObjectMeta.Labels["generated"] = "true"
+	return syncer.NewObjectSyncer("ConfigMap", cluster.Unwrap(), cm, c, scheme, func() error {
+		cm.ObjectMeta.Labels = cluster.GetLabels()
+		cm.ObjectMeta.Labels["generated"] = "true"
 
 		data, err := buildMysqlConfData(cluster)
 		if err != nil {
 			return fmt.Errorf("failed to create mysql configs: %s", err)
 		}
 
-		out.Data = map[string]string{
-			"my.cnf": data,
+		cm.Data = map[string]string{
+			"my.cnf":      data,
+			shPreStopFile: buildBashPreStop(),
 		}
 
 		return nil
 	})
+}
+
+func buildBashPreStop() string {
+	data := `#!/bin/bash
+set -ex
+
+current=$(date "+%Y-%m-%d %H:%M:%S")
+echo "[${current}]preStop is ongoing"
+read_only_status=$(mysql --defaults-file=ConfClientPathHolder -NB -e 'SELECT @@read_only')
+replica_status=$(mysql --defaults-file=ConfClientPathHolder -NB -e 'show slave status\G')
+# orchestrator will isolate old master during failover
+has_replica_hosts=$(mysql --defaults-file=ConfClientPathHolder -NB -e 'show slave hosts\G')
+replica_status_count=$(echo -n "$replica_status" | wc -l )
+has_replica_count=$(echo -n "$has_replica_hosts" | wc -l )
+echo "hostname=$(hostname) readonly=${read_only_status} show_slave_status=${replica_status_count}"
+echo "has_replica_hosts=${has_replica_count}"
+if [ ${read_only_status} -eq 0  ] && [ ${replica_status_count} -eq 0 ] && [ ${has_replica_count} -gt 0 ]
+then
+		masterhostname=$( curl  -s "${ORCH_HTTP_API}/master/${ORCH_CLUSTER_ALIAS}" |  awk -F":" '{print $3}' | awk -F'"' '{print $2}' )
+        echo "master from orchestrator: ${masterhostname}"
+        if [ "${FQDN}" == "${masterhostname}" ]
+        then
+                curl  -s "${ORCH_HTTP_API}/graceful-master-takeover-auto/${ORCH_CLUSTER_ALIAS}"
+				echo "graceful-master-takeover-auto is ongoing, sleep 5 seconds in order to make sure service can work well."
+				sleep 5
+        fi
+fi
+`
+	return strings.Replace(data, "ConfClientPathHolder", confClientPath, -1)
 }
 
 func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
@@ -176,7 +205,8 @@ var mysqlCommonConfigs = map[string]string{
 	// Safety
 	"max-allowed-packet": "16M",
 	"max-connect-errors": "1000000",
-	"sysdate-is-now":     "1",
+
+	"sysdate-is-now": "1",
 
 	// Binary logging
 	"sync-binlog":   "1",

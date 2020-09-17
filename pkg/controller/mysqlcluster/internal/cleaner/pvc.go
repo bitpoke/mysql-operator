@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
@@ -34,10 +34,10 @@ import (
 )
 
 const (
-	reasonPVCCleanupSuccessfull = "SucessfulPVCCleanup"
-	reasonPVCCleanupFailed      = "FailedPVCCleanup"
-	messageCleanupSuccessfull   = "delete Claim %s in StatefulSet %s successful"
-	messageCleanupFailed        = "delete Claim %s in StatefulSet %s failed"
+	reasonPVCCleanupSuccessful = "SuccessfulPVCCleanup"
+	reasonPVCCleanupFailed     = "FailedPVCCleanup"
+	messageCleanupSuccessful   = "delete Claim %s in StatefulSet %s successful"
+	messageCleanupFailed       = "delete Claim %s in StatefulSet %s failed"
 )
 
 var log = logf.Log.WithName("mysqlcluster.pvccleaner")
@@ -66,7 +66,7 @@ func (p *PVCCleaner) Run(ctx context.Context) error {
 	cluster := p.cluster.Unwrap()
 
 	if cluster.DeletionTimestamp != nil {
-		log.V(4).Info("being deleted, no action", "MysqlCluster", p.cluster)
+		log.V(2).Info("being deleted, no action", "key", p.cluster)
 		return nil
 	}
 
@@ -79,12 +79,12 @@ func (p *PVCCleaner) Run(ctx context.Context) error {
 	for _, pvc := range pvcs {
 		ord, parseErr := getOrdinal(pvc.Name)
 		if parseErr == nil && ord >= *cluster.Spec.Replicas && ord != 0 {
-			log.Info("cleaning up PVC", "pvc", pvc)
+			log.Info("cleaning up PVC", "pvc", pvc.Name, "key", p.cluster)
 			if err := p.deletePVC(ctx, &pvc); err != nil {
 				return err
 			}
 		} else if parseErr != nil {
-			log.Error(parseErr, "pvc deletion error")
+			log.Error(parseErr, "pvc deletion error", "key", p.cluster)
 		}
 	}
 
@@ -99,19 +99,19 @@ func (p *PVCCleaner) deletePVC(ctx context.Context, pvc *core.PersistentVolumeCl
 		return err
 	}
 
-	p.recorder.Event(p.cluster, core.EventTypeNormal, reasonPVCCleanupSuccessfull,
-		fmt.Sprintf(messageCleanupSuccessfull, pvc.Name, p.cluster.Name))
+	p.recorder.Event(p.cluster, core.EventTypeNormal, reasonPVCCleanupSuccessful,
+		fmt.Sprintf(messageCleanupSuccessful, pvc.Name, p.cluster.Name))
 	return nil
 }
 
 func (p *PVCCleaner) getPVCs(ctx context.Context) ([]core.PersistentVolumeClaim, error) {
 	pvcs := &core.PersistentVolumeClaimList{}
-	lo := &client.ListOptions{
+	opts := &client.ListOptions{
 		Namespace:     p.cluster.Namespace,
 		LabelSelector: labels.SelectorFromSet(p.cluster.GetSelectorLabels()),
 	}
 
-	if err := p.client.List(ctx, lo, pvcs); err != nil {
+	if err := p.client.List(ctx, pvcs, opts); err != nil {
 		return nil, err
 	}
 
@@ -119,6 +119,7 @@ func (p *PVCCleaner) getPVCs(ctx context.Context) ([]core.PersistentVolumeClaim,
 	claims := []core.PersistentVolumeClaim{}
 	for _, claim := range pvcs.Items {
 		if !isOwnedBy(claim, p.cluster.Unwrap()) {
+			log.Info("pvc not owner by cluster", "pvc", claim.Name, "key", p.cluster)
 			continue // skip it's not owned by this cluster
 		}
 
@@ -144,7 +145,6 @@ func isOwnedBy(pvc core.PersistentVolumeClaim, cluster *api.MysqlCluster) bool {
 		}
 	}
 
-	log.Info("pvc not owner by cluster", "pvc", pvc, "cluster", cluster)
 	return false
 }
 

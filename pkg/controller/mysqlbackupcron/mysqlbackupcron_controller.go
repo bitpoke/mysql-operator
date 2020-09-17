@@ -30,9 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -75,7 +75,7 @@ func newReconciler(mgr manager.Manager, cron *cron.Cron) reconcile.Reconciler {
 	return &ReconcileMysqlBackup{
 		Client:          mgr.GetClient(),
 		scheme:          mgr.GetScheme(),
-		recorder:        mgr.GetRecorder(controllerName),
+		recorder:        mgr.GetEventRecorderFor(controllerName),
 		opt:             options.GetOptions(),
 		cron:            cron,
 		lockJobRegister: new(sync.Mutex),
@@ -136,7 +136,7 @@ func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, fmt.Errorf("failed to parse schedule: %s", err)
 	}
 
-	log.V(1).Info("register cluster in cronjob", "cluster", cluster, "schedule", schedule)
+	log.V(1).Info("register cluster in cronjob", "key", cluster, "schedule", schedule)
 
 	return reconcile.Result{}, r.updateClusterSchedule(cluster, schedule)
 }
@@ -149,12 +149,12 @@ func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.Mysq
 	for _, entry := range r.cron.Entries() {
 		j, ok := entry.Job.(*job)
 		if ok && j.ClusterName == cluster.Name && j.Namespace == cluster.Namespace {
-			log.V(1).Info("cluster already added to cron.", "cluster", cluster.Name)
+			log.V(1).Info("cluster already added to cron.", "key", cluster)
 
 			// change scheduler for already added crons
 			if !reflect.DeepEqual(entry.Schedule, schedule) {
-				log.Info("update cluster scheduler", "cluster",
-					cluster.Name, "scheduler", cluster.Spec.BackupSchedule)
+				log.Info("update cluster scheduler", "key", cluster,
+					"scheduler", cluster.Spec.BackupSchedule)
 
 				if err := r.cron.Remove(cluster.Name); err != nil {
 					return err
@@ -168,8 +168,7 @@ func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.Mysq
 				if cluster.Spec.BackupScheduleJobsHistoryLimit != nil {
 					newValFmt = fmt.Sprintf("%d", cluster.Spec.BackupScheduleJobsHistoryLimit)
 				}
-				log.Info("update cluster backup limit", "cluster",
-					cluster.Name, "limit_val", newValFmt)
+				log.Info("update cluster backup limit", "key", cluster, "limit_val", newValFmt)
 				if err := r.cron.Remove(cluster.Name); err != nil {
 					return err
 				}
@@ -205,7 +204,7 @@ func (r *ReconcileMysqlBackup) unregisterCluster(clusterKey types.NamespacedName
 }
 
 func addBackupFieldIndexers(mgr manager.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(&mysqlv1alpha1.MysqlBackup{}, "status.completed", func(b runtime.Object) []string {
+	return mgr.GetFieldIndexer().IndexField(context.TODO(), &mysqlv1alpha1.MysqlBackup{}, "status.completed", func(b runtime.Object) []string {
 		completed := "false"
 		if b.(*mysqlv1alpha1.MysqlBackup).Status.Completed {
 			completed = "true"

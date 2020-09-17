@@ -49,12 +49,17 @@ const (
 	ConfVolumeMountPath = constants.ConfVolumeMountPath
 	// DataVolumeMountPath is the path to mysql data
 	DataVolumeMountPath = constants.DataVolumeMountPath
+	// TmpfsVolumeMountPath is the path for the tmpfs mount
+	TmpfsVolumeMountPath = constants.TmpfsVolumeMountPath
+
 	// ConfMapVolumeMountPath represents the temp config mount path in init containers
 	ConfMapVolumeMountPath = constants.ConfMapVolumeMountPath
 	// ConfDPath is the path to extra mysql configs dir
 	ConfDPath = constants.ConfDPath
 
 	confClientPath = constants.ConfClientPath
+
+	shPreStopFile = constants.ShPreStop
 )
 
 var (

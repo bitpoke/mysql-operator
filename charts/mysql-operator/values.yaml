@@ -1,0 +1,195 @@
+# Default values for mysql-operator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicas: 1
+image: quay.io/presslabs/mysql-operator:latest
+sidecarImage: quay.io/presslabs/mysql-operator-sidecar:latest
+imagePullPolicy: IfNotPresent
+
+imagePullSecrets:
+# - name: "image-pull-secret"
+
+# whether or not to install CRDs
+installCRDs: true
+# in which namespace to watch for resource, leave empty to watch in all namespaces
+watchNamespace:
+
+# The operator will install a ServiceMonitor if you have prometheus-operator installed.
+serviceMonitor:
+  enabled: true
+  ## Additional labels for the serviceMonitor. Useful if you have multiple prometheus operators running to select only specific ServiceMonitors
+  # additionalLabels:
+  #   prometheus: prom-internal
+  interval: 10s
+  scrapeTimeout: 3s
+  # jobLabel:
+  # targetLabels:
+  # podTargetLabels:
+  namespaceSelector:
+    any: true
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: mysql.presslabs.org
+      app.kubernetes.io/name: mysql
+
+nodeSelector: {}
+tolerations: []
+resources: {}
+  # limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  # requests:
+  #  cpu: 100m
+  #  memory: 128Mi
+
+## nodeAffinity settings
+# nodeAffinity:
+#   requiredDuringSchedulingIgnoredDuringExecution:
+#     nodeSelectorTerms:
+#     - matchExpressions:
+#       - key: cloud.google.com/gke-preemptible
+#         operator: NotIn
+#         values:
+#         - true
+
+## Anti-Affinity setting. The default "hard" will use pod anti-affinity that is
+## requiredDuringSchedulingIgnoredDuringExecution to ensure 2 services don't
+## end up on the same node. Setting this to "soft" will use
+## preferredDuringSchedulingIgnoredDuringExecution. If set to anything else,
+## no anti-affinity rules will be configured.
+antiAffinity: "none"
+
+extraArgs: []
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+podSecurityPolicy:
+  enabled: false
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'docker/default'
+    seccomp.security.alpha.kubernetes.io/defaultProfileName:  'docker/default'
+
+rbac:
+  create: true
+  # if rbac is false this service account is used
+  serviceAccountName: default
+
+orchestrator:
+  image: quay.io/presslabs/mysql-operator-orchestrator:latest
+
+  # orchestrator user and password to manage MySQL clusters
+  topologyUser: orchestrator
+  topologyPassword:  # this is empty and will be random generated if not specified
+  # secretName:  # you can specify which secret to use for orchestrator topology credentials
+
+  resources:
+    # For example
+    # limits:
+    #  cpu: 100m
+    #  memory: 128Mi
+    # requests:
+    #  cpu: 100m
+    #  memory: 128Mi
+
+  service:
+    type: ClusterIP
+    port: 80
+    # nodePort: 3000
+
+  ingress:
+    enabled: false
+    annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    hosts:
+    - host: chart-example.local
+      paths: []
+
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  persistence:
+    enabled: true
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    # storageClass: "-"
+    accessMode: "ReadWriteOnce"
+    size: 1Gi
+
+  # key value map of orchestrator conf directives.
+  # see: https://github.com/github/orchestrator/blob/master/conf/orchestrator-sample.conf.json
+  # the following keys are manages and thus cannot be overwritten:
+  #   - ListenAddress :3000
+  #   - MySQLTopologyCredentialsConfigFile /orchestrator/conf/orc-topology.cnf
+  #   - BackendDB sqlite
+  #   - SQLite3DataFile /var/lib/orchestrator/orc.db
+  #   - RaftEnabled true
+  #   - RaftDataDir /var/lib/orchestrator
+  #   - RaftBind $HOSTNAME
+  #   - RaftNodes The statefullset members
+  config:
+    Debug: false
+    # the operator is handling the registries, do not auto discover
+    DiscoverByShowSlaveHosts: false
+    # forget missing instances automatically
+    UnseenInstanceForgetHours: 1
+
+    InstancePollSeconds: 5
+    HostnameResolveMethod: "none"
+    MySQLHostnameResolveMethod: "@@report_host"
+    RemoveTextFromHostnameDisplay: ":3306"
+    DetectClusterAliasQuery: "SELECT CONCAT(SUBSTRING(@@hostname, 1, LENGTH(@@hostname) - 1 - LENGTH(SUBSTRING_INDEX(@@hostname,'-',-2))),'.',SUBSTRING_INDEX(@@report_host,'.',-1))"
+    DetectInstanceAliasQuery: "SELECT @@hostname"
+    SlaveLagQuery: "SELECT TIMESTAMPDIFF(SECOND,ts,UTC_TIMESTAMP()) as drift FROM sys_operator.heartbeat ORDER BY drift ASC LIMIT 1"
+
+    # Automated recovery (this is opt-in, so we need to set these)
+    # Prevent recovery flip-flop, by disabling auto-recovery for 5 minutes per
+    # cluster
+    RecoveryPeriodBlockSeconds: 300
+    # Do not ignore any host for auto-recovery
+    RecoveryIgnoreHostnameFilters: []
+    # Recover both, masters and intermediate masters
+    RecoverMasterClusterFilters: ['.*']
+    RecoverIntermediateMasterClusterFilters: ['.*']
+    # `reset slave all` and `set read_only=0` on promoted master
+    ApplyMySQLPromotionAfterMasterFailover: false
+    MasterFailoverDetachReplicaMasterHost: true
+    # https://github.com/github/orchestrator/blob/master/docs/configuration-recovery.md#promotion-actions
+    # Safety! do not disable unless you know what you are doing
+    FailMasterPromotionIfSQLThreadNotUpToDate: true
+    DetachLostReplicasAfterMasterFailover: true
+
+    # orchestrator hooks called in the following order
+    # for more information about template: https://github.com/github/orchestrator/blob/master/go/logic/topology_recovery.go#L256
+    ProcessesShellCommand: "sh"
+
+    OnFailureDetectionProcesses: 
+      - "/usr/local/bin/orc-helper event -w '{failureClusterAlias}' 'OrcFailureDetection' 'Failure: {failureType}, failed host: {failedHost}, lost replcas: {lostReplicas}' || true"
+      - "/usr/local/bin/orc-helper failover-in-progress '{failureClusterAlias}' '{failureDescription}' || true"
+
+    # PreGracefulTakeoverProcesses:
+    PreFailoverProcesses:
+      # as backup in case the first request fails
+      - "/usr/local/bin/orc-helper failover-in-progress '{failureClusterAlias}' '{failureDescription}' || true"
+    # PostFailoverProcesses:
+    #   - "/usr/local/bin/orchestrator-helper event '{failureClusterAlias}' 'Orc{command}' 'Failure type: {failureType}, failed hosts: {failedHost}, slaves: {countSlaves}' || true"
+
+    PostUnsuccessfulFailoverProcesses:
+      - "/usr/local/bin/orc-helper event -w '{failureClusterAlias}' 'OrcPostUnsuccessfulFailover' 'Failure: {failureType}, failed host: {failedHost} with {countSlaves} slaves' || true"
+
+    PostMasterFailoverProcesses:
+      - "/usr/local/bin/orc-helper event '{failureClusterAlias}' 'OrcPostMasterFailover' 'Failure type: {failureType}, new master: {successorHost}, slaves: {slaveHosts}' || true"
+
+    PostIntermediateMasterFailoverProcesses:
+      - "/usr/local/bin/orc-helper event '{failureClusterAlias}' 'OrcPostIntermediateMasterFailover' 'Failure type: {failureType}, failed hosts: {failedHost}, slaves: {countSlaves}' || true"
+
+    # PostGracefulTakeoverProcesses:

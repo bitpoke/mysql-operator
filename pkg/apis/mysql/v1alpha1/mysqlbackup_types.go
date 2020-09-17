@@ -92,11 +92,9 @@ type MysqlBackupStatus struct {
 	Conditions []BackupCondition `json:"conditions,omitempty"`
 }
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // MysqlBackup is the Schema for the mysqlbackups API
-// +k8s:openapi-gen=true
+// +kubebuilder:object:root=true
+//
 type MysqlBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -105,9 +103,9 @@ type MysqlBackup struct {
 	Status MysqlBackupStatus `json:"status,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // MysqlBackupList contains a list of MysqlBackup
+// +kubebuilder:object:root=true
+//
 type MysqlBackupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

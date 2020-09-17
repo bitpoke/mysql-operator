@@ -21,18 +21,17 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 var (
@@ -83,7 +82,7 @@ var _ = Describe("Pod syncer", func() {
 		c.Delete(context.TODO(), cluster.Unwrap())
 		// remove all created pods
 		podList := &core.PodList{}
-		c.List(context.TODO(), &client.ListOptions{}, podList)
+		c.List(context.TODO(), podList, &client.ListOptions{})
 		for _, pod := range podList.Items {
 			c.Delete(context.TODO(), &pod)
 		}

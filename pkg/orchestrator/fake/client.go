@@ -22,7 +22,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-
 	// nolint: golint
 	. "github.com/presslabs/mysql-operator/pkg/orchestrator"
 )
@@ -46,11 +45,6 @@ func getNextID() int64 {
 	nextID = nextID + 1
 	return nextID
 }
-
-const (
-	// NoLag is the constant that sets an instance as no lag
-	NoLag int64 = -1
-)
 
 // New fake orchestrator client
 func New() *OrcFakeClient {
@@ -207,8 +201,9 @@ func (o *OrcFakeClient) Discover(host string, port int) error {
 			Valid: false,
 			Int64: 0,
 		},
-		IsUpToDate:       true,
-		IsLastCheckValid: true,
+		IsUpToDate:        true,
+		IsRecentlyChecked: true,
+		IsLastCheckValid:  true,
 	})
 
 	return nil

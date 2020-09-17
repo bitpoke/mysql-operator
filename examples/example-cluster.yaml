@@ -5,20 +5,27 @@ metadata:
 spec:
   replicas: 2
   secretName: my-secret
+
+  ## For setting custom docker image or specifying mysql version
+  ## the image field has priority over mysqlVersion.
+  # image: percona:5.7
   # mysqlVersion: 5.7
+
   # initBucketURL: gs://bucket_name/backup.xtrabackup.gz
   # initBucketSecretName:
 
   ## PodDisruptionBudget
   # minAvailable: 1
 
-  ## For recurrent backups set backupSchedule with a cronjob expression
+  ## For recurrent backups set backupSchedule with a cronjob expression with seconds
   # backupSchedule:
   # backupURL: s3://bucket_name/
   # backupSecretName:
   # backupScheduleJobsHistoryLimit:
   # backupRemoteDeletePolicy:
 
+  ## Custom Server ID Offset for replication
+  # serverIDOffset: 100
 
   ## Configs that will be added to my.cnf for cluster
   # mysqlConf:
@@ -38,6 +45,10 @@ spec:
   #           topologyKey: "kubernetes.io/hostname"
   #           labelSelector:
   #             matchlabels: <cluster-labels>
+  #   backupAffinity: {}
+  #   backupNodeSelector: {}
+  #   backupPriorityClassName:
+  #   backupTolerations: []
   #   nodeSelector: {}
   #   resources:
   #     requests:
@@ -69,3 +80,42 @@ spec:
   ## removed from scheme
   # targetSLO:
   #   maxSlaveLatency: 10s
+
+  ## You can use custom volume for /tmp partition if needed.
+  ## Is disabled by default
+  # tmpfsSize: 1Gi
+
+  ## Set cluster in read only
+  # readOnly: false
+
+  ## Add metrics exporter extra arguments
+  # metricsExporterExtraArgs:
+  #   - --collect.info_schema.userstats
+  #   - --collect.perf_schema.file_events
+
+  ## Add extra arguments to rclone
+  # rcloneExtraArgs:
+  #   - --buffer-size=1G
+  #   - --multi-thread-streams=8
+  #   - --retries-sleep=10s
+  #   - --retries=10
+  #   - --transfers=8
+
+  ## Add extra arguments to xbstream
+  # xbstreamExtraArgs:
+  #   - --parallel=8
+
+  ## Add extra arguments to xtrabackup
+  # xtrabackupExtraArgs:
+  #   - --parallel=8
+
+  ## Add extra arguments to xtrabackup during --prepare
+  # xtrabackupPrepareExtraArgs:
+  #   - --use-memory=5G
+
+  ## Set xtrabackup target directory (the directory needs to exist)
+  # xtrabackupTargetDir: /var/lib/mysql/.tmp/xtrabackup/
+
+  # Add additional SQL commands to run during init of mysql
+  # initFileExtraSQL:
+  #   - "CREATE USER test@localhost"

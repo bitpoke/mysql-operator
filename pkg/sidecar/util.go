@@ -24,7 +24,7 @@ import (
 
 	// add mysql driver
 	_ "github.com/go-sql-driver/mysql"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var log = logf.Log.WithName("sidecar")

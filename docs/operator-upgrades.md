@@ -2,14 +2,23 @@
 title: The MySQL Operator Upgrades
 linktitle: Operator upgrades
 description: The steps to make in order to migrate the operator to a newer version of the MySQL operator.
-categories: [mysql operator]
 keywords: [mysql operator, upgrades]
-toc: true
-related: true
-slug: operator-upgrades
+menu:
+  global:
+    parent: "mysql-operator"
+    weight: 3
 ---
 
 In this section you can find the migration path when upgrading to a newer version of the MySQL operator.
+
+
+Regarding how a MySQL cluster is affected, we will try to keep it as follows when upgrading the
+operator:
+ * *PATCH* versions (e.g. `v0.3.2` -> `v0.3.3` or `v0.3.4`): no restart for the MySQL cluster
+ * *MINOR* versions (e.g. `v0.3.2` -> `v0.4.0`): the MySQL cluster will get restarted
+ * *MAJOR* versions (e.g. `v0.5.0` -> `v1.0.0`): the MySQL cluster will get restarted and it may
+   required manual intervention.
+
 
 ## v0.2.x upgrade
 
@@ -28,7 +37,7 @@ This upgrade requires a Kubernetes cluster upgrade because the `v0.2.x` works on
 
 ## v0.3.x upgrade
 
-This version requires at list Kubernetes `1.11`. The upgrade should be tried on staging environment
+This version requires at least Kubernetes `1.11`. The upgrade should be tried on staging environment
 first because it's with downtime. It requires the deletion of the statefulset and recreation of it.
 The reason behind is that we changed the headless service name (which is an immutable statefulset
 field) to make it smaller that will prevent you from hitting this
@@ -39,3 +48,4 @@ The operator should do all the work for you but you have to make sure that you h
 one node or the master node to be node 0. Doing so will prevent the operator to wait for a failover.
 
 This release drop support for `emptyDir` volume source.
+

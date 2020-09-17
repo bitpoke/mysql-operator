@@ -68,6 +68,32 @@ func (c *MysqlCluster) setPodSpecDefaults(spec *PodSpec) {
 			},
 		}
 	}
+
+	if len(spec.MetricsExporterResources.Requests) == 0 {
+		spec.MetricsExporterResources.Requests = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("10m"),
+			corev1.ResourceMemory: resource.MustParse("32Mi"),
+		}
+	}
+
+	if len(spec.MetricsExporterResources.Limits) == 0 {
+		spec.MetricsExporterResources.Limits = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		}
+	}
+
+	if len(spec.MySQLOperatorSidecarResources.Requests) == 0 {
+		spec.MySQLOperatorSidecarResources.Requests = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("10m"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		}
+	}
+
+	if len(spec.MySQLOperatorSidecarResources.Limits) == 0 {
+		// for the sidecar set the same limits as for mysql
+		spec.MySQLOperatorSidecarResources.Limits = spec.Resources.Limits
+	}
 }
 
 // SetDefaults for VolumeSpec

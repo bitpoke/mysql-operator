@@ -1,12 +1,12 @@
 ---
 title: Integrating mysql clusters into your own helm charts
-linktitle: MySQL Operator Integration
+linktitle: Integration
 description: How to integrate the MySQL operator with your application.
-categories: [mysql operator]
 keywords: [mysql operator]
-toc: true
-related: true
-slug: integrate-operator
+menu:
+  global:
+    parent: "mysql-operator"
+    weight: 1
 ---
 
 After cluster creation, you can update the provided secret with a new field named `DB_CONNECT_URL`
@@ -39,7 +39,7 @@ In your chart add in `requirements.yaml` under `dependencies` section the follow
 ```yaml
 dependencies:
   - name: mysql-cluster
-    version: 0.1.0
+    version: 0.2.0
     repository: https://presslabs.github.io/charts
     condition: mysql.enabled
     alias: mysql
@@ -48,12 +48,12 @@ dependencies:
 
 Once dependencies are configured run `helm dependency update` to fetch related charts.
 
-More information about chart requirements can be found in the official [documentation](https://docs.helm.sh/developing_charts/#managing-dependencies-with-requirements-yaml).
+More information about chart requirements can be found in the official [documentation](https://v2.helm.sh/docs/developing_charts/#managing-dependencies-with-requirements-yaml).
 
 ### Configure your chart's values.yaml file
 
 You can configure the cluster by providing values under the `mysql` key. A comprehensive description
-can be found in the chart [`values.yaml`](https://github.com/presslabs/mysql-operator/blob/master/hack/charts/mysql-cluster/values.yaml)
+can be found in the chart [`values.yaml`](https://github.com/presslabs/mysql-operator/blob/master/charts/mysql-cluster/values.yaml)
 file.
 
 ```yaml

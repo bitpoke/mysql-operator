@@ -7,7 +7,7 @@ if [ -z "$tag" ] ; then
 fi
 version="${tag#v}"
 
-CHART_PATH=charts/mysql-operator
+CHART_PATH=../charts/mysql-operator
 
 echo "Updating chart to version to: ${version}"
 sed -i.bak -E "

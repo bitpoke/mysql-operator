@@ -18,13 +18,13 @@ clone:
 
 pipeline:
   dependencies:
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.4
     commands:
       - make dependencies
 
   lint:
     group: lint
-    image: quay.io/presslabs/bfc:0.1
+    image: quay.io/presslabs/bfc:0.4
     commands:
       - make lint
 
@@ -33,24 +33,24 @@ pipeline:
     image: quay.io/presslabs/kluster-toolbox
     pull: true
     commands:
-      - helm lint hack/charts/mysql-operator
-      - helm dep build hack/charts/mysql-operator
+      - helm lint charts/mysql-operator
+      - helm dep build charts/mysql-operator
 
   test:
     group: test
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.4
     commands:
       - make test
 
   verify-generate:
-    image: quay.io/presslabs/bfc:0.1
+    image: quay.io/presslabs/bfc:0.4
     commands:
       - make -s fmt generate manifests
       - git diff --exit-code
 
   build-chart:
     group: build
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.4
     commands:
       - make chart
 
@@ -142,7 +142,7 @@ pipeline:
     environment:
       - GH_USER=presslabs-bot
     commands:
-      - cd hack/charts
+      - cd charts
       - (cd mysql-operator && helm dep build)
       - helm package mysql-operator
       - CHART="$(basename *.tgz)" ; MESSAGE="Publish $(basename $CHART .tgz)"
@@ -179,7 +179,7 @@ pipeline:
 #
 
   start-kubernetes:
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.4
     group: publish
     secrets:
       - GOOGLE_CREDENTIALS
@@ -191,19 +191,15 @@ pipeline:
       - setup-credentials-helper.sh
       - gcloud container clusters create $CLUSTER_NAME
           --zone europe-west3-b --project testing-reactor
-          --preemptible  --cluster-version 1.11
-      # initialize cluster
-      - kubectl create serviceaccount -n kube-system tiller
-      - kubectl create clusterrolebinding tiller --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-      - helm init --service-account tiller --wait
-      - helm repo add presslabs https://presslabs.github.io/charts
-      - helm dependency update hack/charts/mysql-operator
+          --preemptible  --cluster-version 1.16
+      # update chart deps
+      - helm dependency update charts/mysql-operator
     when:
       branch: master
       event: push
 
   e2e-tests:
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.4
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
@@ -213,20 +209,21 @@ pipeline:
       - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
       - BACKUP_BUCKET_NAME=pl-test-mysql-operator
     commands:
+      - setup-credentials-helper.sh
       - go test ./test/e2e -v --kubernetes-config /root/go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
             --operator-image quay.io/presslabs/mysql-operator:${DRONE_BRANCH/master/latest}
             --sidecar-image quay.io/presslabs/mysql-operator-sidecar:${DRONE_BRANCH/master/latest}
             --orchestrator-image quay.io/presslabs/mysql-operator-orchestrator:${DRONE_BRANCH/master/latest}
             --pod-wait-timeout 150
             --dump-logs-on-failure=false
-            -timeout 30m
+            -timeout 40m
             -ginkgo.slowSpecThreshold 300
     when:
       branch: master
       event: push
 
   stop-kubernetes:
-    image: quay.io/presslabs/bfc
+    image: quay.io/presslabs/bfc:0.4
     secrets:
       - GOOGLE_CREDENTIALS
     environment:

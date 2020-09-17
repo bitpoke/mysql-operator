@@ -252,6 +252,8 @@ var _ = Describe("MysqlBackup controller", func() {
 			Expect(c.Create(context.TODO(), backup.Unwrap())).To(Succeed())
 			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
 
+			// first reconcile request for the backup
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 			testutil.DrainChan(requests)
 		})
 

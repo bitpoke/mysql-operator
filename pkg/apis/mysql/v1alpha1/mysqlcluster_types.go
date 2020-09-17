@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -106,6 +107,11 @@ type MysqlClusterSpec struct {
 	// +optional
 	VolumeSpec VolumeSpec `json:"volumeSpec,omitempty"`
 
+	// TmpfsSize if specified, mounts a tmpfs of this size into /tmp
+	// DEPRECATED: use instead PodSpec.Volumes and PodSpec.VolumeMounts
+	// +optional
+	TmpfsSize *resource.Quantity `json:"tmpfsSize,omitempty"`
+
 	// MaxSlaveLatency represents the allowed latency for a slave node in
 	// seconds. If set then the node with a latency grater than this is removed
 	// from service.
@@ -119,6 +125,40 @@ type MysqlClusterSpec struct {
 	// Makes the cluster READ ONLY. Set the master to writable or ReadOnly
 	// +optional
 	ReadOnly bool `json:"readOnly,omitempty"`
+
+	// Set a custom offset for Server IDs.  ServerID for each node will be the index of the statefulset, plus offset
+	// +optional
+	ServerIDOffset *int `json:"serverIDOffset,omitempty"`
+
+	// MetricsExporterExtraArgs is a list of extra command line arguments to pass to MySQL metrics exporter.
+	// See https://github.com/prometheus/mysqld_exporter for the list of available flags.
+	// +optional
+	MetricsExporterExtraArgs []string `json:"metricsExporterExtraArgs,omitempty"`
+
+	// RcloneExtraArgs is a list of extra command line arguments to pass to rclone.
+	// +optional
+	RcloneExtraArgs []string `json:"rcloneExtraArgs,omitempty"`
+
+	// XbstreamExtraArgs is a list of extra command line arguments to pass to xbstream.
+	// +optional
+	XbstreamExtraArgs []string `json:"xbstreamExtraArgs,omitempty"`
+
+	// XtrabackupExtraArgs is a list of extra command line arguments to pass to xtrabackup.
+	// +optional
+	XtrabackupExtraArgs []string `json:"xtrabackupExtraArgs,omitempty"`
+
+	// XtrabackupPrepareExtraArgs is a list of extra command line arguments to pass to xtrabackup
+	// during --prepare.
+	// +optional
+	XtrabackupPrepareExtraArgs []string `json:"xtrabackupPrepareExtraArgs,omitempty"`
+
+	// XtrabackupTargetDir is a backup destination directory for xtrabackup.
+	// +optional
+	XtrabackupTargetDir string `json:"xtrabackupTargetDir,omitempty"`
+
+	// InitFileExtraSQL is a list of extra sql commands to append to init_file.
+	// +optional
+	InitFileExtraSQL []string `json:"initFileExtraSQL,omitempty"`
 }
 
 // MysqlConf defines type for extra cluster configs. It's a simple map between
@@ -138,6 +178,36 @@ type PodSpec struct {
 	PriorityClassName  string                    `json:"priorityClassName,omitempty"`
 	Tolerations        []core.Toleration         `json:"tolerations,omitempty"`
 	ServiceAccountName string                    `json:"serviceAccountName,omitempty"`
+
+	BackupAffinity          *core.Affinity    `json:"backupAffinity,omitempty"`
+	BackupNodeSelector      map[string]string `json:"backupNodeSelector,omitempty"`
+	BackupPriorityClassName string            `json:"backupPriorityClassName,omitempty"`
+	BackupTolerations       []core.Toleration `json:"backupTolerations,omitempty"`
+
+	// Volumes allows adding extra volumes to the statefulset
+	// +optional
+	Volumes []core.Volume `json:"volumes,omitempty"`
+
+	// VolumesMounts allows mounting extra volumes to the mysql container
+	// +optional
+	VolumeMounts []core.VolumeMount `json:"volumeMounts,omitempty"`
+
+	// InitContainers allows the user to specify extra init containers
+	// +optional
+	InitContainers []core.Container `json:"initContainers,omitempty"`
+
+	// Containers allows for user to specify extra sidecar containers to run along with mysql
+	// +optional
+	Containers []core.Container `json:"containers,omitempty"`
+
+	// MetricsExporterResources allows you to specify resources for metrics exporter container
+	// +optional
+	MetricsExporterResources core.ResourceRequirements `json:"metricsExporterResources,omitempty"`
+
+	// MySQLOperatorSidecarResources allows you to specify resources for sidecar container
+	// used to take backups with xtrabackup
+	// +optional
+	MySQLOperatorSidecarResources core.ResourceRequirements `json:"mysqlOperatorSidecarResources,omitempty"`
 }
 
 // VolumeSpec is the desired spec for storing mysql data. Only one of its
@@ -275,16 +345,15 @@ type MysqlClusterStatus struct {
 	Nodes []NodeStatus `json:"nodes,omitempty"`
 }
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // MysqlCluster is the Schema for the mysqlclusters API
-// +k8s:openapi-gen=true
+// +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.readyNodes
-// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type == "Ready")].status",description="The cluster status"
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type == 'Ready')].status",description="The cluster status"
 // +kubebuilder:printcolumn:name="Replicas",type="integer",JSONPath=".spec.replicas",description="The number of desired nodes"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:resource:shortName=mysql
+//
 type MysqlCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -293,9 +362,9 @@ type MysqlCluster struct {
 	Status MysqlClusterStatus `json:"status,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // MysqlClusterList contains a list of MysqlCluster
+// +kubebuilder:object:root=true
+//
 type MysqlClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

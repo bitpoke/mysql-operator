@@ -18,6 +18,7 @@ package sidecar
 
 import (
 	"strconv"
+	"time"
 
 	// add mysql driver
 	_ "github.com/go-sql-driver/mysql"
@@ -65,12 +66,12 @@ var (
 	serverProbeEndpoint = constants.SidecarServerProbePath
 	// ServerBackupEndpoint is the http server endpoint for backups
 	serverBackupEndpoint = "/xbackup"
-)
+	// ServerDialTimeout is the connect timeout (not http timeout) for requesting a backup from the sidecar server
+	serverConnectTimeout = 5 * time.Second
 
-const (
-	// RcloneConfigFile represents the path to the file that contains rclone
-	// configs. This path should be the same as defined in docker entrypoint
-	// script from mysql-operator-sidecar/docker-entrypoint.sh. /tmp/rclone.conf
-	rcloneConfigFile = constants.RcloneConfigFile
-	rcloneConfigArg  = constants.RcloneConfigArg
+	// xtrabackup Executable Name
+	xtrabackupCommand = "xtrabackup"
+
+	// xbstream Executable Name
+	xbstreamCommand = "xbstream"
 )

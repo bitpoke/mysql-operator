@@ -1,8 +1,19 @@
 #!/bin/bash
 set -e
 
+echo "Create Google Drive service-account.json file."
+echo "${GDRIVE_SERVICE_ACCOUNT}" > /tmp/gdrive-service-account.json
+
 echo "Create rclone.conf file."
 cat <<EOF > /tmp/rclone.conf
+[gd]
+type = drive
+scope = drive
+service_account_file = /tmp/gdrive-service-account.json
+client_id = ${GDRIVE_CLIENT_ID}
+root_folder_id = ${GDRIVE_ROOT_FOLDER_ID}
+impersonate = ${GDRIVE_IMPERSONATOR}
+
 [s3]
 type = s3
 env_auth = false
@@ -13,6 +24,7 @@ region = ${AWS_REGION:-"us-east-1"}
 endpoint = ${S3_ENDPOINT}
 acl = ${AWS_ACL}
 storage_class = ${AWS_STORAGE_CLASS}
+
 [gs]
 type = google cloud storage
 project_number = ${GCS_PROJECT_ID}
@@ -21,9 +33,11 @@ object_acl = ${GCS_OBJECT_ACL}
 bucket_acl = ${GCS_BUCKET_ACL}
 location =  ${GCS_LOCATION}
 storage_class = ${GCS_STORAGE_CLASS:-"MULTI_REGIONAL"}
+
 [http]
 type = http
 url = ${HTTP_URL}
+
 [azure]
 type = azureblob
 account = ${AZUREBLOB_ACCOUNT}
@@ -46,22 +60,22 @@ VERBOSE="--debug"
 case "$1" in
     clone-and-init)
         shift 1
-        $SIDECAR_BIN $VERBOSE clone-and-init "$@"
+        exec $SIDECAR_BIN $VERBOSE clone-and-init "$@"
         ;;
     config-and-serve)
         shift 1
-        $SIDECAR_BIN $VERBOSE run "$@"
+        exec $SIDECAR_BIN $VERBOSE run "$@"
         ;;
     take-backup-to)
         shift 1
-        $SIDECAR_BIN $VERBOSE take-backup-to "$@"
+        exec $SIDECAR_BIN $VERBOSE take-backup-to "$@"
         ;;
     schedule-backup)
         shift 1
-        $SIDECAR_BIN $VERBOSE schedule-backup "$@"
+        exec $SIDECAR_BIN $VERBOSE schedule-backup "$@"
         ;;
     *)
-        echo "Usage: $0 {files-config|clone|config-and-serve}"
+        echo "Usage: $0 {clone-and-init|config-and-serve|take-backup-to|schedule-backup}"
         echo "Now runs your command."
         echo "$@"
 

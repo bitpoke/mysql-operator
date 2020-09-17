@@ -36,7 +36,7 @@ import (
 func GetBucketName() string {
 	bucket := os.Getenv("BACKUP_BUCKET_NAME")
 	if len(bucket) == 0 {
-		Logf("BACKUP_BUEKET_NAME not set! Backups tests will not work")
+		Logf("BACKUP_BUCKET_NAME not set! Backups tests will not work")
 	}
 	return fmt.Sprintf("gs://%s", bucket)
 }

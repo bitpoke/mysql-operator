@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
@@ -28,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/options"
@@ -73,7 +74,8 @@ func (u *upgrader) Run(ctx context.Context) error {
 	// register old nodes in new orchestrator
 	for _, ns := range u.cluster.Status.Nodes {
 		if err = u.orcClient.Discover(ns.Name, constants.MysqlPort); err != nil {
-			log.Error(err, "failed to discover old hosts in new orchestrator - continue", "host", ns.Name)
+			log.Error(err, "failed to discover old hosts in new orchestrator - continue",
+				"host", ns.Name, "key", u.cluster)
 		}
 	}
 
@@ -136,13 +138,13 @@ func (u *upgrader) ShouldUpdate() bool {
 	var ok bool
 	if version, ok = u.cluster.ObjectMeta.Annotations[VersionAnnotation]; !ok {
 		// no version annotation present, (it's a cluster older than 0.3.0) or it's a new cluster
-		log.Info("annotation not set on cluster")
+		log.Info("annotation not set on cluster", "key", u.cluster)
 		return true
 	}
 
 	ver, err := strconv.ParseInt(version, 10, 32)
 	if err != nil {
-		log.Error(err, "annotation version can't be parsed", "value", version)
+		log.Error(err, "annotation version can't be parsed", "key", u.cluster, "value", version)
 		return true
 	}
 
@@ -156,7 +158,7 @@ func (u *upgrader) markUpgradeComplete() error {
 	u.cluster.Annotations[VersionAnnotation] = strconv.Itoa(u.version)
 	err := u.client.Update(context.TODO(), u.cluster.Unwrap())
 	if err != nil {
-		log.Error(err, "failed to update cluster spec", "cluster", u.cluster)
+		log.Error(err, "failed to update cluster spec", "key", u.cluster)
 		return err
 	}
 	return err
@@ -188,7 +190,7 @@ func (u *upgrader) checkNode0Ok(insts []orc.Instance) error {
 	node0 := u.getNodeFrom(insts, 0)
 	if node0 == nil {
 		// continue
-		log.Info("no node found in orchestrator")
+		log.Info("no node found in orchestrator", "key", u.cluster)
 		return fmt.Errorf("node-0 not found in orchestarotr")
 	}
 
@@ -240,7 +242,7 @@ func NewUpgrader(client client.Client, recorder record.EventRecorder, cluster *m
 		cluster:   cluster,
 		recorder:  recorder,
 		client:    client,
-		orcClient: orc.NewFromURI(opt.OrchestratorURI),
-		version:   300, // TODO
+		orcClient: orc.NewFromURI(opt.OrchestratorURI, 10*time.Second),
+		version:   300,
 	}
 }

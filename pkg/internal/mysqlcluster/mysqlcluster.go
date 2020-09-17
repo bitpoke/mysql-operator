@@ -18,14 +18,15 @@ package mysqlcluster
 
 import (
 	"fmt"
-	"github.com/presslabs/mysql-operator/pkg/options"
 	"strings"
 
 	"github.com/blang/semver"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/presslabs/mysql-operator/pkg/options"
 	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
 
@@ -111,7 +112,9 @@ const (
 	ConfigMap ResourceName = "config-files"
 	// MasterService is the name of the service that points to master node
 	MasterService ResourceName = "master-service"
-	// HealthyNodesService is the name of a service that continas all healthy nodes
+	// HealthyReplicasService is the name of a service that points healthy replicas (excludes master)
+	HealthyReplicasService ResourceName = "healthy-replicas-service"
+	// HealthyNodesService is the name of a service that contains all healthy nodes
 	HealthyNodesService ResourceName = "healthy-nodes-service"
 	// PodDisruptionBudget is the name of pod disruption budget for the stateful set
 	PodDisruptionBudget ResourceName = "pdb"
@@ -131,6 +134,8 @@ func GetNameForResource(name ResourceName, clusterName string) string {
 		return fmt.Sprintf("%s-mysql", clusterName)
 	case MasterService:
 		return fmt.Sprintf("%s-mysql-master", clusterName)
+	case HealthyReplicasService:
+		return fmt.Sprintf("%s-mysql-replicas", clusterName)
 	case HeadlessSVC:
 		return HeadlessSVCName
 	case OldHeadlessSVC:
@@ -202,7 +207,7 @@ func (c *MysqlCluster) GetMysqlImage() string {
 	}
 
 	// this means the cluster has a wrong MysqlVersion set
-	log.Error(nil, "no image found with given MySQL version, the image can manually be set by setting .spec.mysqlImage on cluster",
+	log.Error(nil, "no image found with given MySQL version, the image can manually be set by setting .spec.image on cluster",
 		"version", c.GetMySQLSemVer())
 	return ""
 }
@@ -220,4 +225,38 @@ func (c *MysqlCluster) ShouldHaveInitContainerForMysql() bool {
 	expectedRange := semver.MustParseRange(">=5.7.26 <8.0.0 || >=8.0.15")
 
 	return strings.Contains(c.GetMysqlImage(), "percona") && expectedRange(c.GetMySQLSemVer())
+}
+
+// String returns the cluster name and namespace
+func (c *MysqlCluster) String() string {
+	return fmt.Sprintf("%s/%s", c.Namespace, c.Name)
+}
+
+// ExporterDataSourcePort returns a MySQL port mysqld-exporter should connect to.
+// Returns `extra_port` if defined in the cluster spec and if `extra_max_connections`
+// is defined and larger than the default 1. Otherwise, returns the default MySQL port.
+// https://www.percona.com/doc/percona-server/5.7/performance/threadpool.html#extra_port
+func (c *MysqlCluster) ExporterDataSourcePort() int {
+	extraPortSettings := []string{"extra_port", "extra-port"}
+	extraMaxConnectionsSettings := []string{"extra_max_connections", "extra-max-connections"}
+
+	for _, setting := range extraPortSettings {
+		if port, ok := c.Spec.MysqlConf[setting]; ok {
+			for _, setting := range extraMaxConnectionsSettings {
+				if conns, ok := c.Spec.MysqlConf[setting]; ok && conns.IntValue() > 1 {
+					return port.IntValue()
+				}
+			}
+		}
+	}
+
+	return constants.MysqlPort
+}
+
+// GetNamespacedName return the cluster key. Usually used for logging or for runtime.Client.Get as key
+func (c *MysqlCluster) GetNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: c.Namespace,
+		Name:      c.Name,
+	}
 }

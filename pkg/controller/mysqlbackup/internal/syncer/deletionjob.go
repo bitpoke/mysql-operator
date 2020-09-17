@@ -74,13 +74,13 @@ func NewDeleteJobSyncer(c client.Client, s *runtime.Scheme, backup *mysqlbackup.
 		recorder: r,
 	}
 
-	return syncer.NewObjectSyncer("BackupCleaner", nil, job, c, s, jobSyncer.SyncFn)
+	return syncer.NewObjectSyncer("BackupCleaner", nil, job, c, s, func() error {
+		return jobSyncer.SyncFn(job)
+	})
 }
 
 // nolint: gocyclo
-func (s *deletionJobSyncer) SyncFn(in runtime.Object) error {
-	out := in.(*batch.Job)
-
+func (s *deletionJobSyncer) SyncFn(job *batch.Job) error {
 	if s.backup.Spec.RemoteDeletePolicy == api.Retain {
 		// do nothing
 		return syncer.ErrIgnore
@@ -105,13 +105,13 @@ func (s *deletionJobSyncer) SyncFn(in runtime.Object) error {
 	}
 
 	// check if the job is created and if not create it
-	if out.ObjectMeta.CreationTimestamp.IsZero() {
-		out.Labels = map[string]string{
+	if job.ObjectMeta.CreationTimestamp.IsZero() {
+		job.Labels = map[string]string{
 			"backup":      s.backup.Name,
 			"cleanup-job": "true",
 		}
 
-		err := mergo.Merge(&out.Spec.Template.Spec, s.ensurePodSpec(),
+		err := mergo.Merge(&job.Spec.Template.Spec, s.ensurePodSpec(),
 			mergo.WithTransformers(transformers.PodSpec))
 		if err != nil {
 			return err
@@ -119,13 +119,13 @@ func (s *deletionJobSyncer) SyncFn(in runtime.Object) error {
 
 		// explicit set owner reference on job because  the owner has set deletionTimestamp, at this point, and
 		// the syncer will not set it
-		err = controllerutil.SetControllerReference(s.backup.Unwrap(), out, s.schema)
+		err = controllerutil.SetControllerReference(s.backup.Unwrap(), job, s.schema)
 		if err != nil {
 			return err
 		}
 	}
 
-	completed, failed := getJobStatus(out)
+	completed, failed := getJobStatus(job)
 	if completed {
 		removeFinalizer(s.backup.Unwrap(), RemoteStorageFinalizer)
 	}
@@ -139,38 +139,54 @@ func (s *deletionJobSyncer) SyncFn(in runtime.Object) error {
 }
 
 func (s *deletionJobSyncer) ensurePodSpec() core.PodSpec {
+	// get the service account, the same as the one used by the cluster if the cluster exists otherwise use
+	// the default one. This may cause some issues when using workload identity in case when the cluster is removed
+	// before the backup.
+	serviceAccountName := ""
+	if s.cluster != nil {
+		serviceAccountName = s.cluster.Spec.PodSpec.ServiceAccountName
+	}
+
 	return core.PodSpec{
 		RestartPolicy: core.RestartPolicyNever,
 		Containers:    s.ensureContainers(),
 		ImagePullSecrets: []core.LocalObjectReference{
 			{Name: s.opt.ImagePullSecretName},
 		},
+		// set service account to this pod in order to be able to connect to remote storage if using workload identity
+		ServiceAccountName: serviceAccountName,
 	}
 }
 
 func (s *deletionJobSyncer) ensureContainers() []core.Container {
-	return []core.Container{
-		{
-			Name:            "delete",
-			Image:           s.opt.SidecarImage,
-			ImagePullPolicy: s.opt.ImagePullPolicy,
-			Args: []string{
-				"rclone",
-				constants.RcloneConfigArg,
-				"delete",
-				bucketForRclone(s.backup.Spec.BackupURL),
-			},
-			EnvFrom: []core.EnvFromSource{
-				{
-					SecretRef: &core.SecretEnvSource{
-						LocalObjectReference: core.LocalObjectReference{
-							Name: s.backup.Spec.BackupSecretName,
-						},
+	rcloneCommand := []string{"rclone", fmt.Sprintf("--config=%s", constants.RcloneConfigFile)}
+
+	if s.cluster != nil && len(s.cluster.Spec.RcloneExtraArgs) > 0 {
+		rcloneCommand = append(rcloneCommand, s.cluster.Spec.RcloneExtraArgs...)
+	}
+
+	rcloneCommand = append(rcloneCommand, "delete", bucketForRclone(s.backup.Spec.BackupURL))
+
+	container := core.Container{
+		Name:            "delete",
+		Image:           s.opt.SidecarImage,
+		ImagePullPolicy: s.opt.ImagePullPolicy,
+		Args:            rcloneCommand,
+	}
+
+	// if backups secret name is specified use it otherwise don't set anything
+	if len(s.backup.Spec.BackupSecretName) != 0 {
+		container.EnvFrom = []core.EnvFromSource{
+			{
+				SecretRef: &core.SecretEnvSource{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: s.backup.Spec.BackupSecretName,
 					},
 				},
 			},
-		},
+		}
 	}
+	return []core.Container{container}
 }
 
 func (s *deletionJobSyncer) recordWEventOnCluster(reason, msg string) {

@@ -1,0 +1,60 @@
+apiVersion: mysql.presslabs.org/v1alpha1
+kind: MysqlCluster
+metadata:
+  name: {{ include "mysql-cluster.clusterName" . }}
+  labels:
+    app: {{ template "mysql-cluster.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicas }}
+
+  {{- if .Values.customSecretName }}
+  secretName: {{ .Values.customSecretName }}
+  {{- else }}
+  secretName: {{ include "mysql-cluster.secretName" . }}
+  {{- end }}
+
+  {{- if .Values.initBucketURL }}
+  initBucketURL: {{ .Values.initBucketURL }}
+  {{- end }}
+  {{- if .Values.initBucketSecretName }}
+  initBucketSecretName: {{ .Values.initBucketSecretName }}
+  {{- end }}
+
+  {{- if .Values.backupSecretName }}
+  backupSecretName: {{ .Values.backupSecretName }}
+  {{- else if .Values.backupCredentials }}
+  backupSecretName: {{ include "mysql-cluster.backupSecretName" . }}
+  {{- else if .Values.backupSchedule }}
+  {{ required "One of .mysql.backupBucketSecretName and .mysql.backupCredentials should be specified" "" }}
+  {{- end }}
+
+  {{- if .Values.serverIDOffset }}
+  serverIDOffset: {{ .Values.serverIDOffset }}
+  {{- end }}
+
+  {{- if .Values.backupSchedule }}
+  backupSchedule: "{{ .Values.backupSchedule }}"
+  backupRemoteDeletePolicy: {{ .Values.backupRemoteDeletePolicy }}
+  backupURL: {{ required ".mysql.backupURL is missing" .Values.backupURL }}
+  {{- end }}
+  {{- if .Values.backupScheduleJobsHistoryLimit }}
+  backupScheduleJobsHistoryLimit: {{ .Values.backupScheduleJobsHistoryLimit }}
+  {{- end }}
+
+  {{- if .Values.mysqlConf }}
+  mysqlConf:
+    {{ toYaml .Values.mysqlConf | nindent 4 }}
+  {{- end }}
+
+  {{- if .Values.podSpec }}
+  podSpec:
+    {{ toYaml .Values.podSpec | nindent 4 }}
+  {{- end }}
+
+  {{- if .Values.volumeSpec }}
+  volumeSpec:
+    {{ toYaml .Values.volumeSpec | nindent 4 }}
+  {{- end }}

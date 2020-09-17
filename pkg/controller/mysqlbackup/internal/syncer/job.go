@@ -18,6 +18,7 @@ package syncer
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/presslabs/controller-util/syncer"
 	batch "k8s.io/api/batch/v1"
@@ -25,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlbackup"
@@ -36,6 +37,7 @@ import (
 var log = logf.Log.WithName("mysqlbackup.syncer.job")
 
 type jobSyncer struct {
+	job     *batch.Job
 	backup  *mysqlbackup.MysqlBackup
 	cluster *mysqlcluster.MysqlCluster
 
@@ -52,6 +54,7 @@ func NewJobSyncer(c client.Client, s *runtime.Scheme, backup *mysqlbackup.MysqlB
 	}
 
 	sync := &jobSyncer{
+		job:     obj,
 		backup:  backup,
 		cluster: cluster,
 		opt:     opt,
@@ -60,31 +63,28 @@ func NewJobSyncer(c client.Client, s *runtime.Scheme, backup *mysqlbackup.MysqlB
 	return syncer.NewObjectSyncer("Job", backup.Unwrap(), obj, c, s, sync.SyncFn)
 }
 
-func (s *jobSyncer) SyncFn(in runtime.Object) error {
-	out := in.(*batch.Job)
-
+func (s *jobSyncer) SyncFn() error {
 	if s.backup.Status.Completed {
-		log.V(1).Info("backup already completed", "name", s.backup.Name)
+		log.V(1).Info("backup already completed", "backup", s.backup, "key", s.cluster)
 		// skip doing anything
 		return syncer.ErrIgnore
 	}
 
 	if len(s.backup.GetBackupURL(s.cluster)) == 0 {
-		log.Info("can't get backupURL", "cluster", s.cluster, "backup", s.backup)
 		return fmt.Errorf("can't get backupURL")
 	}
 
 	// check if job is already created an just update the status
-	if !out.ObjectMeta.CreationTimestamp.IsZero() {
-		s.updateStatus(out)
+	if !s.job.ObjectMeta.CreationTimestamp.IsZero() {
+		s.updateStatus(s.job)
 		return nil
 	}
 
-	out.Labels = map[string]string{
+	s.job.Labels = map[string]string{
 		"cluster": s.backup.Spec.ClusterName,
 	}
 
-	out.Spec.Template.Spec = s.ensurePodSpec(out.Spec.Template.Spec)
+	s.job.Spec.Template.Spec = s.ensurePodSpec(s.job.Spec.Template.Spec)
 	return nil
 }
 
@@ -109,9 +109,10 @@ func (s *jobSyncer) getBackupCandidate() string {
 			return node.Name
 		}
 	}
-	log.Info("no healthy slave node found so returns the master node", "default_node", s.cluster.GetPodHostname(0),
-		"cluster", s.cluster)
-	return s.cluster.GetPodHostname(0)
+
+	log.Info("no healthy slave node found so returns the master node", "master_node", s.cluster.GetMasterHost(),
+		"key", s.cluster, "backup", s.backup)
+	return s.cluster.GetMasterHost()
 }
 
 func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
@@ -133,13 +134,28 @@ func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 		s.backup.GetBackupURL(s.cluster),
 	}
 
+	in.ImagePullSecrets = s.cluster.Spec.PodSpec.ImagePullSecrets
 	in.ServiceAccountName = s.cluster.Spec.PodSpec.ServiceAccountName
 
-	in.Affinity = s.cluster.Spec.PodSpec.Affinity
-	in.ImagePullSecrets = s.cluster.Spec.PodSpec.ImagePullSecrets
-	in.NodeSelector = s.cluster.Spec.PodSpec.NodeSelector
-	in.PriorityClassName = s.cluster.Spec.PodSpec.PriorityClassName
-	in.Tolerations = s.cluster.Spec.PodSpec.Tolerations
+	in.Affinity = s.cluster.Spec.PodSpec.BackupAffinity
+	if s.cluster.Spec.PodSpec.BackupAffinity == nil {
+		in.Affinity = s.cluster.Spec.PodSpec.Affinity
+	}
+
+	in.NodeSelector = s.cluster.Spec.PodSpec.BackupNodeSelector
+	if s.cluster.Spec.PodSpec.BackupNodeSelector == nil {
+		in.NodeSelector = s.cluster.Spec.PodSpec.NodeSelector
+	}
+
+	in.PriorityClassName = s.cluster.Spec.PodSpec.BackupPriorityClassName
+	if len(s.cluster.Spec.PodSpec.BackupPriorityClassName) == 0 {
+		in.PriorityClassName = s.cluster.Spec.PodSpec.PriorityClassName
+	}
+
+	in.Tolerations = s.cluster.Spec.PodSpec.BackupTolerations
+	if s.cluster.Spec.PodSpec.BackupTolerations == nil {
+		in.Tolerations = s.cluster.Spec.PodSpec.Tolerations
+	}
 
 	boolTrue := true
 	in.Containers[0].Env = []core.EnvVar{
@@ -169,9 +185,16 @@ func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 		},
 	}
 
+	if len(s.cluster.Spec.RcloneExtraArgs) > 0 {
+		in.Containers[0].Env = append(in.Containers[0].Env, core.EnvVar{
+			Name:  "RCLONE_EXTRA_ARGS",
+			Value: strings.Join(s.cluster.Spec.RcloneExtraArgs, " "),
+		})
+	}
+
 	if len(s.backup.Spec.BackupSecretName) != 0 {
 		in.Containers[0].EnvFrom = []core.EnvFromSource{
-			core.EnvFromSource{
+			{
 				SecretRef: &core.SecretEnvSource{
 					LocalObjectReference: core.LocalObjectReference{
 						Name: s.backup.Spec.BackupSecretName,

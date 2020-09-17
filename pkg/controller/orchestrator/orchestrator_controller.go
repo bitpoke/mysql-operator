@@ -34,9 +34,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -62,13 +62,14 @@ var log = logf.Log.WithName(controllerName)
 
 // reconcileTimePeriod represents the time in which a cluster should be reconciled
 var reconcileTimePeriod = time.Second * 5
+var orcRequestsTimeout = 15 * time.Second
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 // USER ACTION REQUIRED: update cmd/manager/main.go to call this mysql.Add(mgr) to install this Controller
 func Add(mgr manager.Manager) error {
 	opt := options.GetOptions()
-	orcClient := orc.NewFromURI(opt.OrchestratorURI)
+	orcClient := orc.NewFromURI(opt.OrchestratorURI, orcRequestsTimeout)
 	return add(mgr, newReconciler(mgr, orcClient))
 }
 
@@ -77,7 +78,7 @@ func newReconciler(mgr manager.Manager, orcClient orc.Interface) reconcile.Recon
 	return &ReconcileMysqlCluster{
 		Client:    mgr.GetClient(),
 		scheme:    mgr.GetScheme(),
-		recorder:  mgr.GetRecorder(controllerName),
+		recorder:  mgr.GetEventRecorderFor(controllerName),
 		orcClient: orcClient,
 	}
 }
@@ -90,7 +91,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	clusters := &sync.Map{}
 
 	// Create a new controller
-	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{
+		Reconciler:              r,
+		MaxConcurrentReconciles: int(options.GetOptions().OrchestratorConcurrentReconciles),
+	})
 	if err != nil {
 		return err
 	}
@@ -124,7 +128,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// create source channel that listen for events on events chan
-	events := make(chan event.GenericEvent)
+	events := make(chan event.GenericEvent, 1024)
 	chSource := source.Channel{Source: events}
 
 	// watch for events on channel `events`
@@ -143,6 +147,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				// write all clusters to events chan to be processed
 				clusters.Range(func(key, value interface{}) bool {
 					events <- value.(event.GenericEvent)
+					log.V(1).Info("Schedule new cluster for reconciliation", "event", value)
+
 					return true
 				})
 			}
@@ -179,16 +185,20 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
-			log.Info("cluster is deleted", "key", request.NamespacedName.String())
+			log.Info("cluster is deleted", "key", request.NamespacedName)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
 
+	// overwrite logger with cluster info
+	// nolint: govet
+	log := log.WithValues("key", cluster.GetNamespacedName())
+
 	// save old status
-	status := *cluster.Status.DeepCopy()
-	log.Info("reconciling cluster", "cluster", cluster)
+	oldStatus := *cluster.Status.DeepCopy()
+	log.V(1).Info("reconciling cluster")
 
 	// this syncer mutates the cluster and updates it. Should be the first syncer
 	finSyncer := newFinalizerSyncer(r.Client, r.scheme, cluster, r.orcClient)
@@ -201,20 +211,21 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 	// By setting defaults will ensure that all fields are set at least with a default value.
 	r.scheme.Default(cluster.Unwrap())
 
+	// TODO no sync should be triggered if no replica is available
+
 	orcSyncer := NewOrcUpdater(cluster, r.recorder, r.orcClient)
 	if err := syncer.Sync(context.TODO(), orcSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// update cluster because newOrcUpdater syncer updates the .Status
-	if !reflect.DeepEqual(status, cluster.Unwrap().Status) && cluster.DeletionTimestamp == nil {
-		log.V(1).Info("update cluster", "diff", deep.Equal(status, cluster.Unwrap().Status))
+	if !reflect.DeepEqual(oldStatus, cluster.Unwrap().Status) && cluster.DeletionTimestamp == nil {
+		log.Info("update status", "diff", deep.Equal(oldStatus, cluster.Unwrap().Status))
 
 		if sErr := r.Status().Update(context.TODO(), cluster.Unwrap()); sErr != nil {
 			log.Error(sErr, "failed to update cluster status")
 			return reconcile.Result{}, sErr
 		}
-
 	}
 
 	return reconcile.Result{}, nil

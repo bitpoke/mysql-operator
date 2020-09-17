@@ -77,7 +77,9 @@ var _ = Describe("MysqlBackup remove job syncer", func() {
 	})
 
 	It("should skip job creation when no needed", func() {
-		delJob := &batch.Job{}
+		delJob := &batch.Job{
+			ObjectMeta: metav1.ObjectMeta{Name: backup.Name + "-job", Namespace: backup.Namespace},
+		}
 		backup.Spec.RemoteDeletePolicy = api.Retain
 		// skip job creation because backup is set to soft delete
 		Expect(syncer.SyncFn(delJob)).To(Equal(syncerpkg.ErrIgnore))
@@ -96,7 +98,9 @@ var _ = Describe("MysqlBackup remove job syncer", func() {
 	})
 
 	It("should create the job and update backup finalizer", func() {
-		delJob := &batch.Job{}
+		delJob := &batch.Job{
+			ObjectMeta: metav1.ObjectMeta{Name: backup.Name + "-job", Namespace: backup.Namespace},
+		}
 		backup.Spec.RemoteDeletePolicy = api.Delete
 		deletionTime := metav1.NewTime(time.Now())
 		backup.DeletionTimestamp = &deletionTime

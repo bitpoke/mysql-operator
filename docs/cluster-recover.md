@@ -1,12 +1,12 @@
 ---
 title: MySQL Cluster Recovery
-linktitle: MySQL Cluster recovery
+linktitle: Recovery
 description: MySQL operator provides a way to recreate clusters from snapshots.
-categories: [mysql operator]
 keywords: [mysql operator]
-toc: true
-related: true
-slug: mysql-cluster-recovery
+menu:
+  global:
+    parent: "mysql-cluster"
+    weight: 2
 ---
 
 The MySQL operator provides a way to recreate a cluster based on a backup (snapshot). Just create a new cluster with a new name which has `initBucketURL` field pointed to the right backup.

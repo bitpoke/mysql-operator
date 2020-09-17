@@ -1,60 +1,27 @@
-baseURL = "https://www.presslabs.com/docs/mysql-operator/"
-title = "MySQL Operator documentation"
-summaryLength = 15
-metaDataFormat = "toml"
-theme = "docs"
-enableRobotsTXT = true
-enableGitInfo = true
+baseURL = "https://www.presslabs.com/docs/mysql-operator"
 pygmentsCodeFences = true
-pygmentsOptions = ""
+pygmentsCodeFencesGuessSyntax = true
 pygmentsUseClasses = true
-pygmentsUseClassic = false
-pygmentsStyle = "github"
-dataDir = "/site/data"
+theme = "hugo-docs-theme"
+languageCode = "en-us"
+title = "MySQL Operator documentation"
+
+[markup]
+  defaultMarkdownHandler = "goldmark"
 
 [params]
-  site_url = "https://www.presslabs.com/"
-  legal_url = "https://www.presslabs.com/legal"
-  breadcrumbs_root = "MySQL Operator DOCS"
-  quick_start = true
-  quick_start_link = "mysql-operator/"
+  related = true
   logo_text = "DOCS"
-  search_placeholder = "Search docs"
-  footer_menu = true
-  footer_menu_title = "DOCUMENTATION"
-  title = "Welcome to MySQL Operator Documentation!"
-  description = "Here you can find Presslabs Stack's documentation, the first open-source serverless hosting platform that bridges two major technologies: WordPress and Kubernetes."
-  release = "3.0.0"
-  # debug = true
-  algolia_search = true
-  algolia_appId = "0TS6NFHDBC"
-  algolia_apiKey = "099bffdf3b4a6ea94ddbea10f73dd15a"
-  algolia_indexName = "MySQL Operator Docs"
-  algolia_currentLanguageOnly = true
-  images = ["images/docs-2019.jpg"]
+  versions = false
 
 [params.algolia]
-  vars = ["title", "description", "summary", "content", "date", "lastmod", "permalink", "text", "lvl0", "lvl1", "url"]
-  params = ["categories", "keywords"]
-
-[blackfriday]
-  angledQuotes = true
-  extensions = ["hardLineBreak"]
-  sourceRelativeLinks = true
-  fractions = false
-  plainIDAnchors = true
-
-[outputFormats.Algolia]
-  baseName = "algolia"
-  isPlainText = true
-  mediaType = "application/json"
-  notAlternative = true
+  appId = "0TS6NFHDBC"
+  apiKey = "b2efcfd6516eed7a2f19269f9cb13acb"
+  indexName = "MySQL Operator Docs"
+  vars = ["title", "description", "content", "date", "lastmod", "permalink", "text", "lvl0", "lvl1", "url"]
 
 [outputs]
-  home = [ "HTML", "RSS", "Algolia" ]
-
-[taxonomies]
-  category = "categories"
+  home = [ "HTML", "RSS", "JSON" ]
 
 [related]
   threshold = 80
@@ -62,45 +29,20 @@ dataDir = "/site/data"
   toLower = false
 
 [[related.indices]]
-  name = "keywords"
+  name = "menu.global.parent"
   weight = 150
 
-[[menu.docs]]
-  name = "Getting started"
+[[menu.global]]
+  name = "MySQL Operator"
   weight = 1
-  url = "/getting-started/"
+  identifier = "mysql-operator"
 
-[[menu.docs]]
-  name = "MySQL Cluster Backups"
+[[menu.global]]
+  name = "MySQL Cluster"
   weight = 2
-  url = "/mysql-cluster-backups/"
+  identifier = "mysql-cluster"
 
-[[menu.docs]]
-  name = "MySQL Cluster Recovery"
-  weight = 2
-  url = "/mysql-cluster-recovery/"
-
-[[menu.docs]]
-  name = "MySQL Operator Recurrent Backups"
-  weight = 2
-  url = "/cluster-recurrent-backups/"
-
-[[menu.docs]]
-  name = "MySQL Cluster Setup"
-  weight = 2
-  url = "/deploy-mysql-cluster/"
-
-[[menu.docs]]
-  name = "MySQL Operator Integration"
-  weight = 2
-  url = "/integrate-operator/"
-
-[[menu.docs]]
-  name = "MySQL Operator Upgrades"
-  weight = 2
-  url = "/operator-upgrades/"
-
-[[menu.docs]]
+[[menu.global]]
   name = "Accessing the Orchestrator"
   weight = 3
-  url = "/orchestrator/"
+  url = "/orchestrator"

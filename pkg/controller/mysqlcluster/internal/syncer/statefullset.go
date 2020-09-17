@@ -18,8 +18,10 @@ package mysqlcluster
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/resource"
+	"strconv"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/imdario/mergo"
 	apps "k8s.io/api/apps/v1"
@@ -43,6 +45,7 @@ const (
 	confMapVolumeName = "config-map"
 	initDBVolumeName  = "init-scripts"
 	dataVolumeName    = "data"
+	tmpfsVolumeName   = "tmp"
 )
 
 // containers names
@@ -82,8 +85,8 @@ func NewStatefulSetSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 		opt:               opt,
 	}
 
-	return syncer.NewObjectSyncer("StatefulSet", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
-		return sync.SyncFn(in)
+	return syncer.NewObjectSyncer("StatefulSet", cluster.Unwrap(), obj, c, scheme, func() error {
+		return sync.SyncFn(obj)
 	})
 }
 
@@ -112,6 +115,11 @@ func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 	if err != nil {
 		return err
 	}
+
+	// mergo will add new keys for NodeSelector and Tolerations and keep the others instead of removing them
+	// Fixes: https://github.com/presslabs/mysql-operator/issues/454
+	out.Spec.Template.Spec.NodeSelector = s.cluster.Spec.PodSpec.NodeSelector
+	out.Spec.Template.Spec.Tolerations = s.cluster.Spec.PodSpec.Tolerations
 
 	if s.cluster.Spec.VolumeSpec.PersistentVolumeClaim != nil {
 		out.Spec.VolumeClaimTemplates = s.ensureVolumeClaimTemplates(out.Spec.VolumeClaimTemplates)
@@ -168,6 +176,7 @@ func (s *sfsSyncer) envVarFromSecret(sctName, name, key string, opt bool) core.E
 	return env
 }
 
+// nolint: gocyclo
 func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 	env := []core.EnvVar{}
 
@@ -215,10 +224,65 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		Value: s.cluster.GetMySQLSemVer().String(),
 	})
 
-	if len(s.cluster.Spec.InitBucketURL) > 0 && name == containerCloneAndInitName {
+	if len(s.cluster.Spec.InitBucketURL) > 0 && isCloneAndInit(name) {
 		env = append(env, core.EnvVar{
 			Name:  "INIT_BUCKET_URI",
 			Value: s.cluster.Spec.InitBucketURL,
+		})
+	}
+
+	if s.cluster.Spec.ServerIDOffset != nil {
+		env = append(env, core.EnvVar{
+			Name:  "MY_SERVER_ID_OFFSET",
+			Value: strconv.FormatInt(int64(*s.cluster.Spec.ServerIDOffset), 10),
+		})
+	}
+
+	hasRcloneExtraArgs := len(s.cluster.Spec.RcloneExtraArgs) > 0
+	if hasRcloneExtraArgs && (isCloneAndInit(name) || isSidecar(name)) {
+		env = append(env, core.EnvVar{
+			Name:  "RCLONE_EXTRA_ARGS",
+			Value: strings.Join(s.cluster.Spec.RcloneExtraArgs, " "),
+		})
+	}
+
+	hasXbstreamExtraArgs := len(s.cluster.Spec.XbstreamExtraArgs) > 0
+	if hasXbstreamExtraArgs && (isCloneAndInit(name) || isSidecar(name)) {
+		env = append(env, core.EnvVar{
+			Name:  "XBSTREAM_EXTRA_ARGS",
+			Value: strings.Join(s.cluster.Spec.XbstreamExtraArgs, " "),
+		})
+	}
+
+	hasXtrabackupExtraArgs := len(s.cluster.Spec.XtrabackupExtraArgs) > 0
+	if hasXtrabackupExtraArgs && isSidecar(name) {
+		env = append(env, core.EnvVar{
+			Name:  "XTRABACKUP_EXTRA_ARGS",
+			Value: strings.Join(s.cluster.Spec.XtrabackupExtraArgs, " "),
+		})
+	}
+
+	hasXtrabackupPrepareExtraArgs := len(s.cluster.Spec.XtrabackupPrepareExtraArgs) > 0
+	if hasXtrabackupPrepareExtraArgs && isCloneAndInit(name) {
+		env = append(env, core.EnvVar{
+			Name:  "XTRABACKUP_PREPARE_EXTRA_ARGS",
+			Value: strings.Join(s.cluster.Spec.XtrabackupPrepareExtraArgs, " "),
+		})
+	}
+
+	hasXtrabackupTargetDir := len(s.cluster.Spec.XtrabackupTargetDir) > 0
+	if hasXtrabackupTargetDir && isSidecar(name) {
+		env = append(env, core.EnvVar{
+			Name:  "XTRABACKUP_TARGET_DIR",
+			Value: s.cluster.Spec.XtrabackupTargetDir,
+		})
+	}
+
+	hasInitFileExtraSQL := len(s.cluster.Spec.InitFileExtraSQL) > 0
+	if hasInitFileExtraSQL && isCloneAndInit(name) {
+		env = append(env, core.EnvVar{
+			Name:  "INITFILE_EXTRA_SQL",
+			Value: strings.Join(s.cluster.Spec.InitFileExtraSQL, ";"),
 		})
 	}
 
@@ -230,7 +294,7 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		env = append(env, s.envVarFromSecret(sctOpName, "PASSWORD", "METRICS_EXPORTER_PASSWORD", false))
 		env = append(env, core.EnvVar{
 			Name:  "DATA_SOURCE_NAME",
-			Value: fmt.Sprintf("$(USER):$(PASSWORD)@(127.0.0.1:%d)/", MysqlPort),
+			Value: fmt.Sprintf("$(USER):$(PASSWORD)@(127.0.0.1:%d)/", s.cluster.ExporterDataSourcePort()),
 		})
 	case containerMySQLInitName:
 		// set MySQL init only flag for init container
@@ -241,6 +305,15 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 	case containerCloneAndInitName:
 		env = append(env, s.envVarFromSecret(sctOpName, "BACKUP_USER", "BACKUP_USER", true))
 		env = append(env, s.envVarFromSecret(sctOpName, "BACKUP_PASSWORD", "BACKUP_PASSWORD", true))
+	case containerMysqlName:
+		env = append(env, core.EnvVar{
+			Name:  "ORCH_CLUSTER_ALIAS",
+			Value: s.cluster.GetClusterAlias(),
+		})
+		env = append(env, core.EnvVar{
+			Name:  "ORCH_HTTP_API",
+			Value: s.opt.OrchestratorURI,
+		})
 	}
 
 	// set MySQL root and application credentials
@@ -272,6 +345,11 @@ func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
 		initCs = append(initCs, mysqlInit)
 	}
 
+	// add user defined init containers
+	if len(s.cluster.Spec.PodSpec.InitContainers) > 0 {
+		initCs = append(initCs, s.cluster.Spec.PodSpec.InitContainers...)
+	}
+
 	return initCs
 }
 
@@ -295,6 +373,13 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			},
 		},
 	})
+
+	mysql.Lifecycle = &core.Lifecycle{
+		PreStop: &core.Handler{
+			Exec: &core.ExecAction{
+				Command: []string{"bash", fmt.Sprintf("%s/%s", ConfVolumeMountPath, shPreStopFile)},
+			},
+		}}
 
 	// nolint: gosec
 	mysqlTestCmd := fmt.Sprintf(`mysql --defaults-file=%s -NB -e 'SELECT COUNT(*) FROM %s.%s WHERE name="configured" AND value="1"'`,
@@ -329,15 +414,22 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 	})
 
 	// METRICS container
+	exporterCommand := []string{
+		fmt.Sprintf("--web.listen-address=0.0.0.0:%d", ExporterPort),
+		fmt.Sprintf("--web.telemetry-path=%s", ExporterPath),
+		"--collect.heartbeat",
+		fmt.Sprintf("--collect.heartbeat.database=%s", constants.OperatorDbName),
+	}
+
+	if len(s.cluster.Spec.MetricsExporterExtraArgs) > 0 {
+		exporterCommand = append(exporterCommand, s.cluster.Spec.MetricsExporterExtraArgs...)
+	}
+
 	exporter := s.ensureContainer(containerExporterName,
 		s.opt.MetricsExporterImage,
-		[]string{
-			fmt.Sprintf("--web.listen-address=0.0.0.0:%d", ExporterPort),
-			fmt.Sprintf("--web.telemetry-path=%s", ExporterPath),
-			"--collect.heartbeat",
-			fmt.Sprintf("--collect.heartbeat.database=%s", constants.OperatorDbName),
-		},
+		exporterCommand,
 	)
+
 	exporter.Ports = ensurePorts(core.ContainerPort{
 		Name:          ExporterPortName,
 		ContainerPort: ExporterPort,
@@ -363,6 +455,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			"--create-table",
 			"--database", constants.OperatorDbName,
 			"--table", "heartbeat",
+			"--utc",
 			"--defaults-file", constants.ConfHeartBeatPath,
 			// it's important to exit when exceeding more than 20 failed attempts otherwise
 			// pt-heartbeat will run forever using old connection.
@@ -384,7 +477,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 			"pt-kill",
 			// host need to be specified, see pt-kill bug: https://jira.percona.com/browse/PT-1223
 			"--host=127.0.0.1",
-			fmt.Sprintf("--defaults-file=%s/client.cnf", ConfVolumeMountPath),
+			fmt.Sprintf("--defaults-file=%s/client.conf", ConfVolumeMountPath),
 		}
 		command = append(command, getCliOptionsFromQueryLimits(s.cluster.Spec.QueryLimits)...)
 
@@ -396,6 +489,11 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		killer.Resources = s.ensureResources(containerKillerName)
 
 		containers = append(containers, killer)
+	}
+
+	// add user defined containers
+	if len(s.cluster.Spec.PodSpec.Containers) > 0 {
+		containers = append(containers, s.cluster.Spec.PodSpec.Containers...)
 	}
 
 	return containers
@@ -415,10 +513,11 @@ func (s *sfsSyncer) ensureVolumes() []core.Volume {
 	} else if s.cluster.Spec.VolumeSpec.EmptyDir != nil {
 		dataVolume.EmptyDir = s.cluster.Spec.VolumeSpec.EmptyDir
 	} else {
-		log.Info("no volume spec is specified", ".spec.volumeSpec", s.cluster.Spec.VolumeSpec)
+		// warning
+		log.V(-1).Info("no volume spec is specified", "volumeSpec", s.cluster.Spec.VolumeSpec, "key", s.cluster)
 	}
 
-	return []core.Volume{
+	volumes := []core.Volume{
 		ensureVolume(confVolumeName, core.VolumeSource{
 			EmptyDir: &core.EmptyDirVolumeSource{},
 		}),
@@ -438,6 +537,22 @@ func (s *sfsSyncer) ensureVolumes() []core.Volume {
 
 		ensureVolume(dataVolumeName, dataVolume),
 	}
+
+	if s.cluster.Spec.TmpfsSize != nil {
+		volumes = append(volumes, ensureVolume(tmpfsVolumeName, core.VolumeSource{
+			EmptyDir: &core.EmptyDirVolumeSource{
+				Medium:    core.StorageMediumMemory,
+				SizeLimit: s.cluster.Spec.TmpfsSize,
+			},
+		}))
+	}
+
+	// append the custom volumes defined by the user
+	if len(s.cluster.Spec.PodSpec.Volumes) > 0 {
+		volumes = append(volumes, s.cluster.Spec.PodSpec.Volumes...)
+	}
+
+	return volumes
 }
 
 // TODO rework the condition here after kubernetes-sigs/controller-runtime#98 gets merged.
@@ -478,7 +593,7 @@ func (s *sfsSyncer) ensureVolumeClaimTemplates(in []core.PersistentVolumeClaim) 
 
 func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 	envSources := []core.EnvFromSource{}
-	if name == containerCloneAndInitName && len(s.cluster.Spec.InitBucketSecretName) > 0 {
+	if isCloneAndInit(name) && len(s.cluster.Spec.InitBucketSecretName) > 0 {
 		envSources = append(envSources, core.EnvFromSource{
 			SecretRef: &core.SecretEnvSource{
 				LocalObjectReference: core.LocalObjectReference{
@@ -487,7 +602,7 @@ func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 			},
 		})
 	}
-	if name == containerSidecarName || name == containerCloneAndInitName {
+	if isCloneAndInit(name) || isSidecar(name) {
 		envSources = append(envSources, core.EnvFromSource{
 			SecretRef: &core.SecretEnvSource{
 				LocalObjectReference: core.LocalObjectReference{
@@ -502,17 +617,29 @@ func (s *sfsSyncer) getEnvSourcesFor(name string) []core.EnvFromSource {
 func (s *sfsSyncer) getVolumeMountsFor(name string) []core.VolumeMount {
 	switch name {
 	case containerCloneAndInitName:
-		return []core.VolumeMount{
+		mounts := []core.VolumeMount{
 			{Name: confVolumeName, MountPath: ConfVolumeMountPath},
 			{Name: confMapVolumeName, MountPath: ConfMapVolumeMountPath},
 			{Name: dataVolumeName, MountPath: DataVolumeMountPath},
 		}
 
+		return mounts
+
 	case containerMysqlName, containerSidecarName, containerMySQLInitName:
-		return []core.VolumeMount{
+		mounts := []core.VolumeMount{
 			{Name: confVolumeName, MountPath: ConfVolumeMountPath},
 			{Name: dataVolumeName, MountPath: DataVolumeMountPath},
 		}
+		if s.cluster.Spec.TmpfsSize != nil {
+			mounts = append(mounts, core.VolumeMount{Name: tmpfsVolumeName, MountPath: DataVolumeMountPath})
+		}
+
+		// add custom volume mounts to the mysql containers
+		if len(s.cluster.Spec.PodSpec.VolumeMounts) > 0 {
+			mounts = append(mounts, s.cluster.Spec.PodSpec.VolumeMounts...)
+		}
+
+		return mounts
 
 	case containerHeartBeatName, containerKillerName:
 		return []core.VolumeMount{
@@ -536,16 +663,23 @@ func (s *sfsSyncer) ensureResources(name string) core.ResourceRequirements {
 		core.ResourceCPU: resource.MustParse("100m"),
 	}
 	requests := core.ResourceList{
-		core.ResourceCPU: resource.MustParse("30m"),
+		core.ResourceCPU:    resource.MustParse("10m"),
+		core.ResourceMemory: resource.MustParse("32Mi"),
 	}
 
 	switch name {
 	case containerExporterName:
-		limits = core.ResourceList{
-			core.ResourceCPU: resource.MustParse("100m"),
-		}
+		return s.cluster.Spec.PodSpec.MetricsExporterResources
+
 	case containerMySQLInitName, containerMysqlName:
 		return s.cluster.Spec.PodSpec.Resources
+
+	case containerHeartBeatName:
+		limits[core.ResourceMemory] = resource.MustParse("64Mi")
+
+	case containerSidecarName:
+		return s.cluster.Spec.PodSpec.MySQLOperatorSidecarResources
+
 	}
 
 	return core.ResourceRequirements{
@@ -616,4 +750,12 @@ func ensureProbe(delay, timeout, period int32, handler core.Handler) *core.Probe
 
 func ensurePorts(ports ...core.ContainerPort) []core.ContainerPort {
 	return ports
+}
+
+func isCloneAndInit(name string) bool {
+	return name == containerCloneAndInitName
+}
+
+func isSidecar(name string) bool {
+	return name == containerSidecarName
 }

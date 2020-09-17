@@ -28,31 +28,29 @@ import (
 
 // NewHealthySVCSyncer returns a service syncer
 func NewHealthySVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
-	obj := &core.Service{
+	service := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(mysqlcluster.HealthyNodesService),
 			Namespace: cluster.Namespace,
 		},
 	}
 
-	return syncer.NewObjectSyncer("HealthySVC", cluster.Unwrap(), obj, c, scheme, func(in runtime.Object) error {
-		out := in.(*core.Service)
-
+	return syncer.NewObjectSyncer("HealthySVC", cluster.Unwrap(), service, c, scheme, func() error {
 		// set service labels
-		out.Labels = cluster.GetLabels()
-		out.Labels["mysql.presslabs.org/service-type"] = "ready-nodes"
+		service.Labels = cluster.GetLabels()
+		service.Labels["mysql.presslabs.org/service-type"] = "ready-nodes"
 
-		out.Spec.Type = "ClusterIP"
-		out.Spec.Selector = cluster.GetSelectorLabels()
-		out.Spec.Selector["healthy"] = "yes"
+		service.Spec.Type = "ClusterIP"
+		service.Spec.Selector = cluster.GetSelectorLabels()
+		service.Spec.Selector["healthy"] = "yes"
 
-		if len(out.Spec.Ports) != 1 {
-			out.Spec.Ports = make([]core.ServicePort, 1)
+		if len(service.Spec.Ports) != 1 {
+			service.Spec.Ports = make([]core.ServicePort, 1)
 		}
-		out.Spec.Ports[0].Name = MysqlPortName
-		out.Spec.Ports[0].Port = MysqlPort
-		out.Spec.Ports[0].TargetPort = TargetPort
-		out.Spec.Ports[0].Protocol = core.ProtocolTCP
+		service.Spec.Ports[0].Name = MysqlPortName
+		service.Spec.Ports[0].Port = MysqlPort
+		service.Spec.Ports[0].TargetPort = TargetPort
+		service.Spec.Ports[0].Protocol = core.ProtocolTCP
 
 		return nil
 	})

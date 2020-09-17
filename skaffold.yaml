@@ -4,20 +4,20 @@ build:
   artifacts:
   - image: quay.io/presslabs/mysql-operator
     docker:
-      dockerfile: hack/development/Dockerfile.operator
+      dockerfile: Dockerfile
   - image: quay.io/presslabs/mysql-operator-sidecar
     docker:
-      dockerfile: hack/development/Dockerfile.sidecar
+      dockerfile: Dockerfile.sidecar
   - image: quay.io/presslabs/mysql-operator-orchestrator
     docker:
-      dockerfile: hack/development/Dockerfile.orchestrator
+      dockerfile: Dockerfile.orchestrator
   local:
     push: true
 deploy:
   helm:
     releases:
     - name: test
-      chartPath: hack/charts/mysql-operator
+      chartPath: charts/mysql-operator
       valuesFiles:
       - hack/development/dev-values.yaml
       values:

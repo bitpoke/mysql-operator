@@ -1,0 +1,95 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: mysqlbackups.mysql.presslabs.org
+spec:
+  group: mysql.presslabs.org
+  names:
+    kind: MysqlBackup
+    listKind: MysqlBackupList
+    plural: mysqlbackups
+    singular: mysqlbackup
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      description: MysqlBackup is the Schema for the mysqlbackups API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: MysqlBackupSpec defines the desired state of MysqlBackup
+          properties:
+            backupSecretName:
+              description: BackupSecretName the name of secrets that contains the credentials to access the bucket. Default is used the secret specified in cluster.
+              type: string
+            backupURL:
+              description: BackupURL represents the URL to the backup location, this can be partially specifyied. Default is used the one specified in the cluster.
+              type: string
+            clusterName:
+              description: ClustterName represents the cluster for which to take backup
+              type: string
+            remoteDeletePolicy:
+              description: RemoteDeletePolicy the deletion policy that specify how to treat the data from remote storage. By default it's used softDelete.
+              type: string
+          required:
+          - clusterName
+          type: object
+        status:
+          description: MysqlBackupStatus defines the observed state of MysqlBackup
+          properties:
+            completed:
+              description: Completed indicates whether the backup is in a final state, no matter whether its' corresponding job failed or succeeded
+              type: boolean
+            conditions:
+              description: Conditions represents the backup resource conditions list.
+              items:
+                description: BackupCondition defines condition struct for backup resource
+                properties:
+                  lastTransitionTime:
+                    description: LastTransitionTime
+                    format: date-time
+                    type: string
+                  message:
+                    description: Message
+                    type: string
+                  reason:
+                    description: Reason
+                    type: string
+                  status:
+                    description: Status of the condition, one of (\"True\", \"False\", \"Unknown\")
+                    type: string
+                  type:
+                    description: type of cluster condition, values in (\"Ready\")
+                    type: string
+                required:
+                - lastTransitionTime
+                - message
+                - reason
+                - status
+                - type
+                type: object
+              type: array
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

@@ -86,7 +86,7 @@ var _ = Describe("MysqlBackup job syncer", func() {
 		Expect(syncer.getBackupCandidate()).To(Equal(cluster.GetPodHostname(1)))
 	})
 
-	It("should return the master if replicas is not healthy", func() {
+	It("should return the master if replicas are not healthy", func() {
 		cluster.Status.Nodes = []api.NodeStatus{
 			api.NodeStatus{
 				Name:       cluster.GetPodHostname(0),
@@ -98,5 +98,19 @@ var _ = Describe("MysqlBackup job syncer", func() {
 			},
 		}
 		Expect(syncer.getBackupCandidate()).To(Equal(cluster.GetPodHostname(0)))
+	})
+
+	It("should return the master if replicas are not healthy, even when master is not pod 0", func() {
+		cluster.Status.Nodes = []api.NodeStatus{
+			api.NodeStatus{
+				Name:       cluster.GetPodHostname(0),
+				Conditions: testutil.NodeConditions(false, false, false, true),
+			},
+			api.NodeStatus{
+				Name:       cluster.GetPodHostname(1),
+				Conditions: testutil.NodeConditions(true, false, false, false),
+			},
+		}
+		Expect(syncer.getBackupCandidate()).To(Equal(cluster.GetPodHostname(1)))
 	})
 })

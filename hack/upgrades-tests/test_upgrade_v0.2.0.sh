@@ -63,7 +63,7 @@ function setup_helm {
     kubectl create clusterrolebinding tiller --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
     helm init --service-account tiller --wait
     helm repo add presslabs https://presslabs.github.io/charts
-    helm dependency update hack/charts/mysql-operator
+    helm dependency update charts/mysql-operator
 }
 
 OP_NAMESPACE=kube-system

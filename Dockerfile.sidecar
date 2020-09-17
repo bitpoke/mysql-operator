@@ -1,13 +1,13 @@
 ###############################################################################
 #  Build the mysql-oerator related binaries
 ###############################################################################
-FROM golang:1.11.2 as builder
+FROM golang:1.13.14 as builder
 
 # Copy in the go src
 WORKDIR /go/src/github.com/presslabs/mysql-operator
 COPY pkg/    pkg/
 COPY cmd/    cmd/
-COPY vendor/ vendor/
+COPY go.mod go.sum ./
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator github.com/presslabs/mysql-operator/cmd/mysql-operator
@@ -26,15 +26,17 @@ RUN apt-get update \
 COPY hack/docker/rclone.gpg /root/rclone.gpg
 RUN gpg --import /root/rclone.gpg
 
-RUN wget -nv https://github.com/ncw/rclone/releases/download/v1.48.0/rclone-v1.48.0-linux-amd64.zip \
-    && wget -nv https://github.com/ncw/rclone/releases/download/v1.48.0/SHA256SUMS \
+ENV RCLONE_VERSION=1.52.3
+
+RUN wget -nv https://github.com/ncw/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip \
+    && wget -nv https://github.com/ncw/rclone/releases/download/v${RCLONE_VERSION}/SHA256SUMS \
     && gpg --verify --output=- SHA256SUMS > sums \
     && sha256sum -c --ignore-missing sums \
     && unzip rclone-*-linux-amd64.zip \
     && mv rclone-*-linux-amd64/rclone /usr/local/bin/ \
     && chmod 755 /usr/local/bin/rclone
 
-###############################################################################
+##############################################################################
 #  Docker image for sidecar containers
 ###############################################################################
 FROM debian:stretch-slim as sidecar
@@ -63,7 +65,7 @@ RUN apt-get update \
 
 USER mysql
 
-# Copy the mysql-operator-sidecar into it's own image
+# Copy the mysql-operator-sidecar into its own image
 COPY ./hack/docker/sidecar-entrypoint.sh /usr/local/bin/sidecar-entrypoint.sh
 COPY --from=builder /go/src/github.com/presslabs/mysql-operator/mysql-operator-sidecar /usr/local/bin/mysql-operator-sidecar
 COPY --from=rclone /usr/local/bin/rclone /usr/local/bin/rclone

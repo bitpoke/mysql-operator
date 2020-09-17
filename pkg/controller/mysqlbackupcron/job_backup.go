@@ -23,6 +23,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -41,7 +42,12 @@ type job struct {
 }
 
 func (j *job) Run() {
-	log.Info("scheduled backup job started", "namespace", j.Namespace, "cluster_name", j.ClusterName)
+	// nolint: govet
+	log := log.WithValues("key", types.NamespacedName{
+		Namespace: j.Namespace,
+		Name:      j.ClusterName,
+	})
+	log.Info("scheduled backup job started")
 
 	// run garbage collector if needed
 	if j.BackupScheduleJobsHistoryLimit != nil {
@@ -50,8 +56,7 @@ func (j *job) Run() {
 
 	// check if a backup is running
 	if j.scheduledBackupsRunningCount() > 0 {
-		log.V(1).Info("at least a backup is running",
-			"backups_len", j.scheduledBackupsRunningCount())
+		log.Info("at least a backup is running", "running_backups_count", j.scheduledBackupsRunningCount())
 		return
 	}
 
@@ -65,9 +70,9 @@ func (j *job) scheduledBackupsRunningCount() int {
 	backupsList := &api.MysqlBackupList{}
 	// select all backups with labels recurrent=true and and not completed of the cluster
 	selector := j.backupSelector()
-	selector.MatchingField("status.completed", "false")
+	client.MatchingFields{"status.completed": "false"}.ApplyToList(selector)
 
-	if err := j.c.List(context.TODO(), selector, backupsList); err != nil {
+	if err := j.c.List(context.TODO(), backupsList, selector); err != nil {
 		log.Error(err, "failed getting backups", "selector", selector)
 		return 0
 	}
@@ -93,7 +98,12 @@ func (j *job) createBackup() (*api.MysqlBackup, error) {
 }
 
 func (j *job) backupSelector() *client.ListOptions {
-	return client.InNamespace(j.Namespace).MatchingLabels(j.recurrentBackupLabels())
+	selector := &client.ListOptions{}
+
+	client.InNamespace(j.Namespace).ApplyToList(selector)
+	client.MatchingLabels(j.recurrentBackupLabels()).ApplyToList(selector)
+
+	return selector
 }
 
 func (j *job) recurrentBackupLabels() map[string]string {
@@ -106,7 +116,7 @@ func (j *job) recurrentBackupLabels() map[string]string {
 func (j *job) backupGC() {
 	var err error
 	backupsList := &api.MysqlBackupList{}
-	if err = j.c.List(context.TODO(), j.backupSelector(), backupsList); err != nil {
+	if err = j.c.List(context.TODO(), backupsList, j.backupSelector()); err != nil {
 		log.Error(err, "failed getting backups", "selector", j.backupSelector())
 		return
 	}
