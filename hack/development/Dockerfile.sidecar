@@ -20,12 +20,8 @@ RUN wget -nv https://github.com/ncw/rclone/releases/download/v${RCLONE_VERSION}/
     && mv rclone-*-linux-amd64/rclone /usr/local/bin/ \
     && chmod 755 /usr/local/bin/rclone
 
-<<<<<<< HEAD
-###############################################################################
-=======
 
 ##############################################################################
->>>>>>> upstream/mysql-8
 #  Docker image for sidecar containers
 ###############################################################################
 FROM debian:stretch-slim as sidecar

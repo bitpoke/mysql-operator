@@ -253,9 +253,6 @@ func NewConfig() *Config {
 
 		ExistsMySQLData: eData,
 
-<<<<<<< HEAD
-		MySQLVersion: semver.MustParse(getEnvValue("MY_MYSQL_VERSION")),
-=======
 		MyServerIDOffset: offset,
 
 		RcloneExtraArgs:            strings.Fields(getEnvValue("RCLONE_EXTRA_ARGS")),
@@ -267,7 +264,6 @@ func NewConfig() *Config {
 		InitFileExtraSQL: strings.Split(getEnvValue("INITFILE_EXTRA_SQL"), ";"),
 
 		MySQLVersion: mysqlVersion,
->>>>>>> upstream/mysql-8
 	}
 
 	return cfg
