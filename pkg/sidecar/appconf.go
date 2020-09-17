@@ -187,15 +187,17 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 		[]string{"CREATE", "SELECT", "DELETE", "UPDATE", "INSERT"}, fmt.Sprintf("%s.%s", toolsDbName, toolsHeartbeatTableName),
 		[]string{"REPLICATION CLIENT"}, "*.*")...)
 
-	// create the status table used by the operator to configure or to mask MySQL node ready
-	// CSV engine for this table can't be used because we use REPLACE statement that requires PRIMARY KEY or
-	// UNIQUE KEY index
-	// nolint: gosec
-    if !strings.HasSuffix(cfg.Hostname, "-0") {
+    // the slave pod doesn't need to back up sys_operator.status, Xtrabackup might have some bugs that 
+    // cause the table to be unclean. We can do this cleanup before the slave pod starts to avoid accidents.
+    if !cfg.IsFirstPodInSet() {
         queries = append(queries, fmt.Sprintf("DROP TABLE IF EXISTS %s.%s",
             constants.OperatorDbName, constants.OperatorStatusTableName))
     }
 
+	// create the status table used by the operator to configure or to mask MySQL node ready
+	// CSV engine for this table can't be used because we use REPLACE statement that requires PRIMARY KEY or
+	// UNIQUE KEY index
+	// nolint: gosec
 	queries = append(queries, fmt.Sprintf(
 		"CREATE TABLE IF NOT EXISTS %[1]s.%[2]s ("+
 			"  name varchar(64) PRIMARY KEY,"+
