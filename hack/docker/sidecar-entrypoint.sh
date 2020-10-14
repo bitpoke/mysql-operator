@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
 
-echo "Create Google Drive service-account.json file."
-echo "${GDRIVE_SERVICE_ACCOUNT}" > /tmp/gdrive-service-account.json
-
 echo "Create rclone.conf file."
 cat <<EOF > /tmp/rclone.conf
 [gd]
@@ -44,14 +41,20 @@ account = ${AZUREBLOB_ACCOUNT}
 key = ${AZUREBLOB_KEY}
 EOF
 
-if [[ -n "${GCS_SERVICE_ACCOUNT_JSON_KEY:-}" ]]; then 
+if [[ -n "${GCS_SERVICE_ACCOUNT_JSON_KEY:-}" ]]; then
     echo "Create google-credentials.json file."
     cat <<EOF > /tmp/google-credentials.json
     ${GCS_SERVICE_ACCOUNT_JSON_KEY}
 EOF
-else 
+else
     touch /tmp/google-credentials.json
 fi
+
+if [[ -n "${GDRIVE_SERVICE_ACCOUNT:-}" ]]; then
+    echo "Create Google Drive service-account.json file."
+    echo "${GDRIVE_SERVICE_ACCOUNT}" > /tmp/gdrive-service-account.json
+fi
+
 
 SIDECAR_BIN=mysql-operator-sidecar
 VERBOSE="--debug"
