@@ -57,6 +57,19 @@ spec:
   #   tolerations: []
   #   priorityClassName:
   #   serviceAccountName: default
+  #   # Use a initContainer to fix the permissons of a hostPath volume.
+  #   initContainers:
+  #     - name: volume-permissions
+  #       image: busybox
+  #       securityContext:
+  #         runAsUser: 0
+  #       command:
+  #         - sh
+  #         - -c
+  #         - chmod 750 /data/mysql; chown 999:999 /data/mysql
+  #       volumeMounts:
+  #         - name: data
+  #           mountPath: /data/mysql
 
   ## Specify additional volume specification
   # volumeSpec:

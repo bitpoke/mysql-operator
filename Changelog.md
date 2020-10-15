@@ -12,6 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Add the ability to set the `imagePullSecrets` for the operator statefulset.
  * Add Google Drive via service account as backup option.
  * Add `initBucketURL` and `initBucketSecretName` options to MysqlCluster chart. This bumps the chart version to `0.3.0`
+ * Add an example of how initContainers can be used to fix hostPath permissions.
 ### Changed
  * Only add `binlog-space-limit` for `percona` image
  * Make user-defined InitContainer take the precedence
