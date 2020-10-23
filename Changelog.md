@@ -23,6 +23,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Update k8s client to `v0.18.2`
  * Update kubebuilder (to `v2.3.1`) along with controller-runtime (to `v0.6.0`) and controller-gen
  * Update rclone to `v1.52.3`
+ * Operator will now reset replication on master after failover
 ### Removed
 ### Fixed
  * Fix pod labels diff of map

@@ -293,6 +293,10 @@ func (ou *orcUpdater) updateClusterFailoverInProgressStatus(master *orc.Instance
 	if master != nil && master.SecondsSinceLastSeen.Valid && master.SecondsSinceLastSeen.Int64 < 5 {
 		ou.cluster.UpdateStatusCondition(api.ClusterConditionFailoverInProgress, core.ConditionFalse,
 			"ClusterMasterHealthy", "Master is healthy in orchestrator")
+
+		if err := ou.orcClient.ResetReplication(master.Key); err != nil {
+			ou.log.Error(err, "Error resetting master replication!")
+		}
 	}
 }
 

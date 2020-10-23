@@ -348,3 +348,8 @@ func (o *OrcFakeClient) EndMaintenance(key InstanceKey) error {
 func (o *OrcFakeClient) Maintenance() ([]Maintenance, error) {
 	return nil, nil
 }
+
+// ResetReplication resets replication on a node
+func (o *OrcFakeClient) ResetReplication(key InstanceKey) error {
+	return nil
+}

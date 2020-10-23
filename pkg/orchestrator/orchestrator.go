@@ -39,6 +39,8 @@ type Interface interface {
 	BeginMaintenance(key InstanceKey, owner, reason string) error
 	EndMaintenance(key InstanceKey) error
 	Maintenance() ([]Maintenance, error)
+
+	ResetReplication(key InstanceKey) error
 }
 
 type orchestrator struct {
@@ -153,4 +155,11 @@ func (o *orchestrator) Maintenance() ([]Maintenance, error) {
 	}
 
 	return maintenances, nil
+}
+
+func (o *orchestrator) ResetReplication(key InstanceKey) error {
+	if err := o.makeGetAPIRequest(fmt.Sprintf("reset-slave/%s/%d", key.Hostname, key.Port), nil); err != nil {
+		return err
+	}
+	return nil
 }
