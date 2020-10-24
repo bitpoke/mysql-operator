@@ -17,9 +17,13 @@ limitations under the License.
 package mysqlcluster
 
 import (
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/presslabs/mysql-operator/pkg/util/constants"
 )
+
+var log = logf.Log.WithName("mysqlcluster-syncer")
 
 // TODO: make those consts private and move them in the file where are used.
 const (
