@@ -24,6 +24,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Update kubebuilder (to `v2.3.1`) along with controller-runtime (to `v0.6.0`) and controller-gen
  * Update rclone to `v1.52.3`
  * Update `Orchestrator` version from `v3.1.2` to `v3.2.3`
+ * Set default MySQL server version to `5.7.31`
 ### Removed
 ### Fixed
  * Fix pod labels diff of map
