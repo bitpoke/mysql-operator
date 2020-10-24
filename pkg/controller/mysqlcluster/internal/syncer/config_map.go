@@ -28,13 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/presslabs/controller-util/syncer"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
-
-var log = logf.Log.WithName("config-map-syncer")
 
 // NewConfigMapSyncer returns config map syncer
 func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
