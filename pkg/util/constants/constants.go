@@ -85,7 +85,7 @@ var (
 	MySQLDefaultVersion = semver.MustParse("5.7.31")
 	// MySQLTagsToSemVer maps simple version to semver versions
 	MySQLTagsToSemVer = map[string]string{
-		"5.7": "5.7.26",
+		"5.7": "5.7.31",
 	}
 	// MysqlImageVersions is a map of supported mysql version and their image
 	MysqlImageVersions = map[string]string{
