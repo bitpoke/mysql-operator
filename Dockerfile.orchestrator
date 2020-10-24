@@ -1,6 +1,7 @@
 ###############################################################################
 #  Build the mysql-oerator related binaries
 ###############################################################################
+
 FROM golang:1.13.14 as builder
 
 # Copy in the go src
@@ -14,34 +15,36 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator github.c
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator-sidecar github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o orc-helper github.com/presslabs/mysql-operator/cmd/orc-helper
 
+
 ##############################################################################
 #  Build Orchestrator
 ###############################################################################
-FROM golang:1.13.7-alpine as builder-orc
+
+FROM golang:1.14.10-alpine3.12 as builder-orc
 
 RUN set -ex \
     && apk add --no-cache \
         bash gcc git musl-dev openssl rsync perl-utils
 
-ARG ORCHESTRATOR_VERSION=v3.1.4
-ARG ORCHESTRATOR_REPO=https://github.com/github/orchestrator.git
+ARG ORCHESTRATOR_VERSION=v3.2.3
+ARG ORCHESTRATOR_REPO=https://github.com/openark/orchestrator.git
 RUN set -ex \
-    && mkdir -p $GOPATH/src/github.com/github/orchestrator \
-    && cd $GOPATH/src/github.com/github/orchestrator \
+    && mkdir -p $GOPATH/src/github.com/openark/orchestrator \
+    && cd $GOPATH/src/github.com/openark/orchestrator \
     && git init && git remote add origin $ORCHESTRATOR_REPO \
     && git fetch --tags \
     && git checkout $ORCHESTRATOR_VERSION
 
-WORKDIR $GOPATH/src/github.com/github/orchestrator
+WORKDIR $GOPATH/src/github.com/openark/orchestrator
 
-RUN set -ex \
-    && ls -l \
-    && ./script/build
+RUN set -ex && ./build.sh -b -P
+
 
 ###############################################################################
 #  Docker image for orchestrator
 ###############################################################################
-FROM alpine:3.11
+
+FROM alpine:3.13
 
 # Create a group and user
 RUN addgroup -g 777 orchestrator && adduser -u 777 -g 777 -S orchestrator
@@ -59,7 +62,7 @@ RUN set -ex \
         tar -C /usr/local/bin -xzv
 
 COPY --chown=777:777 hack/docker/orchestrator/ /
-COPY --from=builder-orc /go/src/github.com/github/orchestrator/bin/ /usr/local/orchestrator/
+COPY --from=builder-orc /tmp/orchestrator-release/build/orchestrator/usr/local/orchestrator/ /usr/local/orchestrator/
 COPY --from=builder /go/src/github.com/presslabs/mysql-operator/orc-helper /usr/local/bin/
 
 USER 777

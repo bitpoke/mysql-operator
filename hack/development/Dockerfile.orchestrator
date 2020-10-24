@@ -1,27 +1,30 @@
+##############################################################################
+#  Build Orchestrator
 ###############################################################################
-FROM golang:1.13.14-alpine as builder
+FROM golang:1.14.10-alpine3.12 as builder-orc
 
 RUN set -ex \
     && apk add --no-cache \
         bash gcc git musl-dev openssl rsync perl-utils
 
-ARG ORCHESTRATOR_VERSION=v3.2.2
-ARG ORCHESTRATOR_REPO=https://github.com/github/orchestrator.git
+ARG ORCHESTRATOR_VERSION=v3.2.3
+ARG ORCHESTRATOR_REPO=https://github.com/openark/orchestrator.git
 RUN set -ex \
-    && mkdir -p $GOPATH/src/github.com/github/orchestrator \
-    && cd $GOPATH/src/github.com/github/orchestrator \
+    && mkdir -p $GOPATH/src/github.com/openark/orchestrator \
+    && cd $GOPATH/src/github.com/openark/orchestrator \
     && git init && git remote add origin $ORCHESTRATOR_REPO \
     && git fetch --tags \
     && git checkout $ORCHESTRATOR_VERSION
 
-WORKDIR $GOPATH/src/github.com/github/orchestrator
+WORKDIR $GOPATH/src/github.com/openark/orchestrator
 
-RUN set -ex \
-    && ls -l \
-    && ./script/build
+RUN set -ex && ./build.sh -b -P
+
 
 ###############################################################################
-FROM alpine:3.11
+#  Docker image for orchestrator
+###############################################################################
+FROM alpine:3.12
 
 # Create a group and user
 RUN addgroup -g 777 orchestrator && adduser -u 777 -g 777 -S orchestrator
@@ -39,7 +42,7 @@ RUN set -ex \
         tar -C /usr/local/bin -xzv
 
 COPY --chown=777:777 ./hack/docker/orchestrator/ /
-COPY --from=builder /go/src/github.com/github/orchestrator/bin/ /usr/local/orchestrator/
+COPY --from=builder-orc /tmp/orchestrator-release/build/orchestrator/usr/local/orchestrator/ /usr/local/orchestrator/
 COPY ./bin/orc-helper_linux_amd64 /usr/local/bin/orc-helper
 
 USER 777
