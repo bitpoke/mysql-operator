@@ -173,7 +173,9 @@ var mysqlMasterSlaveConfigs = map[string]string{
 	"log-bin":           "/var/lib/mysql/mysql-bin",
 	"log-slave-updates": "on",
 
-	"read-only":        "on",
+	// start server without read-only because of https://bugs.mysql.com/bug.php?id=100283
+	// so we can restore from a backup (see https://github.com/presslabs/mysql-operator/issues/509)
+	//"read-only":        "on",
 	"skip-slave-start": "on",
 
 	// Crash safe

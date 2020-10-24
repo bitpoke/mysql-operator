@@ -150,6 +150,10 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 		"SET @@SESSION.SQL_LOG_BIN = 0",
 	}
 
+	// set server as read only
+	// https://github.com/presslabs/mysql-operator/issues/509
+	queries = append(queries, "SET GLOBAL READ_ONLY = 1")
+
 	// create operator database because GRANTS need it
 	queries = append(queries, fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", toolsDbName))
 
