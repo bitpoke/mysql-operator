@@ -15,7 +15,7 @@ RUN apt-get update \
 COPY hack/docker/rclone.gpg /root/rclone.gpg
 RUN gpg --import /root/rclone.gpg
 
-ENV RCLONE_VERSION=1.52.3
+ENV RCLONE_VERSION=1.53.1
 
 RUN wget -nv https://github.com/ncw/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip \
     && wget -nv https://github.com/ncw/rclone/releases/download/v${RCLONE_VERSION}/SHA256SUMS \
