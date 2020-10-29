@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -272,6 +273,12 @@ var _ = Describe("MySQL database controller", func() {
 	})
 
 	It("should not reconcile resource across namespaces", func() {
+		Expect(c.Create(context.TODO(), &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "other",
+			},
+		})).To(Succeed())
+
 		db := factories.NewDatabase(func(db *mysqldatabase.Database) error {
 			db.Namespace = "other"
 			return nil
