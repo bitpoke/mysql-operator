@@ -52,7 +52,7 @@ RUN useradd -u 999 -r -g 999 -s /sbin/nologin \
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        apt-transport-https ca-certificates wget \
+        apt-transport-https ca-certificates pigz wget \
     && rm -rf /var/lib/apt/lists/*
 
 COPY hack/docker/percona.gpg /etc/apt/trusted.gpg.d/percona.gpg

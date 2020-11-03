@@ -77,6 +77,12 @@ type Config struct {
 	// Offset for assigning MySQL Server ID
 	MyServerIDOffset int
 
+	// BackupCompressCommand is a command to use for compressing the backup.
+	BackupCompressCommand []string
+
+	// BackupDecompressCommand is a command to use for decompressing the backup.
+	BackupDecompressCommand []string
+
 	// RcloneExtraArgs is a list of extra command line arguments to pass to rclone.
 	RcloneExtraArgs []string
 
@@ -149,6 +155,22 @@ func (cfg *Config) IsFirstPodInSet() bool {
 // ShouldCloneFromBucket returns true if it's time to initialize from a bucket URL provided
 func (cfg *Config) ShouldCloneFromBucket() bool {
 	return !cfg.ExistsMySQLData && cfg.ServerID() == cfg.MyServerIDOffset && len(cfg.InitBucketURL) != 0
+}
+
+// BackupCompressCmd returns a command to use for compressing the backup.
+func (cfg *Config) BackupCompressCmd() []string {
+	if len(cfg.BackupCompressCommand) > 0 {
+		return cfg.BackupCompressCommand
+	}
+	return []string{"gzip", "--stdout"}
+}
+
+// BackupDecompressCmd returns a command to use for decompressing the backup.
+func (cfg *Config) BackupDecompressCmd() []string {
+	if len(cfg.BackupDecompressCommand) > 0 {
+		return cfg.BackupDecompressCommand
+	}
+	return []string{"gzip", "--decompress"}
 }
 
 // RcloneArgs returns a complete set of rclone arguments.
@@ -245,6 +267,8 @@ func NewConfig() *Config {
 
 		MyServerIDOffset: offset,
 
+		BackupCompressCommand:      strings.Fields(getEnvValue("BACKUP_COMPRESS_COMMAND")),
+		BackupDecompressCommand:    strings.Fields(getEnvValue("BACKUP_DECOMPRESS_COMMAND")),
 		RcloneExtraArgs:            strings.Fields(getEnvValue("RCLONE_EXTRA_ARGS")),
 		XbstreamExtraArgs:          strings.Fields(getEnvValue("XBSTREAM_EXTRA_ARGS")),
 		XtrabackupExtraArgs:        strings.Fields(getEnvValue("XTRABACKUP_EXTRA_ARGS")),

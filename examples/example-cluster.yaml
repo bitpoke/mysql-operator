@@ -107,6 +107,16 @@ spec:
   ## Set cluster in read only
   # readOnly: false
 
+  ## Use `pigz` for parallel compression/decompression of backups
+  ## Or specify any arbitrary compress/decompress commands with args
+  # backupCompressCommand:
+  #   - pigz
+  #   - --stdout
+  #
+  # backupDecompressCommand:
+  #   - pigz
+  #   - --decompress
+
   ## Add metrics exporter extra arguments
   # metricsExporterExtraArgs:
   #   - --collect.info_schema.userstats

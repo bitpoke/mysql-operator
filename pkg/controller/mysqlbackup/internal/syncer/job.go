@@ -115,6 +115,7 @@ func (s *jobSyncer) getBackupCandidate() string {
 	return s.cluster.GetMasterHost()
 }
 
+// nolint: gocyclo
 func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 	if len(in.Containers) == 0 {
 		in.Containers = make([]core.Container, 1)
@@ -183,6 +184,17 @@ func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 				},
 			},
 		},
+	}
+
+	hasBackupCompressCommand := len(s.cluster.Spec.BackupCompressCommand) > 0
+	hasBackupDecompressCommand := len(s.cluster.Spec.BackupDecompressCommand) > 0
+	if hasBackupCompressCommand && hasBackupDecompressCommand {
+		in.Containers[0].Env = append(in.Containers[0].Env, core.EnvVar{
+			Name:  "BACKUP_COMPRESS_COMMAND",
+			Value: strings.Join(s.cluster.Spec.BackupCompressCommand, " "),
+		})
+	} else if hasBackupCompressCommand {
+		log.Info("backupDecompressCommand is not defined, falling back to gzip")
 	}
 
 	if len(s.cluster.Spec.RcloneExtraArgs) > 0 {

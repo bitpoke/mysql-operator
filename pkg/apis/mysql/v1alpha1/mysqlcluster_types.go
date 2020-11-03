@@ -130,6 +130,14 @@ type MysqlClusterSpec struct {
 	// +optional
 	ServerIDOffset *int `json:"serverIDOffset,omitempty"`
 
+	// BackupCompressCommand is a command to use for compressing the backup.
+	// +optional
+	BackupCompressCommand []string `json:"backupCompressCommand,omitempty"`
+
+	// BackupDecompressCommand is a command to use for decompressing the backup.
+	// +optional
+	BackupDecompressCommand []string `json:"backupDecompressCommand,omitempty"`
+
 	// MetricsExporterExtraArgs is a list of extra command line arguments to pass to MySQL metrics exporter.
 	// See https://github.com/prometheus/mysqld_exporter for the list of available flags.
 	// +optional
