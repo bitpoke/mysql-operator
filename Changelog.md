@@ -17,6 +17,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
    it triggers a `graceful-master-takeover-auto` command in Orchestrator.
  * Add `mysqlLifecycle` to `.Spec.PodSpec` to allow overriding the default lifecycle hook
    for the `mysql` container.
+ * Add `backupCompressCommand` and `backupDecompressCommand` to allow using
+   different compressors/decompressors when backing up or restoring.
 ### Changed
  * Only add `binlog-space-limit` for `percona` image
  * Make user-defined InitContainer take the precedence

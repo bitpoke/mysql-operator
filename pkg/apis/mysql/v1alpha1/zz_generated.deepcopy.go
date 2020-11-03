@@ -252,6 +252,16 @@ func (in *MysqlClusterSpec) DeepCopyInto(out *MysqlClusterSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.BackupCompressCommand != nil {
+		in, out := &in.BackupCompressCommand, &out.BackupCompressCommand
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.BackupDecompressCommand != nil {
+		in, out := &in.BackupDecompressCommand, &out.BackupDecompressCommand
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.MetricsExporterExtraArgs != nil {
 		in, out := &in.MetricsExporterExtraArgs, &out.MetricsExporterExtraArgs
 		*out = make([]string, len(*in))

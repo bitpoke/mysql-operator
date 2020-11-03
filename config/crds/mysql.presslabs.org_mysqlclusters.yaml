@@ -49,6 +49,16 @@ spec:
         spec:
           description: 'MysqlClusterSpec defines the desired state of MysqlCluster nolint: maligned'
           properties:
+            backupCompressCommand:
+              description: BackupCompressCommand is a command to use for compressing the backup.
+              items:
+                type: string
+              type: array
+            backupDecompressCommand:
+              description: BackupDecompressCommand is a command to use for decompressing the backup.
+              items:
+                type: string
+              type: array
             backupRemoteDeletePolicy:
               description: BackupRemoteDeletePolicy the deletion policy that specify how to treat the data from remote storage. By default it's used softDelete.
               type: string

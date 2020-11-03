@@ -234,6 +234,17 @@ func (s *sfsSyncer) getEnvFor(name string) []core.EnvVar {
 		})
 	}
 
+	hasBackupCompressCommand := len(s.cluster.Spec.BackupCompressCommand) > 0
+	hasBackupDecompressCommand := len(s.cluster.Spec.BackupDecompressCommand) > 0
+	if hasBackupCompressCommand && hasBackupDecompressCommand && isCloneAndInit(name) {
+		env = append(env, core.EnvVar{
+			Name:  "BACKUP_DECOMPRESS_COMMAND",
+			Value: strings.Join(s.cluster.Spec.BackupDecompressCommand, " "),
+		})
+	} else if hasBackupDecompressCommand {
+		log.Info("backupCompressCommand is not defined, falling back to gzip")
+	}
+
 	hasRcloneExtraArgs := len(s.cluster.Spec.RcloneExtraArgs) > 0
 	if hasRcloneExtraArgs && (isCloneAndInit(name) || isSidecar(name)) {
 		env = append(env, core.EnvVar{
