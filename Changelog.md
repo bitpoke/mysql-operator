@@ -13,6 +13,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Add Google Drive via service account as backup option.
  * Add `initBucketURL` and `initBucketSecretName` options to MysqlCluster chart. This bumps the chart version to `0.3.0`
  * Add an example of how initContainers can be used to fix hostPath permissions.
+ * Add a lifecycle preStop hook for the `mysql` container. Before killing the master MySQL process,
+   it triggers a `graceful-master-takeover-auto` command in Orchestrator.
+ * Add `mysqlLifecycle` to `.Spec.PodSpec` to allow overriding the default lifecycle hook
+   for the `mysql` container.
 ### Changed
  * Only add `binlog-space-limit` for `percona` image
  * Make user-defined InitContainer take the precedence
@@ -28,7 +32,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 ### Fixed
  * Fix pod labels diff of map
- * Add a lifecycle preStop hook for the  `mysql` container. In `preStop` hook, before killing the master MySQL process, it triggers a `gracefaul-master-takeover-auto` from Orchestrator.
  * Fixed backup cleanup job bug (#577)
 
 
