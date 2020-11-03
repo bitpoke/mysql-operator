@@ -174,6 +174,7 @@ type PodSpec struct {
 	Annotations        map[string]string         `json:"annotations,omitempty"`
 	Resources          core.ResourceRequirements `json:"resources,omitempty"`
 	Affinity           *core.Affinity            `json:"affinity,omitempty"`
+	MysqlLifecycle     *core.Lifecycle           `json:"mysqlLifecycle,omitempty"`
 	NodeSelector       map[string]string         `json:"nodeSelector,omitempty"`
 	PriorityClassName  string                    `json:"priorityClassName,omitempty"`
 	Tolerations        []core.Toleration         `json:"tolerations,omitempty"`

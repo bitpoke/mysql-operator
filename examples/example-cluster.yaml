@@ -49,6 +49,12 @@ spec:
   #   backupNodeSelector: {}
   #   backupPriorityClassName:
   #   backupTolerations: []
+  #   # Override the default preStop hook with a custom command/script
+  #   mysqlLifecycle:
+  #     preStop:
+  #       exec:
+  #         command:
+  #           - /scripts/demote-if-master
   #   nodeSelector: {}
   #   resources:
   #     requests:

@@ -371,12 +371,17 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		},
 	})
 
-	mysql.Lifecycle = &core.Lifecycle{
-		PreStop: &core.Handler{
-			Exec: &core.ExecAction{
-				Command: []string{"bash", fmt.Sprintf("%s/%s", ConfVolumeMountPath, shPreStopFile)},
+	if s.cluster.Spec.PodSpec.MysqlLifecycle != nil {
+		mysql.Lifecycle = s.cluster.Spec.PodSpec.MysqlLifecycle
+	} else {
+		mysql.Lifecycle = &core.Lifecycle{
+			PreStop: &core.Handler{
+				Exec: &core.ExecAction{
+					Command: []string{"bash", fmt.Sprintf("%s/%s", ConfVolumeMountPath, shPreStopFile)},
+				},
 			},
-		}}
+		}
+	}
 
 	// nolint: gosec
 	mysqlTestCmd := fmt.Sprintf(`mysql --defaults-file=%s -NB -e 'SELECT COUNT(*) FROM %s.%s WHERE name="configured" AND value="1"'`,

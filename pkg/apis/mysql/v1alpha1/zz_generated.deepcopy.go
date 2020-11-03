@@ -406,6 +406,11 @@ func (in *PodSpec) DeepCopyInto(out *PodSpec) {
 		*out = new(v1.Affinity)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.MysqlLifecycle != nil {
+		in, out := &in.MysqlLifecycle, &out.MysqlLifecycle
+		*out = new(v1.Lifecycle)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.NodeSelector != nil {
 		in, out := &in.NodeSelector, &out.NodeSelector
 		*out = make(map[string]string, len(*in))
