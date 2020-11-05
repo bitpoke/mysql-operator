@@ -302,11 +302,6 @@ func dbObjKey(db *mysqldatabase.Database) client.ObjectKey {
 	}
 }
 
-func getExpectedDSN(dbname string) string {
-	return fmt.Sprintf("root:password@tcp(%s-mysql-master.default:3306)/?timeout=5s&multiStatements=true&interpolateParams=true", dbname)
-
-}
-
 func forceDeleteDb(c client.Client, db *mysqldatabase.Database) {
 	// delete resource even if it's deleted or has finalizer on it
 	c.Delete(context.TODO(), db.Unwrap())
