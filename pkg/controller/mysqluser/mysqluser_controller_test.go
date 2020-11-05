@@ -19,8 +19,6 @@ package mysqluser
 import (
 	"context"
 	"errors"
-	"github.com/presslabs/mysql-operator/pkg/testutil/factories"
-	"github.com/presslabs/mysql-operator/pkg/testutil/gomegamatcher"
 	"strings"
 	"time"
 
@@ -42,6 +40,8 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysql/fake"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqluser"
+	"github.com/presslabs/mysql-operator/pkg/testutil/factories"
+	"github.com/presslabs/mysql-operator/pkg/testutil/gomegamatcher"
 )
 
 const timeout = time.Second * 1
@@ -162,6 +162,8 @@ var _ = Describe("MySQL user controller", func() {
 				}
 
 				fakeSQL.AssertDSN(expectedDSN)
+				// the create user runs twice
+				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 
 				Expect(c.Create(context.TODO(), user.Unwrap())).To(Succeed())
@@ -170,7 +172,6 @@ var _ = Describe("MySQL user controller", func() {
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 				// Wait for reconciliation triggered by finalizer being set
-				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 				// We need to make sure that the controller does not create infinite loops
@@ -540,11 +541,13 @@ var _ = Describe("MySQL user controller", func() {
 				Eventually(func() error {
 					return c.Get(context.TODO(), userKey, user.Unwrap())
 				}).ShouldNot(Succeed())
+
 			})
 
 			It("doesn't remove the user finalizer and it tries to reconcile again", func() {
 				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
 					defer GinkgoRecover()
+					Expect(query).To(Equal("DROP USER IF EXISTS ?@?;"))
 
 					return deletionResult
 				}
@@ -578,6 +581,9 @@ var _ = Describe("MySQL user controller", func() {
 
 				// We need to make sure that the controller does not create infinite loops
 				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
+
+				// the user should be removed
+				Expect(c.Get(context.TODO(), userKey, user.Unwrap())).NotTo(Succeed())
 			})
 		})
 	})
@@ -595,7 +601,7 @@ drain:
 			break drain
 		}
 	}
-	Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
+	Consistently(requests, "2s").ShouldNot(Receive(Equal(expectedRequest)))
 
 	fakeQueryRunner.DisallowExtraCalls()
 }

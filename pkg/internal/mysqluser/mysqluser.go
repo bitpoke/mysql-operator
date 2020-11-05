@@ -21,6 +21,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -121,5 +122,13 @@ func (u *MySQLUser) GetClusterKey() client.ObjectKey {
 	return client.ObjectKey{
 		Name:      u.Spec.ClusterRef.Name,
 		Namespace: ns,
+	}
+}
+
+// GetKey return the user key. Usually used for logging or for runtime.Client.Get as key
+func (u *MySQLUser) GetKey() client.ObjectKey {
+	return types.NamespacedName{
+		Namespace: u.Namespace,
+		Name:      u.Name,
 	}
 }

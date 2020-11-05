@@ -97,12 +97,6 @@ func (r *ReconcileMySQLUser) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, r.removeUser(ctx, user)
 	}
 
-	// get the actual state from mysql cluster
-	//	usErr := r.updateUserStatusFromCluster(ctx, user)
-	//	if err := r.updateStatusAndErr(ctx, user, oldStatus, usErr); err != nil {
-	//		return reconcile.Result{}, err
-	//	}
-
 	// write the desired status into mysql cluster
 	ruErr := r.reconcileUserInCluster(ctx, user)
 	if err := r.updateStatusAndErr(ctx, user, oldStatus, ruErr); err != nil {
@@ -193,7 +187,7 @@ func (r *ReconcileMySQLUser) reconcileUserInDB(ctx context.Context, user *mysqlu
 	}
 
 	// create/ update user in database
-	log.Info("creating mysql user", "key", user.MysqlUser, "database", user.Spec.User)
+	log.Info("creating mysql user", "key", user.GetKey(), "database", user.Spec.User, "cluster", user.GetClusterKey())
 	if err := mysql.CreateUserIfNotExists(ctx, sql, user.Spec.User, password, user.Spec.AllowedHosts,
 		user.Spec.Permissions, user.Spec.ResourceLimits); err != nil {
 		return err
@@ -249,7 +243,7 @@ func (r *ReconcileMySQLUser) dropUserFromDB(ctx context.Context, user *mysqluser
 	}
 
 	for _, host := range user.Status.AllowedHosts {
-		log.Info("removing user from mysql cluster", "key", user.Unwrap(), "username", user.Spec.User)
+		log.Info("removing user from mysql cluster", "key", user.GetKey(), "username", user.Spec.User, "cluster", user.GetClusterKey())
 		if err := mysql.DropUser(ctx, sql, user.Spec.User, host); err != nil {
 			return err
 		}
@@ -259,7 +253,7 @@ func (r *ReconcileMySQLUser) dropUserFromDB(ctx context.Context, user *mysqluser
 
 func (r *ReconcileMySQLUser) updateStatusAndErr(ctx context.Context, user *mysqluser.MySQLUser, oldStatus *mysqlv1alpha1.MysqlUserStatus, prevErr error) error {
 	if !reflect.DeepEqual(oldStatus, &user.Status) {
-		log.V(1).Info("update mysql user status", "key", user.MysqlUser, "diff", deep.Equal(oldStatus, &user.Status))
+		log.V(1).Info("update mysql user status", "key", user.GetKey(), "diff", deep.Equal(oldStatus, &user.Status))
 
 		if err := r.Status().Update(ctx, user.Unwrap()); err != nil {
 			if prevErr != nil {

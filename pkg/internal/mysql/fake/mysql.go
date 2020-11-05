@@ -19,6 +19,7 @@ package fake
 import (
 	"context"
 	"fmt"
+	"github.com/onsi/ginkgo"
 	"sync"
 
 	"github.com/onsi/gomega"
@@ -57,6 +58,7 @@ func (qr *SQLRunner) PurgeExpectedCalls() {
 func (qr *SQLRunner) runCall(query mysql.Query) error {
 	qr.lock.Lock()
 	defer qr.lock.Unlock()
+	defer ginkgo.GinkgoRecover()
 
 	if qr.expectedDSN != nil {
 		gomega.Expect(qr.dsn).To(gomega.Equal(*qr.expectedDSN), "DSN does not match")
