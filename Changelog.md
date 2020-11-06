@@ -29,6 +29,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Update rclone to `v1.53.1`
  * Update `Orchestrator` version from `v3.1.2` to `v3.2.3`
  * Set default MySQL server version to `5.7.31`
+ * Stop building unused binaries in Dockerfiles.
 ### Removed
 ### Fixed
  * Fix pod labels diff of map
