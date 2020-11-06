@@ -1,6 +1,7 @@
 ###############################################################################
-#  Build the mysql-oerator related binaries
+#  Build the mysql-operator binary
 ###############################################################################
+
 FROM golang:1.13.14 as builder
 
 # Copy in the go src
@@ -11,8 +12,6 @@ COPY go.mod go.sum ./
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator github.com/presslabs/mysql-operator/cmd/mysql-operator
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator-sidecar github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o orc-helper github.com/presslabs/mysql-operator/cmd/orc-helper
 
 ###############################################################################
 #  Docker image for operator
