@@ -19,8 +19,8 @@ PATH := $(BINDIR):$(PATH)
 SHELL := env PATH=$(PATH) /bin/sh
 
 # check if kubebuilder is installed in local bin dir and set KUBEBUILDER_ASSETS
-ifeq 'yes' "$(shell test -f $(BINDIR)/kubebuilder && echo -n 'yes')"
-	KUBEBUILDER_ASSETS ?= $(BINDIR)
+ifneq ("$(wildcard $(BINDIR)/kubebuilder)", "")
+	export KUBEBUILDER_ASSETS ?= $(BINDIR)
 endif
 
 all: test build

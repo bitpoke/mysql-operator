@@ -35,6 +35,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
  * Fix pod labels diff of map
  * Fixed backup cleanup job bug (#577)
+ * Fix Kubebuilder path in Makefile.
 
 
 ## [0.4.0] - 2020-06-17
