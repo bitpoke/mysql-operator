@@ -73,7 +73,9 @@ var _ = Describe("MySQL user controller", func() {
 		fakeSQL = fake.NewQueryRunner(false)
 
 		var recFn reconcile.Reconciler
-		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, fake.NewFakeFactory(fakeSQL)))
+		rec := newReconciler(mgr, fake.NewFakeFactory(fakeSQL)).(*ReconcileMySQLUser)
+		rec.Client = c
+		recFn, requests = testutil.SetupTestReconcile(rec)
 		Expect(add(mgr, recFn)).To(Succeed())
 
 		stop = testutil.StartTestManager(mgr)
@@ -137,8 +139,6 @@ var _ = Describe("MySQL user controller", func() {
 				expectedDSN := "root:password@tcp(" + cluster.Name + "-mysql-master." + cluster.Namespace + ":3306)" +
 					"/?timeout=5s&multiStatements=true&interpolateParams=true"
 				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
-					defer GinkgoRecover()
-
 					By("Checking finalizer")
 					Expect(c.Get(context.TODO(), userKey, user.Unwrap())).To(Succeed())
 					Expect(meta.HasFinalizer(&user.ObjectMeta, userFinalizer))
@@ -235,8 +235,6 @@ var _ = Describe("MySQL user controller", func() {
 				expectedDSN := "root:password@tcp(" + cluster.Name + "-mysql-master." + cluster.Namespace + ":3306)" +
 					"/?timeout=5s&multiStatements=true&interpolateParams=true"
 				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
-					defer GinkgoRecover()
-
 					By("Creating the user")
 					expectedQuery := strings.Join([]string{
 						"BEGIN;\n",
@@ -336,8 +334,6 @@ var _ = Describe("MySQL user controller", func() {
 				userName := user.Spec.User
 
 				fakeSQL.AddExpectedCalls(func(query string, args ...interface{}) error {
-					defer GinkgoRecover()
-
 					By("Updating the user with new allowed host (first reconciliation)")
 					expectedQuery := strings.Join([]string{
 						"BEGIN;\n",
@@ -356,15 +352,11 @@ var _ = Describe("MySQL user controller", func() {
 
 					return nil
 				}, func(query string, args ...interface{}) error {
-					defer GinkgoRecover()
-
 					By("Remove user old allowed host (first reconciliation)")
 					Expect(query).To(Equal("DROP USER IF EXISTS ?@?;"))
 					Expect(args).To(ConsistOf(userName, "test2"))
 					return nil
 				}, func(query string, args ...interface{}) error {
-					defer GinkgoRecover()
-
 					By("Updating the user with new allowed host (second reconciliation)")
 					expectedQuery := strings.Join([]string{
 						"BEGIN;\n",
@@ -403,8 +395,6 @@ var _ = Describe("MySQL user controller", func() {
 
 				// The mysql user creation fails
 				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
-					defer GinkgoRecover()
-
 					return errors.New("couldn't create user")
 				}
 				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall, expectedQueryRunnerCall)
@@ -487,8 +477,6 @@ var _ = Describe("MySQL user controller", func() {
 				expectedDSN := "root:password@tcp(" + cluster.Name + "-mysql-master." + cluster.Namespace + ":3306)" +
 					"/?timeout=5s&multiStatements=true&interpolateParams=true"
 				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
-					defer GinkgoRecover()
-
 					By("Deleting the user")
 					expectedQuery := "DROP USER IF EXISTS ?@?;"
 					Expect(query).To(Equal(expectedQuery))
@@ -546,7 +534,6 @@ var _ = Describe("MySQL user controller", func() {
 
 			It("doesn't remove the user finalizer and it tries to reconcile again", func() {
 				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
-					defer GinkgoRecover()
 					Expect(query).To(Equal("DROP USER IF EXISTS ?@?;"))
 
 					return deletionResult

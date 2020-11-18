@@ -50,12 +50,20 @@ type MysqlDatabaseCondition struct {
 
 // MysqlDatabaseSpec defines the desired state of MysqlDatabaseSpec
 type MysqlDatabaseSpec struct {
+
 	// ClusterRef represents a reference to the MySQL cluster.
 	// This field should be immutable.
 	ClusterRef ClusterReference `json:"clusterRef"`
+
 	// Database represents the database name which will be created.
 	// This field should be immutable.
 	Database string `json:"database"`
+
+	// CharacterSet represents the charset name used when database is created
+	CharacterSet string `json:"characterSet,omitempty"`
+
+	// Collation represents the collation name used as default database collation
+	Collation string `json:"collation,omitempty"`
 }
 
 // MysqlDatabaseStatus defines the observed state of MysqlDatabase

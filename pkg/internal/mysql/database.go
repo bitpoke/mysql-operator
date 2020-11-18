@@ -22,10 +22,21 @@ import (
 )
 
 // CreateDatabaseIfNotExists creates a database if it doesn't already exist
-func CreateDatabaseIfNotExists(ctx context.Context, sql SQLRunner, database string) error {
-	query := NewQuery(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", Escape(database)))
+func CreateDatabaseIfNotExists(ctx context.Context, sql SQLRunner, database, charset, collate string) error {
+	args := []interface{}{}
+	query := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s`", Escape(database))
 
-	if err := sql.QueryExec(ctx, query); err != nil {
+	if len(charset) > 0 {
+		query += " CHARACTER SET ?"
+		args = append(args, charset)
+	}
+
+	if len(collate) > 0 {
+		query += " COLLATE ?"
+		args = append(args, collate)
+	}
+
+	if err := sql.QueryExec(ctx, NewQuery(query, args...)); err != nil {
 		return fmt.Errorf("failed to create database, err: %s", err)
 	}
 

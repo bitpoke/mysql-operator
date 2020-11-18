@@ -276,3 +276,12 @@ func (c *MysqlCluster) GetSidecarImage() string {
 
 	return sidecarImage
 }
+
+// IsMysqlClusterKind for the given kind checks if CRD kind is for MysqlCluster CRD
+func IsMysqlClusterKind(kind string) bool {
+	switch kind {
+	case "MysqlCluster", "mysqlcluster", "mysqlclusters":
+		return true
+	}
+	return false
+}
