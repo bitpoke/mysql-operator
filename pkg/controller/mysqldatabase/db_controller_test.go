@@ -69,7 +69,10 @@ var _ = Describe("MySQL database controller", func() {
 		fakeQR = fake.NewQueryRunner(false)
 
 		var recFn reconcile.Reconciler
-		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, fake.NewFakeFactory(fakeQR)))
+		rec := newReconciler(mgr, fake.NewFakeFactory(fakeQR)).(*ReconcileMySQLDatabase)
+		// inject an uncached client
+		rec.Client = c
+		recFn, requests = testutil.SetupTestReconcile(rec)
 		Expect(add(mgr, recFn)).To(Succeed())
 
 		stop = testutil.StartTestManager(mgr)
@@ -88,20 +91,17 @@ var _ = Describe("MySQL database controller", func() {
 		BeforeEach(func() {
 			clusterName = fmt.Sprintf("mysql-%d", rand.Int())
 			db = factories.NewDatabase(factories.WithMySQLCluster(context.TODO(), c, clusterName))
+			dbName := db.Name
 
 			fakeQR.AddExpectedCalls(
 				func(query string, args ...interface{}) error {
-					defer GinkgoRecover()
-
 					By("Creating the database")
-					Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;", db.Name)))
+					Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s`;", dbName)))
 					Expect(args).To(BeEmpty())
 
 					return nil
 				},
 				func(query string, args ...interface{}) error {
-					defer GinkgoRecover()
-
 					return nil
 				},
 			)
@@ -144,8 +144,6 @@ var _ = Describe("MySQL database controller", func() {
 			It("should not delete the db if query returns error", func() {
 				fakeQR.AddExpectedCalls(
 					func(query string, args ...interface{}) error {
-						defer GinkgoRecover()
-
 						return fmt.Errorf("fake db connection error")
 					},
 				)
@@ -163,8 +161,6 @@ var _ = Describe("MySQL database controller", func() {
 			It("should drop the database when deleted ", func() {
 				fakeQR.AddExpectedCalls(
 					func(query string, args ...interface{}) error {
-						defer GinkgoRecover()
-
 						By("Deleting the database")
 						//Expect(dsn).To(Equal(getExpectedDSN(clusterName)))
 						Expect(query).To(Equal(fmt.Sprintf("DROP DATABASE IF EXISTS `%s`;", db.Spec.Database)))
@@ -213,13 +209,14 @@ var _ = Describe("MySQL database controller", func() {
 	It("should run the correct queries", func() {
 		clusterName := fmt.Sprintf("mysql-%d", rand.Int())
 		db := factories.NewDatabase(factories.WithMySQLCluster(context.TODO(), c, clusterName))
+		dbName := db.Name
 
 		fakeQR.AddExpectedCalls(
 			func(query string, args ...interface{}) error {
 				defer GinkgoRecover()
 
 				By("Creating the database")
-				Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;", db.Name)))
+				Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s`;", dbName)))
 
 				return nil
 			},
@@ -227,7 +224,7 @@ var _ = Describe("MySQL database controller", func() {
 				defer GinkgoRecover()
 
 				By("Creating the database second run")
-				Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;", db.Name)))
+				Expect(query).To(Equal(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s`;", dbName)))
 
 				return nil
 			},
@@ -244,7 +241,6 @@ var _ = Describe("MySQL database controller", func() {
 	})
 
 	It("should fail if the cluster doesn't exists", func() {
-		fakeQR.AllowExtraCalls()
 		db := factories.NewDatabase()
 
 		Expect(c.Create(context.TODO(), db.Unwrap())).To(Succeed())
@@ -258,6 +254,7 @@ var _ = Describe("MySQL database controller", func() {
 
 		Expect(c.Delete(context.TODO(), db.Unwrap())).To(Succeed())
 
+		fakeQR.AllowExtraCalls()
 		forceDeleteDb(c, db)
 	})
 
@@ -291,6 +288,7 @@ var _ = Describe("MySQL database controller", func() {
 		Expect(c.Get(context.TODO(), dbObjKey(db), db.Unwrap())).To(Succeed())
 		Expect(db.Unwrap()).To(gm.HaveCondition(mysqlv1alpha1.MysqlDatabaseReady, corev1.ConditionFalse))
 
+		fakeQR.AllowExtraCalls()
 		forceDeleteDb(c, db)
 	})
 })

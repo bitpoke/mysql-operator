@@ -40,6 +40,7 @@ import (
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysql"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqluser"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
@@ -129,13 +130,6 @@ func (r *ReconcileMySQLUser) removeUser(ctx context.Context, user *mysqluser.MyS
 	return nil
 }
 
-//func (r *ReconcileMySQLUser) updateUserStatusFromCluster(ctx context.Context, user *mysqluser.MysqlUser) (err error) {
-//	// catch the error and set the failed status
-//	defer setFailedStatus(&err, user)
-//
-//	return nil
-//}
-
 func (r *ReconcileMySQLUser) reconcileUserInCluster(ctx context.Context, user *mysqluser.MySQLUser) (err error) {
 	// catch the error and set the failed status
 	defer setFailedStatus(&err, user)
@@ -187,7 +181,7 @@ func (r *ReconcileMySQLUser) reconcileUserInDB(ctx context.Context, user *mysqlu
 	}
 
 	// create/ update user in database
-	log.Info("creating mysql user", "key", user.GetKey(), "database", user.Spec.User, "cluster", user.GetClusterKey())
+	log.Info("creating mysql user", "key", user.GetKey(), "username", user.Spec.User, "cluster", user.GetClusterKey())
 	if err := mysql.CreateUserIfNotExists(ctx, sql, user.Spec.User, password, user.Spec.AllowedHosts,
 		user.Spec.Permissions, user.Spec.ResourceLimits); err != nil {
 		return err
@@ -232,7 +226,7 @@ func (r *ReconcileMySQLUser) dropUserFromDB(ctx context.Context, user *mysqluser
 		// if the mysql cluster does not exists then we can safely assume that
 		// the user is deleted so exist successfully
 		statusErr, ok := err.(*apierrors.StatusError)
-		if ok && statusErr.Status().Details.Kind == "MysqlCluster" {
+		if ok && mysqlcluster.IsMysqlClusterKind(statusErr.Status().Details.Kind) {
 			// it seems the cluster is not to be found, so we assume it has been deleted
 			return nil
 		}

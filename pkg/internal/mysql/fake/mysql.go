@@ -19,9 +19,9 @@ package fake
 import (
 	"context"
 	"fmt"
-	"github.com/onsi/ginkgo"
 	"sync"
 
+	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 
 	"github.com/presslabs/mysql-operator/pkg/internal/mysql"

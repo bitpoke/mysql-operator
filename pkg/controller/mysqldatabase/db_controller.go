@@ -38,6 +38,7 @@ import (
 
 	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysql"
+	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqldatabase"
 	"github.com/presslabs/mysql-operator/pkg/options"
 )
@@ -126,20 +127,22 @@ func (r *ReconcileMySQLDatabase) Reconcile(request reconcile.Request) (reconcile
 func (r *ReconcileMySQLDatabase) deleteDatabase(ctx context.Context, db *mysqldatabase.Database) error {
 	log.Info("deleting MySQL database", "name", db.Name, "database", db.Spec.Database)
 
-	sql, close, err := r.SQLRunnerFactory(mysql.NewConfigFromClusterKey(r.Client, db.GetClusterKey()))
+	sql, closeConn, err := r.SQLRunnerFactory(mysql.NewConfigFromClusterKey(r.Client, db.GetClusterKey()))
+	defer closeConn()
 	if apierrors.IsNotFound(err) {
 		// if the mysql cluster does not exists then we can safely assume that
 		// the db is deleted so exist successfully
 		statusErr, ok := err.(*apierrors.StatusError)
-		if ok && statusErr.Status().Details.Kind == "MysqlCluster" {
+		if ok && mysqlcluster.IsMysqlClusterKind(statusErr.Status().Details.Kind) {
 			// it seems the cluster is not to be found, so we assume it has been deleted
 			return nil
 		}
+
+		return err
+
 	} else if err != nil {
 		return err
 	}
-
-	defer close()
 
 	log.Info("removing database from mysql cluster", "key", db.Unwrap(), "database", db.Spec.Database)
 
@@ -154,15 +157,15 @@ func (r *ReconcileMySQLDatabase) deleteDatabase(ctx context.Context, db *mysqlda
 func (r *ReconcileMySQLDatabase) createDatabase(ctx context.Context, db *mysqldatabase.Database) error {
 	log.Info("creating MySQL database", "name", db.Name, "database", db.Spec.Database)
 
-	sql, close, err := r.SQLRunnerFactory(mysql.NewConfigFromClusterKey(r, db.GetClusterKey()))
+	sql, closeConn, err := r.SQLRunnerFactory(mysql.NewConfigFromClusterKey(r, db.GetClusterKey()))
 	if err != nil {
 		return err
 	}
 
-	defer close()
+	defer closeConn()
 
 	// Create database if does not exists
-	return mysql.CreateDatabaseIfNotExists(ctx, sql, db.Spec.Database)
+	return mysql.CreateDatabaseIfNotExists(ctx, sql, db.Spec.Database, db.Spec.CharacterSet, db.Spec.Collation)
 }
 
 func (r *ReconcileMySQLDatabase) updateReadyCondition(
