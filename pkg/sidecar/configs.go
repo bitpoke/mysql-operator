@@ -240,11 +240,11 @@ func NewConfig() *Config {
 			offset = MysqlServerIDOffset
 		}
 	}
+
 	// get MySQL version from env
 	var mysqlVersion semver.Version
-	mysqlVersionData := getEnvValue("MY_MYSQL_VERSION")
-	if len(mysqlVersionData) != 0 {
-		mysqlVersion = semver.MustParse(mysqlVersionData)
+	if mysqlVersion, err = semver.Parse(getEnvValue("MY_MYSQL_VERSION")); err != nil {
+		log.Info("MY_MYSQL_VERSION is not a semver version")
 	}
 
 	cfg := &Config{
