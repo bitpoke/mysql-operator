@@ -265,3 +265,14 @@ func (c *MysqlCluster) GetNamespacedName() types.NamespacedName {
 		Name:      c.Name,
 	}
 }
+
+// GetSidecarImage selects the sidecar docker image based on mysql version
+func (c *MysqlCluster) GetSidecarImage() string {
+	// decide the sidecar image based on mysql version
+	sidecarImage := options.GetOptions().SidecarMysql57Image
+	if c.GetMySQLSemVer().Major == 8 {
+		sidecarImage = options.GetOptions().SidecarMysql8Image
+	}
+
+	return sidecarImage
+}

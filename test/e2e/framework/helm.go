@@ -32,7 +32,8 @@ func HelmInstallChart(release, ns string) {
 		"--values", TestContext.ChartValues, "--wait",
 		"--kube-context", TestContext.KubeContext,
 		"--set", fmt.Sprintf("image=%s", TestContext.OperatorImage),
-		"--set", fmt.Sprintf("sidecarImage=%s", TestContext.SidecarImage),
+		"--set", fmt.Sprintf("sidecarImage=%s", TestContext.SidecarMysql57Image),
+		"--set", fmt.Sprintf("sidecarMysql8Image=%s", TestContext.SidecarMysql8Image),
 		"--set", fmt.Sprintf("orchestrator.image=%s", TestContext.OrchestratorImage),
 	}
 

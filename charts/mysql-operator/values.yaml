@@ -4,7 +4,8 @@
 
 replicas: 1
 image: quay.io/presslabs/mysql-operator:latest
-sidecarImage: quay.io/presslabs/mysql-operator-sidecar:latest
+sidecarImage: quay.io/presslabs/mysql-operator-sidecar-mysql57:latest
+sidecarMysql8Image: quay.io/presslabs/mysql-operator-sidecar-mysql8:latest
 imagePullPolicy: IfNotPresent
 
 # Insert a pre-stop lifecycle hook and trigger a failover. NOTE: Use this when your cluster network

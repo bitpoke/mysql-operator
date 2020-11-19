@@ -37,8 +37,10 @@ func getFromEnvOrDefault(key, def string) string {
 
 // Options is the data structure that contains information about mysql operator configuration
 type Options struct {
-	// SidecarImage is the image used in sidecar container to serve backups and configure MySQL
-	SidecarImage string
+	// SidecarMysql57Image is the image used in sidecar container to serve backups and configure MySQL
+	SidecarMysql57Image string
+	// SidecarMysql8Image as above but used when cluster uses mysql 8.0 and above
+	SidecarMysql8Image string
 
 	// MetricsExporterImage is the image for exporter container
 	MetricsExporterImage string
@@ -118,13 +120,17 @@ const (
 )
 
 var (
-	defaultSidecarImage = "quay.io/presslabs/mysql-operator-sidecar:" + util.AppVersion
+	defaultSidecarMysql57Image = "quay.io/presslabs/mysql-operator-sidecar-mysql57:" + util.AppVersion
+	defaultSidecarMysql8Image  = "quay.io/presslabs/mysql-operator-sidecar-mysql8:" + util.AppVersion
 )
 
 // AddFlags registers all mysql-operator needed flags
 func (o *Options) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.SidecarImage, "sidecar-image", defaultSidecarImage,
-		"The image that instrumentate mysql.")
+	fs.StringVar(&o.SidecarMysql57Image, "sidecar-image", defaultSidecarMysql57Image,
+		"The image that is used for mysql node instrumentation.")
+
+	fs.StringVar(&o.SidecarMysql8Image, "sidecar-mysql8-image", defaultSidecarMysql8Image,
+		"The image that is used for mysql (version 8.0 or above) node instrumentation.")
 
 	fs.StringVar(&o.MetricsExporterImage, "metrics-exporter-image", defaultExporterImage,
 		"The image for mysql metrics exporter.")
@@ -166,7 +172,8 @@ var once sync.Once
 func GetOptions() *Options {
 	once.Do(func() {
 		instance = &Options{
-			SidecarImage:         defaultSidecarImage,
+			SidecarMysql57Image:  defaultSidecarMysql57Image,
+			SidecarMysql8Image:   defaultSidecarMysql8Image,
 			MetricsExporterImage: defaultExporterImage,
 
 			ImagePullPolicy:     defaultImagePullPolicy,
