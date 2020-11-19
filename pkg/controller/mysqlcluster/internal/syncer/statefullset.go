@@ -382,9 +382,10 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		},
 	})
 
+	// set lifecycle hook on MySQL container
 	if s.cluster.Spec.PodSpec.MysqlLifecycle != nil {
 		mysql.Lifecycle = s.cluster.Spec.PodSpec.MysqlLifecycle
-	} else {
+	} else if s.opt.FailoverBeforeShutdownEnabled {
 		mysql.Lifecycle = &core.Lifecycle{
 			PreStop: &core.Handler{
 				Exec: &core.ExecAction{

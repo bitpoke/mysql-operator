@@ -7,6 +7,11 @@ image: quay.io/presslabs/mysql-operator:latest
 sidecarImage: quay.io/presslabs/mysql-operator-sidecar:latest
 imagePullPolicy: IfNotPresent
 
+# Insert a pre-stop lifecycle hook and trigger a failover. NOTE: Use this when your cluster network
+# policy allows to connect across namespaces and the mysql node is able to connecto to operator pod
+gracefulShutdown:
+  enabled: false
+
 imagePullSecrets:
 # - name: "image-pull-secret"
 

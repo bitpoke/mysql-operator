@@ -72,6 +72,10 @@ type Options struct {
 
 	// OrchestratorConcurrentReconciles sets the orchestrator controller workers
 	OrchestratorConcurrentReconciles int32
+
+	// FailoverBeforeShutdownEnabled if enabled inserts a pre-stop lifecycle hook into pod
+	// to trigger a failover before shutdown
+	FailoverBeforeShutdownEnabled bool
 }
 
 type pullpolicy corev1.PullPolicy
@@ -108,6 +112,9 @@ const (
 	defaultLeaderElectionID        = "mysql-operator-leader-election"
 
 	defaultNamespace = ""
+
+	// TODO(next): make this true by default in next major release
+	defaultFailoverBeforeShutdownEnabled = false
 )
 
 var (
@@ -147,6 +154,9 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 	fs.Int32Var(&o.OrchestratorConcurrentReconciles, "orchestrator-concurrent-reconciles", 10,
 		"Set the number of workers for orchestrator reconciler.")
+
+	fs.BoolVar(&o.FailoverBeforeShutdownEnabled, "failover-before-shutdown", defaultFailoverBeforeShutdownEnabled,
+		"In pre-stop hook trigger a failover from Orchestrator")
 }
 
 var instance *Options
@@ -166,6 +176,8 @@ func GetOptions() *Options {
 			OrchestratorTopologyPassword: defaultOrchestratorTopologyPassword,
 
 			Namespace: defaultNamespace,
+
+			FailoverBeforeShutdownEnabled: defaultFailoverBeforeShutdownEnabled,
 		}
 	})
 

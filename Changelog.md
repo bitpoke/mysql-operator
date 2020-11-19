@@ -14,9 +14,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Add `initBucketURL` and `initBucketSecretName` options to MysqlCluster chart. This bumps the chart version to `0.3.0`
  * Add an example of how initContainers can be used to fix hostPath permissions.
  * Add a lifecycle preStop hook for the `mysql` container. Before killing the master MySQL process,
-   it triggers a `graceful-master-takeover-auto` command in Orchestrator.
- * Add `mysqlLifecycle` to `.Spec.PodSpec` to allow overriding the default lifecycle hook
-   for the `mysql` container.
+   it triggers a `graceful-master-takeover-auto` command in Orchestrator. This is disabled by
+   default, to enable it set `gracefulShutdown.enabled=true` in chart values or set the controller
+   command argument `failover-before-shutdown` to `true`.
+ * Add `mysqlLifecycle` to `.Spec.PodSpec` to allow overriding the default lifecycle hook for the
+   `mysql` container.
  * Add `backupCompressCommand` and `backupDecompressCommand` to allow using
    different compressors/decompressors when backing up or restoring.
 ### Changed

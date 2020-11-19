@@ -54,6 +54,11 @@ spec:
             {{- if .Values.watchNamespace }}
             - --namespace={{ .Values.watchNamespace }}
             {{- end }}
+            {{- if .Values.gracefulShutdown.enabled }}
+            - --failover-before-shutdown=true
+            {{- else }}
+            - --failover-before-shutdown=false
+            {{- end }}
             {{- range $arg := .Values.extraArgs }}
             - {{ $arg }}
             {{- end }}
