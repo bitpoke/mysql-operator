@@ -54,87 +54,23 @@ pipeline:
     commands:
       - make chart
 
-  publish-operator:
+  publish-images:
     group: publish
-    image: plugins/docker
-    registry: quay.io
-    repo: quay.io/presslabs/mysql-operator
-    username: presslabs+drone
-    tags: ["${DRONE_BRANCH/master/latest}"]
+    image: quay.io/presslabs/bfc:latest
+    environment:
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_USER: presslabs+drone
     secrets:
       - source: QUAY_TOKEN
         target: DOCKER_PASSWORD
+    commands:
+      - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD quay.io
+      - make images
+      - make publish
     when:
-      event: push
-
-  publish-operator:
-    group: publish
-    image: plugins/docker
-    registry: quay.io
-    repo: quay.io/presslabs/mysql-operator
-    username: presslabs+drone
-    auto_tag: true
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
-    when:
-      event: tag
-
-  publish-sidecar:
-    group: publish
-    image: plugins/docker
-    registry: quay.io
-    repo: quay.io/presslabs/mysql-operator-sidecar
-    username: presslabs+drone
-    dockerfile: Dockerfile.sidecar
-    tags: ["${DRONE_BRANCH/master/latest}"]
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
-    when:
-      event: push
-
-  publish-sidecar:
-    group: publish
-    image: plugins/docker
-    registry: quay.io
-    repo: quay.io/presslabs/mysql-operator-sidecar
-    username: presslabs+drone
-    dockerfile: Dockerfile.sidecar
-    auto_tag: true
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
-    when:
-      event: tag
-
-  publish-orchestrator:
-    group: publish
-    image: plugins/docker
-    registry: quay.io
-    repo: quay.io/presslabs/mysql-operator-orchestrator
-    username: presslabs+drone
-    dockerfile: Dockerfile.orchestrator
-    tags: ["${DRONE_BRANCH/master/latest}"]
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
-    when:
-      event: push
-
-  publish-orchestrator:
-    group: publish
-    image: plugins/docker
-    registry: quay.io
-    repo: quay.io/presslabs/mysql-operator-orchestrator
-    username: presslabs+drone
-    dockerfile: Dockerfile.orchestrator
-    auto_tag: true
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
-    when:
-      event: tag
+      event:
+        - push
+        - tag
 
   publish-helm-chart:
     image: quay.io/presslabs/kluster-toolbox
@@ -212,7 +148,8 @@ pipeline:
       - setup-credentials-helper.sh
       - go test ./test/e2e -v --kubernetes-config /root/go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
             --operator-image quay.io/presslabs/mysql-operator:${DRONE_BRANCH/master/latest}
-            --sidecar-image quay.io/presslabs/mysql-operator-sidecar:${DRONE_BRANCH/master/latest}
+            --sidecar-mysql57-image quay.io/presslabs/mysql-operator-sidecar-mysql57:${DRONE_BRANCH/master/latest}
+            --sidecar-mysql8-image quay.io/presslabs/mysql-operator-sidecar-mysql8:${DRONE_BRANCH/master/latest}
             --orchestrator-image quay.io/presslabs/mysql-operator-orchestrator:${DRONE_BRANCH/master/latest}
             --pod-wait-timeout 150
             --dump-logs-on-failure=false
@@ -237,3 +174,16 @@ pipeline:
       branch: master
       event: push
 
+
+services:
+  docker:
+    image: docker:dind
+    privileged: true
+    commands:
+      - mkdir -p "$CI_WORKSPACE/.work/docker" "$CI_WORKSPACE/.cache/docker"
+      - /usr/local/bin/dockerd-entrypoint.sh dockerd --host "unix://$CI_WORKSPACE/.work/docker/docker.sock" --storage-driver overlay2 --log-level error
+
+    when:
+      event:
+        - push
+        - tag
