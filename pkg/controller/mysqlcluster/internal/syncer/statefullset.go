@@ -348,7 +348,7 @@ func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
 
 	// clone and init container
 	cloneInit := s.ensureContainer(containerCloneAndInitName,
-		s.opt.SidecarImage,
+		s.cluster.GetSidecarImage(),
 		[]string{"clone-and-init"},
 	)
 	initCs = append(initCs, cloneInit)
@@ -414,7 +414,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 
 	// SIDECAR container
 	sidecar := s.ensureContainer(containerSidecarName,
-		s.opt.SidecarImage,
+		s.cluster.GetSidecarImage(),
 		[]string{"config-and-serve"},
 	)
 	sidecar.Ports = ensurePorts(core.ContainerPort{
@@ -464,7 +464,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 
 	// PT-HEARTBEAT container
 	heartbeat := s.ensureContainer(containerHeartBeatName,
-		s.opt.SidecarImage,
+		s.cluster.GetSidecarImage(),
 		[]string{
 			"pt-heartbeat",
 			"--update", "--replace",
@@ -499,7 +499,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		command = append(command, getCliOptionsFromQueryLimits(s.cluster.Spec.QueryLimits)...)
 
 		killer := s.ensureContainer(containerKillerName,
-			s.opt.SidecarImage,
+			s.cluster.GetSidecarImage(),
 			command,
 		)
 

@@ -51,6 +51,9 @@ spec:
             {{- if .Values.sidecarImage }}
             - --sidecar-image={{ .Values.sidecarImage }}
             {{- end -}}
+            {{- if .Values.sidecarMysql8Image }}
+            - --sidecar-mysql8-image={{ .Values.sidecarMysql8Image }}
+            {{- end -}}
             {{- if .Values.watchNamespace }}
             - --namespace={{ .Values.watchNamespace }}
             {{- end }}

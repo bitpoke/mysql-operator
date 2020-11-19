@@ -127,7 +127,7 @@ func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 	}
 
 	in.Containers[0].Name = "backup"
-	in.Containers[0].Image = s.opt.SidecarImage
+	in.Containers[0].Image = s.cluster.GetSidecarImage()
 	in.Containers[0].ImagePullPolicy = s.opt.ImagePullPolicy
 	in.Containers[0].Args = []string{
 		"take-backup-to",

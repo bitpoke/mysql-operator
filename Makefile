@@ -1,7 +1,8 @@
 APP_VERSION ?= $(shell git describe --abbrev=5 --dirty --tags --always)
 REGISTRY := quay.io/presslabs
 IMAGE_NAME := mysql-operator
-SIDECAR_IMAGE_NAME := mysql-operator-sidecar
+SIDECAR_MYSQL57_IMAGE_NAME := mysql-operator-sidecar-mysql57
+SIDECAR_MYSQL8_IMAGE_NAME := mysql-operator-sidecar-mysql8
 BUILD_TAG := build
 IMAGE_TAGS := $(APP_VERSION)
 PKG_NAME := github.com/presslabs/mysql-operator
@@ -126,11 +127,14 @@ dependencies-local: dependencies
 .PHONY: images
 images:
 	docker build . -f Dockerfile -t $(REGISTRY)/$(IMAGE_NAME):$(BUILD_TAG)
-	docker build . -f Dockerfile.sidecar -t $(REGISTRY)/$(SIDECAR_IMAGE_NAME):$(BUILD_TAG)
+	docker build . -f Dockerfile.sidecar -t $(REGISTRY)/$(SIDECAR_MYSQL57_IMAGE_NAME):$(BUILD_TAG)
+	docker build . -f Dockerfile.sidecar --build-arg XTRABACKUP_PKG=percona-xtrabackup-80 \
+								-t $(REGISTRY)/$(SIDECAR_MYSQL8_IMAGE_NAME):$(BUILD_TAG)
 	set -e; \
 		for tag in $(IMAGE_TAGS); do \
 			docker tag $(REGISTRY)/$(IMAGE_NAME):$(BUILD_TAG) $(REGISTRY)/$(IMAGE_NAME):$${tag}; \
-			docker tag $(REGISTRY)/$(SIDECAR_IMAGE_NAME):$(BUILD_TAG) $(REGISTRY)/$(SIDECAR_IMAGE_NAME):$${tag}; \
+			docker tag $(REGISTRY)/$(SIDECAR_MYSQL57_IMAGE_NAME):$(BUILD_TAG) $(REGISTRY)/$(SIDECAR_MYSQL57_IMAGE_NAME):$${tag}; \
+			docker tag $(REGISTRY)/$(SIDECAR_MYSQL8_IMAGE_NAME):$(BUILD_TAG) $(REGISTRY)/$(SIDECAR_MYSQL8_IMAGE_NAME):$${tag}; \
 	done
 
 # Push the docker image
@@ -139,7 +143,8 @@ publish: images
 	set -e; \
 		for tag in $(IMAGE_TAGS); do \
 		docker push $(REGISTRY)/$(IMAGE_NAME):$${tag}; \
-		docker push $(REGISTRY)/$(SIDECAR_IMAGE_NAME):$${tag}; \
+		docker push $(REGISTRY)/$(SIDECAR_MYSQL57_IMAGE_NAME):$${tag}; \
+		docker push $(REGISTRY)/$(SIDECAR_MYSQL8_IMAGE_NAME):$${tag}; \
 	done
 
 # E2E tests
@@ -161,5 +166,6 @@ e2e-remote:
 		--kubernetes-config $(KUBECONFIG) --kubernetes-context $(K8S_CONTEXT) \
 		--report-dir ../../e2e-reports \
 		--operator-image quay.io/presslabs/mysql-operator:$(E2E_IMG_TAG) \
-		--sidecar-image  quay.io/presslabs/mysql-operator-sidecar:$(E2E_IMG_TAG) \
+		--sidecar-mysql57-image  quay.io/presslabs/mysql-operator-sidecar-mysql57:$(E2E_IMG_TAG) \
+		--sidecar-mysql8-image  quay.io/presslabs/mysql-operator-sidecar-mysql8:$(E2E_IMG_TAG) \
 		--orchestrator-image  quay.io/presslabs/mysql-operator-orchestrator:$(E2E_IMG_TAG)

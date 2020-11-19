@@ -5,9 +5,16 @@ build:
   - image: quay.io/presslabs/mysql-operator
     docker:
       dockerfile: hack/development/Dockerfile.operator
-  - image: quay.io/presslabs/mysql-operator-sidecar
+  - image: quay.io/presslabs/mysql-operator-sidecar-mysql57
     docker:
       dockerfile: hack/development/Dockerfile.sidecar
+      buildArgs:
+        XTRABACKUP_PKG: percona-xtrabackup-24
+  - image: quay.io/presslabs/mysql-operator-sidecar-mysql8
+    docker:
+      dockerfile: hack/development/Dockerfile.sidecar
+      buildArgs:
+        XTRABACKUP_PKG: percona-xtrabackup-80
   - image: quay.io/presslabs/mysql-operator-orchestrator
     docker:
       dockerfile: hack/development/Dockerfile.orchestrator
@@ -22,5 +29,6 @@ deploy:
       - hack/development/dev-values.yaml
       values:
         image: quay.io/presslabs/mysql-operator
-        sidecarImage: quay.io/presslabs/mysql-operator-sidecar
+        sidecarImage: quay.io/presslabs/mysql-operator-sidecar-mysql57
+        sidecarMysql8Image: quay.io/presslabs/mysql-operator-sidecar-mysql8
         orchestrator.image: quay.io/presslabs/mysql-operator-orchestrator

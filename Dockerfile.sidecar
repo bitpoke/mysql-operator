@@ -58,9 +58,10 @@ RUN apt-get update \
 COPY hack/docker/percona.gpg /etc/apt/trusted.gpg.d/percona.gpg
 RUN echo 'deb https://repo.percona.com/apt buster main' > /etc/apt/sources.list.d/percona.list
 
+ARG XTRABACKUP_PKG=percona-xtrabackup-24
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        percona-toolkit percona-xtrabackup-80 unzip default-mysql-client
+        percona-toolkit ${XTRABACKUP_PKG} unzip default-mysql-client
 
 
 USER mysql
