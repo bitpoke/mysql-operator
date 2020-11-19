@@ -4,13 +4,13 @@ build:
   artifacts:
   - image: quay.io/presslabs/mysql-operator
     docker:
-      dockerfile: Dockerfile
+      dockerfile: hack/development/Dockerfile.operator
   - image: quay.io/presslabs/mysql-operator-sidecar
     docker:
-      dockerfile: Dockerfile.sidecar
+      dockerfile: hack/development/Dockerfile.sidecar
   - image: quay.io/presslabs/mysql-operator-orchestrator
     docker:
-      dockerfile: Dockerfile.orchestrator
+      dockerfile: hack/development/Dockerfile.orchestrator
   local:
     push: true
 deploy:
