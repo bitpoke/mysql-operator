@@ -58,3 +58,8 @@ spec:
   volumeSpec:
     {{ toYaml .Values.volumeSpec | nindent 4 }}
   {{- end }}
+
+  {{- if .Values.initFileExtraSQL }}
+  initFileExtraSQL:
+    {{ toYaml .Values.initFileExtraSQL | nindent 4 }}
+  {{- end }}
