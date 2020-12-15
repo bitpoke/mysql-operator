@@ -51,7 +51,9 @@ $(KUBEBUILDER):
 	@rm -fr $(TOOLS_HOST_DIR)/tmp
 	@$(OK) installing kubebuilder $(KUBEBUILDER_VERSION)
 
-$(eval $(call tool.go.get,controller-gen,v0.2.4,sigs.k8s.io/controller-tools/cmd/controller-gen))
+CONTROLLER_GEN_VERSION ?= 0.2.4
+CONTROLLER_GEN_URL ?= sigs.k8s.io/controller-tools/cmd/controller-gen
+$(eval $(call tool.go.get,controller-gen,v$(CONTROLLER_GEN_VERSION),$(CONTROLLER_GEN_URL)))
 
 # ====================================================================================
 # Kubebuilder Targets
