@@ -39,6 +39,10 @@ func RunConfigCommand(cfg *Config) error {
 		return fmt.Errorf("copy file my.cnf: %s", err)
 	}
 
+	if err = copyFile(mountConfigDir+"/"+shPreStop, configDir+"/"+shPreStop); err != nil {
+		return fmt.Errorf("copy file %s: %s", shPreStop, err)
+	}
+
 	if err = os.Mkdir(confDPath, os.FileMode(0755)); err != nil {
 		if !os.IsExist(err) {
 			return fmt.Errorf("error mkdir %s/conf.d: %s", configDir, err)
