@@ -74,4 +74,6 @@ var (
 
 	// xbstream Executable Name
 	xbstreamCommand = "xbstream"
+
+	shPreStop = constants.ShPreStop
 )
