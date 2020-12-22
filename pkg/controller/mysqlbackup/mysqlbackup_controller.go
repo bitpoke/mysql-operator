@@ -183,6 +183,14 @@ func (r *ReconcileMysqlBackup) updateBackup(savedBackup *mysqlv1alpha1.MysqlBack
 			return err
 		}
 	}
+	if !reflect.DeepEqual(savedBackup.Status, backup.Unwrap().Status) {
+		log.Info("update backup object status")
+		if err := r.Status().Update(context.TODO(), backup.Unwrap()); err != nil {
+			log.Error(err, fmt.Sprintf("update status backup %s/%s", backup.Name, backup.Namespace),
+				"backupStatus", backup.Status)
+			return err
+		}
+	}
 	return nil
 }
 
