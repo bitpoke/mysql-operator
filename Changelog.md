@@ -42,7 +42,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Fix #632
  * Fix #637
 
-
 ## [0.4.0] - 2020-06-17
 ### Added
  * Added a `ServiceMonitor` to the operator chart that scrapes all MySQL instances.
