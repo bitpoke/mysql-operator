@@ -39,8 +39,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Fix pod labels diff of map
  * Fixed backup cleanup job bug (#577)
  * Fix Kubebuilder path in Makefile.
- * Fix #632
- * Fix #637
+ * Fix #632 lifeCycle preStop script is not copied to given directory.
+ * Fix #637 mysqlbackup status is not updated correctly.
 
 ## [0.4.0] - 2020-06-17
 ### Added
