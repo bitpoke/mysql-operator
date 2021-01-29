@@ -138,13 +138,11 @@ var _ = Describe("MySQL user controller", func() {
 			It("reconciles the mysql user, but not before the finalizer has been set", func() {
 				expectedDSN := "root:password@tcp(" + cluster.Name + "-mysql-master." + cluster.Namespace + ":3306)" +
 					"/?timeout=5s&multiStatements=true&interpolateParams=true"
+				// copy values to prevent data race detection
+				dbUser := user.Spec.User
+				dbAllowedHost := user.Spec.AllowedHosts[0]
 				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
-					By("Checking finalizer")
-					Expect(c.Get(context.TODO(), userKey, user.Unwrap())).To(Succeed())
-					Expect(meta.HasFinalizer(&user.ObjectMeta, userFinalizer))
-
 					By("Creating user")
-
 					expectedQuery := strings.Join([]string{
 						"BEGIN;\n",
 						"CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?;\n",
@@ -154,8 +152,8 @@ var _ = Describe("MySQL user controller", func() {
 					Expect(query).To(Equal(expectedQuery))
 
 					Expect(args).To(ConsistOf(
-						user.Spec.User, user.Spec.AllowedHosts[0], userPassword,
-						user.Spec.User, user.Spec.AllowedHosts[0], userPassword,
+						dbUser, dbAllowedHost, userPassword,
+						dbUser, dbAllowedHost, userPassword,
 					))
 
 					return nil
@@ -173,6 +171,10 @@ var _ = Describe("MySQL user controller", func() {
 
 				// Wait for reconciliation triggered by finalizer being set
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+				By("Checking finalizer")
+				Expect(c.Get(context.TODO(), userKey, user.Unwrap())).To(Succeed())
+				Expect(meta.HasFinalizer(&user.ObjectMeta, userFinalizer))
 
 				// We need to make sure that the controller does not create infinite loops
 				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
@@ -234,6 +236,9 @@ var _ = Describe("MySQL user controller", func() {
 			It("reconciles the mysql user, but not before the finalizer has been set", func() {
 				expectedDSN := "root:password@tcp(" + cluster.Name + "-mysql-master." + cluster.Namespace + ":3306)" +
 					"/?timeout=5s&multiStatements=true&interpolateParams=true"
+				// copy values to prevent data race detection
+				dbUser := user.Spec.User
+				dbAllowedHost := user.Spec.AllowedHosts[0]
 				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
 					By("Creating the user")
 					expectedQuery := strings.Join([]string{
@@ -248,17 +253,18 @@ var _ = Describe("MySQL user controller", func() {
 					Expect(query).To(Equal(expectedQuery))
 
 					Expect(args).To(ConsistOf(
-						user.Spec.User, user.Spec.AllowedHosts[0], userPassword, // create user
-						user.Spec.User, user.Spec.AllowedHosts[0], userPassword, // alter user
-						user.Spec.User, user.Spec.AllowedHosts[0], // grant privilege #1
-						user.Spec.User, user.Spec.AllowedHosts[0], // grant privilege #2
-						user.Spec.User, user.Spec.AllowedHosts[0], // grant privilege #3
+						dbUser, dbAllowedHost, userPassword, // create user
+						dbUser, dbAllowedHost, userPassword, // alter user
+						dbUser, dbAllowedHost, // grant privilege #1
+						dbUser, dbAllowedHost, // grant privilege #2
+						dbUser, dbAllowedHost, // grant privilege #3
 					))
 
 					return nil
 				}
 
 				fakeSQL.AssertDSN(expectedDSN)
+				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 
 				Expect(c.Create(context.TODO(), user.Unwrap())).To(Succeed())
@@ -267,7 +273,6 @@ var _ = Describe("MySQL user controller", func() {
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 				// Wait for reconciliation triggered by finalizer being set
-				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 				// We need to make sure that the controller does not create infinite loops
