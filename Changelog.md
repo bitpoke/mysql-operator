@@ -41,6 +41,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Fix Kubebuilder path in Makefile.
  * Fix #632 lifeCycle preStop script is not copied to given directory.
  * Fix #637 mysqlbackup status is not updated correctly.
+ * Fix #647 custom conf can't overwrite the default conf
 
 ## [0.4.0] - 2020-06-17
 ### Added
