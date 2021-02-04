@@ -96,8 +96,6 @@ func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
 	cfg := ini.Empty()
 	sec := cfg.Section("mysqld")
 
-	// common configs
-	addKVConfigsToSection(sec, convertMapToKVConfig(mysqlCommonConfigs), cluster.Spec.MysqlConf)
 	if cluster.GetMySQLSemVer().Major == 5 {
 		addKVConfigsToSection(sec, convertMapToKVConfig(mysql5xConfigs))
 	} else if cluster.GetMySQLSemVer().Major == 8 {
@@ -106,6 +104,8 @@ func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
 
 	// boolean configs
 	addBConfigsToSection(sec, mysqlMasterSlaveBooleanConfigs)
+	// add custom configs, would overwrite common configs
+	addKVConfigsToSection(sec, convertMapToKVConfig(mysqlCommonConfigs), cluster.Spec.MysqlConf)
 
 	// include configs from /etc/mysql/conf.d/*.cnf
 	_, err := sec.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
