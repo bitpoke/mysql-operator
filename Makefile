@@ -5,7 +5,7 @@ ORCHESTRATOR_IMAGE_NAME := mysql-operator-orchestrator
 SIDECAR_MYSQL57_IMAGE_NAME := mysql-operator-sidecar-mysql57
 SIDECAR_MYSQL8_IMAGE_NAME := mysql-operator-sidecar-mysql8
 BUILD_TAG := build
-IMAGE_TAGS := $(APP_VERSION:master=latest)
+IMAGE_TAGS := $(APP_VERSION)
 PKG_NAME := github.com/presslabs/mysql-operator
 
 BINDIR := $(PWD)/bin
@@ -163,7 +163,7 @@ e2e-local: images
 		--kubernetes-config $(KUBECONFIG) --kubernetes-context $(K8S_CONTEXT) \
 		--report-dir ../../e2e-reports
 
-E2E_IMG_TAG ?= latest
+E2E_IMG_TAG ?= $(APP_VERSION)
 e2e-remote:
 	go test ./test/e2e -v $(G_ARGS) -timeout 50m --pod-wait-timeout 200 \
 		-ginkgo.slowSpecThreshold 300 \
