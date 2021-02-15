@@ -1,10 +1,11 @@
 APP_VERSION ?= $(shell git describe --abbrev=5 --dirty --tags --always)
 REGISTRY := quay.io/presslabs
 IMAGE_NAME := mysql-operator
+ORCHESTRATOR_IMAGE_NAME := mysql-operator-orchestrator
 SIDECAR_MYSQL57_IMAGE_NAME := mysql-operator-sidecar-mysql57
 SIDECAR_MYSQL8_IMAGE_NAME := mysql-operator-sidecar-mysql8
 BUILD_TAG := build
-IMAGE_TAGS := $(APP_VERSION)
+IMAGE_TAGS := $(APP_VERSION:master=latest)
 PKG_NAME := github.com/presslabs/mysql-operator
 
 BINDIR := $(PWD)/bin
@@ -127,12 +128,14 @@ dependencies-local: dependencies
 .PHONY: images
 images:
 	docker build . -f Dockerfile -t $(REGISTRY)/$(IMAGE_NAME):$(BUILD_TAG)
+	docker build . -f Dockerfile.orchestrator -t $(REGISTRY)/$(ORCHESTRATOR_IMAGE_NAME):$(BUILD_TAG)
 	docker build . -f Dockerfile.sidecar -t $(REGISTRY)/$(SIDECAR_MYSQL57_IMAGE_NAME):$(BUILD_TAG)
 	docker build . -f Dockerfile.sidecar --build-arg XTRABACKUP_PKG=percona-xtrabackup-80 \
-								-t $(REGISTRY)/$(SIDECAR_MYSQL8_IMAGE_NAME):$(BUILD_TAG)
+					-t $(REGISTRY)/$(SIDECAR_MYSQL8_IMAGE_NAME):$(BUILD_TAG)
 	set -e; \
 		for tag in $(IMAGE_TAGS); do \
 			docker tag $(REGISTRY)/$(IMAGE_NAME):$(BUILD_TAG) $(REGISTRY)/$(IMAGE_NAME):$${tag}; \
+			docker tag $(REGISTRY)/$(ORCHESTRATOR_IMAGE_NAME):$(BUILD_TAG) $(REGISTRY)/$(ORCHESTRATOR_IMAGE_NAME):$${tag}; \
 			docker tag $(REGISTRY)/$(SIDECAR_MYSQL57_IMAGE_NAME):$(BUILD_TAG) $(REGISTRY)/$(SIDECAR_MYSQL57_IMAGE_NAME):$${tag}; \
 			docker tag $(REGISTRY)/$(SIDECAR_MYSQL8_IMAGE_NAME):$(BUILD_TAG) $(REGISTRY)/$(SIDECAR_MYSQL8_IMAGE_NAME):$${tag}; \
 	done
@@ -143,6 +146,7 @@ publish: images
 	set -e; \
 		for tag in $(IMAGE_TAGS); do \
 		docker push $(REGISTRY)/$(IMAGE_NAME):$${tag}; \
+		docker push $(REGISTRY)/$(ORCHESTRATOR_IMAGE_NAME):$${tag}; \
 		docker push $(REGISTRY)/$(SIDECAR_MYSQL57_IMAGE_NAME):$${tag}; \
 		docker push $(REGISTRY)/$(SIDECAR_MYSQL8_IMAGE_NAME):$${tag}; \
 	done

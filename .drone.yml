@@ -65,7 +65,6 @@ pipeline:
         target: DOCKER_PASSWORD
     commands:
       - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD quay.io
-      - make images
       - make publish
     when:
       event:
