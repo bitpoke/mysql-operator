@@ -64,10 +64,11 @@ type ReconcileMySQLDatabase struct {
 // check for reconciler to implement reconciler.Reconciler interface
 var _ reconcile.Reconciler = &ReconcileMySQLDatabase{}
 
-// Reconcile reads that state of the cluster for a Wordpress object and makes changes based on the state read
-// and what is in the Wordpress.Spec
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqldatabases;mysqldatabases/status,verbs=get;list;watch;create;update;patch;delete
+
+// Reconcile reads that state of the cluster for a Wordpress object and makes changes based on the state read
+// and what is in the Wordpress.Spec
 func (r *ReconcileMySQLDatabase) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx := context.Background()
 

@@ -66,10 +66,11 @@ type ReconcileMySQLUser struct {
 // check for reconciler to implement reconciler.Reconciler interface
 var _ reconcile.Reconciler = &ReconcileMySQLUser{}
 
-// Reconcile reads that state of the cluster for a MysqlUser object and makes changes based on the state read
-// and what is in the MysqlUser.Spec
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlusers;mysqlusers/status,verbs=get;list;watch;create;update;patch;delete
+
+// Reconcile reads that state of the cluster for a MysqlUser object and makes changes based on the state read
+// and what is in the MysqlUser.Spec
 func (r *ReconcileMySQLUser) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx := context.Background()
 

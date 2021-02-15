@@ -89,6 +89,32 @@ rules:
       - update
       - watch
   - apiGroups:
+      - mysql.presslabs.org
+    resources:
+      - mysqldatabases
+      - mysqldatabases/status
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - mysql.presslabs.org
+    resources:
+      - mysqlusers
+      - mysqlusers/status
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
       - policy
     resources:
       - poddisruptionbudgets
