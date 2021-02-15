@@ -48,18 +48,13 @@ pipeline:
       - make -s fmt generate manifests
       - git diff --exit-code
 
-  build-chart:
-    group: build
-    image: quay.io/presslabs/bfc:0.4
-    commands:
-      - make chart
-
   publish-images:
     group: publish
     image: quay.io/presslabs/bfc:latest
     environment:
       DOCKER_HOST: tcp://docker:2375
       DOCKER_USER: presslabs+drone
+      APP_VERSION: ${DRONE_TAG:-${DRONE_BRANCH/master/latest}}
     secrets:
       - source: QUAY_TOKEN
         target: DOCKER_PASSWORD
@@ -70,6 +65,14 @@ pipeline:
       event:
         - push
         - tag
+
+  build-chart:
+    group: build
+    image: quay.io/presslabs/bfc:0.4
+    environment:
+      APP_VERSION: ${DRONE_TAG:-${DRONE_BRANCH/master/latest}}
+    commands:
+      - make chart
 
   publish-helm-chart:
     image: quay.io/presslabs/kluster-toolbox
@@ -138,7 +141,7 @@ pipeline:
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
-      - APP_VERSION=${DRONE_TAG}
+      - APP_VERSION=${DRONE_TAG:-${DRONE_BRANCH/master/latest}}
       - KUBECONFIG=/root/go/.kube/config
       - HELM_HOME=/root/go/.helm/
       - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
@@ -146,10 +149,10 @@ pipeline:
     commands:
       - setup-credentials-helper.sh
       - go test ./test/e2e -v --kubernetes-config /root/go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
-            --operator-image quay.io/presslabs/mysql-operator:${DRONE_BRANCH/master/latest}
-            --sidecar-mysql57-image quay.io/presslabs/mysql-operator-sidecar-mysql57:${DRONE_BRANCH/master/latest}
-            --sidecar-mysql8-image quay.io/presslabs/mysql-operator-sidecar-mysql8:${DRONE_BRANCH/master/latest}
-            --orchestrator-image quay.io/presslabs/mysql-operator-orchestrator:${DRONE_BRANCH/master/latest}
+            --operator-image quay.io/presslabs/mysql-operator:$APP_VERSION
+            --sidecar-mysql57-image quay.io/presslabs/mysql-operator-sidecar-mysql57:$APP_VERSION
+            --sidecar-mysql8-image quay.io/presslabs/mysql-operator-sidecar-mysql8:$APP_VERSION
+            --orchestrator-image quay.io/presslabs/mysql-operator-orchestrator:$APP_VERSION
             --pod-wait-timeout 150
             --dump-logs-on-failure=false
             -timeout 40m
