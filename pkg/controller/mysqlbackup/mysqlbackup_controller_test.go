@@ -207,7 +207,6 @@ var _ = Describe("MysqlBackup controller", func() {
 
 			// expect reqoncile request
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 			Eventually(refreshFn(c, backupKey)).Should(testutil.BackupHaveCondition(api.BackupComplete, core.ConditionTrue))
 			Eventually(refreshFn(c, backupKey)).Should(testutil.BackupHaveCondition(api.BackupFailed, core.ConditionTrue))
