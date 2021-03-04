@@ -100,7 +100,7 @@ vet:
 generate: manifests
 
 lint:
-	$(BINDIR)/golangci-lint run ./pkg/... ./cmd/...
+	$(BINDIR)/golangci-lint run --timeout 2m0s ./pkg/... ./cmd/...
 	hack/license-check
 
 .PHONY: chart
