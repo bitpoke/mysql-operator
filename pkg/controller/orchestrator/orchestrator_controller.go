@@ -147,7 +147,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				// write all clusters to events chan to be processed
 				clusters.Range(func(key, value interface{}) bool {
 					events <- value.(event.GenericEvent)
-					log.V(1).Info("Schedule new cluster for reconciliation", "event", value)
+					log.V(1).Info("Schedule new cluster for reconciliation", "key", key)
 
 					return true
 				})

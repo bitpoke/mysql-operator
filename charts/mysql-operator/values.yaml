@@ -167,12 +167,13 @@ orchestrator:
     RecoverMasterClusterFilters: ['.*']
     RecoverIntermediateMasterClusterFilters: ['.*']
     # `reset slave all` and `set read_only=0` on promoted master
-    ApplyMySQLPromotionAfterMasterFailover: false
-    MasterFailoverDetachReplicaMasterHost: true
+    ApplyMySQLPromotionAfterMasterFailover: true
     # https://github.com/github/orchestrator/blob/master/docs/configuration-recovery.md#promotion-actions
     # Safety! do not disable unless you know what you are doing
     FailMasterPromotionIfSQLThreadNotUpToDate: true
     DetachLostReplicasAfterMasterFailover: true
+    # set downtime on the failed master
+    MasterFailoverLostInstancesDowntimeMinutes: 10
 
     # orchestrator hooks called in the following order
     # for more information about template: https://github.com/github/orchestrator/blob/master/go/logic/topology_recovery.go#L256

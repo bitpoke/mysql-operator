@@ -382,6 +382,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 				IsUpToDate:        true,
 				IsRecentlyChecked: true,
 				IsLastCheckValid:  true,
+				Uptime:            300,
 			})
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
@@ -395,6 +396,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 				IsUpToDate:        true,
 				IsRecentlyChecked: true,
 				IsLastCheckValid:  true,
+				Uptime:            300,
 			})
 
 			// update cluster nodes status

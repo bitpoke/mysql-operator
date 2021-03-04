@@ -122,7 +122,8 @@ type MysqlClusterSpec struct {
 	// +optional
 	QueryLimits *QueryLimits `json:"queryLimits,omitempty"`
 
-	// Makes the cluster READ ONLY. Set the master to writable or ReadOnly
+	// Makes the cluster READ ONLY. This has not a strong guarantee, in case of a failover the cluster will be writable
+	// for at least a few seconds.
 	// +optional
 	ReadOnly bool `json:"readOnly,omitempty"`
 
