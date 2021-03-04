@@ -45,6 +45,7 @@ const (
 	forgetGraceTime              = 30
 	defaultMaxSlaveLatency int64 = 30
 	mysqlPort                    = 3306
+	uptimeGraceTime              = 15
 )
 
 type orcUpdater struct {
@@ -527,6 +528,11 @@ func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet, master *orc.Ins
 		// master is not found
 		// set cluster read only
 		for _, inst := range insts {
+			// give time to stabilize in case of a failover
+			if !inst.IsUpToDate || inst.Uptime < uptimeGraceTime {
+				ou.log.Info("skip set read-only/writable", "instance", instToLog(&inst))
+				continue
+			}
 			if err = ou.setReadOnlyNode(inst); err != nil {
 				ou.log.Error(err, "failed to set read only", "instance", instToLog(&inst))
 			}
@@ -536,6 +542,13 @@ func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet, master *orc.Ins
 
 	// master is determined
 	for _, inst := range insts {
+		// give time to stabilize in case of a failover
+		// https://github.com/presslabs/mysql-operator/issues/566
+		if !inst.IsUpToDate || inst.Uptime < uptimeGraceTime {
+			ou.log.Info("skip set read-only/writable", "instance", instToLog(&inst))
+			continue
+		}
+
 		if ou.cluster.Spec.ReadOnly {
 			if err = ou.setReadOnlyNode(inst); err != nil {
 				ou.log.Error(err, "failed to set read only", "instance", instToLog(&inst))
