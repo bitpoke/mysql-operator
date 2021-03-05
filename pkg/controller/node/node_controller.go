@@ -164,7 +164,7 @@ type ReconcileMysqlNode struct {
 // and what is in the MysqlCluster.Spec
 // nolint: gocyclo
 func (r *ReconcileMysqlNode) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), mysqlReconciliationTimeout)
+	ctx, cancel := context.WithTimeout(ctx, mysqlReconciliationTimeout)
 	defer cancel()
 
 	pod := &corev1.Pod{}

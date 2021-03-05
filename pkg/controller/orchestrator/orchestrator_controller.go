@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -199,7 +200,7 @@ func (r *ReconcileMysqlCluster) Reconcile(ctx context.Context, request reconcile
 	log.V(1).Info("reconciling cluster")
 
 	// this syncer mutates the cluster and updates it. Should be the first syncer
-	finSyncer := newFinalizerSyncer(r.Client, r.scheme, cluster, r.orcClient)
+	finSyncer := newFinalizerSyncer(r.Client, cluster, r.orcClient)
 	if err := syncer.Sync(context.TODO(), finSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -230,9 +231,9 @@ func (r *ReconcileMysqlCluster) Reconcile(ctx context.Context, request reconcile
 }
 
 // getKey returns a string that represents the key under which cluster is registered
-func getKey(meta client.Object) string {
+func getKey(obj klog.KMetadata) string {
 	return types.NamespacedName{
-		Namespace: meta.GetNamespace(),
-		Name:      meta.GetName(),
+		Namespace: obj.GetNamespace(),
+		Name:      obj.GetName(),
 	}.String()
 }
