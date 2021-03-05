@@ -105,7 +105,7 @@ type ReconcileMysqlBackup struct {
 
 // Reconcile reads that state of the cluster for a MysqlBackup object and makes changes based on the state read
 // and what is in the MysqlBackup.Spec
-func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileMysqlBackup) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlBackup instance
 	backup := mysqlbackup.New(&mysqlv1alpha1.MysqlBackup{})
 	err := r.Get(context.TODO(), request.NamespacedName, backup.Unwrap())

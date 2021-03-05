@@ -142,7 +142,7 @@ type ReconcileMysqlCluster struct {
 // Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
 // and what is in the MysqlCluster.Spec
 // nolint: gocyclo
-func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileMysqlCluster) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlCluster instance
 	cluster := mysqlcluster.New(&mysqlv1alpha1.MysqlCluster{})
 	err := r.Get(context.TODO(), request.NamespacedName, cluster.Unwrap())

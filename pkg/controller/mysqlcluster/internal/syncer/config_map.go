@@ -42,7 +42,7 @@ func NewConfigMapSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 		},
 	}
 
-	return syncer.NewObjectSyncer("ConfigMap", cluster.Unwrap(), cm, c, scheme, func() error {
+	return syncer.NewObjectSyncer("ConfigMap", cluster.Unwrap(), cm, c, func() error {
 		cm.ObjectMeta.Labels = cluster.GetLabels()
 		cm.ObjectMeta.Labels["generated"] = "true"
 

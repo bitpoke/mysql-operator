@@ -43,7 +43,7 @@ import (
 	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 )
 
-type clusterComponents []runtime.Object
+type clusterComponents []client.Object
 
 const timeout = time.Second * 2
 
@@ -56,12 +56,12 @@ var _ = Describe("MysqlCluster controller", func() {
 	var (
 		// channel for incoming reconcile requests
 		requests chan reconcile.Request
-		// stop channel for controller manager
-		stop chan struct{}
 		// controller k8s client
 		c client.Client
 		// k8s runtime scheme
 		scheme *runtime.Scheme
+
+		ctxCancel func()
 	)
 
 	BeforeEach(func() {
@@ -75,11 +75,11 @@ var _ = Describe("MysqlCluster controller", func() {
 		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr))
 		Expect(add(mgr, recFn)).To(Succeed())
 
-		stop = testutil.StartTestManager(mgr)
+		_, ctxCancel = testutil.StartTestManager(mgr)
 	})
 
 	AfterEach(func() {
-		close(stop)
+		ctxCancel()
 	})
 
 	Describe("when creating a new mysql cluster", func() {
@@ -125,7 +125,7 @@ var _ = Describe("MysqlCluster controller", func() {
 				Namespace: cluster.Namespace,
 			}
 
-			components = []runtime.Object{
+			components = []client.Object{
 				&appsv1.StatefulSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-mysql", name),
@@ -193,7 +193,7 @@ var _ = Describe("MysqlCluster controller", func() {
 		})
 
 		DescribeTable("the reconciler",
-			func(nameFmt string, obj runtime.Object) {
+			func(nameFmt string, obj client.Object) {
 				key := types.NamespacedName{
 					Name:      fmt.Sprintf(nameFmt, cluster.Name),
 					Namespace: cluster.Namespace,
@@ -489,7 +489,7 @@ var _ = Describe("MysqlCluster controller", func() {
 	})
 })
 
-func removeAllCreatedResource(c client.Client, clusterComps []runtime.Object) {
+func removeAllCreatedResource(c client.Client, clusterComps []client.Object) {
 	for _, obj := range clusterComps {
 		c.Delete(context.TODO(), obj)
 	}

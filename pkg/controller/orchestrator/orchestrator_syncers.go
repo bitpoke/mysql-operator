@@ -30,7 +30,7 @@ import (
 func newFinalizerSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster, orcClient orc.Interface) syncer.Interface {
 
 	// create the orchestrator finalizer
-	return syncer.NewObjectSyncer("OrchestratorFinalizerSyncer", nil, cluster.Unwrap(), c, scheme, func() error {
+	return syncer.NewObjectSyncer("OrchestratorFinalizerSyncer", nil, cluster.Unwrap(), c, func() error {
 		out := cluster.Unwrap()
 
 		// always add finalizer, this action is idempotent

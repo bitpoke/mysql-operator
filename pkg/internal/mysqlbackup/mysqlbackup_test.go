@@ -18,6 +18,7 @@ package mysqlbackup
 import (
 	"testing"
 
+	"github.com/go-logr/zapr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +28,7 @@ import (
 )
 
 func TestMySQLBackupWrapper(t *testing.T) {
-	logf.SetLogger(logf.ZapLoggerTo(GinkgoWriter, true))
+	logf.SetLogger(zapr.NewLogger(logf.RawStackdriverZapLoggerTo(GinkgoWriter, true)))
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "MySQLBackup wrapper unit tests")

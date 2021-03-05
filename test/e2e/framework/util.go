@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

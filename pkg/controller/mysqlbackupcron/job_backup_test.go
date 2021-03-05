@@ -41,8 +41,8 @@ var _ = Describe("MysqlBackupCron cron job", func() {
 	var (
 		// controller k8s client
 		c client.Client
-		// stop channel for controller manager
-		stop chan struct{}
+
+		ctxCancel func()
 
 		clusterName string
 		namespace   string
@@ -57,7 +57,7 @@ var _ = Describe("MysqlBackupCron cron job", func() {
 		// NOTE: field indexer should be added before starting the manager
 		Expect(addBackupFieldIndexers(mgr)).To(Succeed())
 
-		stop = testutil.StartTestManager(mgr)
+		_, ctxCancel = testutil.StartTestManager(mgr)
 
 		clusterName = fmt.Sprintf("cl-%d", rand.Int31())
 		namespace = "default"
@@ -71,7 +71,7 @@ var _ = Describe("MysqlBackupCron cron job", func() {
 		}
 	})
 	AfterEach(func() {
-		close(stop)
+		ctxCancel()
 	})
 
 	When("more backups are created", func() {

@@ -74,7 +74,7 @@ func NewDeleteJobSyncer(c client.Client, s *runtime.Scheme, backup *mysqlbackup.
 		recorder: r,
 	}
 
-	return syncer.NewObjectSyncer("BackupCleaner", nil, job, c, s, func() error {
+	return syncer.NewObjectSyncer("BackupCleaner", nil, job, c, func() error {
 		return jobSyncer.SyncFn(job)
 	})
 }

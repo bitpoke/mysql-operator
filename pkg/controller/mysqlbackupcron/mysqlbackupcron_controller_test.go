@@ -45,12 +45,12 @@ var _ = Describe("MysqlBackupCron controller", func() {
 	var (
 		// channel for incoming reconcile requests
 		requests chan reconcile.Request
-		// stop channel for controller manager
-		stop chan struct{}
 		// controller k8s client
 		c client.Client
 		// cron job
 		cron *cronpkg.Cron
+
+		ctxCancel func()
 	)
 
 	BeforeEach(func() {
@@ -69,11 +69,11 @@ var _ = Describe("MysqlBackupCron controller", func() {
 		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, cron))
 		Expect(add(mgr, recFn)).To(Succeed())
 
-		stop = testutil.StartTestManager(mgr)
+		_, ctxCancel = testutil.StartTestManager(mgr)
 	})
 
 	AfterEach(func() {
-		close(stop)
+		ctxCancel()
 	})
 
 	// instantiate a cluster and a backup
