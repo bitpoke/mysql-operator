@@ -18,6 +18,7 @@ limitations under the License.
 package testutil
 
 import (
+	"context"
 	"io"
 	"time"
 
@@ -28,12 +29,12 @@ import (
 
 	// loggging
 	"github.com/go-logr/logr"
+	"github.com/go-logr/zapr"
+	logf "github.com/presslabs/controller-util/log"
 
 	core "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	utilLog "github.com/presslabs/controller-util/log"
 )
 
 const (
@@ -54,15 +55,15 @@ func DrainChan(requests <-chan reconcile.Request) {
 
 // NewTestLogger returns a logger good for tests
 func NewTestLogger(w io.Writer) logr.Logger {
-	return utilLog.ZapLoggerTo(w, true)
+	return zapr.NewLogger(logf.RawStackdriverZapLoggerTo(w, true))
 }
 
 // SetupTestReconcile returns a reconcile.Reconcile implementation that delegates to inner and
 // writes the request to requests after Reconcile is finished.
 func SetupTestReconcile(inner reconcile.Reconciler) (reconcile.Reconciler, chan reconcile.Request) {
 	requests := make(chan reconcile.Request)
-	fn := reconcile.Func(func(req reconcile.Request) (reconcile.Result, error) {
-		result, err := inner.Reconcile(req)
+	fn := reconcile.Func(func(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+		result, err := inner.Reconcile(ctx, req)
 		requests <- req
 		return result, err
 	})
@@ -70,13 +71,14 @@ func SetupTestReconcile(inner reconcile.Reconciler) (reconcile.Reconciler, chan 
 }
 
 // StartTestManager adds recFn
-func StartTestManager(mgr manager.Manager) chan struct{} {
-	stop := make(chan struct{})
+func StartTestManager(mgr manager.Manager) (context.Context, func()) {
+	ctx, cancel := context.WithCancel(context.TODO())
+
 	go func() {
 		defer GinkgoRecover()
-		Expect(mgr.Start(stop)).NotTo(HaveOccurred())
+		Expect(mgr.Start(ctx)).NotTo(HaveOccurred())
 	}()
-	return stop
+	return ctx, cancel
 }
 
 // PodHaveCondition is a helper func that returns a matcher to check for an

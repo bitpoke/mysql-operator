@@ -21,17 +21,16 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-logr/zapr"
 	logf "github.com/presslabs/controller-util/log"
-	"github.com/spf13/cobra"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-
 	"github.com/presslabs/mysql-operator/pkg/sidecar"
+	"github.com/spf13/cobra"
 )
 
 var log = logf.Log.WithName("sidecar")
 
 func main() {
-	stop := signals.SetupSignalHandler()
+	stop := make(chan struct{})
 
 	cmd := &cobra.Command{
 		Use:   "mysql-operator-sidecar",
@@ -54,7 +53,7 @@ func main() {
 	}
 
 	// setup logging
-	logf.SetLogger(logf.ZapLogger(debug))
+	logf.SetLogger(zapr.NewLogger(logf.RawStackdriverZapLoggerTo(os.Stderr, true)))
 
 	// init configs
 	cfg := sidecar.NewConfig()

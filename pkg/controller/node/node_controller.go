@@ -129,7 +129,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		// also the pod should not be initialized before and should be running because the init
 		// timeout is ~5s (see above) and the cluster status can become obsolete
 		UpdateFunc: func(evt event.UpdateEvent) bool {
-			return isOwnedByMySQL(evt.MetaNew) && isRunning(evt.ObjectNew) && !isReady(evt.ObjectNew)
+			return isOwnedByMySQL(evt.ObjectNew) && isRunning(evt.ObjectNew) && !isReady(evt.ObjectNew)
 		},
 
 		DeleteFunc: func(evt event.DeleteEvent) bool {
@@ -163,7 +163,7 @@ type ReconcileMysqlNode struct {
 // Reconcile reads that state of the cluster for a MysqlCluster object and makes changes based on the state read
 // and what is in the MysqlCluster.Spec
 // nolint: gocyclo
-func (r *ReconcileMysqlNode) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileMysqlNode) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), mysqlReconciliationTimeout)
 	defer cancel()
 

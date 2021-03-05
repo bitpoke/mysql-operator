@@ -69,9 +69,7 @@ var _ reconcile.Reconciler = &ReconcileMySQLDatabase{}
 
 // Reconcile reads that state of the cluster for a Wordpress object and makes changes based on the state read
 // and what is in the Wordpress.Spec
-func (r *ReconcileMySQLDatabase) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.Background()
-
+func (r *ReconcileMySQLDatabase) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlDatabase instance
 	db := mysqldatabase.Wrap(&mysqlv1alpha1.MysqlDatabase{})
 

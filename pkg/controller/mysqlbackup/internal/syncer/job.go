@@ -60,7 +60,7 @@ func NewJobSyncer(c client.Client, s *runtime.Scheme, backup *mysqlbackup.MysqlB
 		opt:     opt,
 	}
 
-	return syncer.NewObjectSyncer("Job", backup.Unwrap(), obj, c, s, sync.SyncFn)
+	return syncer.NewObjectSyncer("Job", backup.Unwrap(), obj, c, sync.SyncFn)
 }
 
 func (s *jobSyncer) SyncFn() error {

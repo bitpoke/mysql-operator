@@ -71,9 +71,7 @@ var _ reconcile.Reconciler = &ReconcileMySQLUser{}
 
 // Reconcile reads that state of the cluster for a MysqlUser object and makes changes based on the state read
 // and what is in the MysqlUser.Spec
-func (r *ReconcileMySQLUser) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.Background()
-
+func (r *ReconcileMySQLUser) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlUser instance
 	user := mysqluser.Wrap(&mysqlv1alpha1.MysqlUser{})
 

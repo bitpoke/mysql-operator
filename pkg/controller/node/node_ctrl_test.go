@@ -46,12 +46,12 @@ var _ = Describe("MysqlNode controller", func() {
 	var (
 		// channel for incoming reconcile requests
 		requests chan reconcile.Request
-		// stop channel for controller manager
-		stop chan struct{}
 		// controller k8s client
 		c client.Client
 
 		sqli *fakeSQLRunner
+
+		ctxCancel func()
 	)
 
 	BeforeEach(func() {
@@ -69,11 +69,11 @@ var _ = Describe("MysqlNode controller", func() {
 		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, newNodeConn))
 		Expect(add(mgr, recFn)).To(Succeed())
 
-		stop = testutil.StartTestManager(mgr)
+		_, ctxCancel = testutil.StartTestManager(mgr)
 	})
 
 	AfterEach(func() {
-		close(stop)
+		ctxCancel()
 	})
 
 	Describe("when creating a new cluster with new nodes", func() {

@@ -25,7 +25,6 @@ import (
 	"github.com/go-test/deep"
 	"github.com/presslabs/controller-util/syncer"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -102,25 +101,24 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to MysqlCluster. just for add and delete events
 	err = c.Watch(&source.Kind{Type: &mysqlv1alpha1.MysqlCluster{}}, &handler.Funcs{
 		CreateFunc: func(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
-			if evt.Meta == nil {
+			if evt.Object == nil {
 				log.Error(nil, "CreateEvent received with no metadata", "CreateEvent", evt)
 				return
 			}
 
-			log.V(1).Info("register cluster in clusters list", "meta", evt.Meta)
-			clusters.Store(getKey(evt.Meta), event.GenericEvent{ // nolint: megacheck
-				Meta:   evt.Meta,
+			log.V(1).Info("register cluster in clusters list", "obj", evt.Object)
+			clusters.Store(getKey(evt.Object), event.GenericEvent{ // nolint: megacheck
 				Object: evt.Object,
 			})
 		},
 		DeleteFunc: func(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
-			if evt.Meta == nil {
+			if evt.Object == nil {
 				log.Error(nil, "DeleteEvent received with no metadata", "DeleteEvent", evt)
 				return
 			}
 
-			log.V(1).Info("remove cluster from clusters list", "meta", evt.Meta)
-			clusters.Delete(getKey(evt.Meta))
+			log.V(1).Info("remove cluster from clusters list", "obj", evt.Object)
+			clusters.Delete(getKey(evt.Object))
 		},
 	})
 	if err != nil {
@@ -138,10 +136,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// create a runnable function that dispatches events to events channel
 	// this runnableFunc is passed to the manager that starts it.
-	var f manager.RunnableFunc = func(stop <-chan struct{}) error {
+	var f manager.RunnableFunc = func(ctx context.Context) error {
 		for {
 			select {
-			case <-stop:
+			case <-ctx.Done():
 				return nil
 			case <-time.After(reconcileTimePeriod):
 				// write all clusters to events chan to be processed
@@ -177,7 +175,7 @@ type ReconcileMysqlCluster struct {
 // cluster, this reconcile is triggered in a loop.
 //
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
-func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileMysqlCluster) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlCluster instance
 	cluster := mysqlcluster.New(&mysqlv1alpha1.MysqlCluster{})
 	err := r.Get(context.TODO(), request.NamespacedName, cluster.Unwrap())
@@ -232,7 +230,7 @@ func (r *ReconcileMysqlCluster) Reconcile(request reconcile.Request) (reconcile.
 }
 
 // getKey returns a string that represents the key under which cluster is registered
-func getKey(meta metav1.Object) string {
+func getKey(meta client.Object) string {
 	return types.NamespacedName{
 		Namespace: meta.GetNamespace(),
 		Name:      meta.GetName(),

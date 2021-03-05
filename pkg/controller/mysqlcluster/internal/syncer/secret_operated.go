@@ -41,7 +41,7 @@ func NewOperatedSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *m
 		},
 	}
 
-	return syncer.NewObjectSyncer("OperatedSecret", cluster.Unwrap(), secret, c, scheme, func() error {
+	return syncer.NewObjectSyncer("OperatedSecret", cluster.Unwrap(), secret, c, func() error {
 		if secret.Data == nil {
 			secret.Data = make(map[string][]byte)
 		}

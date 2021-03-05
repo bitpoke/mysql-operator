@@ -45,13 +45,13 @@ var _ = Describe("MySQL database controller", func() {
 	var (
 		// channel for incoming reconcile requests
 		requests chan reconcile.Request
-		// stop channel for controller manager
-		stop chan struct{}
 
 		// controller k8s client
 		c client.Client
 
 		fakeQR *fake.SQLRunner
+
+		ctxCancel func()
 	)
 
 	BeforeEach(func() {
@@ -75,11 +75,11 @@ var _ = Describe("MySQL database controller", func() {
 		recFn, requests = testutil.SetupTestReconcile(rec)
 		Expect(add(mgr, recFn)).To(Succeed())
 
-		stop = testutil.StartTestManager(mgr)
+		_, ctxCancel = testutil.StartTestManager(mgr)
 	})
 
 	AfterEach(func() {
-		close(stop)
+		ctxCancel()
 	})
 
 	When("db resource is created", func() {

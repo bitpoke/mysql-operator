@@ -36,7 +36,7 @@ func NewPDBSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster
 		},
 	}
 
-	return syncer.NewObjectSyncer("PDB", cluster.Unwrap(), pdb, c, scheme, func() error {
+	return syncer.NewObjectSyncer("PDB", cluster.Unwrap(), pdb, c, func() error {
 		if pdb.Spec.MinAvailable != nil {
 			// this mean that pdb is created and should return because spec is imutable
 			return nil

@@ -50,12 +50,12 @@ var _ = Describe("MySQL user controller", func() {
 	var (
 		// channel for incoming reconcile requests
 		requests chan reconcile.Request
-		// stop channel for controller manager
-		stop chan struct{}
 		// controller k8s client
 		c client.Client
 		// fake query runner
 		fakeSQL *fake.SQLRunner
+
+		ctxCancel func()
 	)
 
 	BeforeEach(func() {
@@ -78,12 +78,11 @@ var _ = Describe("MySQL user controller", func() {
 		recFn, requests = testutil.SetupTestReconcile(rec)
 		Expect(add(mgr, recFn)).To(Succeed())
 
-		stop = testutil.StartTestManager(mgr)
-
+		_, ctxCancel = testutil.StartTestManager(mgr)
 	})
 
 	AfterEach(func() {
-		close(stop)
+		ctxCancel()
 		fakeSQL.DisallowExtraCalls()
 	})
 

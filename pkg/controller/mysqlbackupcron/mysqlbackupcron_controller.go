@@ -62,9 +62,9 @@ type startStopCron struct {
 	Cron *cron.Cron
 }
 
-func (c startStopCron) Start(stop <-chan struct{}) error {
+func (c startStopCron) Start(ctx context.Context) error {
 	c.Cron.Start()
-	<-stop
+	<-ctx.Done()
 	c.Cron.Stop()
 
 	return nil
@@ -112,7 +112,7 @@ type ReconcileMysqlBackup struct {
 
 // Reconcile reads that state of the cluster for a MysqlBackup object and makes changes based on the state read
 // and what is in the MysqlBackup.Spec
-func (r *ReconcileMysqlBackup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileMysqlBackup) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlBackup instance
 	cluster := &mysqlv1alpha1.MysqlCluster{}
 	err := r.Get(context.TODO(), request.NamespacedName, cluster)
@@ -204,7 +204,7 @@ func (r *ReconcileMysqlBackup) unregisterCluster(clusterKey types.NamespacedName
 }
 
 func addBackupFieldIndexers(mgr manager.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(context.TODO(), &mysqlv1alpha1.MysqlBackup{}, "status.completed", func(b runtime.Object) []string {
+	return mgr.GetFieldIndexer().IndexField(context.TODO(), &mysqlv1alpha1.MysqlBackup{}, "status.completed", func(b client.Object) []string {
 		completed := "false"
 		if b.(*mysqlv1alpha1.MysqlBackup).Status.Completed {
 			completed = "true"

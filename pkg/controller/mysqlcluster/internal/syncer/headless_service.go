@@ -36,7 +36,7 @@ func NewHeadlessSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 		},
 	}
 
-	return syncer.NewObjectSyncer("HeadlessSVC", nil, service, c, scheme, func() error {
+	return syncer.NewObjectSyncer("HeadlessSVC", nil, service, c, func() error {
 		// add general labels to this service
 		service.Labels = map[string]string{
 			"app.kubernetes.io/name":       "mysql",

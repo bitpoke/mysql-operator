@@ -51,8 +51,6 @@ var _ = Describe("Orchestrator controller", func() {
 	var (
 		// channel for incoming reconcile requests
 		requests chan reconcile.Request
-		// stop channel for controller manager
-		stop chan struct{}
 		// controller k8s client
 		c client.Client
 		// orchestrator fake client
@@ -60,6 +58,8 @@ var _ = Describe("Orchestrator controller", func() {
 		//timeouts
 		noReconcileTime  time.Duration
 		reconcileTimeout time.Duration
+
+		ctxCancel func()
 	)
 
 	BeforeEach(func() {
@@ -80,12 +80,12 @@ var _ = Describe("Orchestrator controller", func() {
 		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, orcClient))
 		Expect(add(mgr, recFn)).To(Succeed())
 
-		stop = testutil.StartTestManager(mgr)
+		_, ctxCancel = testutil.StartTestManager(mgr)
 	})
 
 	AfterEach(func() {
 		time.Sleep(1 * time.Second)
-		close(stop)
+		ctxCancel()
 	})
 
 	Describe("after creating a new mysql cluster", func() {
@@ -161,14 +161,14 @@ var _ = Describe("Orchestrator controller", func() {
 
 		It("should re-register cluster for orchestrator sync when re-starting the controller", func() {
 			// restart the controller
-			close(stop)
+			ctxCancel()
 			var recFn reconcile.Reconciler
 			mgr, err := manager.New(cfg, manager.Options{})
 			Expect(err).NotTo(HaveOccurred())
 			c = mgr.GetClient()
 			recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, orcClient))
 			Expect(add(mgr, recFn)).To(Succeed())
-			stop = testutil.StartTestManager(mgr)
+			_, ctxCancel = testutil.StartTestManager(mgr)
 
 			// wait a second for a request
 			Consistently(requests, noReconcileTime).ShouldNot(Receive(Equal(expectedRequest)))

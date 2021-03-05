@@ -40,7 +40,7 @@ func NewSecretSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlclus
 		},
 	}
 
-	return syncer.NewObjectSyncer("Secret", nil, secret, c, scheme, func() error {
+	return syncer.NewObjectSyncer("Secret", nil, secret, c, func() error {
 		if _, ok := secret.Data["ROOT_PASSWORD"]; !ok {
 			return fmt.Errorf("ROOT_PASSWORD not set in secret: %s", secret.Name)
 		}

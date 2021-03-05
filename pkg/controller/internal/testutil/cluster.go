@@ -29,7 +29,6 @@ import (
 
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -81,8 +80,8 @@ func NodeConditions(master, replicating, lagged, readOnly bool) []api.NodeCondit
 
 // RefreshFn receives a client and a runtime.Objects and refreshes the object from k8s
 // example: Eventually(RefreshFn(c, cluster.Unwrap())).Should(HaveClusterStatusReadyNodes(2))
-func RefreshFn(c client.Client, obj runtime.Object) func() runtime.Object {
-	return func() runtime.Object {
+func RefreshFn(c client.Client, obj client.Object) func() client.Object {
+	return func() client.Object {
 		objMeta, ok := obj.(metav1.Object)
 		if !ok {
 			return nil

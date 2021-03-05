@@ -35,7 +35,7 @@ func NewHealthyReplicasSVCSyncer(c client.Client, scheme *runtime.Scheme, cluste
 		},
 	}
 
-	return syncer.NewObjectSyncer("HealthyReplicasSVC", cluster.Unwrap(), service, c, scheme, func() error {
+	return syncer.NewObjectSyncer("HealthyReplicasSVC", cluster.Unwrap(), service, c, func() error {
 		// set service labels
 		service.Labels = cluster.GetLabels()
 		service.Labels["mysql.presslabs.org/service-type"] = "ready-replicas"

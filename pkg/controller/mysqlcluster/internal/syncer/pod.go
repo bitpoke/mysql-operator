@@ -62,7 +62,7 @@ func NewPodSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster
 		log:      logf.Log.WithName("pod-syncer").WithValues("key", cluster.GetNamespacedName()),
 	}
 
-	return syncer.NewObjectSyncer("Pod", nil, pod, c, scheme, func() error {
+	return syncer.NewObjectSyncer("Pod", nil, pod, c, func() error {
 		return sync.SyncFn(pod)
 	})
 }

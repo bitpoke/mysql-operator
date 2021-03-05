@@ -48,10 +48,10 @@ var _ = Describe("MysqlBackup controller", func() {
 	var (
 		// channel for incoming reconcile requests
 		requests chan reconcile.Request
-		// stop channel for controller manager
-		stop chan struct{}
 		// controller k8s client
 		c client.Client
+
+		ctxCancel func()
 	)
 
 	BeforeEach(func() {
@@ -64,11 +64,11 @@ var _ = Describe("MysqlBackup controller", func() {
 		recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr))
 		Expect(add(mgr, recFn)).To(Succeed())
 
-		stop = testutil.StartTestManager(mgr)
+		_, ctxCancel = testutil.StartTestManager(mgr)
 	})
 
 	AfterEach(func() {
-		close(stop)
+		ctxCancel()
 	})
 
 	// instantiate a cluster and a backup
