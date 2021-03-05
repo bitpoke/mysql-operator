@@ -170,7 +170,9 @@ func (in *MysqlBackupStatus) DeepCopyInto(out *MysqlBackupStatus) {
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]BackupCondition, len(*in))
-		copy(*out, *in)
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 
@@ -343,7 +345,9 @@ func (in *MysqlClusterStatus) DeepCopyInto(out *MysqlClusterStatus) {
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]ClusterCondition, len(*in))
-		copy(*out, *in)
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 	if in.Nodes != nil {
 		in, out := &in.Nodes, &out.Nodes
@@ -483,7 +487,9 @@ func (in *MysqlDatabaseStatus) DeepCopyInto(out *MysqlDatabaseStatus) {
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]MysqlDatabaseCondition, len(*in))
-		copy(*out, *in)
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 
@@ -623,7 +629,9 @@ func (in *MysqlUserStatus) DeepCopyInto(out *MysqlUserStatus) {
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]MySQLUserCondition, len(*in))
-		copy(*out, *in)
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 	if in.AllowedHosts != nil {
 		in, out := &in.AllowedHosts, &out.AllowedHosts
@@ -664,7 +672,9 @@ func (in *NodeStatus) DeepCopyInto(out *NodeStatus) {
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]NodeCondition, len(*in))
-		copy(*out, *in)
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 
