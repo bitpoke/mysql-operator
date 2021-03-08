@@ -38,7 +38,7 @@ pipeline:
 
   test:
     group: test
-    image: quay.io/presslabs/bfc:0.4
+    image: quay.io/presslabs/bfc:0.10
     commands:
       - make test
 
