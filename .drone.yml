@@ -18,13 +18,13 @@ clone:
 
 pipeline:
   dependencies:
-    image: quay.io/presslabs/bfc:0.4
+    image: quay.io/presslabs/bfc:0.10
     commands:
       - make dependencies
 
   lint:
     group: lint
-    image: quay.io/presslabs/bfc:0.4
+    image: quay.io/presslabs/bfc:0.10
     commands:
       - make lint
 
@@ -43,14 +43,14 @@ pipeline:
       - make test
 
   verify-generate:
-    image: quay.io/presslabs/bfc:0.4
+    image: quay.io/presslabs/bfc:0.10
     commands:
       - make -s fmt generate manifests
       - git diff --exit-code
 
   publish-images:
     group: publish
-    image: quay.io/presslabs/bfc:latest
+    image: quay.io/presslabs/bfc:0.10
     environment:
       DOCKER_HOST: tcp://docker:2375
       DOCKER_USER: presslabs+drone
@@ -68,7 +68,7 @@ pipeline:
 
   build-chart:
     group: build
-    image: quay.io/presslabs/bfc:0.4
+    image: quay.io/presslabs/bfc:0.10
     environment:
       APP_VERSION: ${DRONE_TAG:-${DRONE_BRANCH/master/latest}}
     commands:
