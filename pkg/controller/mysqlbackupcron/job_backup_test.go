@@ -50,7 +50,7 @@ var _ = Describe("MysqlBackupCron cron job", func() {
 	)
 
 	BeforeEach(func() {
-		mgr, err := manager.New(cfg, manager.Options{})
+		mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
 		Expect(err).To(Succeed())
 		c = mgr.GetClient()
 
