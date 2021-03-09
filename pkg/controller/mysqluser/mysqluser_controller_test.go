@@ -414,6 +414,7 @@ var _ = Describe("MySQL user controller", func() {
 			})
 
 			It("tries to reconcile again", func() {
+				fakeSQL.AllowExtraCalls()
 				// Wait for initial reconciliation
 				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
