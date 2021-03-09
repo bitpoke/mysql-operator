@@ -29,9 +29,8 @@ all: test build
 
 # Run tests
 test: generate fmt vet manifests
-	ginkgo --randomizeAllSpecs --randomizeSuites --failOnPending \
+	ginkgo --randomizeAllSpecs --randomizeSuites --failOnPending --flakeAttempts=2 \
 			--cover --coverprofile cover.out --trace --race --progress  $(TEST_ARGS)\
-			./pkg/... ./cmd/...
 
 # Build mysql-operator binary
 build: generate fmt vet
