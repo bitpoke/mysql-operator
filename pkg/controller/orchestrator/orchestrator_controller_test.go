@@ -73,7 +73,7 @@ var _ = Describe("Orchestrator controller", func() {
 
 		var recFn reconcile.Reconciler
 
-		mgr, err := manager.New(cfg, manager.Options{})
+		mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
 		Expect(err).NotTo(HaveOccurred())
 		c = mgr.GetClient()
 
@@ -163,7 +163,7 @@ var _ = Describe("Orchestrator controller", func() {
 			// restart the controller
 			ctxCancel()
 			var recFn reconcile.Reconciler
-			mgr, err := manager.New(cfg, manager.Options{})
+			mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
 			Expect(err).NotTo(HaveOccurred())
 			c = mgr.GetClient()
 			recFn, requests = testutil.SetupTestReconcile(newReconciler(mgr, orcClient))

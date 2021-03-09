@@ -67,7 +67,7 @@ var _ = Describe("MysqlCluster controller", func() {
 	BeforeEach(func() {
 		var recFn reconcile.Reconciler
 
-		mgr, err := manager.New(cfg, manager.Options{})
+		mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: "0"})
 		Expect(err).NotTo(HaveOccurred())
 		c = mgr.GetClient()
 		scheme = mgr.GetScheme()
