@@ -117,7 +117,7 @@ pipeline:
 #
 
   start-kubernetes:
-    image: quay.io/presslabs/bfc:0.4
+    image: quay.io/presslabs/bfc:0.10
     group: publish
     secrets:
       - GOOGLE_CREDENTIALS
@@ -137,7 +137,7 @@ pipeline:
       event: push
 
   e2e-tests:
-    image: quay.io/presslabs/bfc:0.4
+    image: quay.io/presslabs/bfc:0.10
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
@@ -162,7 +162,7 @@ pipeline:
       event: push
 
   stop-kubernetes:
-    image: quay.io/presslabs/bfc:0.4
+    image: quay.io/presslabs/bfc:0.10
     secrets:
       - GOOGLE_CREDENTIALS
     environment:
