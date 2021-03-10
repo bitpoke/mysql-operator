@@ -1,7 +1,7 @@
 ###############################################################################
 #  Build the mysql-oerator related binaries
 ###############################################################################
-FROM golang:1.13.14 as builder
+FROM golang:1.16.0 as builder
 
 # Copy in the go src
 WORKDIR /go/src/github.com/presslabs/mysql-operator
