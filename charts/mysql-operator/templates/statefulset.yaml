@@ -33,6 +33,8 @@ spec:
         - name: operator
           image: "{{ .Values.image }}"
           imagePullPolicy: {{ .Values.imagePullPolicy }}
+          securityContext:
+            runAsUser: 888
           env:
             - name: ORC_TOPOLOGY_USER
               valueFrom:
