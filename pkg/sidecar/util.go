@@ -63,8 +63,12 @@ func copyFile(src, dst string) error {
 // readPurgedGTID returns the GTID from xtrabackup_binlog_info file
 func readPurgedGTID() (string, error) {
 	file, err := os.Open(fmt.Sprintf("%s/xtrabackup_binlog_info", dataDir))
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return "", err
+	}
+
+	if os.IsNotExist(err) {
+		return "", nil
 	}
 
 	defer func() {
