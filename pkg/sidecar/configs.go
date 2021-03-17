@@ -152,8 +152,7 @@ func (cfg *Config) MysqlDSN() string {
 
 // IsFirstPodInSet returns true if this pod has an ordinal of 0, meaning it is the first one in the set
 func (cfg *Config) IsFirstPodInSet() bool {
-	ordinal := getOrdinalFromHostname(cfg.Hostname)
-	return ordinal == 0
+	return strings.HasSuffix(cfg.Hostname, "-0")
 }
 
 // ShouldCloneFromBucket returns true if it's time to initialize from a bucket URL provided
@@ -198,7 +197,7 @@ func (cfg *Config) XtrabackupArgs() []string {
 		"--backup",
 		"--slave-info",
 		"--stream=xbstream",
-		fmt.Sprintf("--tables-exclude=%s.%s", constants.OperatorDbName, constants.OperatorStatusTableName),
+		fmt.Sprintf("--tables-exclude=%s\\.%s", constants.OperatorDbName, constants.OperatorStatusTableName),
 		"--host=127.0.0.1",
 		fmt.Sprintf("--user=%s", cfg.ReplicationUser),
 		fmt.Sprintf("--password=%s", cfg.ReplicationPassword),
@@ -303,17 +302,17 @@ func getEnvValue(key string) string {
 }
 
 func getOrdinalFromHostname(hn string) int {
-	// mysql-master-1
-	// or
-	// stateful-ceva-3
-	l := strings.Split(hn, "-")
-	for i := len(l) - 1; i >= 0; i-- {
-		if o, err := strconv.ParseInt(l[i], 10, 8); err == nil {
-			return int(o)
-		}
+	begin := strings.LastIndex(hn, "-")
+	if begin < 0 {
+		return 0
+	}
+	index := hn[begin+1:]
+	o, err := strconv.Atoi(index)
+	if err != nil {
+		return -1
 	}
 
-	return 0
+	return o
 }
 
 // retryLookupHost tries to figure out a host IPs with retries

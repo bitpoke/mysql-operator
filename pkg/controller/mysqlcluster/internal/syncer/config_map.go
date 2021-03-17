@@ -81,7 +81,7 @@ if [ ${read_only_status} -eq 0  ] && [ ${replica_status_count} -eq 0 ] && [ ${ha
 then
 		masterhostname=$( curl  -s "${ORCH_HTTP_API}/master/${ORCH_CLUSTER_ALIAS}" |  awk -F":" '{print $3}' | awk -F'"' '{print $2}' )
         echo "master from orchestrator: ${masterhostname}"
-        if [ "${FQDN}" == "${masterhostname}" ]
+        if [ "${MY_FQDN}" == "${masterhostname}" ]
         then
                 curl  -s "${ORCH_HTTP_API}/graceful-master-takeover-auto/${ORCH_CLUSTER_ALIAS}"
 				echo "graceful-master-takeover-auto is ongoing, sleep 5 seconds in order to make sure service can work well."
