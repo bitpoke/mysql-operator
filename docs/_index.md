@@ -31,6 +31,22 @@ this will break the communication between orchestrator and MySQL clusters. To so
 `helm upgrade --reuse-values` or specify the orchestrator password. We recommend specifying the
 orchestrator password.
 
+## How to remove MySQL Operator completely from Kubernetes cluster to do a fresh deploy
+
+Delete the helm release: 
+
+```shell
+helm -n <namespace> delete <operator-release>
+```
+And then delete the CRDs by running the following commands:
+
+```shell
+kubectl delete -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/mysql.presslabs.org_mysqlbackups.yaml
+kubectl delete -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/mysql.presslabs.org_mysqlclusters.yaml 
+kubectl delete -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/mysql.presslabs.org_mysqldatabases.yaml 
+kubectl delete -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/mysql.presslabs.org_mysqlusers.yaml 
+```
+
 ## Deploying a cluster
 
 __tl;dr__
