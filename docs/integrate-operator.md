@@ -11,7 +11,7 @@ menu:
 
 After cluster creation, you can update the provided secret with a new field named `DB_CONNECT_URL`
 that contains a [DSN](https://en.wikipedia.org/wiki/Data_source_name) to connect to the writable
-cluster endpoint. You can check the `_helper.tpl` file for more insights.
+cluster endpoint. You can check the `_helpers.tpl` file for more insights.
 
 The MySQL operator provides 3 services to access the nodes:
 
