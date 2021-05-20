@@ -45,7 +45,7 @@ func newFinalizerSyncer(c client.Client, cluster *mysqlcluster.MysqlCluster, orc
 			)
 			// get status from orchestrator
 			if instances, err = orcClient.Cluster(cluster.GetClusterAlias()); err != nil {
-				log.V(-1).Info("an error occurred while getting cluster from orchestrator", "error", err)
+				log.V(0).Info("an error occurred while getting cluster from orchestrator", "error", err)
 			}
 
 			if len(instances) == 0 {

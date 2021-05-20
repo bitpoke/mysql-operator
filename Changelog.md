@@ -36,6 +36,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Set default MySQL server version to `5.7.31`
  * Generate CRDs with controller-gen `v0.5.0`
  * Update client-go to `v0.20.4`
+ * Change use `klog`
 ### Removed
 ### Fixed
  * Fix pod labels diff of map

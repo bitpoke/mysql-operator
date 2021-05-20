@@ -19,15 +19,17 @@ package sidecar
 import (
 	"testing"
 
-	"github.com/go-logr/zapr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/klog"
+	"k8s.io/klog/v2/klogr"
 
 	logf "github.com/presslabs/controller-util/log"
 )
 
 func TestSidecarApp(t *testing.T) {
-	logf.SetLogger(zapr.NewLogger(logf.RawStackdriverZapLoggerTo(GinkgoWriter, true)))
+	klog.SetOutput(GinkgoWriter)
+	logf.SetLogger(klogr.New())
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Sidecar App Suite")
