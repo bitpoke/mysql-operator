@@ -52,7 +52,7 @@ func NewError(resp *http.Response, path string, details interface{}) *Error {
 	}
 
 	if err = json.Unmarshal(body, rsp); err != nil {
-		log.V(-1).Info("error when unmarhal error data", "body", string(body))
+		log.V(0).Info("error when unmarhal error data", "body", string(body))
 		rsp.Message = fmt.Sprintf("<<can't get more details, in error: error: %s, body: %s>>", err, body)
 		return rsp
 	}

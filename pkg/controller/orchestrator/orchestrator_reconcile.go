@@ -98,7 +98,7 @@ func (ou *orcUpdater) Sync(ctx context.Context) (syncer.SyncResult, error) {
 
 	// get recoveries for this cluster
 	if recoveries, err = ou.orcClient.AuditRecovery(ou.cluster.GetClusterAlias()); err != nil {
-		ou.log.V(-1).Info("can't get recoveries from orchestrator", "error", err.Error())
+		ou.log.V(0).Info("can't get recoveries from orchestrator", "error", err.Error())
 	}
 
 	// update cluster status
@@ -130,7 +130,7 @@ func (ou *orcUpdater) getFromOrchestrator() (instances []orc.Instance, master *o
 			ou.log.Error(err, "Orchestrator is not reachable")
 			return instances, master, err
 		}
-		ou.log.V(-1).Info("cluster not found in Orchestrator", "error", "not found")
+		ou.log.V(0).Info("cluster not found in Orchestrator", "error", "not found")
 		return instances, master, nil
 	}
 
@@ -140,7 +140,7 @@ func (ou *orcUpdater) getFromOrchestrator() (instances []orc.Instance, master *o
 			ou.log.Error(err, "Orchestrator is not reachable")
 			return instances, master, err
 		}
-		ou.log.V(-1).Info("can't get master from Orchestrator", "error", "not found")
+		ou.log.V(0).Info("can't get master from Orchestrator", "error", "not found")
 	}
 
 	// check if it's the same master with one that is determined from all instances
@@ -148,7 +148,7 @@ func (ou *orcUpdater) getFromOrchestrator() (instances []orc.Instance, master *o
 	m := insts.DetermineMaster()
 	if master == nil || m == nil || master.Key.Hostname != m.Key.Hostname {
 		// throw a warning
-		ou.log.V(-1).Info("master clash, between what is determined and what is in Orc",
+		ou.log.V(0).Info("master clash, between what is determined and what is in Orc",
 			"in_orchestrator", instToLog(master), "determined", instToLog(m))
 		return instances, nil, nil
 	}
