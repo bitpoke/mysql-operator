@@ -29,10 +29,10 @@ import (
 
 	// loggging
 	"github.com/go-logr/logr"
-	"github.com/go-logr/zapr"
-	logf "github.com/presslabs/controller-util/log"
 
 	core "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
+	"k8s.io/klog/v2/klogr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -55,7 +55,8 @@ func DrainChan(requests <-chan reconcile.Request) {
 
 // NewTestLogger returns a logger good for tests
 func NewTestLogger(w io.Writer) logr.Logger {
-	return zapr.NewLogger(logf.RawStackdriverZapLoggerTo(w, true))
+	klog.SetOutput(w)
+	return klogr.New()
 }
 
 // SetupTestReconcile returns a reconcile.Reconcile implementation that delegates to inner and

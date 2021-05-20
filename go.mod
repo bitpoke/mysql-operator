@@ -6,7 +6,6 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-ini/ini v1.57.0
 	github.com/go-logr/logr v0.4.0
-	github.com/go-logr/zapr v0.4.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b

@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/go-logr/zapr"
 	logf "github.com/presslabs/controller-util/log"
 	"github.com/presslabs/mysql-operator/pkg/sidecar"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2/klogr"
 )
 
 var log = logf.Log.WithName("sidecar")
@@ -53,7 +53,7 @@ func main() {
 	}
 
 	// setup logging
-	logf.SetLogger(zapr.NewLogger(logf.RawStackdriverZapLoggerTo(os.Stderr, true)))
+	logf.SetLogger(klogr.New())
 
 	// init configs
 	cfg := sidecar.NewConfig()
