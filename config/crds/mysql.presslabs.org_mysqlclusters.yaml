@@ -3507,6 +3507,9 @@ spec:
                 maxLength: 63
                 minLength: 1
                 type: string
+              semiSync:
+                description: SemiSync if enabled the MySQL open semi-synchronous replication
+                type: boolean
               serverIDOffset:
                 description: Set a custom offset for Server IDs.  ServerID for each node will be the index of the statefulset, plus offset
                 type: integer

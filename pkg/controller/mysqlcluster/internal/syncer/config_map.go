@@ -93,13 +93,19 @@ fi
 }
 
 func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
-	cfg := ini.Empty()
+	cfg := ini.Empty(ini.LoadOptions{IgnoreInlineComment: true})
 	sec := cfg.Section("mysqld")
 
 	if cluster.GetMySQLSemVer().Major == 5 {
 		addKVConfigsToSection(sec, convertMapToKVConfig(mysql5xConfigs))
 	} else if cluster.GetMySQLSemVer().Major == 8 {
 		addKVConfigsToSection(sec, convertMapToKVConfig(mysql8xConfigs))
+	}
+
+	if cluster.SemiSyncEnabled() {
+		addKVConfigsToSection(sec, map[string]intstr.IntOrString{
+			"plugin_load": intstr.FromString("rpl_semi_sync_master=semisync_master.so;rpl_semi_sync_slave=semisync_slave.so"),
+		})
 	}
 
 	// boolean configs

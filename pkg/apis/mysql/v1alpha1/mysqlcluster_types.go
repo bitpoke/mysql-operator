@@ -127,6 +127,10 @@ type MysqlClusterSpec struct {
 	// +optional
 	ReadOnly bool `json:"readOnly,omitempty"`
 
+	// SemiSync if enabled the MySQL open semi-synchronous replication
+	// +optional
+	SemiSync bool `json:"semiSync,omitempty"`
+
 	// Set a custom offset for Server IDs.  ServerID for each node will be the index of the statefulset, plus offset
 	// +optional
 	ServerIDOffset *int `json:"serverIDOffset,omitempty"`

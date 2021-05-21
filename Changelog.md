@@ -22,6 +22,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Add `backupCompressCommand` and `backupDecompressCommand` to allow using
    different compressors/decompressors when backing up or restoring.
  * Add support for MySQL version 8.0
+ * Add semi-sync
 ### Changed
  * Only add `binlog-space-limit` for `percona` image
  * Make user-defined InitContainer take the precedence

@@ -11,6 +11,7 @@
 {{- $_ := set $conf "RaftAdvertise" "{{ .Env.HOSTNAME }}-svc" }}
 {{- $_ := set $conf "RaftBind" "{{ .Env.HOSTNAME }}"}}
 {{- $_ := set $conf "HTTPAdvertise" "http://{{ .Env.HOSTNAME }}-svc:80" }}
+{{- $_ := set $conf "DetectSemiSyncEnforcedQuery" "SELECT COUNT(*) AS SemiSyncEnforced FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME='rpl_semi_sync_master'"}}
 {{- if eq 1 $replicas -}}
 {{- $_ := set $conf "RaftNodes" (list) }}
 {{- else -}}

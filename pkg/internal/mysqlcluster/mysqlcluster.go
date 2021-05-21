@@ -212,6 +212,11 @@ func (c *MysqlCluster) GetMysqlImage() string {
 	return ""
 }
 
+// SemiSyncEnabled returns the mysql semi-sync enable status
+func (c *MysqlCluster) SemiSyncEnabled() bool {
+	return c.Spec.SemiSync
+}
+
 // UpdateSpec updates the cluster specs that need to be saved
 func (c *MysqlCluster) UpdateSpec() {
 	// TODO: remove this in next major release (v0.4)
