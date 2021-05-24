@@ -125,9 +125,7 @@ func (r *ReconcileMySQLDatabase) Reconcile(ctx context.Context, request reconcil
 
 func (r *ReconcileMySQLDatabase) deleteDatabase(ctx context.Context, db *mysqldatabase.Database) error {
 	log.Info("deleting MySQL database", "name", db.Name, "database", db.Spec.Database)
-
 	sql, closeConn, err := r.SQLRunnerFactory(mysql.NewConfigFromClusterKey(r.Client, db.GetClusterKey()))
-	defer closeConn()
 	if apierrors.IsNotFound(err) {
 		// if the mysql cluster does not exists then we can safely assume that
 		// the db is deleted so exist successfully
@@ -142,6 +140,7 @@ func (r *ReconcileMySQLDatabase) deleteDatabase(ctx context.Context, db *mysqlda
 	} else if err != nil {
 		return err
 	}
+	defer closeConn()
 
 	log.Info("removing database from mysql cluster", "key", db.Unwrap(), "database", db.Spec.Database)
 
