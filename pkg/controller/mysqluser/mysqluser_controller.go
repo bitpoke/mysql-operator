@@ -220,7 +220,6 @@ func stringIn(str string, strs []string) (int, bool) {
 
 func (r *ReconcileMySQLUser) dropUserFromDB(ctx context.Context, user *mysqluser.MySQLUser) error {
 	sql, closeConn, err := r.SQLRunnerFactory(mysql.NewConfigFromClusterKey(r.Client, user.GetClusterKey()))
-	defer closeConn()
 	if apierrors.IsNotFound(err) {
 		// if the mysql cluster does not exists then we can safely assume that
 		// the user is deleted so exist successfully
@@ -234,6 +233,7 @@ func (r *ReconcileMySQLUser) dropUserFromDB(ctx context.Context, user *mysqluser
 	if err != nil {
 		return err
 	}
+	defer closeConn()
 
 	for _, host := range user.Status.AllowedHosts {
 		log.Info("removing user from mysql cluster", "key", user.GetKey(), "username", user.Spec.User, "cluster", user.GetClusterKey())
