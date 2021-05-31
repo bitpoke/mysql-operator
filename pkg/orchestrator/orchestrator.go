@@ -91,7 +91,7 @@ func (o *orchestrator) Cluster(cluster string) ([]Instance, error) {
 }
 
 func (o *orchestrator) AuditRecovery(cluster string) ([]TopologyRecovery, error) {
-	path := fmt.Sprintf("audit-recovery/%s", cluster)
+	path := fmt.Sprintf("audit-recovery/cluster/%s", cluster)
 	var recoveries []TopologyRecovery
 	if err := o.makeGetRequest(path, &recoveries); err != nil {
 		return nil, err
