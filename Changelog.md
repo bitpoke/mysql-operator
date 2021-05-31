@@ -22,6 +22,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Add `backupCompressCommand` and `backupDecompressCommand` to allow using
    different compressors/decompressors when backing up or restoring.
  * Add support for MySQL version 8.0
+ * Add `go modules` cache
 ### Changed
  * Only add `binlog-space-limit` for `percona` image
  * Make user-defined InitContainer take the precedence
@@ -36,8 +37,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Set default MySQL server version to `5.7.31`
  * Generate CRDs with controller-gen `v0.5.0`
  * Update client-go to `v0.20.4`
+ * Update `getOrdinalFromHostname` and `IsFirstPodInSet`
 ### Removed
 ### Fixed
+ * Fix insufficient permissions during startup
+ * Fix the `xtrabackup` `--tables-exclude` cannot take effect
+ * Fix the pod unable to connect `Orchestrator`
  * Fix pod labels diff of map
  * Fixed backup cleanup job bug (#577)
  * Fix Kubebuilder path in Makefile.
