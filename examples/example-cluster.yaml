@@ -129,6 +129,7 @@ spec:
   #   - --retries-sleep=10s
   #   - --retries=10
   #   - --transfers=8
+  #   - --s3-force-path-style=false # when use Alibaba OSS
 
   ## Add extra arguments to xbstream
   # xbstreamExtraArgs:
