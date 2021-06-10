@@ -26,6 +26,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
@@ -172,6 +174,17 @@ func transportWithTimeout(connectTimeout time.Duration) http.RoundTripper {
 // requestABackup connects to specified host and endpoint and gets the backup
 func requestABackup(cfg *Config, host, endpoint string) (*http.Response, error) {
 	log.Info("initialize a backup", "host", host, "endpoint", endpoint)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+	defer cancel()
+	// always waiting for a cluster
+	err := wait.PollImmediateUntil(time.Minute, func() (done bool, err error) {
+		return isServiceAvailable(host), nil
+	}, ctx.Done())
+
+	if err != nil {
+		return nil, err
+	}
 
 	req, err := http.NewRequest("GET", prepareURL(host, endpoint), nil)
 	if err != nil {
