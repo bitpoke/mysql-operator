@@ -25,6 +25,7 @@ The following table contains the configuration parameters for mysql-operator and
 | `sidecarImage`                  | Mysql operator sidecar image                                                                  | `docker.io/bitpoke/mysql-operator-sidecar-5.7:latest`   |
 | `sidecarMysql8Image`            | Mysql operator sidecar image                                                                  | `docker.io/bitpoke/mysql-operator-sidecar-8.0:latest`   |
 | `installCRDs`                   | Whether or not to install CRDS, Regardless of value of this, Helm v3+ will install the CRDs if those are not present already. Use `--skip-crds` with `helm install` if you want to skip CRD creation                                                                | `true`                                    |
+| `gracefulShutdown.enabled`      | Insert a pre-stop lifecycle hook and trigger a failover when a MySQL pod is stopped           | `true`                                                  |
 | `resources`                     | Controller and Orchestrator pod resources limits and requests                                 | `{}`                                                    |
 | `nodeSelector`                  | Controller and Orchestrator pod nodeSelector                                                  | `{}`                                                    |
 | `tolerations`                   | Controller and Orchestrator pod tolerations                                                   | `{}`                                                    |

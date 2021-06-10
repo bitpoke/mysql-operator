@@ -22,6 +22,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Use networking.k8s.io/v1 instead of extensions/v1beta1 for ingress
  * Use `Service.spec.publishNotReadyAddresses` instead of `service.alpha.kubernetes.io/tolerate-unready-endpoints`
  * Use [git-semver](https://github.com/mdomke/git-semver) for setting versions
+ * Gracefull shutdown is enabled by default
 ### Removed
  * Removed support for Helm 2
 ### Fixed
