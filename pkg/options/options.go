@@ -121,8 +121,7 @@ const (
 
 	defaultNamespace = ""
 
-	// TODO(next): make this true by default in next major release
-	defaultFailoverBeforeShutdownEnabled = false
+	defaultFailoverBeforeShutdownEnabled = true
 )
 
 var (
