@@ -69,11 +69,10 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          # TODO: add livenessProbe to controller
-          # livenessProbe:
-          #   httpGet:
-          #     path: /health
-          #     port: 80
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
         - name: orchestrator
           image: {{ .Values.orchestrator.image }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}

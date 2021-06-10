@@ -76,6 +76,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Add `MetricsExporterResources` and `MySQLOperatorSidecarResrouces` in `.Spec.PodSpec` to allow
    the user specifying resources for thos sidecars containers.
  * Add command line flag to configure number of workers for orchestrator controller.
+ * Add livenessProbe to controller
 ### Changed
  * [#422](https://github.com/presslabs/mysql-operator/pull/422) adds the `SidecarServerPort` to the
    `MasterService` and introduces one new service, HealthyReplicasService, so that we can try to

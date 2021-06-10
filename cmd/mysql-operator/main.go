@@ -27,6 +27,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
@@ -79,9 +80,15 @@ func main() {
 		LeaderElectionNamespace: opt.LeaderElectionNamespace,
 		LeaderElectionID:        opt.LeaderElectionID,
 		Namespace:               opt.Namespace,
+		HealthProbeBindAddress:  ":8081",
 	})
 	if err != nil {
 		log.Error(err, "unable to create a new manager")
+		os.Exit(1)
+	}
+
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		log.Error(err, "unable to add healthzCheck to manager")
 		os.Exit(1)
 	}
 
