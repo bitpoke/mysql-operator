@@ -50,6 +50,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Fix #637 mysqlbackup status is not updated correctly.
  * Fix #647 custom conf can't overwrite the default conf
  * Fix #627 let Orchestrator do the failover
+ * Fix #694 the error caused by backing up without waiting for master to be created.
 
 ## [0.4.0] - 2020-06-17
 ### Added
