@@ -5,6 +5,11 @@
 ## The cluster number of nodes
 replicas: 1
 
+## For setting custom docker image or specifying mysql version
+## the image field has priority over mysqlVersion.
+# image: percona:5.7
+# mysqlVersion: "5.7"
+
 ## MySQL connect credentials, those credentials will be provisioned in the cluster
 rootPassword: ""
 appUser: ""
