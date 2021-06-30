@@ -316,7 +316,7 @@ func getOrdinalFromHostname(hn string) int {
 }
 
 // retryLookupHost tries to figure out a host IPs with retries
-// nolint: unused deadcode
+// nolint: unused, deadcode
 func retryLookupHost(host string) ([]string, error) {
 	// try to find the host IP
 	IPs, err := net.LookupHost(host)
