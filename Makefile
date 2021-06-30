@@ -110,7 +110,7 @@ chart: generate manifests
 
 dependencies:
 	test -d $(BINDIR) || mkdir $(BINDIR)
-	GOBIN=$(BINDIR) go get github.com/onsi/ginkgo/ginkgo@v1.15.0
+	GOBIN=$(BINDIR) go get github.com/onsi/ginkgo/ginkgo@v1.16.4
 
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v$(GOLANGCI_LINTER_VERSION)
 
