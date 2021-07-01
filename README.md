@@ -77,3 +77,4 @@ This project uses Percona Server for MySQL 5.7 because of backup improvements (e
 ## License
 
 This project is licensed under Apache 2.0 license. Read the [LICENSE](LICENSE) file in the top distribution directory for the full license text.
+
