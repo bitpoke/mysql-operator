@@ -129,7 +129,7 @@ pipeline:
       - setup-credentials-helper.sh
       - gcloud container clusters create $CLUSTER_NAME
           --zone europe-west3-b --project testing-reactor
-          --preemptible  --cluster-version 1.16
+          --preemptible  --cluster-version 1.19
       # update chart deps
       - helm dependency update charts/mysql-operator
     when:
