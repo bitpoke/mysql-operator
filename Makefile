@@ -110,11 +110,11 @@ chart: generate manifests
 
 dependencies:
 	test -d $(BINDIR) || mkdir $(BINDIR)
-	GOBIN=$(BINDIR) go get github.com/onsi/ginkgo/ginkgo@v1.16.4
+	GOBIN=$(BINDIR) go install github.com/onsi/ginkgo/ginkgo@v1.16.4
 
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $(BINDIR) v$(GOLANGCI_LINTER_VERSION)
 
-	GOBIN=$(BINDIR) go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0
+	GOBIN=$(BINDIR) go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0
 
 dependencies-local: dependencies
 	curl -sL https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$(GOOS)_$(GOARCH) -o $(BINDIR)/yq
