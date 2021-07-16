@@ -5,7 +5,8 @@ ORCHESTRATOR_IMAGE_NAME := mysql-operator-orchestrator
 SIDECAR_MYSQL57_IMAGE_NAME := mysql-operator-sidecar-mysql57
 SIDECAR_MYSQL8_IMAGE_NAME := mysql-operator-sidecar-mysql8
 BUILD_TAG := build
-IMAGE_TAGS := $(APP_VERSION)
+# strip prefix v from git tag
+IMAGE_TAGS := $(APP_VERSION:v%=%)
 PKG_NAME := github.com/presslabs/mysql-operator
 
 BINDIR := $(PWD)/bin
