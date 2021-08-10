@@ -6,7 +6,7 @@ clone:
 
 workspace:
   base: /workspace
-  path: src/github.com/presslabs/build
+  path: src/github.com/bitpoke/build
 
 steps:
 - name: clone
@@ -16,19 +16,20 @@ steps:
     tags: true
 
 - name: build
-  image: docker.io/presslabs/build:v0.2.0
+  pull: true
+  image: docker.io/bitpoke/build:v0.3
   commands:
   - make -j4 build
   depends_on:
     - clone
 
 - name: publish
-  image: docker.io/presslabs/build:v0.2.0
+  image: docker.io/bitpoke/build:v0.3
   commands:
   - /usr/local/bin/setup-credentials-helper.sh
   - make publish
   environment:
-    DOCKER_USERNAME: presslabsbot
+    DOCKER_USERNAME: bitpokebot
     DOCKER_PASSWORD:
       from_secret: DOCKER_PASSWORD
   depends_on:
@@ -36,7 +37,7 @@ steps:
 
 services:
 - name: docker
-  image: docker:19.03.5-dind
+  image: docker:20.10.8-dind
   privileged: true
   commands:
     - /usr/local/bin/dockerd-entrypoint.sh dockerd --host "unix:///workspace/docker.sock" --storage-driver overlay2 --log-level error
@@ -45,4 +46,3 @@ trigger:
   ref:
     - refs/heads/master
     - refs/heads/release-*
-    - refs/tags/**

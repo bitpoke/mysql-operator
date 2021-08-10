@@ -70,7 +70,7 @@ if [ ! -z "$SSH_KEY" ] ; then
 fi
 
 if [[ ! -z "${GIT_USER}" && ! -z "${GIT_PASSWORD}" ]] ; then
-    git config --global user.email ${GIT_EMAIL:-no-reply@presslabs.com}
+    git config --global user.email ${GIT_EMAIL:-bot@bitpoke.cloud}
     git config --global user.name $GIT_USER
 
     cat <<EOF >> ~/.netrc

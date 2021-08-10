@@ -1,5 +1,5 @@
 # build
-Presslabs GNU make based build system
+bitpoke GNU make based build system
 
 ## Goals
 
@@ -11,12 +11,12 @@ Presslabs GNU make based build system
 ## Quickstart
 
 ```sh
-git subtree add -P build https://github.com/presslabs/build.git
+git subtree add -P build https://github.com/bitpoke/build.git
 
 cat <<EOF > Makefile
 # Project Setup
-PROJECT_NAME := presslabs-dashboard
-PROJECT_REPO := github.com/presslabs/dashboard
+PROJECT_NAME := mysql-operator
+PROJECT_REPO := github.com/bitpoke/mysql-operator
 
 include build/makelib/common.mk
 ```
