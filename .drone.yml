@@ -17,14 +17,14 @@ steps:
 
 - name: build
   pull: true
-  image: docker.io/bitpoke/build:v0.3
+  image: docker.io/bitpoke/build:v0.3.0
   commands:
   - make -j4 build
   depends_on:
     - clone
 
 - name: publish
-  image: docker.io/bitpoke/build:v0.3
+  image: docker.io/bitpoke/build:v0.3.0
   commands:
   - /usr/local/bin/setup-credentials-helper.sh
   - make publish
