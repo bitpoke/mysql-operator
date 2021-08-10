@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM google/cloud-sdk:290.0.0
+FROM google/cloud-sdk:351.0.0
+
+ARG ARCH
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -60,17 +62,17 @@ RUN sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /
         php-redis \
         php-sodium \
         php-yaml \
-    && rm -f /etc/apt/sources.list.d/php.list
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # ------------------------------------------------------------------------------------------------
 # git config
-RUN git config --global user.email "bot@presslabs.com" \
-    && git config --global user.name "Igor Debot"
+RUN git config --global user.email "bot@bitpoke.cloud" \
+    && git config --global user.name "RoBot"
 
 # ------------------------------------------------------------------------------------------------
 # Go support
-RUN GO_VERSION=1.13.10 && \
-    GO_HASH=8a4cbc9f2b95d114c38f6cbe94a45372d48c604b707db2057c787398dfbf8e7f && \
+RUN GO_VERSION=1.16.7 && \
+    GO_HASH=7fe7a73f55ba3e2285da36f8b085e5c0159e9564ef5f63ee0ed6b818ade8ef04 && \
     curl -fsSL https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz -o golang.tar.gz && \
     echo "${GO_HASH}  golang.tar.gz" | sha256sum -c - && \
     tar -C /usr/local -xzf golang.tar.gz && \
@@ -85,7 +87,7 @@ RUN platforms="darwin_amd64 windows_amd64 linux_amd64 linux_arm64" && \
 
 # ------------------------------------------------------------------------------------------------
 # Node JS and chrome support
-RUN curl -fsSL https://deb.nodesource.com/setup_10.x | bash - && \
+RUN curl -fsSL https://deb.nodesource.com/setup_14.x | bash - && \
     curl -fsSL https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
     echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list && \
     /usr/local/build-scripts/install-packages.sh \
@@ -93,7 +95,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_10.x | bash - && \
         google-chrome-stable \
         xvfb && \
     rm -f /etc/apt/sources.list.d/google.list && \
-    ln -fs /usr/local/bin/xvfb-chrome /usr/bin/google-chrome
+    ln -fs /usr/local/bin/xvfb-chrome /usr/bin/google-chrome && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 ENV CHROME_BIN /usr/bin/google-chrome
 
 # ------------------------------------------------------------------------------------------------
@@ -102,22 +105,24 @@ RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - && \
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list && \
     /usr/local/build-scripts/install-packages.sh \
         yarn && \
-    rm -f /etc/apt/sources.list.d/yarn.list
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # ------------------------------------------------------------------------------------------------
 # rclone
 RUN set -ex \
-    && export RCLONE_VERSION=1.50.2 \
+    && export RCLONE_VERSION=1.56.0 \
     && curl -sL -o rclone-v${RCLONE_VERSION}-linux-amd64.deb https://github.com/rclone/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.deb \
     && dpkg -i rclone-v${RCLONE_VERSION}-linux-amd64.deb \
-    && rm rclone-v${RCLONE_VERSION}-linux-amd64.deb
+    && rm rclone-v${RCLONE_VERSION}-linux-amd64.deb \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # ------------------------------------------------------------------------------------------------
 # Run tini as PID 1 and avoid signal handling issues
-ARG ARCH
-ARG TINI_VERSION
-RUN curl -sL -o /tini https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${ARCH} && \
-    chmod +x /tini
+
+RUN set -ex \
+    && export TINI_VERSION=v0.19.0 \
+    && curl -sL -o /tini https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${ARCH} \
+    && chmod +x /tini
 
 ENV DOCKER_HOST=unix:///workspace/docker.sock
 
