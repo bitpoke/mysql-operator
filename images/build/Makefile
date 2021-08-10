@@ -10,12 +10,12 @@ CACHE_IMAGES = $(IMAGE)
 include ../../makelib/image.mk
 
 img.build:
-	@$(INFO) docker build $(IMAGE) $(PLATFORM)
+	@$(INFO) docker build $(IMAGE) $(IMAGE_PLATFORM)
 	@cp -La . $(IMAGE_TEMP_DIR)
 	@mkdir -p $(IMAGE_TEMP_DIR)/rootfs
-	@docker build $(BUILD_ARGS) \
-		--build-arg ARCH=$(ARCH) \
-		--build-arg TINI_VERSION=$(TINI_VERSION) \
+	@docker buildx build $(BUILD_ARGS) \
+		--platform $(IMAGE_PLATFORM) \
 		-t $(IMAGE) \
+		--build-arg ARCH=$(ARCH) \
 		$(IMAGE_TEMP_DIR)
 	@$(OK) docker build $(IMAGE)

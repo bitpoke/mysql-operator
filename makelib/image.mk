@@ -35,19 +35,6 @@ DOCKER_HOST ?= unix:///workspace/docker.sock
 export DOCKER_HOST
 endif
 
-# set the OS base image to alpine if in not defined. set your own image for each
-# supported platform.
-ifeq ($(origin OSBASEIMAGE),undefined)
-OSBASE ?= alpine:3.7
-ifeq ($(ARCH),amd64)
-OSBASEIMAGE = $(OSBASE)
-else ifeq ($(ARCH),arm64)
-OSBASEIMAGE = arm64v8/$(OSBASE)
-else
-$(error unsupported architecture $(ARCH))
-endif
-endif
-
 # a registry that is scoped to the current build tree on this host. this enables
 # us to have isolation between concurrent builds on the same system, as in the case
 # of multiple working directories or on a CI system with multiple executors. All images
@@ -85,8 +72,13 @@ CACHE_PRUNE_DATE := $(shell export TZ="UTC+$(PRUNE_HOURS)"; date +"$(CACHE_DATE_
 CACHE_TAG := $(shell date -u +"$(CACHE_DATE_FORMAT)")
 
 REGISTRIES ?= $(DOCKER_REGISTRY)
+
+# docker accepted image platform format
+# eg linux/arm64 -> linux/arm64/v8, linux/armv7 -> linux/arm/v7, linux/armv6 -> linux/arm/v6
+dockerify-platform = $(subst armv7,arm/v7,$(subst arm64,arm64/v8,$(1)))
 IMAGE_ARCHS := $(subst linux_,,$(filter linux_%,$(PLATFORMS)))
-IMAGE_PLATFORMS := $(subst _,/,$(subst $(SPACE),$(COMMA),$(filter linux_%,$(PLATFORMS))))
+IMAGE_PLATFORMS := $(call dockerify-platform,$(subst _,/,$(filter linux_%,$(PLATFORMS))))
+IMAGE_PLATFORM = $(call dockerify-platform,linux/$(ARCH))
 
 # if set to 1 docker image caching will not be used.
 CACHEBUST ?= 0
@@ -107,23 +99,9 @@ endif
 BUILD_BASE_ARGS += $(BUILD_ARGS)
 export PULL
 
-# the version of tini to use
-TINI_VERSION ?= v0.16.1
-
 ifeq ($(HOSTOS),Linux)
 SELF_CID := $(shell cat /proc/self/cgroup | grep docker | grep -o -E '[0-9a-f]{64}' | head -n 1)
 endif
-
-ifneq ($(filter gcr.io%,$(DOCKER_REGISTRY)),)
-MANIFEST_TOOL_ARGS += --username oauth2accesstoken --password $$(gcloud auth print-access-token)
-endif
-
-# ====================================================================================
-# tools
-
-MANIFEST_TOOL_VERSION ?= 1.0.0
-MANIFEST_TOOL_DOWNLOAD_URL ?= https://github.com/estesp/manifest-tool/releases/download/v$(MANIFEST_TOOL_VERSION)/manifest-tool-$(HOSTOS)-$(HOSTARCH)
-$(eval $(call tool.download,manifest-tool,$(MANIFEST_TOOL_VERSION),$(MANIFEST_TOOL_DOWNLOAD_URL)))
 
 # =====================================================================================
 # Image Targets
@@ -199,49 +177,46 @@ debug.nuke:
 define repo.targets
 .PHONY: .img.release.build.$(1).$(2).$(3)
 .img.release.build.$(1).$(2).$(3):
-	@$(INFO) docker build $(1)/$(2)-$(3):$(VERSION)
-	@docker tag $(BUILD_REGISTRY)/$(2)-$(3) $(1)/$(2)-$(3):$(VERSION) || $(FAIL)
-	@# Save image as _output/images/linux_<arch>/<image>.tar.gz (no builds for darwin or windows)
-	@mkdir -p $(OUTPUT_DIR)/images/linux_$(3) || $(FAIL)
-	@docker save $(BUILD_REGISTRY)/$(2)-$(3) | gzip -c > $(OUTPUT_DIR)/images/linux_$(3)/$(2).tar.gz || $(FAIL)
-	@$(OK) docker build $(1)/$(2)-$(3):$(VERSION)
+	@$(INFO) docker build $(1)/$(2):$(VERSION)-$(3)
+	@docker tag $(BUILD_REGISTRY)/$(2)-$(3) $(1)/$(2):$(VERSION)-$(3) || $(FAIL)
+	@$(OK) docker build $(1)/$(2):$(VERSION)-$(3)
 .img.release.build: .img.release.build.$(1).$(2).$(3)
 
 .PHONY: .img.release.publish.$(1).$(2).$(3)
 .img.release.publish.$(1).$(2).$(3):
-	@$(INFO) docker push $(1)/$(2)-$(3):$(VERSION)
-	@docker push $(1)/$(2)-$(3):$(VERSION) || $(FAIL)
-	@$(OK) docker push $(1)/$(2)-$(3):$(VERSION)
+	@$(INFO) docker push $(1)/$(2):$(VERSION)-$(3)
+	@docker push $(1)/$(2):$(VERSION)-$(3) || $(FAIL)
+	@$(OK) docker push $(1)/$(2):$(VERSION)-$(3)
 .img.release.publish: .img.release.publish.$(1).$(2).$(3)
 
 .PHONY: .img.release.promote.$(1).$(2).$(3)
 .img.release.promote.$(1).$(2).$(3):
-	@$(INFO) docker promote $(1)/$(2)-$(3):$(VERSION) to $(1)/$(2)-$(3):$(CHANNEL)
-	@docker pull $(1)/$(2)-$(3):$(VERSION) || $(FAIL)
-	@[ "$(CHANNEL)" = "master" ] || docker tag $(1)/$(2)-$(3):$(VERSION) $(1)/$(2)-$(3):$(VERSION)-$(CHANNEL) || $(FAIL)
-	@docker tag $(1)/$(2)-$(3):$(VERSION) $(1)/$(2)-$(3):$(CHANNEL) || $(FAIL)
-	@[ "$(CHANNEL)" = "master" ] || docker push $(1)/$(2)-$(3):$(VERSION)-$(CHANNEL)
+	@$(INFO) docker promote $(1)/$(2):$(VERSION)-$(3) to $(1)/$(2)-$(3):$(CHANNEL)
+	@docker pull $(1)/$(2):$(VERSION)-$(3) || $(FAIL)
+	@[ "$(CHANNEL)" = "master" ] || docker tag $(1)/$(2):$(VERSION)-$(3) $(1)/$(2):$(VERSION)-$(3)-$(CHANNEL) || $(FAIL)
+	@docker tag $(1)/$(2):$(VERSION)-$(3) $(1)/$(2)-$(3):$(CHANNEL) || $(FAIL)
+	@[ "$(CHANNEL)" = "master" ] || docker push $(1)/$(2):$(VERSION)-$(3)-$(CHANNEL)
 	@docker push $(1)/$(2)-$(3):$(CHANNEL) || $(FAIL)
-	@$(OK) docker promote $(1)/$(2)-$(3):$(VERSION) to $(1)/$(2)-$(3):$(CHANNEL) || $(FAIL)
+	@$(OK) docker promote $(1)/$(2):$(VERSION)-$(3) to $(1)/$(2)-$(3):$(CHANNEL) || $(FAIL)
 .img.release.promote: .img.release.promote.$(1).$(2).$(3)
 
 .PHONY: .img.release.clean.$(1).$(2).$(3)
 .img.release.clean.$(1).$(2).$(3):
-	@[ -z "$$$$(docker images -q $(1)/$(2)-$(3):$(VERSION))" ] || docker rmi $(1)/$(2)-$(3):$(VERSION)
-	@[ -z "$$$$(docker images -q $(1)/$(2)-$(3):$(VERSION)-$(CHANNEL))" ] || docker rmi $(1)/$(2)-$(3):$(VERSION)-$(CHANNEL)
+	@[ -z "$$$$(docker images -q $(1)/$(2):$(VERSION)-$(3))" ] || docker rmi $(1)/$(2):$(VERSION)-$(3)
+	@[ -z "$$$$(docker images -q $(1)/$(2):$(VERSION)-$(3)-$(CHANNEL))" ] || docker rmi $(1)/$(2):$(VERSION)-$(3)-$(CHANNEL)
 	@[ -z "$$$$(docker images -q $(1)/$(2)-$(3):$(CHANNEL))" ] || docker rmi $(1)/$(2)-$(3):$(CHANNEL)
 .img.release.clean: .img.release.clean.$(1).$(2).$(3)
 endef
 $(foreach r,$(REGISTRIES), $(foreach i,$(IMAGES), $(foreach a,$(IMAGE_ARCHS),$(eval $(call repo.targets,$(r),$(i),$(a))))))
 
 .PHONY: .img.release.manifest.publish.%
-.img.release.manifest.publish.%: .img.release.publish $(MANIFEST_TOOL)
-	@$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms $(IMAGE_PLATFORMS) --template $(DOCKER_REGISTRY)/$*-ARCH:$(VERSION) --target $(DOCKER_REGISTRY)/$*:$(VERSION) || $(FAIL)
+.img.release.manifest.publish.%: .img.release.publish
+	@docker buildx imagetools create --tag $(DOCKER_REGISTRY)/$*:$(VERSION) $(patsubst %,$(DOCKER_REGISTRY)/$*:$(VERSION)-%,$(IMAGE_ARCHS))
 
 .PHONY: .img.release.manifest.promote.%
-.img.release.manifest.promote.%: .img.release.promote $(MANIFEST_TOOL)
-	@[ "$(CHANNEL)" = "master" ] || $(MANIFEST_TOOL) push from-args --platforms $(IMAGE_PLATFORMS) --template $(DOCKER_REGISTRY)/$*-ARCH:$(VERSION) --target $(DOCKER_REGISTRY)/$*:$(VERSION)-$(CHANNEL) || $(FAIL)
-	@$(MANIFEST_TOOL) $(MANIFEST_TOOL_ARGS) push from-args --platforms $(IMAGE_PLATFORMS) --template $(DOCKER_REGISTRY)/$*-ARCH:$(VERSION) --target $(DOCKER_REGISTRY)/$*:$(CHANNEL) || $(FAIL)
+.img.release.manifest.promote.%: .img.release.promote
+	@[ "$(CHANNEL)" = "master" ] || docker buildx imagetools create --tag $(DOCKER_REGISTRY)/$*:$(VERSION)-$(CHANNEL) $(patsubst %,$(DOCKER_REGISTRY)/$*:$(VERSION)-%,$(IMAGE_ARCHS)) || $(FAIL)
+	@docker buildx imagetools create --tag $(DOCKER_REGISTRY)/$*:$(CHANNEL) $(patsubst %,$(DOCKER_REGISTRY)/$*:$(VERSION)-%,$(IMAGE_ARCHS))
 
 .img.release.build: ;@
 .img.release.publish: ;@

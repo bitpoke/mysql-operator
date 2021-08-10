@@ -18,6 +18,9 @@ ENV DEBIAN_FRONTEND noninteractive
 
 COPY build-scripts /usr/local/build-scripts
 
+COPY --from=docker/buildx-bin:0.6.1 /buildx /usr/libexec/docker/cli-plugins/docker-buildx
+RUN docker buildx version
+
 # ------------------------------------------------------------------------------------------------
 # install build and release tools
 RUN /usr/local/build-scripts/install-packages.sh \
