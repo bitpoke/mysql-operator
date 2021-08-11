@@ -117,6 +117,50 @@ RUN set -ex \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # ------------------------------------------------------------------------------------------------
+# dockerize
+RUN set -ex \
+    && export DOCKERIZE_VERSION="2.1.0" \
+    && curl -sL -o dockerize.tar.gz "https://github.com/presslabs/dockerize/releases/download/v${DOCKERIZE_VERSION}/dockerize-linux-amd64-v${DOCKERIZE_VERSION}.tar.gz" \
+    && tar -C /usr/local/bin -xzvf dockerize.tar.gz \
+    && rm dockerize.tar.gz \
+    && chmod 0755 /usr/local/bin/dockerize \
+    && chown root:root /usr/local/bin/dockerize
+
+# ------------------------------------------------------------------------------------------------
+# sops
+RUN set -ex \
+    && export SOPS_VERSION="3.7.1" \
+    && curl -sL -o /usr/local/bin/sops "https://github.com/mozilla/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux" \
+    && chmod 0755 /usr/local/bin/sops \
+    && chown root:root /usr/local/bin/sops
+
+# ------------------------------------------------------------------------------------------------
+# helm
+RUN set -ex \
+    && export HELM_VERSION="3.6.3" \
+    && curl -sL -o helm.tar.gz "https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz" \
+    && tar -C /usr/local/bin -xzvf helm.tar.gz --strip-components 1 linux-amd64/helm \
+    && rm helm.tar.gz \
+    && chmod 0755 /usr/local/bin/helm \
+    && chown root:root /usr/local/bin/helm
+
+# ------------------------------------------------------------------------------------------------
+# helm secrets plugin
+RUN set -ex \
+    && export HELM_SECRETS_VERSION="3.8.3" \
+    && helm plugin install https://github.com/jkroepke/helm-secrets --version ${HELM_SECRETS_VERSION}
+
+# ------------------------------------------------------------------------------------------------
+# kustomize
+RUN set -ex \
+    && export KUSTOMIZE_VERSION="4.2.0" \
+    && curl -sL -o kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
+    && tar -C /usr/local/bin -xzvf kustomize.tar.gz \
+    && rm kustomize.tar.gz \
+    && chmod 0755 /usr/local/bin/kustomize \
+    && chown root:root /usr/local/bin/kustomize
+
+# ------------------------------------------------------------------------------------------------
 # Run tini as PID 1 and avoid signal handling issues
 
 RUN set -ex \
