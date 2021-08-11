@@ -160,6 +160,24 @@ $$(TOOLS_HOST_DIR)/$(1)-v$(2): |$$(TOOLS_HOST_DIR)
 	@$$(OK) go get $(3)
 endef # tool.go.get
 
+# Creates a target for installing a go tool from source
+# 1 tool, 2 version, 3 tool url, 4 go env vars
+define tool.go.install
+$(call tool,$(1),$(2))
+
+$$(TOOLS_HOST_DIR)/$(1)-v$(2): |$$(TOOLS_HOST_DIR)
+	@echo ${TIME} ${BLUE}[TOOL]${CNone} go install $(3)@$(2)
+	@mkdir -p $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2) || $$(FAIL)
+	@mkdir -p $$(TOOLS_DIR)/go/$(1)-v$(2)/ && cd $$(TOOLS_DIR)/go/$(1)-v$(2)/ && $(GOHOST) mod init tools && \
+	    $(4) GO111MODULE=on GOPATH=$$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2) $(GOHOST) install $(3)@$(2) || $$(FAIL)
+	@find $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2) -type f -print0 | xargs -0 chmod 0644 || $$(FAIL)
+	@find $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2) -type d -print0 | xargs -0 chmod 0755 || $$(FAIL)
+	@mv $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2)/bin/$(1) $$@ || $$(FAIL)
+	@chmod +x $$@
+	@rm -rf $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2)
+	@$$(OK) go install $(3)
+endef # tool.go.install
+
 # Creates a target for compiling a vendored go tool
 # 1 tool, 2 package
 define tool.go.vendor.install
@@ -187,12 +205,12 @@ $(eval $(call tool.download.tar.gz,golangci-lint,$(GOLANGCI_LINT_VERSION),$(GOLA
 ifneq ($(LANGUAGES),)
 GO_XGETTEXT_VERSION ?= v0.0.0-20180127124228-c366ce0fe48d
 GO_XGETTEXT_URL ?= github.com/presslabs/gettext/go-xgettext
-$(eval $(call tool.go.get,go-xgettext,$(GO_XGETTEXT_VERSION),$(GO_XGETTEXT_URL)))
+$(eval $(call tool.go.install,go-xgettext,$(GO_XGETTEXT_VERSION),$(GO_XGETTEXT_URL)))
 endif
 
 # we use a consistent version of gofmt even while running different go compilers.
 # see https://github.com/golang/go/issues/26397 for more details
-GOFMT_VERSION ?= 1.16
+GOFMT_VERSION ?= 1.16.6
 GOFMT_DOWNLOAD_URL ?= https://dl.google.com/go/go$(GOFMT_VERSION).$(HOSTOS)-$(HOSTARCH).tar.gz
 ifneq ($(findstring $(GOFMT_VERSION),$(GO_VERSION)),)
 GOFMT := $(shell which gofmt)
@@ -202,16 +220,16 @@ endif
 
 GOIMPORTS_VERSION ?= v0.1.5
 GOIMPORTS_URL ?= golang.org/x/tools/cmd/goimports
-$(eval $(call tool.go.get,goimports,$(GOIMPORTS_VERSION),$(GOIMPORTS_URL)))
+$(eval $(call tool.go.install,goimports,$(GOIMPORTS_VERSION),$(GOIMPORTS_URL)))
 
 ifeq ($(GO_TEST_TOOL),ginkgo)
 GINKGO_VERSION ?= v1.16.4
 GINKGO_URL ?= github.com/onsi/ginkgo/ginkgo
-$(eval $(call tool.go.get,ginkgo,$(GINKGO_VERSION),$(GINKGO_URL)))
+$(eval $(call tool.go.install,ginkgo,$(GINKGO_VERSION),$(GINKGO_URL)))
 else # GO_TEST_TOOL != ginkgo
 GO_JUNIT_REPORT_VERSION ?= v0.9.2-0.20191008195320-984a47ca6b0a
 GO_JUNIT_REPORT_URL ?= github.com/jstemmer/go-junit-report
-$(eval $(call tool.go.get,go-junit-report,$(GO_JUNIT_REPORT_VERSION),$(GO_JUNIT_REPORT_URL),go-junit-report))
+$(eval $(call tool.go.install,go-junit-report,$(GO_JUNIT_REPORT_VERSION),$(GO_JUNIT_REPORT_URL),go-junit-report))
 endif # GO_TEST_TOOL
 
 # ====================================================================================
