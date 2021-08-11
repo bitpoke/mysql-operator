@@ -18,14 +18,20 @@ __KUBEBUILDERV2_MAKEFILE__ := included
 # ====================================================================================
 # Options
 
-KUBEBUILDER_VERSION ?= 2.2.0
+KUBEBUILDER_VERSION ?= 2.3.2
 KUBEBUILDER := $(TOOLS_HOST_DIR)/kubebuilder-$(KUBEBUILDER_VERSION)
 
 CRD_DIR ?= config/crds
 API_DIR ?= pkg/apis
+RBAC_DIR ?= config/rbac
 
-CRD_OPTIONS ?= "crd:trivialVersions=true"
 BOILERPLATE_FILE ?= ./hack/boilerplate.go.txt
+
+GEN_CRD_OPTIONS ?= crd:trivialVersions=true
+GEN_RBAC_OPTIONS ?= rbac:roleName=manager-role
+GEN_WEBHOOK_OPTIONS ?=
+GEN_OBJECT_OPTIONS ?= object:headerFile=$(BOILERPLATE_FILE)
+GEN_OUTPUTS_OPTIONS ?= output:crd:artifacts:config=$(CRD_DIR) output:rbac:artifacts:config=$(RBAC_DIR)
 
 # these are use by the kubebuilder test harness
 
@@ -51,9 +57,9 @@ $(KUBEBUILDER):
 	@rm -fr $(TOOLS_HOST_DIR)/tmp
 	@$(OK) installing kubebuilder $(KUBEBUILDER_VERSION)
 
-CONTROLLER_GEN_VERSION ?= 0.2.4
+CONTROLLER_GEN_VERSION ?= 0.6.1
 CONTROLLER_GEN_URL ?= sigs.k8s.io/controller-tools/cmd/controller-gen
-$(eval $(call tool.go.get,controller-gen,v$(CONTROLLER_GEN_VERSION),$(CONTROLLER_GEN_URL)))
+$(eval $(call tool.go.install,controller-gen,v$(CONTROLLER_GEN_VERSION),$(CONTROLLER_GEN_URL)))
 
 # ====================================================================================
 # Kubebuilder Targets
@@ -64,10 +70,8 @@ $(eval $(call common.target,kubebuilder.manifests))
 .do.kubebuilder.manifests: $(CONTROLLER_GEN)
 	@$(INFO) Generating Kubebuilder manifests
 	@# first delete the CRD_DIR, to remove the CRDs of types that no longer exist
-	@rm -rf $(CRD_DIR)
 
-	@$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=$(CRD_DIR)
-	$(CONTROLLER_GEN) object:headerFile=$(BOILERPLATE_FILE) paths="./..."
+	@$(CONTROLLER_GEN) paths="./pkg/..." $(GEN_CRD_OPTIONS) $(GEN_RBAC_OPTIONS) $(GEN_WEBHOOK_OPTIONS) $(GEN_OBJECT_OPTIONS) $(GEN_OUTPUTS_OPTIONS)
 
 	@$(OK) Generating Kubebuilder manifests
 
@@ -95,7 +99,7 @@ export KUBEBULDERV2_HELPTEXT
 	@echo "$$KUBEBULDERV2_HELPTEXT"
 
 .help: .kubebuilder.help
-.generate.run: kubebuilder.manifests
+go.generate: kubebuilder.manifests
 
 .PHONY: .kubebuilder.help kubebuilder.manifests
 
