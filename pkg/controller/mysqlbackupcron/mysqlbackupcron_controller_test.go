@@ -27,7 +27,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 
-	cronpkg "github.com/wgliang/cron"
+	cronpkg "github.com/robfig/cron/v3"
 	"golang.org/x/net/context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -50,7 +50,10 @@ var _ = Describe("MysqlBackupCron controller", func() {
 		// cron job
 		cron *cronpkg.Cron
 
-		ctxCancel func()
+		ctxCancel     func()
+		defaultParser = cronpkg.NewParser(
+			cronpkg.Second | cronpkg.Minute | cronpkg.Hour | cronpkg.Dom | cronpkg.Month | cronpkg.DowOptional | cronpkg.Descriptor,
+		)
 	)
 
 	BeforeEach(func() {
@@ -107,7 +110,7 @@ var _ = Describe("MysqlBackupCron controller", func() {
 			},
 		}
 
-		schedule, err = cronpkg.Parse(cluster.Spec.BackupSchedule)
+		schedule, err = defaultParser.Parse(cluster.Spec.BackupSchedule)
 		Expect(err).To(Succeed())
 	})
 
@@ -142,7 +145,7 @@ var _ = Describe("MysqlBackupCron controller", func() {
 		It("should update cluster backup schedule", func() {
 			// update cluster scheduler
 			cluster.Spec.BackupSchedule = "0 0 0 * * *"
-			newSchedule, _ := cronpkg.Parse(cluster.Spec.BackupSchedule)
+			newSchedule, _ := defaultParser.Parse(cluster.Spec.BackupSchedule)
 			Expect(c.Update(context.TODO(), cluster)).To(Succeed())
 
 			// expect an reconcile event
@@ -176,12 +179,12 @@ var _ = Describe("MysqlBackupCron controller", func() {
 			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 
 			// check cron entry to have a single entry
-			Expect(cron.Entries()).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+			Expect(cron.Entries()).To(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Job": PointTo(MatchFields(IgnoreExtras, Fields{
 					"ClusterName":                    Equal(cluster.Name),
 					"BackupScheduleJobsHistoryLimit": PointTo(Equal(limit)),
 				})),
-			}))))
+			})))
 		})
 
 		When("backup is executed once per second", func() {
@@ -221,10 +224,10 @@ var _ = Describe("MysqlBackupCron controller", func() {
 })
 
 func haveCronJob(name string, sched cronpkg.Schedule) gomegatypes.GomegaMatcher {
-	return ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+	return ContainElement(MatchFields(IgnoreExtras, Fields{
 		"Job": PointTo(MatchFields(IgnoreExtras, Fields{
 			"ClusterName": Equal(name),
 		})),
 		"Schedule": Equal(sched),
-	})))
+	}))
 }

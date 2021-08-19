@@ -24,6 +24,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
    different compressors/decompressors when backing up or restoring.
  * Add support for MySQL version 8.0
  * Add `go modules` cache
+ * Support cron timezone
 ### Changed
  * Only add `binlog-space-limit` for `percona` image
  * Make user-defined InitContainer take the precedence
