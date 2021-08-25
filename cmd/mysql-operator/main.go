@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/go-logr/zapr"
 	logf "github.com/presslabs/controller-util/log"
 	"github.com/spf13/pflag"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/klog"
+	"k8s.io/klog/v2/klogr"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -58,7 +58,7 @@ func main() {
 	klogFlags.Set("logtostderr", "true")      // nolint: errcheck
 	klogFlags.Set("alsologtostderr", "false") // nolint: errcheck
 
-	logf.SetLogger(zapr.NewLogger(logf.RawStackdriverZapLoggerTo(os.Stderr, true)))
+	logf.SetLogger(klogr.New())
 
 	if err := opt.Validate(); err != nil {
 		log.Error(err, "failed to validate command line args, see help.")

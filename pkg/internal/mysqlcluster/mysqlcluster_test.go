@@ -24,11 +24,12 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 
-	"github.com/go-logr/zapr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/klog"
+	"k8s.io/klog/v2/klogr"
 
 	logf "github.com/presslabs/controller-util/log"
 	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -37,7 +38,8 @@ import (
 )
 
 func TestMySQLClusterWrapper(t *testing.T) {
-	logf.SetLogger(zapr.NewLogger(logf.RawStackdriverZapLoggerTo(GinkgoWriter, true)))
+	klog.SetOutput(GinkgoWriter)
+	logf.SetLogger(klogr.New())
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "MySQL Cluster wrapper unit tests")

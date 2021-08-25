@@ -2,9 +2,7 @@
 
 MySQL Operator enables bulletproof MySQL on Kubernetes. It manages all the necessary resources for deploying and managing a highly available MySQL cluster. It provides effortless backups, while keeping the cluster highly available.
 
-MySQL Operator was developed by the awesome engineering team at [Presslabs](https://www.presslabs.com/), a Smart Managed WordPress Hosting platform.
-
-For more open-source projects, check [Presslabs Code](https://www.presslabs.com/code/).
+MySQL Operator is maintained and developed by [Bitpoke](https://www.bitpoke.io/), a self managed WordPress hosting app running cloud-native.
 
 ## Goals and status
 
@@ -15,11 +13,10 @@ The main goals of this operator are:
  3. Out-of-the-box backups (scheduled and on demand) and point-in-time recovery
  4. Support for cloning in cluster and across clusters.
 
-The operator is to be considered alpha and not suitable for critical production workloads. We, Presslabs, sucessfully use it at the moment for some non-critical production workloads.
 
 ## Contributing
 
-We welcome all contributions in the form of new issues for feature requests, bugs or even pull requests. We are open to discuss ideas on how to improve the operator and would also love to find out where and how it's used. The discussion related to this project should happen on the Kubernetes Community [Slack](https://kubernetes.slack.com/messages/CEKQXFR0E/). The current maintainers of this project can be reached via [email](mailto:ping@presslabs.com), too.
+We welcome all contributions in the form of new issues for feature requests, bugs or even pull requests. We are open to discuss ideas on how to improve the operator and would also love to find out where and how it's used. The discussion related to this project should happen on the Kubernetes Community [Slack](https://kubernetes.slack.com/messages/CEKQXFR0E/). The current maintainers of this project can be reached via [email](mailto:info@bitpoke.io), too.
 
 ## Documentation
 
@@ -52,8 +49,8 @@ Maybe upgrading the MySQL operator to a newer version requires additional steps.
 
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/examples/example-cluster-secret.yaml
-kubectl apply -f https://raw.githubusercontent.com/presslabs/mysql-operator/master/examples/example-cluster.yaml
+kubectl apply -f https://raw.githubusercontent.com/bitpoke/mysql-operator/master/examples/example-cluster-secret.yaml
+kubectl apply -f https://raw.githubusercontent.com/bitpoke/mysql-operator/master/examples/example-cluster.yaml
 ```
 
 ## Roadmap to v1.0

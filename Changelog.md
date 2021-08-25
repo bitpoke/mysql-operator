@@ -28,17 +28,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Only add `binlog-space-limit` for `percona` image
  * Make user-defined InitContainer take the precedence
  * Set timeout of 15s on connection between the operator and Orchestrator
- * Bump controller-util dependency to 0.1.18 which fixes some updates on pod spec.
+ * Bump controller-util dependency to 0.3.0 which fixes some updates on pod spec.
  * Removed `NO_AUTO_VALUE_ON_ZERO` from `sql-mode` to be inline with MySQL default value
  * Remove use go module instead of dep
- * Update k8s client to `v0.18.2`
- * Update kubebuilder (to `v2.3.1`) along with controller-runtime (to `v0.8.3`) and controller-gen
+ * Update k8s client to `v0.21.2`
+ * Update kubebuilder (to `v2.3.1`) along with controller-runtime (to `v0.9.2`) and controller-gen
  * Update rclone to `v1.53.1`
  * Update `Orchestrator` version from `v3.1.2` to `v3.2.3`
  * Set default MySQL server version to `5.7.31`
  * Generate CRDs with controller-gen `v0.5.0`
- * Update client-go to `v0.20.4`
  * Update `getOrdinalFromHostname` and `IsFirstPodInSet`
+ * Use `klog` for logging
 ### Removed
 ### Fixed
  * Fix insufficient permissions during startup

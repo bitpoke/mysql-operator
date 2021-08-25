@@ -187,7 +187,7 @@ func (r *ReconcileMysqlNode) Reconcile(ctx context.Context, request reconcile.Re
 	var cluster *mysqlcluster.MysqlCluster
 	cluster, err = r.getNodeCluster(ctx, pod)
 	if err != nil {
-		log.V(-1).Info("cluster is not found", "error", err)
+		log.V(0).Info("cluster is not found", "error", err)
 		return reconcile.Result{}, err
 	}
 
