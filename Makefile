@@ -14,6 +14,7 @@ KUBEBUILDER_VERSION ?= 2.3.1
 HELM_VERSION ?= 3.2.4
 GOLANGCI_LINTER_VERSION ?= 1.24.0
 YQ_VERSION ?= 3.3.2
+KIND_VERSION ?= 0.11.1
 
 GOOS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 GOARCH ?= amd64
@@ -125,6 +126,8 @@ dependencies-local: dependencies
 	curl -sL https://get.helm.sh/helm-v$(HELM_VERSION)-$(GOOS)-$(GOARCH).tar.gz | \
 		tar -C $(BINDIR) -xz --strip-components 1 $(GOOS)-$(GOARCH)/helm
 	chmod +x $(BINDIR)/helm
+	curl -Lo $(BINDIR)/kind "https://kind.sigs.k8s.io/dl/v$(KIND_VERSION)/kind-$$(go env GOOS)-$$(go env GOARCH)"
+	chmod u+x $(BINDIR)/kind
 
 # Build the docker image
 .PHONY: images
@@ -151,6 +154,22 @@ publish: images
 		docker push $(REGISTRY)/$(ORCHESTRATOR_IMAGE_NAME):$${tag}; \
 		docker push $(REGISTRY)/$(SIDECAR_MYSQL57_IMAGE_NAME):$${tag}; \
 		docker push $(REGISTRY)/$(SIDECAR_MYSQL8_IMAGE_NAME):$${tag}; \
+	done
+
+# Debug in local
+CLUSTER_NAME := mysql-operator
+
+delete-environment:
+	-@kind delete cluster --name $(CLUSTER_NAME)
+
+create-environment: delete-environment images chart
+	@kind create cluster --name $(CLUSTER_NAME)
+	set -e; \
+		for tag in $(IMAGE_TAGS); do \
+		kind load docker-image --name $(CLUSTER_NAME) $(REGISTRY)/$(IMAGE_NAME):$${tag}; \
+		kind load docker-image --name $(CLUSTER_NAME) $(REGISTRY)/$(ORCHESTRATOR_IMAGE_NAME):$${tag}; \
+		kind load docker-image --name $(CLUSTER_NAME) $(REGISTRY)/$(SIDECAR_MYSQL57_IMAGE_NAME):$${tag}; \
+		kind load docker-image --name $(CLUSTER_NAME) $(REGISTRY)/$(SIDECAR_MYSQL8_IMAGE_NAME):$${tag}; \
 	done
 
 # E2E tests
