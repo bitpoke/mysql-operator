@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 var log = logf.Log.WithName("update-status")

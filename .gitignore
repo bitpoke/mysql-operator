@@ -40,9 +40,7 @@ docs/_build/
 *.swp
 
 # ignore bin
-bin/
-hack/docker/mysql-operator-sidecar/mysql-operator-sidecar
-hack/docker/mysql-operator/mysql-operator
+/bin/
 **/charts/*.tgz
 *.bak
 

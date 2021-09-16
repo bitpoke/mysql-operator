@@ -27,9 +27,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	. "github.com/presslabs/mysql-operator/pkg/internal/mysql"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysql/fake"
+	mysqlv1alpha1 "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	. "github.com/bitpoke/mysql-operator/pkg/internal/mysql"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysql/fake"
 )
 
 func TestMySQLInterface(t *testing.T) {

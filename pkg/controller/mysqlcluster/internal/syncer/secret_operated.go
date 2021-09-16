@@ -24,8 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/options"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/bitpoke/mysql-operator/pkg/options"
 )
 
 const (

@@ -28,9 +28,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/options"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/bitpoke/mysql-operator/pkg/options"
 )
 
 const (

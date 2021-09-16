@@ -45,7 +45,7 @@ type MysqlClusterSpec struct {
 	SecretName string `json:"secretName"`
 
 	// Represents the MySQL version that will be run. The available version can be found here:
-	// https://github.com/presslabs/mysql-operator/blob/0fd4641ce4f756a0aab9d31c8b1f1c44ee10fcb2/pkg/util/constants/constants.go#L87
+	// https://github.com/bitpoke/mysql-operator/blob/0fd4641ce4f756a0aab9d31c8b1f1c44ee10fcb2/pkg/util/constants/constants.go#L87
 	// This field should be set even if the Image is set to let the operator know which mysql version is running.
 	// Based on this version the operator can take decisions which features can be used.
 	// Defaults to 5.7

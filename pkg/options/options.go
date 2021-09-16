@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/presslabs/mysql-operator/pkg/util"
+	"github.com/bitpoke/mysql-operator/pkg/util"
 )
 
 // nolint: unparam
@@ -108,7 +108,7 @@ func newPullPolicyValue(defaultValue corev1.PullPolicy, v *corev1.PullPolicy) *p
 }
 
 const (
-	defaultExporterImage = "prom/mysqld-exporter:v0.11.0"
+	defaultExporterImage = "prom/mysqld-exporter:v0.13.0"
 
 	defaultImagePullPolicy     = corev1.PullIfNotPresent
 	defaultImagePullSecretName = ""
@@ -126,8 +126,8 @@ const (
 )
 
 var (
-	defaultSidecarMysql57Image = "quay.io/presslabs/mysql-operator-sidecar-mysql57:" + util.AppVersion
-	defaultSidecarMysql8Image  = "quay.io/presslabs/mysql-operator-sidecar-mysql8:" + util.AppVersion
+	defaultSidecarMysql57Image = "docker.io/bitpoke/mysql-operator-sidecar-5.7:" + util.AppVersion
+	defaultSidecarMysql8Image  = "docker.io/bitpoke/mysql-operator-sidecar-8.0:" + util.AppVersion
 )
 
 // AddFlags registers all mysql-operator needed flags

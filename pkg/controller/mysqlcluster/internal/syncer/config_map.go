@@ -30,7 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/presslabs/controller-util/syncer"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
+
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 // NewConfigMapSyncer returns config map syncer
@@ -185,7 +186,7 @@ var mysqlCommonConfigs = map[string]string{
 	"log-slave-updates": "on",
 
 	// start server without read-only because of https://bugs.mysql.com/bug.php?id=100283
-	// so we can restore from a backup (see https://github.com/presslabs/mysql-operator/issues/509)
+	// so we can restore from a backup (see https://github.com/bitpoke/mysql-operator/issues/509)
 	//"read-only":        "on",
 	"skip-slave-start": "on",
 

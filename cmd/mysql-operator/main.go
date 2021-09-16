@@ -31,9 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
-	"github.com/presslabs/mysql-operator/pkg/apis"
-	"github.com/presslabs/mysql-operator/pkg/controller"
-	"github.com/presslabs/mysql-operator/pkg/options"
+	"github.com/bitpoke/mysql-operator/pkg/apis"
+	"github.com/bitpoke/mysql-operator/pkg/controller"
+	"github.com/bitpoke/mysql-operator/pkg/options"
 )
 
 var log = logf.Log.WithName("mysql-operator")

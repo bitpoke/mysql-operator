@@ -25,7 +25,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
+	"github.com/bitpoke/mysql-operator/pkg/util/constants"
 )
 
 // RunCloneCommand clones the data from several potential sources.

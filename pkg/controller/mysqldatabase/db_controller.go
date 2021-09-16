@@ -36,11 +36,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysql"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqldatabase"
-	"github.com/presslabs/mysql-operator/pkg/options"
+	mysqlv1alpha1 "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysql"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqldatabase"
+	"github.com/bitpoke/mysql-operator/pkg/options"
 )
 
 const (

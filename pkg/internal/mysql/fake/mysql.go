@@ -24,7 +24,7 @@ import (
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 
-	"github.com/presslabs/mysql-operator/pkg/internal/mysql"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysql"
 )
 
 // SQLCall ...

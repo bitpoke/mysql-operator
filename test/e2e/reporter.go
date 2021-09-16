@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	clientset "k8s.io/client-go/kubernetes"
 
-	"github.com/presslabs/mysql-operator/test/e2e/framework"
+	"github.com/bitpoke/mysql-operator/test/e2e/framework"
 )
 
 type podLogReporter struct {

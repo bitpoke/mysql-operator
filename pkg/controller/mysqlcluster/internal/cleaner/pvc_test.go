@@ -31,9 +31,9 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/options"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/bitpoke/mysql-operator/pkg/options"
 )
 
 var _ = Describe("PVC cleaner", func() {
@@ -104,7 +104,7 @@ var _ = Describe("PVC cleaner", func() {
 						Namespace: cluster.Namespace,
 						Labels:    cluster.GetSelectorLabels(),
 						OwnerReferences: []metav1.OwnerReference{
-							metav1.OwnerReference{
+							{
 								APIVersion: api.SchemeGroupVersion.String(),
 								Kind:       "MysqlCluster",
 								Name:       cluster.Name,

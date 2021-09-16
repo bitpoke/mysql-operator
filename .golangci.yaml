@@ -15,6 +15,7 @@ run:
   tests: false
   skip-dirs:
     - vendor
+    - test/e2e
   skip-files:
     - zz_generated.*.go
 
@@ -45,6 +46,8 @@ linters:
     - gocritic
     - gomnd
     - gocognit
+    - godot
+    - nestif
 
 issues:
   max-same-issues: 0

@@ -33,12 +33,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysql/fake"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqldatabase"
-	"github.com/presslabs/mysql-operator/pkg/testutil/factories"
-	gm "github.com/presslabs/mysql-operator/pkg/testutil/gomegamatcher"
+	mysqlv1alpha1 "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/controller/internal/testutil"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysql/fake"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqldatabase"
+	"github.com/bitpoke/mysql-operator/pkg/testutil/factories"
+	gm "github.com/bitpoke/mysql-operator/pkg/testutil/gomegamatcher"
 )
 
 var _ = Describe("MySQL database controller", func() {

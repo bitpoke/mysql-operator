@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/presslabs/mysql-operator/pkg/apis"
-	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
+	"github.com/bitpoke/mysql-operator/pkg/apis"
+	"github.com/bitpoke/mysql-operator/pkg/controller/internal/testutil"
 )
 
 var cfg *rest.Config

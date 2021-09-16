@@ -16,7 +16,7 @@ limitations under the License.
 
 package controller
 
-import "github.com/presslabs/mysql-operator/pkg/controller/node"
+import "github.com/bitpoke/mysql-operator/pkg/controller/node"
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.

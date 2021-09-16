@@ -36,9 +36,9 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	"github.com/presslabs/mysql-operator/test/e2e/framework"
-	"github.com/presslabs/mysql-operator/test/e2e/framework/ginkgowrapper"
-	pf "github.com/presslabs/mysql-operator/test/e2e/framework/portforward"
+	"github.com/bitpoke/mysql-operator/test/e2e/framework"
+	"github.com/bitpoke/mysql-operator/test/e2e/framework/ginkgowrapper"
+	pf "github.com/bitpoke/mysql-operator/test/e2e/framework/portforward"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )

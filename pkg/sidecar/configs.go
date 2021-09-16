@@ -30,8 +30,8 @@ import (
 	"github.com/blang/semver"
 	"github.com/presslabs/controller-util/rand"
 
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/bitpoke/mysql-operator/pkg/util/constants"
 )
 
 // Config contains information related with the pod.

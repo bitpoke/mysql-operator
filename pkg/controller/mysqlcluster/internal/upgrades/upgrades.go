@@ -31,10 +31,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/options"
-	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/bitpoke/mysql-operator/pkg/options"
+	orc "github.com/bitpoke/mysql-operator/pkg/orchestrator"
+	"github.com/bitpoke/mysql-operator/pkg/util/constants"
 )
 
 var log = logf.Log.WithName("upgrades.cluster")
