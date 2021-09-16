@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 // The job structure contains the context to schedule a backup

@@ -1,191 +1,79 @@
-branches:
-  - master
-  - 1.x
-  - 2.x
-  # This is very useful when debugging drone related issues. Just prefix your branch with "drone-"
-  # to trigger a drone build.
-  - drone-*
-
-workspace:
-  base: /root/go
-  path: src/github.com/presslabs/mysql-operator
+---
+kind: pipeline
+name: default
 
 clone:
-  git:
-    image: plugins/git
-    depth: 100
+  disable: true
+
+workspace:
+  base: /workspace
+  path: src/github.com/bitpoke/mysql-operator
+
+steps:
+- name: git
+  pull: default
+  image: plugins/git
+  settings:
+    depth: 0
     tags: true
 
-pipeline:
-  dependencies:
-    image: quay.io/presslabs/bfc:0.11
-    commands:
-      - make dependencies
+- name: install dependencies
+  pull: always
+  image: docker.io/bitpoke/build:v0.3.0-3.g7069e76
+  commands:
+  - make -j4 build.tools
 
-  lint:
-    group: lint
-    image: quay.io/presslabs/bfc:0.11
-    commands:
-      - make lint
+- name: verify generated code
+  image: docker.io/bitpoke/build:v0.3.0-3.g7069e76
+  commands:
+  - make generate
+  - git diff --exit-code
 
-  lint-chart:
-    group: lint
-    image: quay.io/presslabs/kluster-toolbox
-    pull: true
-    commands:
-      - helm lint charts/mysql-operator
-      - helm dep build charts/mysql-operator
+- name: lint
+  image: docker.io/bitpoke/build:v0.3.0-3.g7069e76
+  commands:
+  - make -j4 lint
 
-  test:
-    group: test
-    image: quay.io/presslabs/bfc:0.11
-    commands:
-      - make test
+- name: test
+  image: docker.io/bitpoke/build:v0.3.0-3.g7069e76
+  commands:
+  - make test
 
-  verify-generate:
-    image: quay.io/presslabs/bfc:0.11
-    commands:
-      - make -s fmt generate manifests
-      - git diff --exit-code
+- name: build
+  image: docker.io/bitpoke/build:v0.3.0-3.g7069e76
+  commands:
+  - make -j4 build
 
-  publish-images:
-    group: publish
-    image: quay.io/presslabs/bfc:0.11
-    environment:
-      DOCKER_HOST: tcp://docker:2375
-      DOCKER_USER: presslabs+drone
-      APP_VERSION: ${DRONE_TAG:-${DRONE_BRANCH/master/latest}}
-    secrets:
-      - source: QUAY_TOKEN
-        target: DOCKER_PASSWORD
-    commands:
-      - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD quay.io
-      - make publish
-    when:
-      event:
-        - push
-        - tag
-
-  build-chart:
-    group: build
-    image: quay.io/presslabs/bfc:0.11
-    environment:
-      APP_VERSION: ${DRONE_TAG:-${DRONE_BRANCH/master/latest}}
-    commands:
-      - make chart
-
-  publish-helm-chart:
-    image: quay.io/presslabs/kluster-toolbox
-    pull: true
-    environment:
-      - GH_USER=presslabs-bot
-    commands:
-      - cd charts
-      - (cd mysql-operator && helm dep build)
-      - helm package mysql-operator
-      - CHART="$(basename *.tgz)" ; MESSAGE="Publish $(basename $CHART .tgz)"
-      - /usr/local/bin/gh put --skip-existing -m "$MESSAGE" "$CHART" "presslabs/charts/docs/"
-      - rm *.tgz
-      # publish cluster chart
-      - (cd mysql-cluster && helm dep build)
-      - helm package mysql-cluster
-      - CHART="$(basename *.tgz)" ; MESSAGE="Publish $(basename $CHART .tgz)"
-      - /usr/local/bin/gh put --skip-existing -m "$MESSAGE" "$CHART" "presslabs/charts/docs/"
-    secrets:
-      - GH_PASSWORD
-    when:
-      event: tag
-
-#
-# Documentation
-#
-
-  trigger-docs-build:
-    image: plugins/downstream
-    server: https://drone.presslabs.net
-    fork: true
-    secrets:
-      - DRONE_TOKEN
-    repositories:
-      - presslabs/docs
-    when:
-      branch: master
-      event: push
-
-#
-# end to end testing
-#
-
-  start-kubernetes:
-    image: quay.io/presslabs/bfc:0.11
-    group: publish
-    secrets:
-      - GOOGLE_CREDENTIALS
-    environment:
-      - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
-      - KUBECONFIG=/root/go/.kube/config
-      - HELM_HOME=/root/go/.helm/
-    commands:
-      - setup-credentials-helper.sh
-      - gcloud container clusters create $CLUSTER_NAME
-          --zone europe-west3-b --project testing-reactor
-          --preemptible  --cluster-version 1.19
-      # update chart deps
-      - helm dependency update charts/mysql-operator
-    when:
-      branch: master
-      event: push
-
-  e2e-tests:
-    image: quay.io/presslabs/bfc:0.11
-    secrets:
-      - GOOGLE_CREDENTIALS
-    environment:
-      - APP_VERSION=${DRONE_TAG:-${DRONE_BRANCH/master/latest}}
-      - KUBECONFIG=/root/go/.kube/config
-      - HELM_HOME=/root/go/.helm/
-      - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
-      - BACKUP_BUCKET_NAME=pl-test-mysql-operator
-    commands:
-      - setup-credentials-helper.sh
-      - go test ./test/e2e -v --kubernetes-config /root/go/.kube/config --kubernetes-context gke_testing-reactor_europe-west3-b_$CLUSTER_NAME
-            --operator-image quay.io/presslabs/mysql-operator:$APP_VERSION
-            --sidecar-mysql57-image quay.io/presslabs/mysql-operator-sidecar-mysql57:$APP_VERSION
-            --sidecar-mysql8-image quay.io/presslabs/mysql-operator-sidecar-mysql8:$APP_VERSION
-            --orchestrator-image quay.io/presslabs/mysql-operator-orchestrator:$APP_VERSION
-            --pod-wait-timeout 150
-            --dump-logs-on-failure=false
-            -timeout 40m
-            -ginkgo.slowSpecThreshold 300
-    when:
-      branch: master
-      event: push
-
-  stop-kubernetes:
-    image: quay.io/presslabs/bfc:0.11
-    secrets:
-      - GOOGLE_CREDENTIALS
-    environment:
-      - CLUSTER_NAME=mysql-op-x${DRONE_BUILD_NUMBER}
-      - KUBECONFIG=/root/go/.kube/config
-    commands:
-      - setup-credentials-helper.sh
-      - gcloud container clusters delete $CLUSTER_NAME --quiet --zone europe-west3-b --project testing-reactor
-    when:
-      status: [ success, failure ]
-      branch: master
-      event: push
-
+- name: publish
+  image: docker.io/bitpoke/build:v0.3.0-3.g7069e76
+  environment:
+    DOCKER_REGISTRY:
+      from_secret: DOCKER_REGISTRY
+    DOCKER_USERNAME:
+      from_secret: DOCKER_USERNAME
+    DOCKER_PASSWORD:
+      from_secret: DOCKER_PASSWORD
+  commands:
+  - /usr/local/bin/setup-credentials-helper.sh
+  - make publish
+  when:
+    ref:
+    - refs/heads/master
+    - refs/heads/release-*
 
 services:
-  docker:
-    image: docker:dind
-    privileged: true
-    commands:
-      - mkdir -p "$CI_WORKSPACE/.work/docker" "$CI_WORKSPACE/.cache/docker"
-      - /usr/local/bin/dockerd-entrypoint.sh dockerd --host "unix://$CI_WORKSPACE/.work/docker/docker.sock" --storage-driver overlay2 --log-level error
+- name: docker
+  image: docker:20.10.8-dind
+  privileged: true
+  commands:
+    - /usr/local/bin/dockerd-entrypoint.sh dockerd --host "unix:///workspace/docker.sock" --storage-driver overlay2 --log-level error
 
-    when:
-      event:
-        - push
-        - tag
+trigger:
+  ref:
+    - refs/pull/**
+    - refs/heads/master
+    - refs/heads/release-*
+    - refs/tags/**
+    # CI related changes SHOULD be prefixed with drone-
+    - refs/heads/drone-*
+

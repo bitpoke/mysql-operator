@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 // NodeConditions returns a list of api.NodeConditions for a node

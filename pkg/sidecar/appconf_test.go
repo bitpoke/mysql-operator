@@ -17,9 +17,10 @@ limitations under the License.
 package sidecar
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"strings"
 )
 
 var _ = Describe("Test sidecar appconf", func() {

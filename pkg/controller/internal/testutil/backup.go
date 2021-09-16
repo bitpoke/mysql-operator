@@ -27,7 +27,7 @@ import (
 	core "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 // ListAllBackupsFn returns a helper function that can be used with gomega

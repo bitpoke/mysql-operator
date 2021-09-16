@@ -24,11 +24,11 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlbackup"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/options"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/controller/internal/testutil"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlbackup"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/bitpoke/mysql-operator/pkg/options"
 )
 
 var _ = Describe("MysqlBackup job syncer", func() {
@@ -74,11 +74,11 @@ var _ = Describe("MysqlBackup job syncer", func() {
 
 	It("should return the healthy replica", func() {
 		cluster.Status.Nodes = []api.NodeStatus{
-			api.NodeStatus{
+			{
 				Name:       cluster.GetPodHostname(0),
 				Conditions: testutil.NodeConditions(true, false, false, false),
 			},
-			api.NodeStatus{
+			{
 				Name:       cluster.GetPodHostname(1),
 				Conditions: testutil.NodeConditions(false, true, false, true),
 			},
@@ -88,11 +88,11 @@ var _ = Describe("MysqlBackup job syncer", func() {
 
 	It("should return the master if replicas are not healthy", func() {
 		cluster.Status.Nodes = []api.NodeStatus{
-			api.NodeStatus{
+			{
 				Name:       cluster.GetPodHostname(0),
 				Conditions: testutil.NodeConditions(true, false, false, false),
 			},
-			api.NodeStatus{
+			{
 				Name:       cluster.GetPodHostname(1),
 				Conditions: testutil.NodeConditions(false, false, false, true),
 			},
@@ -102,11 +102,11 @@ var _ = Describe("MysqlBackup job syncer", func() {
 
 	It("should return the master if replicas are not healthy, even when master is not pod 0", func() {
 		cluster.Status.Nodes = []api.NodeStatus{
-			api.NodeStatus{
+			{
 				Name:       cluster.GetPodHostname(0),
 				Conditions: testutil.NodeConditions(false, false, false, true),
 			},
-			api.NodeStatus{
+			{
 				Name:       cluster.GetPodHostname(1),
 				Conditions: testutil.NodeConditions(true, false, false, false),
 			},

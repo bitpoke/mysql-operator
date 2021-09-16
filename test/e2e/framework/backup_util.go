@@ -30,7 +30,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 func GetBucketName() string {

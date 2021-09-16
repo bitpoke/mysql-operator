@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
+	"github.com/bitpoke/mysql-operator/pkg/util/constants"
 )
 
 var log = logf.Log.WithName("mysqlcluster-syncer")

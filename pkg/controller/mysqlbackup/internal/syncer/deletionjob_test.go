@@ -30,10 +30,10 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlbackup"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/options"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlbackup"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/bitpoke/mysql-operator/pkg/options"
 )
 
 var _ = Describe("MysqlBackup remove job syncer", func() {
@@ -111,11 +111,11 @@ var _ = Describe("MysqlBackup remove job syncer", func() {
 		Expect(backup.Finalizers).To(ContainElement(RemoteStorageFinalizer))
 
 		delJob.Status.Conditions = []batch.JobCondition{
-			batch.JobCondition{
+			{
 				Type:   batch.JobComplete,
 				Status: core.ConditionTrue,
 			},
-			batch.JobCondition{
+			{
 				Type:   batch.JobFailed,
 				Status: core.ConditionTrue,
 			},
@@ -125,7 +125,7 @@ var _ = Describe("MysqlBackup remove job syncer", func() {
 		Expect(recorder.Events).To(Receive(ContainSubstring(RemoteDeletionFailedEvent)))
 
 		delJob.Status.Conditions = []batch.JobCondition{
-			batch.JobCondition{
+			{
 				Type:   batch.JobComplete,
 				Status: core.ConditionFalse,
 			},
@@ -134,11 +134,11 @@ var _ = Describe("MysqlBackup remove job syncer", func() {
 		Expect(backup.Finalizers).To(ContainElement(RemoteStorageFinalizer))
 
 		delJob.Status.Conditions = []batch.JobCondition{
-			batch.JobCondition{
+			{
 				Type:   batch.JobComplete,
 				Status: core.ConditionTrue,
 			},
-			batch.JobCondition{
+			{
 				Type:   batch.JobFailed,
 				Status: core.ConditionFalse,
 			},

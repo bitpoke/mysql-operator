@@ -20,11 +20,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	// this import  needs to be done otherwise the mysql driver don't work
 	_ "github.com/go-sql-driver/mysql"
-	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	mysqlv1alpha1 "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 
 	logf "github.com/presslabs/controller-util/log"
 )

@@ -21,17 +21,19 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 var (
@@ -142,7 +144,7 @@ func getPod(cluster *mysqlcluster.MysqlCluster, id int) *core.Pod {
 		},
 		Spec: core.PodSpec{
 			Containers: []core.Container{
-				core.Container{
+				{
 					Name:  "first",
 					Image: "image:latest",
 				},

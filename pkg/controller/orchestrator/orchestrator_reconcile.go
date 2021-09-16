@@ -31,9 +31,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	orc "github.com/bitpoke/mysql-operator/pkg/orchestrator"
 )
 
 const (
@@ -543,7 +543,7 @@ func (ou *orcUpdater) markReadOnlyNodesInOrc(insts InstancesSet, master *orc.Ins
 	// master is determined
 	for _, inst := range insts {
 		// give time to stabilize in case of a failover
-		// https://github.com/presslabs/mysql-operator/issues/566
+		// https://github.com/bitpoke/mysql-operator/issues/566
 		if !inst.IsUpToDate || inst.Uptime < uptimeGraceTime {
 			ou.log.Info("skip set read-only/writable", "instance", instToLog(&inst))
 			continue

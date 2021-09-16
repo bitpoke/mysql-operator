@@ -23,7 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/presslabs/controller-util/syncer"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
+
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 // NewHealthySVCSyncer returns a service syncer

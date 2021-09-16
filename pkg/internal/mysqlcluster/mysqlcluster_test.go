@@ -32,9 +32,10 @@ import (
 	"k8s.io/klog/v2/klogr"
 
 	logf "github.com/presslabs/controller-util/log"
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/options"
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
+
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/options"
+	"github.com/bitpoke/mysql-operator/pkg/util/constants"
 )
 
 func TestMySQLClusterWrapper(t *testing.T) {

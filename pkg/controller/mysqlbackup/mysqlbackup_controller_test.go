@@ -36,10 +36,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlbackup"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/controller/internal/testutil"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlbackup"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 const timeout = time.Second * 2

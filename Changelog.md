@@ -39,6 +39,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Generate CRDs with controller-gen `v0.5.0`
  * Update `getOrdinalFromHostname` and `IsFirstPodInSet`
  * Use `klog` for logging
+ * Use https://github.com/bitpoke/build for building the project
 ### Removed
 ### Fixed
  * Fix insufficient permissions during startup

@@ -33,10 +33,11 @@ import (
 
 	"github.com/presslabs/controller-util/mergo/transformers"
 	"github.com/presslabs/controller-util/syncer"
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/options"
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
+
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/bitpoke/mysql-operator/pkg/options"
+	"github.com/bitpoke/mysql-operator/pkg/util/constants"
 )
 
 // volumes names
@@ -117,7 +118,7 @@ func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 	}
 
 	// mergo will add new keys for NodeSelector and Tolerations and keep the others instead of removing them
-	// Fixes: https://github.com/presslabs/mysql-operator/issues/454
+	// Fixes: https://github.com/bitpoke/mysql-operator/issues/454
 	out.Spec.Template.Spec.NodeSelector = s.cluster.Spec.PodSpec.NodeSelector
 	out.Spec.Template.Spec.Tolerations = s.cluster.Spec.PodSpec.Tolerations
 

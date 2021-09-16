@@ -17,7 +17,7 @@ limitations under the License.
 package apis
 
 import (
-	"github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 func init() {

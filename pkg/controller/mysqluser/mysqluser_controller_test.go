@@ -36,12 +36,12 @@ import (
 	"github.com/presslabs/controller-util/meta"
 	"github.com/presslabs/controller-util/rand"
 
-	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/controller/internal/testutil"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysql/fake"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqluser"
-	"github.com/presslabs/mysql-operator/pkg/testutil/factories"
-	"github.com/presslabs/mysql-operator/pkg/testutil/gomegamatcher"
+	mysqlv1alpha1 "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/controller/internal/testutil"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysql/fake"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqluser"
+	"github.com/bitpoke/mysql-operator/pkg/testutil/factories"
+	"github.com/bitpoke/mysql-operator/pkg/testutil/gomegamatcher"
 )
 
 const timeout = time.Second * 1

@@ -1,4 +1,4 @@
-module github.com/presslabs/mysql-operator
+module github.com/bitpoke/mysql-operator
 
 go 1.16
 

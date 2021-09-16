@@ -22,8 +22,9 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
 	// nolint: golint
-	. "github.com/presslabs/mysql-operator/pkg/orchestrator"
+	. "github.com/bitpoke/mysql-operator/pkg/orchestrator"
 )
 
 // OrcFakeClient is a structure that implements orchestrator client interface used in

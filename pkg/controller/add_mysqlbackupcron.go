@@ -17,7 +17,7 @@ limitations under the License.
 package controller
 
 import (
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlbackupcron"
+	"github.com/bitpoke/mysql-operator/pkg/controller/mysqlbackupcron"
 )
 
 func init() {

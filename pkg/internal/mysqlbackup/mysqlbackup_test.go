@@ -25,7 +25,8 @@ import (
 	"k8s.io/klog/v2/klogr"
 
 	logf "github.com/presslabs/controller-util/log"
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
 
 func TestMySQLBackupWrapper(t *testing.T) {

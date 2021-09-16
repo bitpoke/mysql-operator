@@ -35,14 +35,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	mysqlv1alpha1 "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
+	mysqlv1alpha1 "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	cleaner "github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/cleaner"
-	clustersyncer "github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
-	"github.com/presslabs/mysql-operator/pkg/controller/mysqlcluster/internal/upgrades"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	"github.com/presslabs/mysql-operator/pkg/options"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	cleaner "github.com/bitpoke/mysql-operator/pkg/controller/mysqlcluster/internal/cleaner"
+	clustersyncer "github.com/bitpoke/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
+	"github.com/bitpoke/mysql-operator/pkg/controller/mysqlcluster/internal/upgrades"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	"github.com/bitpoke/mysql-operator/pkg/options"
 )
 
 var log = logf.Log.WithName(controllerName)

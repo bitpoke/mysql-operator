@@ -19,6 +19,9 @@ package orchelper
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/presslabs/controller-util/rand"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,11 +29,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/reference"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
 )
 
 // parse the orchestrator cluster name as NamespacedName

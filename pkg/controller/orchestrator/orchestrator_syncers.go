@@ -20,9 +20,9 @@ import (
 	"github.com/presslabs/controller-util/syncer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/presslabs/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/presslabs/mysql-operator/pkg/internal/mysqlcluster"
-	orc "github.com/presslabs/mysql-operator/pkg/orchestrator"
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	orc "github.com/bitpoke/mysql-operator/pkg/orchestrator"
 )
 
 // newFinalizerSyncer returns a syncer for mysql cluster that sets the OrchestratorFinalizer

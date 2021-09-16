@@ -26,7 +26,7 @@ import (
 
 	"github.com/go-ini/ini"
 
-	"github.com/presslabs/mysql-operator/pkg/util/constants"
+	"github.com/bitpoke/mysql-operator/pkg/util/constants"
 )
 
 // RunConfigCommand generates my.cnf, client.cnf and 10-dynamic.cnf files.
@@ -155,7 +155,7 @@ func initFileQuery(cfg *Config, gtidPurged string) []byte {
 	}
 
 	// set server as read only
-	// https://github.com/presslabs/mysql-operator/issues/509
+	// https://github.com/bitpoke/mysql-operator/issues/509
 	queries = append(queries, "SET GLOBAL READ_ONLY = 1")
 
 	// create operator database because GRANTS need it
