@@ -19,13 +19,14 @@ package e2e
 import (
 	"context"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 	"testing"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/golang/glog"
 	"github.com/onsi/ginkgo"
@@ -172,5 +173,5 @@ func RunE2ETests(t *testing.T) {
 
 	glog.Infof("Starting e2e run on Ginkgo node %d", config.GinkgoConfig.ParallelNode)
 
-	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Mysql operator e2e suite", rps)
+	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "MySQL Operator E2E Suite", rps)
 }

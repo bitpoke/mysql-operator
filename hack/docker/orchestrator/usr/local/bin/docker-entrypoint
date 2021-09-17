@@ -1,5 +1,0 @@
-#!/bin/sh
-dockerize -no-overwrite -template /templates/orchestrator.conf.json:/etc/orchestrator/orchestrator.conf.json
-dockerize -no-overwrite -template /templates/orc-topology.cnf:/etc/orchestrator/orc-topology.cnf
-
-exec $@
