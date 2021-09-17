@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM google/cloud-sdk:351.0.0
+FROM google/cloud-sdk:357.0.0
 
 ARG ARCH
 
