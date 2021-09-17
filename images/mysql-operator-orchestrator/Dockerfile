@@ -1,24 +1,3 @@
-###############################################################################
-#  Build the mysql-oerator related binaries
-###############################################################################
-
-FROM golang:1.16.0 as builder
-
-# Copy in the go src
-WORKDIR /go/src/github.com/presslabs/mysql-operator
-
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY pkg/    pkg/
-COPY cmd/    cmd/
-
-# Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator github.com/presslabs/mysql-operator/cmd/mysql-operator
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o mysql-operator-sidecar github.com/presslabs/mysql-operator/cmd/mysql-operator-sidecar
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o orc-helper github.com/presslabs/mysql-operator/cmd/orc-helper
-
-
 ##############################################################################
 #  Build Orchestrator
 ###############################################################################
@@ -64,13 +43,12 @@ RUN set -ex \
     && wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz -O- | \
         tar -C /usr/local/bin -xzv
 
-COPY --chown=777:777 hack/docker/orchestrator/ /
+COPY --chown=777:777 rootfs/ /
 COPY --from=builder-orc /tmp/orchestrator-release/build/orchestrator/usr/local/orchestrator/ /usr/local/orchestrator/
-COPY --from=builder /go/src/github.com/presslabs/mysql-operator/orc-helper /usr/local/bin/
 
 USER 777
 EXPOSE 3000 10008
 VOLUME [ "/var/lib/orchestrator" ]
 
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["/usr/local/bin/orchestrator", "-quiet", "-config", "/etc/orchestrator/orchestrator.conf.json", "http"]

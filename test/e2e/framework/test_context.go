@@ -17,6 +17,7 @@ import (
 	"flag"
 	"os"
 
+	"github.com/bitpoke/mysql-operator/pkg/version"
 	"github.com/onsi/ginkgo/config"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -58,6 +59,8 @@ func RegisterCommonFlags() {
 	// Randomize specs as well as suites
 	config.GinkgoConfig.RandomizeAllSpecs = true
 
+	commit := version.GetInfo().GitCommit
+
 	flag.StringVar(&TestContext.KubeHost, "kubernetes-host", "", "The kubernetes host, or apiserver, to connect to")
 	flag.StringVar(&TestContext.KubeConfig, "kubernetes-config", os.Getenv(clientcmd.RecommendedConfigPathEnvVar), "Path to config containing embedded authinfo for kubernetes. Default value is from environment variable "+clientcmd.RecommendedConfigPathEnvVar)
 	flag.StringVar(&TestContext.KubeContext, "kubernetes-context", "", "config context to use for kuberentes. If unset, will use value from 'current-context'")
@@ -66,10 +69,10 @@ func RegisterCommonFlags() {
 	flag.StringVar(&TestContext.ChartPath, "operator-chart-path", "../../charts/mysql-operator", "The chart name or path for mysql operator")
 	flag.StringVar(&TestContext.ChartValues, "operator-chart-values-path", "../../test/e2e-values.yaml", "Path to a values file for mysql-operator chart.")
 
-	flag.StringVar(&TestContext.OperatorImage, "operator-image", "quay.io/presslabs/mysql-operator:build", "Image for mysql operator.")
-	flag.StringVar(&TestContext.SidecarMysql57Image, "sidecar-mysql57-image", "quay.io/presslabs/mysql-operator-sidecar-mysql57:build", "Image for mysql helper.")
-	flag.StringVar(&TestContext.SidecarMysql8Image, "sidecar-mysql8-image", "quay.io/presslabs/mysql-operator-sidecar-mysql8:build", "Image for mysql helper.")
-	flag.StringVar(&TestContext.OrchestratorImage, "orchestrator-image", "quay.io/presslabs/mysql-operator-orchestrator:build", "Image for mysql orchestrator.")
+	flag.StringVar(&TestContext.OperatorImage, "operator-image", "eu.gcr.io/bitpoke-mysql-operator-testing/mysql-operator:"+commit, "Image for mysql operator.")
+	flag.StringVar(&TestContext.SidecarMysql57Image, "sidecar-mysql57-image", "eu.gcr.io/bitpoke-mysql-operator-testing/mysql-operator-sidecar-5.7:"+commit, "Image for mysql helper.")
+	flag.StringVar(&TestContext.SidecarMysql8Image, "sidecar-mysql8-image", "eu.gcr.io/bitpoke-mysql-operator-testing/mysql-operator-sidecar-8.0:"+commit, "Image for mysql helper.")
+	flag.StringVar(&TestContext.OrchestratorImage, "orchestrator-image", "eu.gcr.io/bitpoke-mysql-operator-testing/mysql-operator-orchestrator:"+commit, "Image for mysql orchestrator.")
 
 	flag.IntVar(&TestContext.TimeoutSeconds, "pod-wait-timeout", 100, "Timeout to wait for a pod to be ready.")
 	flag.BoolVar(&TestContext.DumpLogsOnFailure, "dump-logs-on-failure", true, "Dump pods logs when a test fails.")

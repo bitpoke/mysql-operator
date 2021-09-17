@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/bitpoke/mysql-operator/pkg/util"
+	"github.com/bitpoke/mysql-operator/pkg/version"
 )
 
 // nolint: unparam
@@ -126,8 +126,8 @@ const (
 )
 
 var (
-	defaultSidecarMysql57Image = "docker.io/bitpoke/mysql-operator-sidecar-5.7:" + util.AppVersion
-	defaultSidecarMysql8Image  = "docker.io/bitpoke/mysql-operator-sidecar-8.0:" + util.AppVersion
+	defaultSidecarMysql57Image = "docker.io/bitpoke/mysql-operator-sidecar-5.7:" + version.GetInfo().GitVersion
+	defaultSidecarMysql8Image  = "docker.io/bitpoke/mysql-operator-sidecar-8.0:" + version.GetInfo().GitVersion
 )
 
 // AddFlags registers all mysql-operator needed flags

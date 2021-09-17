@@ -259,7 +259,7 @@ go.test.unit: $(GINKGO)
 	@CGO_ENABLED=0 $(GINKGO) $(GO_TEST_FLAGS) $(GO_STATIC_FLAGS) $(patsubst $(ROOT_DIR)/%,./%,$(shell go list -f '{{ .Dir }}' $(GO_TEST_PACKAGES))) || $(FAIL)
 	@$(OK) go test unit-tests
 
-go.test.integration:
+go.test.integration: $(GINKGO)
 	@$(INFO) ginkgo integration-tests
 	@mkdir -p $(GO_TEST_OUTPUT) || $(FAIL)
 	@CGO_ENABLED=0 $(GINKGO) $(GO_TEST_FLAGS) $(GO_STATIC_FLAGS) $(foreach t,$(GO_INTEGRATION_TESTS_SUBDIRS),./$(t)/...) $(TEST_FILTER_PARAM) || $(FAIL)

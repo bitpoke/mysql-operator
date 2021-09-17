@@ -96,7 +96,7 @@ spec:
             - name: data
               mountPath: /var/lib/orchestrator/
             - name: config
-              mountPath: /templates/
+              mountPath: /usr/local/share/orchestrator/templates/
           livenessProbe:
             timeoutSeconds: 10
             initialDelaySeconds: 200

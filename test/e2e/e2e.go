@@ -172,5 +172,5 @@ func RunE2ETests(t *testing.T) {
 
 	glog.Infof("Starting e2e run on Ginkgo node %d", config.GinkgoConfig.ParallelNode)
 
-	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Mysql operator e2e suite", rps)
+	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "MySQL Operator E2E Suite", rps)
 }

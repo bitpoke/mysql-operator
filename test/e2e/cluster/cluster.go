@@ -44,7 +44,7 @@ var (
 	two = int32(2)
 )
 
-var _ = Describe("Mysql cluster tests", func() {
+var _ = Describe("MySQL Cluster E2E Tests", func() {
 	f := framework.NewFramework("mc-1")
 
 	var (
