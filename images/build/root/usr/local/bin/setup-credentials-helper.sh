@@ -1,8 +1,8 @@
 #!/bin/bash
 : "${GOOGLE_CREDENTIALS:="$(cat "$PLUGIN_GOOGLE_CREDENTIALS_FILE" 2>/dev/null)"}"
 : "${GOOGLE_CLOUD_PROJECT:="$PLUGIN_GOOGLE_CLOUD_PROJECT"}"
-: "${CLUSTER:="$PLUGIN_CLUSTER"}"
-: "${ZONE:="$PLUGIN_ZONE"}"
+: "${GOOGLE_CLOUD_CLUSTER:="$PLUGIN_GOOGLE_CLOUD_CLUSTER"}"
+: "${GOOGLE_CLOUD_ZONE:="$PLUGIN_GOOGLE_CLOUD_ZONE"}"
 : "${SSH_KEY:="$PLUGIN_SSH_KEY"}"
 : "${DOCKER_USERNAME:="$PLUGIN_DOCKER_USERNAME"}"
 : "${DOCKER_PASSWORD:="$PLUGIN_DOCKER_PASSWORD"}"
@@ -48,13 +48,12 @@ if [ -n "$GOOGLE_CLOUD_PROJECT" ] ; then
     run gcloud config set project "$GOOGLE_CLOUD_PROJECT"
 fi
 
-if [ -n "$CLUSTER" ] ; then
+if [ -n "$GOOGLE_CLOUD_CLUSTER" ] ; then
     require_google_credentials
-    require_param "cluster"
-    require_param "project"
-    require_param "zone"
+    require_param "google_cloud_project"
+    require_param "google_cloud_zone"
 
-    run gcloud container clusters get-credentials "$CLUSTER" --project "$GOOGLE_CLOUD_PROJECT" --zone "$ZONE"
+    run gcloud container clusters get-credentials "$GOOGLE_CLOUD_CLUSTER" --project "$GOOGLE_CLOUD_PROJECT" --zone "$GOOGLE_CLOUD_ZONE"
     # Display kubernetees versions (usefull for debugging)
     run kubectl version
 fi
