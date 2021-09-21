@@ -94,100 +94,105 @@ steps:
     depth: 0
     tags: true
 
-- name: create gke cluster
-  image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
-  environment: &e2eEnvironment
-    # set version in stone, as we need stable tags for e2e testing
-    VERSION: ${DRONE_COMMIT}
-    DOCKER_REGISTRY: eu.gcr.io/bitpoke-mysql-operator-testing
-    GOOGLE_CREDENTIALS:
-      from_secret: E2E_GOOGLE_CREDENTIALS
-    GOOGLE_CLOUD_PROJECT: bitpoke-mysql-operator-testing
-    GOOGLE_CLOUD_ZONE: europe-west4-b
-    CLUSTER_NAME: mysql-operator-e2e-testing-${DRONE_COMMIT:0:8}
-    BACKUP_BUCKET_NAME: bitpoke-mysql-operator-testing-backup
-  commands:
-  - /usr/local/bin/setup-credentials-helper.sh
-  - gcloud container clusters create $CLUSTER_NAME
-      --zone $GOOGLE_CLOUD_ZONE
-      --preemptible
-      --cluster-version 1.19
-      --addons=GcePersistentDiskCsiDriver
-      --monitoring=NONE
+# - name: create gke cluster
+#   image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
+#   environment: &e2eEnvironment
+#     # set version in stone, as we need stable tags for e2e testing
+#     VERSION: ${DRONE_COMMIT}
+#     DOCKER_REGISTRY: eu.gcr.io/bitpoke-mysql-operator-testing
+#     GOOGLE_CREDENTIALS:
+#       from_secret: E2E_GOOGLE_CREDENTIALS
+#     GOOGLE_CLOUD_PROJECT: bitpoke-mysql-operator-testing
+#     GOOGLE_CLOUD_ZONE: europe-west4-b
+#     CLUSTER_NAME: mysql-operator-e2e-testing-${DRONE_COMMIT:0:8}
+#     BACKUP_BUCKET_NAME: bitpoke-mysql-operator-testing-backup
+#   commands:
+#   - /usr/local/bin/setup-credentials-helper.sh
+#   - gcloud container clusters create $CLUSTER_NAME
+#       --zone $GOOGLE_CLOUD_ZONE
+#       --preemptible
+#       --cluster-version 1.19
+#       --addons=GcePersistentDiskCsiDriver
+#       --monitoring=NONE
 
 - name: build
-  image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
-  environment:
-    <<: *e2eEnvironment
+  image: docker.io/bitpoke/build:v0.5.0
+  volumes:
+  - name: dockersock
+    path: /var/run
+  #   <<: *e2eEnvironment
   commands:
   - make -j4 build
   depends_on:
     - git
 
-- name: publish
-  image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
-  environment:
-    DOCKER_REGISTRY:
-      from_secret: DOCKER_REGISTRY
-    DOCKER_USERNAME:
-      from_secret: DOCKER_USERNAME
-    DOCKER_PASSWORD:
-      from_secret: DOCKER_PASSWORD
-  commands:
-  - /usr/local/bin/setup-credentials-helper.sh
-  - make publish
-  depends_on:
-    - build
-  when:
-    ref:
-    - refs/tags/**
-
-- name: publish e2e images
-  image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
-  environment:
-    <<: *e2eEnvironment
-  commands:
-  - /usr/local/bin/setup-credentials-helper.sh
-  - make publish
-  depends_on:
-    - build
-
-- name: e2e test
-  image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
-  environment:
-    <<: *e2eEnvironment
-    GOOGLE_CLOUD_CLUSTER: mysql-operator-e2e-testing-${DRONE_COMMIT:0:8}
-  commands:
-  - /usr/local/bin/setup-credentials-helper.sh
-  - make e2e
-  depends_on:
-    - publish e2e images
-    - create gke cluster
-
-- name: delete gke cluster
-  image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
-  environment:
-    <<: *e2eEnvironment
-  commands:
-  - /usr/local/bin/setup-credentials-helper.sh
-  - gcloud container clusters delete $CLUSTER_NAME
-      --quiet
-      --async
-      --zone $GOOGLE_CLOUD_ZONE
-  failure: ignore
-  depends_on:
-    - e2e test
-  when:
-    status:
-    - success
-    - failure
+# - name: publish
+#   image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
+#   environment:
+#     DOCKER_REGISTRY:
+#       from_secret: DOCKER_REGISTRY
+#     DOCKER_USERNAME:
+#       from_secret: DOCKER_USERNAME
+#     DOCKER_PASSWORD:
+#       from_secret: DOCKER_PASSWORD
+#   commands:
+#   - /usr/local/bin/setup-credentials-helper.sh
+#   - make publish
+#   depends_on:
+#     - build
+#   when:
+#     ref:
+#     - refs/tags/**
+# 
+# - name: publish e2e images
+#   image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
+#   environment:
+#     <<: *e2eEnvironment
+#   commands:
+#   - /usr/local/bin/setup-credentials-helper.sh
+#   - make publish
+#   depends_on:
+#     - build
+# 
+# - name: e2e test
+#   image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
+#   environment:
+#     <<: *e2eEnvironment
+#     GOOGLE_CLOUD_CLUSTER: mysql-operator-e2e-testing-${DRONE_COMMIT:0:8}
+#   commands:
+#   - /usr/local/bin/setup-credentials-helper.sh
+#   - make e2e
+#   depends_on:
+#     - publish e2e images
+#     - create gke cluster
+# 
+# - name: delete gke cluster
+#   image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
+#   environment:
+#     <<: *e2eEnvironment
+#   commands:
+#   - /usr/local/bin/setup-credentials-helper.sh
+#   - gcloud container clusters delete $CLUSTER_NAME
+#       --quiet
+#       --async
+#       --zone $GOOGLE_CLOUD_ZONE
+#   failure: ignore
+#   depends_on:
+#     - e2e test
+#   when:
+#     status:
+#     - success
+#     - failure
 
 services:
 - name: docker
-  image: docker:20.10.8-dind
-  privileged: true
-  commands:
-    - /usr/local/bin/dockerd-entrypoint.sh dockerd --host "unix:///workspace/docker.sock" --storage-driver overlay2 --log-level error
+  image: docker:20.10.8-dind-rootless
+  environment:
+    DOCKER_TLS_CERTDIR: ""
+
+volumes:
+- name: dockersock
+  temp: {}
 
 trigger:
   ref:
@@ -195,4 +200,3 @@ trigger:
     - refs/heads/release-*
     # CI related changes SHOULD be prefixed with drone-
     - refs/heads/drone-*
-
