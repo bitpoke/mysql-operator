@@ -1,83 +1,129 @@
 ---
 kind: pipeline
 name: default
-# 
-# clone:
-#   disable: true
-# 
-# workspace:
-#   base: /workspace
-#   path: src/github.com/bitpoke/mysql-operator
-# 
-# steps:
-# - name: git
-#   pull: default
-#   image: plugins/git
-#   settings:
-#     depth: 0
-#     tags: true
-# 
-# - name: install dependencies
-#   pull: always
-#   image: docker.io/bitpoke/build:v0.4.1
-#   commands:
-#   - make -j4 build.tools
-# 
-# - name: verify generated code
-#   image: docker.io/bitpoke/build:v0.4.1
-#   commands:
-#   - make generate
-#   - git diff --exit-code
-# 
-# - name: lint
-#   image: docker.io/bitpoke/build:v0.4.1
-#   commands:
-#   - make -j4 lint
-# 
-# - name: test
-#   image: docker.io/bitpoke/build:v0.4.1
-#   commands:
-#   - make test
-# 
-# - name: build
-#   image: docker.io/bitpoke/build:v0.4.1
-#   commands:
-#   - make -j4 build
-# 
-# - name: publish
-#   image: docker.io/bitpoke/build:v0.4.1
-#   environment:
-#     DOCKER_REGISTRY:
-#       from_secret: DOCKER_REGISTRY
-#     DOCKER_USERNAME:
-#       from_secret: DOCKER_USERNAME
-#     DOCKER_PASSWORD:
-#       from_secret: DOCKER_PASSWORD
-#   commands:
-#   - /usr/local/bin/setup-credentials-helper.sh
-#   - make publish
-#   when:
-#     ref:
-#     - refs/tags/**
-# 
-# services:
-# - name: docker
-#   image: docker:20.10.8-dind
-#   privileged: true
-#   commands:
-#     - /usr/local/bin/dockerd-entrypoint.sh dockerd --host "unix:///workspace/docker.sock" --storage-driver overlay2 --log-level error
-# 
-# trigger:
-#   ref:
-#     - refs/pull/**
-#     - refs/heads/master
-#     - refs/heads/release-*
-#     - refs/tags/**
-#     # CI related changes SHOULD be prefixed with drone-
-#     - refs/heads/drone-*
-# ---
-# kind: pipeline
-# name: e2e testing
+
+clone:
+  disable: true
+
+workspace:
+  base: /workspace
+  path: src/github.com/bitpoke/mysql-operator
+
+steps:
+- name: git
+  pull: default
+  image: plugins/git
+  settings:
+    depth: 0
+    tags: true
+
+- name: install dependencies
+  pull: always
+  image: docker.io/bitpoke/build:v0.5.0
+  commands:
+  - make -j4 build.tools
+
+- name: verify generated code
+  image: docker.io/bitpoke/build:v0.5.0
+  commands:
+  - make generate
+  - git diff --exit-code
+
+- name: lint
+  image: docker.io/bitpoke/build:v0.5.0
+  commands:
+  - make -j4 lint
+
+- name: test
+  image: docker.io/bitpoke/build:v0.5.0
+  commands:
+  - make test
+
+- name: build
+  image: docker.io/bitpoke/build:v0.5.0
+  commands:
+  - make -j4 build
+
+- name: publish
+  image: docker.io/bitpoke/build:v0.5.0
+  environment:
+    DOCKER_REGISTRY:
+      from_secret: DOCKER_REGISTRY
+    DOCKER_USERNAME:
+      from_secret: DOCKER_USERNAME
+    DOCKER_PASSWORD:
+      from_secret: DOCKER_PASSWORD
+  commands:
+  - /usr/local/bin/setup-credentials-helper.sh
+  - make publish
+  when:
+    ref:
+    - refs/tags/**
+
+services:
+- name: docker
+  image: docker:20.10.8-dind-rootless
+  environment:
+    DOCKER_TLS_CERTDIR: ""
+
+trigger:
+  ref:
+    - refs/pull/**
+    - refs/heads/master
+    - refs/heads/release-*
+    # CI related changes SHOULD be prefixed with drone-
+    - refs/heads/drone-*
+
+---
+kind: pipeline
+name: publish
+
+trigger:
+  ref:
+    - refs/tags/**
+clone:
+  disable: true
+
+workspace:
+  base: /workspace
+  path: src/github.com/bitpoke/mysql-operator
+
+steps:
+- name: git
+  pull: default
+  image: plugins/git
+  settings:
+    depth: 0
+    tags: true
+
+- name: build
+  image: docker.io/bitpoke/build:v0.5.0
+  commands:
+  - make -j4 build
+
+- name: publish
+  image: docker.io/bitpoke/build:v0.5.0
+  environment:
+    DOCKER_REGISTRY:
+      from_secret: DOCKER_REGISTRY
+    DOCKER_USERNAME:
+      from_secret: DOCKER_USERNAME
+    DOCKER_PASSWORD:
+      from_secret: DOCKER_PASSWORD
+  commands:
+  - /usr/local/bin/setup-credentials-helper.sh
+  - make publish
+
+---
+kind: pipeline
+name: e2e testing
+
+trigger:
+  ref:
+    - refs/heads/master
+    - refs/heads/release-*
+    # e2e CI related changes SHOULD be prefixed with drone-e2e-
+    - refs/heads/drone-e2e-*
 
 clone:
   disable: true
@@ -95,7 +141,7 @@ steps:
     tags: true
 
 - name: create gke cluster
-  image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
+  image: docker.io/bitpoke/build:v0.5.0
   environment: &e2eEnvironment
     # set version in stone, as we need stable tags for e2e testing
     VERSION: ${DRONE_COMMIT}
@@ -116,34 +162,18 @@ steps:
       --monitoring=NONE
 
 - name: build
-  image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
-  environment:
-    <<: *e2eEnvironment
+  image: docker.io/bitpoke/build:v0.5.0
+  volumes:
+  - name: dockersock
+    path: /var/run
+  #   <<: *e2eEnvironment
   commands:
   - make -j4 build
   depends_on:
     - git
 
-- name: publish
-  image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
-  environment:
-    DOCKER_REGISTRY:
-      from_secret: DOCKER_REGISTRY
-    DOCKER_USERNAME:
-      from_secret: DOCKER_USERNAME
-    DOCKER_PASSWORD:
-      from_secret: DOCKER_PASSWORD
-  commands:
-  - /usr/local/bin/setup-credentials-helper.sh
-  - make publish
-  depends_on:
-    - build
-  when:
-    ref:
-    - refs/tags/**
-
 - name: publish e2e images
-  image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
+  image: docker.io/bitpoke/build:v0.5.0
   environment:
     <<: *e2eEnvironment
   commands:
@@ -153,7 +183,7 @@ steps:
     - build
 
 - name: e2e test
-  image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
+  image: docker.io/bitpoke/build:v0.5.0
   environment:
     <<: *e2eEnvironment
     GOOGLE_CLOUD_CLUSTER: mysql-operator-e2e-testing-${DRONE_COMMIT:0:8}
@@ -165,7 +195,7 @@ steps:
     - create gke cluster
 
 - name: delete gke cluster
-  image: docker.io/bitpoke/build:v0.4.1-2.gffe1bc4-amd64
+  image: docker.io/bitpoke/build:v0.5.0
   environment:
     <<: *e2eEnvironment
   commands:
@@ -184,10 +214,9 @@ steps:
 
 services:
 - name: docker
-  image: docker:20.10.8-dind
-  privileged: true
-  commands:
-    - /usr/local/bin/dockerd-entrypoint.sh dockerd --host "unix:///workspace/docker.sock" --storage-driver overlay2 --log-level error
+  image: docker:20.10.8-dind-rootless
+  environment:
+    DOCKER_TLS_CERTDIR: ""
 
 trigger:
   ref:
@@ -195,4 +224,3 @@ trigger:
     - refs/heads/release-*
     # CI related changes SHOULD be prefixed with drone-
     - refs/heads/drone-*
-
