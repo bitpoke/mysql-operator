@@ -177,8 +177,6 @@ RUN set -ex \
     && curl -sL -o /tini https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${ARCH} \
     && chmod +x /tini
 
-ENV DOCKER_HOST=unix:///workspace/docker.sock
-
 COPY root /
 
 ENTRYPOINT [ "/tini", "-g", "--", "/build/run.sh" ]

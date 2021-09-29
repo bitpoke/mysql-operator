@@ -31,7 +31,7 @@ IMAGE_TEMP_DIR := $(shell mktemp -d)
 endif
 
 ifeq ($(DRONE),true)
-DOCKER_HOST ?= unix:///workspace/docker.sock
+DOCKER_HOST ?= tcp://docker:2375
 export DOCKER_HOST
 endif
 
