@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM google/cloud-sdk:351.0.0
+FROM google/cloud-sdk:357.0.0
 
 ARG ARCH
 
@@ -176,8 +176,6 @@ RUN set -ex \
     && export TINI_VERSION=v0.19.0 \
     && curl -sL -o /tini https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${ARCH} \
     && chmod +x /tini
-
-ENV DOCKER_HOST=unix:///workspace/docker.sock
 
 COPY root /
 
