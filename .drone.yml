@@ -44,22 +44,6 @@ steps:
   commands:
   - make -j4 build
 
-- name: publish
-  image: docker.io/bitpoke/build:v0.5.0
-  environment:
-    DOCKER_REGISTRY:
-      from_secret: DOCKER_REGISTRY
-    DOCKER_USERNAME:
-      from_secret: DOCKER_USERNAME
-    DOCKER_PASSWORD:
-      from_secret: DOCKER_PASSWORD
-  commands:
-  - /usr/local/bin/setup-credentials-helper.sh
-  - make publish
-  when:
-    ref:
-    - refs/tags/**
-
 services:
 - name: docker
   image: docker:20.10.8-dind-rootless
@@ -110,9 +94,17 @@ steps:
       from_secret: DOCKER_USERNAME
     DOCKER_PASSWORD:
       from_secret: DOCKER_PASSWORD
+    # make build system happy by setting a branch name on tags
+    BRANCH_NAME: release-${DRONE_TAG}
   commands:
   - /usr/local/bin/setup-credentials-helper.sh
   - make publish
+
+services:
+- name: docker
+  image: docker:20.10.8-dind-rootless
+  environment:
+    DOCKER_TLS_CERTDIR: ""
 
 ---
 kind: pipeline
