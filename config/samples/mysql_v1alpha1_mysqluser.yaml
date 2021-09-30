@@ -1,7 +1,7 @@
 apiVersion: mysql.presslabs.org/v1alpha1
-kind: MysqlCluster
+kind: MysqlUser
 metadata:
-  name: mysqlcluster-sample
+  name: mysqluser-sample
 spec:
   # Add fields here
   foo: bar

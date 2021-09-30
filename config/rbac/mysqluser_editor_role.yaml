@@ -1,0 +1,24 @@
+# permissions for end users to edit mysqlusers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mysqluser-editor-role
+rules:
+- apiGroups:
+  - mysql.presslabs.org
+  resources:
+  - mysqlusers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mysql.presslabs.org
+  resources:
+  - mysqlusers/status
+  verbs:
+  - get

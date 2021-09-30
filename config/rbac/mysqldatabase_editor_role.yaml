@@ -1,0 +1,24 @@
+# permissions for end users to edit mysqldatabases.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mysqldatabase-editor-role
+rules:
+- apiGroups:
+  - mysql.presslabs.org
+  resources:
+  - mysqldatabases
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mysql.presslabs.org
+  resources:
+  - mysqldatabases/status
+  verbs:
+  - get

@@ -118,16 +118,14 @@ type MysqlUserStatus struct {
 	AllowedHosts []string `json:"allowedHosts,omitempty"`
 }
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// MysqlUser is the Schema for the MySQL User API
-// +k8s:openapi-gen=true
+// +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type == 'Ready')].status",description="The user status"
 // +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".spec.clusterRef.name"
 // +kubebuilder:printcolumn:name="UserName",type="string",JSONPath=".spec.user"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+
+// MysqlUser is the Schema for the MySQL User API
 type MysqlUser struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -135,7 +133,7 @@ type MysqlUser struct {
 	Status            MysqlUserStatus `json:"status,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // MysqlUserList contains a list of MysqlUser
 type MysqlUserList struct {

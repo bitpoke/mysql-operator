@@ -1,3 +1,16 @@
-version: "1"
+version: "2"
 domain: presslabs.org
-repo: github.com/presslabs/mysql-operator
+repo: github.com/bitpoke/mysql-operator
+resources:
+- group: mysql
+  kind: MysqlCluster
+  version: v1alpha1
+- group: mysql
+  kind: MysqlBackup
+  version: v1alpha1
+- group: mysql
+  kind: MysqlDatabase
+  version: v1alpha1
+- group: mysql
+  kind: MysqlUser
+  version: v1alpha1

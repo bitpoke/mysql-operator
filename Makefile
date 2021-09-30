@@ -44,6 +44,9 @@ GO_INTEGRATION_TESTS_PARAMS ?= -timeout 50m \
 
 TEST_FILTER_PARAM += $(GO_INTEGRATION_TESTS_PARAMS)
 
+# Kubebuilder v2 compatible paths
+CRD_DIR := config/crd/bases
+RBAC_DIR := config/rbac
 
 CLUSTER_NAME ?= mysql-operator
 delete-environment:

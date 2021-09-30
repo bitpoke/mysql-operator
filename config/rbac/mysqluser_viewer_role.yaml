@@ -1,0 +1,20 @@
+# permissions for end users to view mysqlusers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mysqluser-viewer-role
+rules:
+- apiGroups:
+  - mysql.presslabs.org
+  resources:
+  - mysqlusers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - mysql.presslabs.org
+  resources:
+  - mysqlusers/status
+  verbs:
+  - get

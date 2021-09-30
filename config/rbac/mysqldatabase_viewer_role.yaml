@@ -1,0 +1,20 @@
+# permissions for end users to view mysqldatabases.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mysqldatabase-viewer-role
+rules:
+- apiGroups:
+  - mysql.presslabs.org
+  resources:
+  - mysqldatabases
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - mysql.presslabs.org
+  resources:
+  - mysqldatabases/status
+  verbs:
+  - get

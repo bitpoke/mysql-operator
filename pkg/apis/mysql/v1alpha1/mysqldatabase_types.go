@@ -72,16 +72,14 @@ type MysqlDatabaseStatus struct {
 	Conditions []MysqlDatabaseCondition `json:"conditions,omitempty"`
 }
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// MysqlDatabase is the Schema for the MySQL database API
-// +k8s:openapi-gen=true
+// +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type == 'Ready')].status",description="The database status"
 // +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".spec.clusterRef.name"
 // +kubebuilder:printcolumn:name="Database",type="string",JSONPath=".spec.database"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+
+// MysqlDatabase is the Schema for the MySQL database API
 type MysqlDatabase struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -89,7 +87,7 @@ type MysqlDatabase struct {
 	Status            MysqlDatabaseStatus `json:"status,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // MysqlDatabaseList contains a list of MysqlDatabase
 type MysqlDatabaseList struct {

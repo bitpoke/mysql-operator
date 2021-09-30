@@ -49,7 +49,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(testutil.NewTestLogger(GinkgoWriter))
 
 	t = &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "..", "..", "config", "crds")},
+		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "..", "..", "config", "crd", "bases")},
 	}
 
 	err = api.SchemeBuilder.AddToScheme(scheme.Scheme)

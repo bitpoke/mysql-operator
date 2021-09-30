@@ -1,0 +1,24 @@
+# permissions for end users to edit mysqlclusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mysqlcluster-editor-role
+rules:
+- apiGroups:
+  - mysql.presslabs.org
+  resources:
+  - mysqlclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mysql.presslabs.org
+  resources:
+  - mysqlclusters/status
+  verbs:
+  - get
