@@ -224,7 +224,7 @@ $(foreach r,$(REGISTRIES), $(foreach i,$(IMAGES), $(foreach a,$(IMAGE_ARCHS),$(e
 .img.release.clean: ;@
 
 .PHONY: img.prune .img.done .img.clean .do.img.clean .img.release.build .img.release.publish .img.release.promote
-.PHONY: .img.release.clean .img.cache
+.PHONY: .img.release.clean .img.cache img.publish
 
 # ====================================================================================
 # Common Targets
@@ -250,9 +250,11 @@ clean: .img.clean .img.release.clean
 
 .publish.init: .img.release.build
 
+img.publish: $(addprefix .img.release.manifest.publish.,$(IMAGES))
+
 # only publish images for master and release branches
 ifneq ($(filter master release-%,$(BRANCH_NAME)),)
-.publish.run: $(addprefix .img.release.manifest.publish.,$(IMAGES))
+.publish.run: img.publish
 endif
 
 .promote.run: $(addprefix .img.release.manifest.promote.,$(IMAGES))
