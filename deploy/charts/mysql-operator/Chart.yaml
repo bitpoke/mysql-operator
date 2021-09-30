@@ -1,11 +1,11 @@
 apiVersion: v1
-description: A Helm chart for mysql operator
+description: A helm chart for Bitpoke Operator for MySQL
 name: mysql-operator
 keywords:
   - mysql
   - percona
   - orchestrator
-  - presslabs
+  - bitpoke
 version: 0.1.1+master
 home: https://github.com/bitpoke/mysql-operator
 sources:
