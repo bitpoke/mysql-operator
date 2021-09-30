@@ -172,7 +172,8 @@ steps:
     <<: *e2eEnvironment
   commands:
   - /usr/local/bin/setup-credentials-helper.sh
-  - make publish
+  - make .img.release.build
+  - make img.publish
   depends_on:
     - build
 
