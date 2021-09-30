@@ -211,10 +211,3 @@ services:
   image: docker:20.10.8-dind-rootless
   environment:
     DOCKER_TLS_CERTDIR: ""
-
-trigger:
-  ref:
-    - refs/heads/master
-    - refs/heads/release-*
-    # CI related changes SHOULD be prefixed with drone-
-    - refs/heads/drone-*
