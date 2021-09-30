@@ -7,7 +7,7 @@ keywords:
   - orchestrator
   - presslabs
 version: 0.1.1+master
-home: https://github.com/presslabs/mysql-operator
+home: https://github.com/bitpoke/mysql-operator
 sources:
-  - https://github.com/presslabs/mysql-operator.git
+  - https://github.com/bitpoke/mysql-operator.git
 appVersion: "master"

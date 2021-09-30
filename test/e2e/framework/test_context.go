@@ -67,7 +67,7 @@ func RegisterCommonFlags() {
 	flag.StringVar(&TestContext.KubeContext, "kubernetes-context", "", "config context to use for kuberentes. If unset, will use value from 'current-context'")
 
 	flag.StringVar(&TestContext.ReportDir, "report-dir", "", "Optional directory to store junit and pod logs output in. If not specified, no junit or logs files will be output")
-	flag.StringVar(&TestContext.ChartPath, "operator-chart-path", "../../charts/mysql-operator", "The chart name or path for mysql operator")
+	flag.StringVar(&TestContext.ChartPath, "operator-chart-path", "../../deploy/charts/mysql-operator", "The chart name or path for mysql operator")
 	flag.StringVar(&TestContext.ChartValues, "operator-chart-values-path", "../../test/e2e-values.yaml", "Path to a values file for mysql-operator chart.")
 
 	flag.StringVar(&TestContext.OperatorImage, "operator-image", "eu.gcr.io/bitpoke-mysql-operator-testing/mysql-operator:"+commit, "Image for mysql operator.")

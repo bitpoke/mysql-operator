@@ -3,9 +3,9 @@
 # Declare variables to be passed into your templates.
 
 replicas: 1
-image: quay.io/presslabs/mysql-operator:latest
-sidecarImage: quay.io/presslabs/mysql-operator-sidecar-mysql57:latest
-sidecarMysql8Image: quay.io/presslabs/mysql-operator-sidecar-mysql8:latest
+image: docker.io/bitpoke/mysql-operator:latest
+sidecarImage: docker.io/bitpoke/mysql-operator-sidecar-5.7:latest
+sidecarMysql8Image: docker.io/bitpoke/mysql-operator-sidecar-8.0:latest
 imagePullPolicy: IfNotPresent
 
 # Insert a pre-stop lifecycle hook and trigger a failover. NOTE: Use this when your cluster network
@@ -84,7 +84,7 @@ rbac:
   serviceAccountName: default
 
 orchestrator:
-  image: quay.io/presslabs/mysql-operator-orchestrator:latest
+  image: docker.io/bitpoke/mysql-operator-orchestrator:latest
 
   # orchestrator user and password to manage MySQL clusters
   topologyUser: orchestrator
