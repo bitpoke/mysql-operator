@@ -7,6 +7,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 ### Added
+### Changed
+### Removed
+### Fixed
+
+## [0.5.0] - 2021-10-06
+### Added
  * Add `image` and `mysqlVersion` options to MysqlCluster chart. This bumps the chart version to `0.3.1`
  * Add `backupAffinity`, `backupNodeSelector`, `backupPriorityClassName`, `backupTolerations`
    to `.Spec.PodSpec` to allow specifying custom scheduling constraints for backup jobs.
