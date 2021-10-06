@@ -127,7 +127,8 @@ func (r *ReconcileMysqlBackup) Reconcile(ctx context.Context, request reconcile.
 		if errors.IsNotFound(err) {
 			// Object not found, return.  Created objects are automatically garbage collected.
 			// For additional cleanup logic use finalizers.
-			return reconcile.Result{}, r.unregisterCluster(request.NamespacedName)
+			r.unregisterCluster(request.NamespacedName)
+			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
@@ -145,11 +146,12 @@ func (r *ReconcileMysqlBackup) Reconcile(ctx context.Context, request reconcile.
 
 	log.V(1).Info("register cluster in cronjob", "key", cluster, "schedule", schedule)
 
-	return reconcile.Result{}, r.updateClusterSchedule(cluster, schedule)
+	r.updateClusterSchedule(cluster, schedule)
+	return reconcile.Result{}, nil
 }
 
 // updateClusterSchedule creates/updates a cron job for specified cluster.
-func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.MysqlCluster, schedule cron.Schedule) error {
+func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.MysqlCluster, schedule cron.Schedule) {
 	r.lockJobRegister.Lock()
 	defer r.lockJobRegister.Unlock()
 
@@ -183,7 +185,7 @@ func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.Mysq
 			}
 
 			// nothing to change for this cluster, return
-			return nil
+			return
 		}
 	}
 
@@ -194,11 +196,9 @@ func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.Mysq
 		BackupScheduleJobsHistoryLimit: cluster.Spec.BackupScheduleJobsHistoryLimit,
 		BackupRemoteDeletePolicy:       cluster.Spec.BackupRemoteDeletePolicy,
 	})
-
-	return nil
 }
 
-func (r *ReconcileMysqlBackup) unregisterCluster(clusterKey types.NamespacedName) error {
+func (r *ReconcileMysqlBackup) unregisterCluster(clusterKey types.NamespacedName) {
 	r.lockJobRegister.Lock()
 	defer r.lockJobRegister.Unlock()
 
@@ -208,8 +208,6 @@ func (r *ReconcileMysqlBackup) unregisterCluster(clusterKey types.NamespacedName
 			r.cron.Remove(entry.ID)
 		}
 	}
-
-	return nil
 }
 
 func addBackupFieldIndexers(mgr manager.Manager) error {
