@@ -93,6 +93,8 @@ spec:
               secretRef:
                 name: {{ template "mysql-operator.orc-secret-name" . }}
           volumeMounts:
+            - name: data
+              mountPath: /var/lib/orchestrator/
             - name: config
               mountPath: /usr/local/share/orchestrator/templates/
           livenessProbe:
@@ -118,13 +120,6 @@ spec:
         - name: data
           emptyDir: {}
         {{- end }}
-      initContainers:
-        - name: init-mount
-          image: busybox:1.34.0
-          command: ['sh', '-c', "chown -R 777:777 /var/lib/orchestrator"]
-          volumeMounts:
-            - name: data
-              mountPath: /var/lib/orchestrator/
 
       # security context to mount corectly the volume for orc
       securityContext:
