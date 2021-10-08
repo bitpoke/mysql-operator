@@ -1,54 +1,37 @@
-##############################################################################
-#  Build Orchestrator
-###############################################################################
+# Docker image for orchestrator
+# The base image is pinned to the debug-nonroot tag
+FROM gcr.io/distroless/base-debian11@sha256:6894e9a1136595d0ef17499caee73e75be4f39fa0d30f588d91277ddb051a44a
+SHELL ["/busybox/sh", "-c"]
 
-FROM golang:1.14.10-alpine3.12 as builder-orc
+# switch to root for installing software
+USER root
 
 RUN set -ex \
-    && apk add --no-cache \
-        bash gcc git musl-dev openssl rsync perl-utils
-
-ARG ORCHESTRATOR_VERSION=v3.2.3
-ARG ORCHESTRATOR_REPO=https://github.com/openark/orchestrator.git
-RUN set -ex \
-    && mkdir -p $GOPATH/src/github.com/openark/orchestrator \
-    && cd $GOPATH/src/github.com/openark/orchestrator \
-    && git init && git remote add origin $ORCHESTRATOR_REPO \
-    && git fetch --tags \
-    && git checkout $ORCHESTRATOR_VERSION
-
-WORKDIR $GOPATH/src/github.com/openark/orchestrator
-
-RUN set -ex && ./build.sh -b -P
-
-
-###############################################################################
-#  Docker image for orchestrator
-###############################################################################
-
-FROM alpine:3.12
-
-# Create a group and user
-RUN addgroup -g 777 orchestrator && adduser -u 777 -g 777 -S orchestrator
-
-ENV DOCKERIZE_VERSION v0.6.1
-RUN set -ex \
-    && apk add --update --no-cache \
-        curl \
-        wget \
-        tar \
-        openssl \
-    && mkdir /etc/orchestrator /var/lib/orchestrator \
-    && chown -R 777:777 /etc/orchestrator /var/lib/orchestrator \
-    && wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz -O- | \
+    && mkdir -p /usr/local/bin \
+    && export DOCKERIZE_VERSION=0.6.1 \
+    && wget https://github.com/jwilder/dockerize/releases/download/v${DOCKERIZE_VERSION}/dockerize-linux-amd64-v${DOCKERIZE_VERSION}.tar.gz -O- | \
         tar -C /usr/local/bin -xzv
 
-COPY --chown=777:777 rootfs/ /
-COPY --from=builder-orc /tmp/orchestrator-release/build/orchestrator/usr/local/orchestrator/ /usr/local/orchestrator/
+RUN set -ex \
+    && export ORCHESTRATOR_VERSION=3.2.3 \
+    && wget https://github.com/openark/orchestrator/releases/download/v${ORCHESTRATOR_VERSION}/orchestrator-${ORCHESTRATOR_VERSION}-linux-amd64.tar.gz -O- | \
+        tar -C / -xzv
 
-USER 777
+COPY rootfs/ /
+RUN set -ex \
+    && mkdir -p /etc/orchestrator /var/lib/orchestrator \
+    && chown -R 65532:65532 /etc/orchestrator /var/lib/orchestrator
+
+# switch back to nonroot for runtime
+USER 65532
 EXPOSE 3000 10008
 VOLUME [ "/var/lib/orchestrator" ]
 
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["/usr/local/bin/orchestrator", "-quiet", "-config", "/etc/orchestrator/orchestrator.conf.json", "http"]
+ENTRYPOINT [ "/usr/local/bin/dockerize", \
+             "-no-overwrite", \
+             "-template", \
+             "/usr/local/share/orchestrator/templates/orchestrator.conf.json:/etc/orchestrator/orchestrator.conf.json", \
+             "-template", \
+             "/usr/local/share/orchestrator/templates/orc-topology.cnf:/etc/orchestrator/orc-topology.cnf", \
+             "--" ]
+CMD ["/usr/local/orchestrator/orchestrator", "-quiet", "-config", "/etc/orchestrator/orchestrator.conf.json", "http"]

@@ -1,6 +1,6 @@
-# Copy the wordpress-operator binary into a thin image
+# Copy the mysql-operator binary into a thin image
 # The image is pinned to the nonroot tag
-FROM gcr.io/distroless/static-debian10@sha256:50115802102da4a7dbc74f5399028347682361ebf0792b7a11b088e648e69ac2
+FROM gcr.io/distroless/base-debian11@sha256:56d73a61ea1135c28f2be9afe2be88fc360e5fa1a892d600512a10eb2e028fa5
 
 COPY rootfs /
 USER nonroot
