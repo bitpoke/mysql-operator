@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 ### Added
 ### Changed
+ * Use [distroless](https://github.com/GoogleContainerTools/distroless) as base image for orchestrator container
 ### Removed
 ### Fixed
 
