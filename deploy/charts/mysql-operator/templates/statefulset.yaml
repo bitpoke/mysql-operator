@@ -33,8 +33,6 @@ spec:
         - name: operator
           image: "{{ .Values.image }}"
           imagePullPolicy: {{ .Values.imagePullPolicy }}
-          securityContext:
-            runAsUser: 888
           env:
             - name: ORC_TOPOLOGY_USER
               valueFrom:
@@ -93,8 +91,10 @@ spec:
               secretRef:
                 name: {{ template "mysql-operator.orc-secret-name" . }}
           volumeMounts:
+            - name: data
+              mountPath: /var/lib/orchestrator
             - name: config
-              mountPath: /usr/local/share/orchestrator/templates/
+              mountPath: /usr/local/share/orchestrator/templates
           livenessProbe:
             timeoutSeconds: 10
             initialDelaySeconds: 200
@@ -118,17 +118,24 @@ spec:
         - name: data
           emptyDir: {}
         {{- end }}
+
+      {{- if .Values.orchestrator.persistence.fsGroupWorkaroundEnabled }}
       initContainers:
         - name: init-mount
+          securityContext:
+            runAsUser: 0
           image: busybox:1.34.0
-          command: ['sh', '-c', "chown -R 777:777 /var/lib/orchestrator"]
+          command: ['sh', '-c', "chown -R {{ .Values.securityContext.fsGroup | default "0" }}:{{ .Values.securityContext.fsGroup | default "0" }} /var/lib/orchestrator"]
           volumeMounts:
             - name: data
-              mountPath: /var/lib/orchestrator/
+              mountPath: /var/lib/orchestrator
+      {{- end }}
 
       # security context to mount corectly the volume for orc
+      {{- with .Values.securityContext }}
       securityContext:
-        fsGroup: 777
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 
       {{- with .Values.nodeSelector }}
       nodeSelector:
