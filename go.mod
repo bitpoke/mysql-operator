@@ -13,9 +13,9 @@ require (
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
 	github.com/presslabs/controller-util v0.3.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
-	github.com/wgliang/cron v0.0.0-20180129105837-79834306f643
 	golang.org/x/net v0.0.0-20210428140749-89ef3d95e781
 	gopkg.in/ini.v1 v1.57.0 // indirect
 
