@@ -39,4 +39,5 @@ The following table contains the configuration parameters for mysql-operator and
 | `orchestrator.image`            | Orchestrator container image                                                                  | `docker.io/bitpoke/mysql-operator-orchestrator:latest`  |
 | `orchestrator.topologyUser`     | Set a user for orchestrator to use it to connect to the MySQL cluster                         | `orchestrator`                                          |
 | `orchestrator.topologyPassword` | Set a password for the orchestrator user to connect to MySQL cluster                          | `<random string>`                                       |
+| `orchestrator.persistence.fsGroupWorkaroundEnabled` | Adds a  workaround for persistent volume provisioners which don't support fsGroup (eg. when deploying to kind) [#615](https://github.com/bitpoke/mysql-operator/issues/615) | `false` |
 | `orchestrator.*`                | More ochestrator values that can be tuned. Check in values.yaml                               |                                                         |
