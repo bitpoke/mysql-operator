@@ -427,7 +427,14 @@ distclean: clean
 
 .PHONY: .build.init .build.check .build.check.platform .build.code .build.code.platform .build.artifacts .build.artifacts.platform
 .PHONY: .build.done .do.build.platform.% .do.build.platform .do.build.artifacts.% .do.build.artifacts
-.PHONY: build.tools build.all build clean distclean
+.PHONY: build.tools build.info build.all build clean distclean
+
+build.info:
+	@echo "build version: $(VERSION)"
+	@echo "git commit: $(COMMIT_HASH)"
+	@echo "git branch: $(BRANCH_NAME)"
+	@echo "git tree state: $(GIT_TREE_STATE)"
+	@echo "git tags: $(TAGS)"
 
 # ====================================================================================
 # Help
