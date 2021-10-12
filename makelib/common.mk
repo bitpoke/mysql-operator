@@ -209,10 +209,23 @@ $(TOOLS_HOST_DIR):
 $(TOOLS_BIN_DIR):
 	@mkdir -p "$@"
 
-
 ifeq ($(origin HOSTNAME), undefined)
 HOSTNAME := $(shell hostname)
 endif
+
+YQ_VERSION ?= 4.11.2
+YQ_DOWNLOAD_URL ?= https://github.com/mikefarah/yq/releases/download/v$(YQ_VERSION)/yq_$(HOST_PLATFORM)
+$(eval $(call tool.download,yq,$(YQ_VERSION),$(YQ_DOWNLOAD_URL)))
+
+GIT_SEMVER_VERSION ?= 6.1.1
+GIT_SEMVER_DOWNLOAD_URL ?= https://github.com/mdomke/git-semver/releases/download/v$(GIT_SEMVER_VERSION)/git-semver_$(GIT_SEMVER_VERSION)_$(HOST_PLATFORM).tar.gz
+$(eval $(call tool.download.tar.gz,git-semver,$(GIT_SEMVER_VERSION),$(GIT_SEMVER_DOWNLOAD_URL),git-semver,0))
+
+$(TOOLS_DIR)/git-semver.mk: $(GIT_SEMVER)
+	@echo '# dummy target to require installing git-semver before making everything' > "$@"
+	@touch "$@"
+
+include $(TOOLS_DIR)/git-semver.mk
 
 # ====================================================================================
 # git introspection
@@ -225,6 +238,13 @@ TAGS := $(shell git tag -l --points-at HEAD)
 
 ifeq ($(origin BRANCH_NAME), undefined)
 BRANCH_NAME := $(shell git rev-parse --abbrev-ref HEAD)
+endif
+
+# Set default GIT_TREE_STATE
+ifeq ($(shell git status -s | head -c1 | wc -c | tr -d '[[:space:]]'), 0)
+GIT_TREE_STATE = clean
+else
+GIT_TREE_STATE = dirty
 endif
 
 # ====================================================================================
@@ -240,16 +260,16 @@ REMOTE_URL ?= $(shell git remote get-url $(REMOTE_NAME))
 
 # ====================================================================================
 # Version and Tagging
+#
+
+BUILD_DATE ?= $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 
 # set a semantic version number from git if VERSION is undefined.
 ifeq ($(origin VERSION), undefined)
-# check if there are any existing `git tag` values
-ifeq ($(shell git tag),)
-# no tags found - default to initial tag `v0.0.0`
-VERSION := $(shell echo "v0.0.0-$$(git rev-list HEAD --count)-$$(git describe --dirty --always --abbrev=7)" | sed 's/-/./2' | sed 's/-/./2')
+ifeq ($(GIT_TREE_STATE),clean)
+VERSION := $(shell $(GIT_SEMVER) -prefix v)
 else
-# use tags
-VERSION := $(shell git describe --dirty --always --tags --abbrev=7 | sed 's/-/./2' | sed 's/-/./2' )
+VERSION := $(shell $(GIT_SEMVER) -prefix v -set-meta $(shell echo "$(COMMIT_HASH)" | head -c8)-dirty)
 endif
 endif
 export VERSION
@@ -259,16 +279,6 @@ VERSION_VALID := $(shell echo "$(VERSION)" | grep -E -q '$(VERSION_REGEX)' && ec
 VERSION_MAJOR := $(shell echo "$(VERSION)" | sed -E -e 's/$(VERSION_REGEX)/\1/')
 VERSION_MINOR := $(shell echo "$(VERSION)" | sed -E -e 's/$(VERSION_REGEX)/\2/')
 VERSION_PATCH := $(shell echo "$(VERSION)" | sed -E -e 's/$(VERSION_REGEX)/\3/')
-
-BUILD_DATE ?= $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
-GIT_COMMIT := $(shell git rev-parse HEAD)
-
-# Set default GIT_TREE_STATE
-ifeq ($(shell git status -s | head -c1 | wc -c | tr -d '[[:space:]]'), 0)
-GIT_TREE_STATE = clean
-else
-GIT_TREE_STATE = dirty
-endif
 
 .publish.tag: .version.require.clean.tree
 ifneq ($(VERSION_VALID),1)
