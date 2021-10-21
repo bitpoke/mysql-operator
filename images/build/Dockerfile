@@ -66,8 +66,13 @@ RUN sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /
 
 # ------------------------------------------------------------------------------------------------
 # git config
-RUN git config --global user.email "bot@bitpoke.cloud" \
-    && git config --global user.name "RoBot"
+RUN set -ex \
+    && git config --global user.email "bot@bitpoke.cloud" \
+    && git config --global user.name "Bitpoke Bot" \
+    && git config --global diff.tar-filelist.binary true \
+    && git config --global diff.tar-filelist.textconv 'tar -tvf' \
+    && git config --global diff.tar.binary true \
+    && git config --global diff.tar.textconv 'tar -xvOf'
 
 # ------------------------------------------------------------------------------------------------
 # Go support
