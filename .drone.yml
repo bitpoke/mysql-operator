@@ -29,15 +29,15 @@ steps:
   environment:
     DOCKER_USERNAME: bitpokebot
     DOCKER_PASSWORD:
-      from_secret: DOCKER_PASSWORD
+      from_secret: DOCKER_PASSWORDa
+  when:
+    ref:
+    - refs/heads/master-*
+    - refs/heads/release-*
+    - refs/tags/**
 
 services:
 - name: docker
   image: docker:20.10.8-dind-rootless
   environment:
     DOCKER_TLS_CERTDIR: ""
-
-trigger:
-  ref:
-    - refs/heads/master
-    - refs/heads/release-*
