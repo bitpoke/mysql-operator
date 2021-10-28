@@ -9,6 +9,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
  * Add `orchestrator.persistence.fsGroupWorkaroundEnabled` for persistent volume
    provisioners wich don't support fsGroup in security context (fixes #615)
+ * Add `appSecretLabels`, `appSecretAnnotations`, `backupSecretLabels`, `backupSecretAnnotations` to provide 
+   custom labels and annotations to created app and backup secrets
 ### Changed
  * Allow setting pod security context when deploying with Helm
  * Use [distroless](https://github.com/GoogleContainerTools/distroless) as base image for orchestrator container

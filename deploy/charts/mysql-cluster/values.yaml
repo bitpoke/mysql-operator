@@ -15,6 +15,8 @@ rootPassword: ""
 appUser: ""
 appPassword: ""
 appDatabase: ""
+# appSecretLabels: {}
+# appSecretAnnotations: {}
 
 podSpec:
 mysqlConf:
@@ -30,6 +32,8 @@ backupScheduleJobsHistoryLimit:
 backupURL:
 backupSecretName:
 backupRemoteDeletePolicy:
+# backupSecretLabels: {}
+# backupSecretAnnotations: {}
 backupCredentials:
   # AWS_ACCESS_KEY_ID: ?
   # AWS_SECRET_ACCESS_KEY: ?
