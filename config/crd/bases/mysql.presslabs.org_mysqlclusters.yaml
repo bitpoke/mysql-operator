@@ -51,6 +51,20 @@ spec:
             description: 'MysqlClusterSpec defines the desired state of MysqlCluster
               nolint: maligned'
             properties:
+              MasterServiceSpec:
+                description: Master service extra specification
+                properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations allow to specify annotations for MysqlCluster's
+                      services
+                    type: object
+                  loadBalancer:
+                    description: LoadBalancer configures whether a service is a LoadBalancer
+                      or not.
+                    type: boolean
+                type: object
               backupCompressCommand:
                 description: BackupCompressCommand is a command to use for compressing
                   the backup.
@@ -6161,6 +6175,20 @@ spec:
                   in case of a failover the cluster will be writable for at least
                   a few seconds.
                 type: boolean
+              replicaServiceSpec:
+                description: Healthy replica service extra specification
+                properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations allow to specify annotations for MysqlCluster's
+                      services
+                    type: object
+                  loadBalancer:
+                    description: LoadBalancer configures whether a service is a LoadBalancer
+                      or not.
+                    type: boolean
+                type: object
               replicas:
                 description: The number of pods. This updates replicas filed Defaults
                   to 0
