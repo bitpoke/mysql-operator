@@ -126,6 +126,11 @@ orchestrator:
     #    hosts:
     #      - chart-example.local
 
+    ## If defined set the `ingressClassName`. If unset the default ingress class
+    ## (https://kubernetes.io/docs/concepts/services-networking/ingress/#default-ingress-class)
+    ## will be used. Mutually exlusive with annotation `kubernetes.io/ingress.class`
+    # className: nginx
+
   persistence:
     enabled: true
     ## If defined, storageClassName: <storageClass>
