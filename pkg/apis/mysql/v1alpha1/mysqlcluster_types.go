@@ -109,7 +109,7 @@ type MysqlClusterSpec struct {
 
 	// Master service extra specification
 	// +optional
-	MasterServiceSpec ServiceSpec `json:"MasterServiceSpec,omitempty"`
+	MasterServiceSpec ServiceSpec `json:"masterServiceSpec,omitempty"`
 
 	// Healthy replica service extra specification
 	// +optional
@@ -249,11 +249,15 @@ type VolumeSpec struct {
 	PersistentVolumeClaim *core.PersistentVolumeClaimSpec `json:"persistentVolumeClaim,omitempty"`
 }
 
-// ServiceSpec s the desired spec for addition configuration of MysqlCluster services
+// ServiceSpec is the desired spec for addition configuration of MysqlCluster services
 type ServiceSpec struct {
 	// LoadBalancer configures whether a service is a LoadBalancer or not.
 	// +optional
 	LoadBalancer bool `json:"loadBalancer,omitempty"`
+
+	// AllowedSourceRanges sets a list of CIDR blocks allowed to access the cluster using LoadBalancer service.
+	// +optional
+	AllowedSourceRanges []string `json:"allowedSourceRanges,omitempty"`
 
 	// Annotations allow to specify annotations for MysqlCluster's services
 	// +optional

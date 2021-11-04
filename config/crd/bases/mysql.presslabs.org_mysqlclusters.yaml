@@ -51,20 +51,6 @@ spec:
             description: 'MysqlClusterSpec defines the desired state of MysqlCluster
               nolint: maligned'
             properties:
-              MasterServiceSpec:
-                description: Master service extra specification
-                properties:
-                  annotations:
-                    additionalProperties:
-                      type: string
-                    description: Annotations allow to specify annotations for MysqlCluster's
-                      services
-                    type: object
-                  loadBalancer:
-                    description: LoadBalancer configures whether a service is a LoadBalancer
-                      or not.
-                    type: boolean
-                type: object
               backupCompressCommand:
                 description: BackupCompressCommand is a command to use for compressing
                   the backup.
@@ -116,6 +102,26 @@ spec:
                 items:
                   type: string
                 type: array
+              masterServiceSpec:
+                description: Master service extra specification
+                properties:
+                  allowedSourceRanges:
+                    description: AllowedSourceRanges sets a list of CIDR blocks allowed
+                      to access the cluster using LoadBalancer service.
+                    items:
+                      type: string
+                    type: array
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations allow to specify annotations for MysqlCluster's
+                      services
+                    type: object
+                  loadBalancer:
+                    description: LoadBalancer configures whether a service is a LoadBalancer
+                      or not.
+                    type: boolean
+                type: object
               maxSlaveLatency:
                 description: MaxSlaveLatency represents the allowed latency for a
                   slave node in seconds. If set then the node with a latency grater
@@ -6178,6 +6184,12 @@ spec:
               replicaServiceSpec:
                 description: Healthy replica service extra specification
                 properties:
+                  allowedSourceRanges:
+                    description: AllowedSourceRanges sets a list of CIDR blocks allowed
+                      to access the cluster using LoadBalancer service.
+                    items:
+                      type: string
+                    type: array
                   annotations:
                     additionalProperties:
                       type: string

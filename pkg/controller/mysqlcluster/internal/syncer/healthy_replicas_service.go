@@ -40,6 +40,7 @@ func NewHealthyReplicasSVCSyncer(c client.Client, scheme *runtime.Scheme, cluste
 		// set service type
 		if cluster.Spec.ReplicaServiceSpec.LoadBalancer {
 			service.Spec.Type = core.ServiceTypeLoadBalancer
+			service.Spec.LoadBalancerSourceRanges = cluster.Spec.ReplicaServiceSpec.AllowedSourceRanges
 		}
 
 		// merge annotations

@@ -40,6 +40,7 @@ func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 		// set service type
 		if cluster.Spec.MasterServiceSpec.LoadBalancer {
 			service.Spec.Type = core.ServiceTypeLoadBalancer
+			service.Spec.LoadBalancerSourceRanges = cluster.Spec.MasterServiceSpec.AllowedSourceRanges
 		}
 
 		// merge annotations
