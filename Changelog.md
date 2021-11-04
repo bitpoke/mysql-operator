@@ -16,6 +16,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
  * Allow setting pod security context when deploying with Helm
  * Use [distroless](https://github.com/GoogleContainerTools/distroless) as base image for orchestrator container
+ * Use networking.k8s.io/v1 instead of extensions/v1beta1 for ingress
 ### Removed
 ### Fixed
 
