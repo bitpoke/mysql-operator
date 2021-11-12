@@ -15,10 +15,10 @@ metadata:
     chart: {{ $chart }}
     release: {{ $.Release.Name }}
     heritage: {{ $.Release.Service }}
-  annotations:
-    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
 spec:
   type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
   ports:
   - name: web
     port: 80
