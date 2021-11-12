@@ -47,7 +47,7 @@ spec:
           args:
             - --leader-election-namespace={{ .Release.Namespace }}
             # connect to orchestrator on localhost
-            - --orchestrator-uri=http://{{ template "mysql-operator.fullname" . }}.{{ .Release.Namespace }}/api
+            - --orchestrator-uri=http://{{ template "mysql-operator.fullname" . }}.{{ .Release.Namespace }}:{{ .Values.orchestrator.service.port }}/api
             {{- if .Values.sidecarImage }}
             - --sidecar-image={{ .Values.sidecarImage }}
             {{- end -}}
