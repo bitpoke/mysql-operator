@@ -140,6 +140,9 @@ orchestrator:
     ##   GKE, AWS & OpenStack)
     ##
     # storageClass: "-"
+    # annotations: {}
+    # selector:
+    #  matchLabels: {}
     accessMode: "ReadWriteOnce"
     size: 1Gi
     # inject an init container which properly sets the ownership for the orchestrator's data volume
