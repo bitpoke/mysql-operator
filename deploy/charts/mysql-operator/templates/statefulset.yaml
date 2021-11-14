@@ -175,11 +175,22 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: data
+        {{- with .Values.orchestrator.persistence.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       spec:
         accessModes: [ {{ .Values.orchestrator.persistence.accessMode }} ]
         resources:
           requests:
             storage: {{ .Values.orchestrator.persistence.size }}
+        {{- if .Values.orchestrator.persistence.selector }}
+        {{- with .Values.orchestrator.persistence.selector.matchLabels }}
+        selector:
+          matchLabels:
+            {{- toYaml . | nindent 12 }}
+        {{- end }}
+        {{- end }}
       {{- if .Values.orchestrator.persistence.storageClass }}
       {{- if (eq "-" .Values.orchestrator.persistence.storageClass) }}
         storageClassName: ""
