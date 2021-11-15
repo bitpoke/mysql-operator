@@ -209,10 +209,23 @@ $(TOOLS_HOST_DIR):
 $(TOOLS_BIN_DIR):
 	@mkdir -p "$@"
 
-
 ifeq ($(origin HOSTNAME), undefined)
 HOSTNAME := $(shell hostname)
 endif
+
+YQ_VERSION ?= 4.11.2
+YQ_DOWNLOAD_URL ?= https://github.com/mikefarah/yq/releases/download/v$(YQ_VERSION)/yq_$(HOST_PLATFORM)
+$(eval $(call tool.download,yq,$(YQ_VERSION),$(YQ_DOWNLOAD_URL)))
+
+GIT_SEMVER_VERSION ?= 6.1.1
+GIT_SEMVER_DOWNLOAD_URL ?= https://github.com/mdomke/git-semver/releases/download/v$(GIT_SEMVER_VERSION)/git-semver_$(GIT_SEMVER_VERSION)_$(HOST_PLATFORM).tar.gz
+$(eval $(call tool.download.tar.gz,git-semver,$(GIT_SEMVER_VERSION),$(GIT_SEMVER_DOWNLOAD_URL),git-semver,0))
+
+$(TOOLS_DIR)/git-semver.mk: $(GIT_SEMVER)
+	@echo '# dummy target to require installing git-semver before making everything' > "$@"
+	@touch "$@"
+
+include $(TOOLS_DIR)/git-semver.mk
 
 # ====================================================================================
 # git introspection
@@ -225,6 +238,13 @@ TAGS := $(shell git tag -l --points-at HEAD)
 
 ifeq ($(origin BRANCH_NAME), undefined)
 BRANCH_NAME := $(shell git rev-parse --abbrev-ref HEAD)
+endif
+
+# Set default GIT_TREE_STATE
+ifeq ($(shell git status -s | head -c1 | wc -c | tr -d '[[:space:]]'), 0)
+GIT_TREE_STATE = clean
+else
+GIT_TREE_STATE = dirty
 endif
 
 # ====================================================================================
@@ -240,16 +260,16 @@ REMOTE_URL ?= $(shell git remote get-url $(REMOTE_NAME))
 
 # ====================================================================================
 # Version and Tagging
+#
+
+BUILD_DATE ?= $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 
 # set a semantic version number from git if VERSION is undefined.
 ifeq ($(origin VERSION), undefined)
-# check if there are any existing `git tag` values
-ifeq ($(shell git tag),)
-# no tags found - default to initial tag `v0.0.0`
-VERSION := $(shell echo "v0.0.0-$$(git rev-list HEAD --count)-$$(git describe --dirty --always --abbrev=7)" | sed 's/-/./2' | sed 's/-/./2')
+ifeq ($(GIT_TREE_STATE),clean)
+VERSION := $(shell $(GIT_SEMVER) -prefix v)
 else
-# use tags
-VERSION := $(shell git describe --dirty --always --tags --abbrev=7 | sed 's/-/./2' | sed 's/-/./2' )
+VERSION := $(shell $(GIT_SEMVER) -prefix v -set-meta $(shell echo "$(COMMIT_HASH)" | head -c8)-dirty)
 endif
 endif
 export VERSION
@@ -259,16 +279,6 @@ VERSION_VALID := $(shell echo "$(VERSION)" | grep -E -q '$(VERSION_REGEX)' && ec
 VERSION_MAJOR := $(shell echo "$(VERSION)" | sed -E -e 's/$(VERSION_REGEX)/\1/')
 VERSION_MINOR := $(shell echo "$(VERSION)" | sed -E -e 's/$(VERSION_REGEX)/\2/')
 VERSION_PATCH := $(shell echo "$(VERSION)" | sed -E -e 's/$(VERSION_REGEX)/\3/')
-
-BUILD_DATE ?= $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
-GIT_COMMIT := $(shell git rev-parse HEAD)
-
-# Set default GIT_TREE_STATE
-ifeq ($(shell git status -s | head -c1 | wc -c | tr -d '[[:space:]]'), 0)
-GIT_TREE_STATE = clean
-else
-GIT_TREE_STATE = dirty
-endif
 
 .publish.tag: .version.require.clean.tree
 ifneq ($(VERSION_VALID),1)
@@ -417,62 +427,14 @@ distclean: clean
 
 .PHONY: .build.init .build.check .build.check.platform .build.code .build.code.platform .build.artifacts .build.artifacts.platform
 .PHONY: .build.done .do.build.platform.% .do.build.platform .do.build.artifacts.% .do.build.artifacts
-.PHONY: build.tools build.all build clean distclean
+.PHONY: build.tools build.info build.all build clean distclean
 
-# ====================================================================================
-# Tools macros
-#
-# Theses macros are used to install tools in an idempotent, cache friendly way.
-
-define tool
-$(subst -,_,$(call upper,$(1))) := $$(TOOLS_BIN_DIR)/$(1)
-
-build.tools: $$(TOOLS_BIN_DIR)/$(1)
-$$(TOOLS_BIN_DIR)/$(1): $$(TOOLS_HOST_DIR)/$(1)-v$(2) |$$(TOOLS_BIN_DIR)
-	@ln -sf $$< $$@
-endef
-
-# Creates a target for downloading a tool from a given url
-# 1 tool, 2 version, 3 download url
-define tool.download
-$(call tool,$(1),$(2))
-
-$$(TOOLS_HOST_DIR)/$(1)-v$(2): |$$(TOOLS_HOST_DIR)
-	@echo ${TIME} ${BLUE}[TOOL]${CNone} installing $(1) version $(2) from $(3)
-	@curl -fsSLo $$@ $(3) || $$(FAIL)
-	@chmod +x $$@
-	@$$(OK) installing $(1) version $(2) from $(3)
-endef # tool.download
-
-# Creates a target for downloading and unarchiving a tool from a given url
-# 1 tool, 2 version, 3 download url, 4 tool path within archive, 5 tar strip components
-define tool.download.tar.gz
-$(call tool,$(1),$(2))
-
-ifeq ($(4),)
-$(1)_TOOL_ARCHIVE_PATH = $(1)
-else
-$(1)_TOOL_ARCHIVE_PATH = $(4)
-endif
-
-
-$$(TOOLS_HOST_DIR)/$(1)-v$(2): |$$(TOOLS_HOST_DIR)
-	@echo ${TIME} ${BLUE}[TOOL]${CNone} installing $(1) version $(2) from $(3)
-	@mkdir -p $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2) || $$(FAIL)
-ifeq ($(5),)
-	@curl -fsSL $(3) | tar -xz --strip-components=1 -C $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2) || $$(FAIL)
-else
-	@curl -fsSL $(3) | tar -xz --strip-components=$(5) -C $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2) || $$(FAIL)
-endif
-	@mv $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2)/$$($(1)_TOOL_ARCHIVE_PATH) $$@ || $(FAIL)
-	@chmod +x $$@
-	@rm -rf $$(TOOLS_HOST_DIR)/tmp-$(1)-v$(2)
-	@$$(OK) installing $(1) version $(2) from $(3)
-endef # tool.download.tar.gz
-
-YQ_VERSION ?= 4.11.2
-YQ_DOWNLOAD_URL ?= https://github.com/mikefarah/yq/releases/download/v$(YQ_VERSION)/yq_$(HOST_PLATFORM)
-$(eval $(call tool.download,yq,$(YQ_VERSION),$(YQ_DOWNLOAD_URL)))
+build.info:
+	@echo "build version: $(VERSION)"
+	@echo "git commit: $(COMMIT_HASH)"
+	@echo "git branch: $(BRANCH_NAME)"
+	@echo "git tree state: $(GIT_TREE_STATE)"
+	@echo "git tags: $(TAGS)"
 
 # ====================================================================================
 # Help

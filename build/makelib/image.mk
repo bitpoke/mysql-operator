@@ -80,6 +80,8 @@ IMAGE_ARCHS := $(subst linux_,,$(filter linux_%,$(PLATFORMS)))
 IMAGE_PLATFORMS := $(call dockerify-platform,$(subst _,/,$(filter linux_%,$(PLATFORMS))))
 IMAGE_PLATFORM = $(call dockerify-platform,linux/$(ARCH))
 
+IMAGE_TAG ?= $(subst +,-,$(VERSION))
+
 # if set to 1 docker image caching will not be used.
 CACHEBUST ?= 0
 ifeq ($(CACHEBUST),1)
@@ -177,33 +179,33 @@ debug.nuke:
 define repo.targets
 .PHONY: .img.release.build.$(1).$(2).$(3)
 .img.release.build.$(1).$(2).$(3):
-	@$(INFO) docker build $(1)/$(2):$(VERSION)-$(3)
-	@docker tag $(BUILD_REGISTRY)/$(2)-$(3) $(1)/$(2):$(VERSION)-$(3) || $(FAIL)
-	@$(OK) docker build $(1)/$(2):$(VERSION)-$(3)
+	@$(INFO) docker build $(1)/$(2):$(IMAGE_TAG)-$(3)
+	@docker tag $(BUILD_REGISTRY)/$(2)-$(3) $(1)/$(2):$(IMAGE_TAG)-$(3) || $(FAIL)
+	@$(OK) docker build $(1)/$(2):$(IMAGE_TAG)-$(3)
 .img.release.build: .img.release.build.$(1).$(2).$(3)
 
 .PHONY: .img.release.publish.$(1).$(2).$(3)
 .img.release.publish.$(1).$(2).$(3):
-	@$(INFO) docker push $(1)/$(2):$(VERSION)-$(3)
-	@docker push $(1)/$(2):$(VERSION)-$(3) || $(FAIL)
-	@$(OK) docker push $(1)/$(2):$(VERSION)-$(3)
+	@$(INFO) docker push $(1)/$(2):$(IMAGE_TAG)-$(3)
+	@docker push $(1)/$(2):$(IMAGE_TAG)-$(3) || $(FAIL)
+	@$(OK) docker push $(1)/$(2):$(IMAGE_TAG)-$(3)
 .img.release.publish: .img.release.publish.$(1).$(2).$(3)
 
 .PHONY: .img.release.promote.$(1).$(2).$(3)
 .img.release.promote.$(1).$(2).$(3):
-	@$(INFO) docker promote $(1)/$(2):$(VERSION)-$(3) to $(1)/$(2)-$(3):$(CHANNEL)
-	@docker pull $(1)/$(2):$(VERSION)-$(3) || $(FAIL)
-	@[ "$(CHANNEL)" = "master" ] || docker tag $(1)/$(2):$(VERSION)-$(3) $(1)/$(2):$(VERSION)-$(3)-$(CHANNEL) || $(FAIL)
-	@docker tag $(1)/$(2):$(VERSION)-$(3) $(1)/$(2)-$(3):$(CHANNEL) || $(FAIL)
-	@[ "$(CHANNEL)" = "master" ] || docker push $(1)/$(2):$(VERSION)-$(3)-$(CHANNEL)
+	@$(INFO) docker promote $(1)/$(2):$(IMAGE_TAG)-$(3) to $(1)/$(2)-$(3):$(CHANNEL)
+	@docker pull $(1)/$(2):$(IMAGE_TAG)-$(3) || $(FAIL)
+	@[ "$(CHANNEL)" = "master" ] || docker tag $(1)/$(2):$(IMAGE_TAG)-$(3) $(1)/$(2):$(IMAGE_TAG)-$(3)-$(CHANNEL) || $(FAIL)
+	@docker tag $(1)/$(2):$(IMAGE_TAG)-$(3) $(1)/$(2)-$(3):$(CHANNEL) || $(FAIL)
+	@[ "$(CHANNEL)" = "master" ] || docker push $(1)/$(2):$(IMAGE_TAG)-$(3)-$(CHANNEL)
 	@docker push $(1)/$(2)-$(3):$(CHANNEL) || $(FAIL)
-	@$(OK) docker promote $(1)/$(2):$(VERSION)-$(3) to $(1)/$(2)-$(3):$(CHANNEL) || $(FAIL)
+	@$(OK) docker promote $(1)/$(2):$(IMAGE_TAG)-$(3) to $(1)/$(2)-$(3):$(CHANNEL) || $(FAIL)
 .img.release.promote: .img.release.promote.$(1).$(2).$(3)
 
 .PHONY: .img.release.clean.$(1).$(2).$(3)
 .img.release.clean.$(1).$(2).$(3):
-	@[ -z "$$$$(docker images -q $(1)/$(2):$(VERSION)-$(3))" ] || docker rmi $(1)/$(2):$(VERSION)-$(3)
-	@[ -z "$$$$(docker images -q $(1)/$(2):$(VERSION)-$(3)-$(CHANNEL))" ] || docker rmi $(1)/$(2):$(VERSION)-$(3)-$(CHANNEL)
+	@[ -z "$$$$(docker images -q $(1)/$(2):$(IMAGE_TAG)-$(3))" ] || docker rmi $(1)/$(2):$(IMAGE_TAG)-$(3)
+	@[ -z "$$$$(docker images -q $(1)/$(2):$(IMAGE_TAG)-$(3)-$(CHANNEL))" ] || docker rmi $(1)/$(2):$(IMAGE_TAG)-$(3)-$(CHANNEL)
 	@[ -z "$$$$(docker images -q $(1)/$(2)-$(3):$(CHANNEL))" ] || docker rmi $(1)/$(2)-$(3):$(CHANNEL)
 .img.release.clean: .img.release.clean.$(1).$(2).$(3)
 endef
@@ -211,12 +213,12 @@ $(foreach r,$(REGISTRIES), $(foreach i,$(IMAGES), $(foreach a,$(IMAGE_ARCHS),$(e
 
 .PHONY: .img.release.manifest.publish.%
 .img.release.manifest.publish.%: .img.release.publish
-	@docker buildx imagetools create --tag $(DOCKER_REGISTRY)/$*:$(VERSION) $(patsubst %,$(DOCKER_REGISTRY)/$*:$(VERSION)-%,$(IMAGE_ARCHS))
+	@docker buildx imagetools create --tag $(DOCKER_REGISTRY)/$*:$(IMAGE_TAG) $(patsubst %,$(DOCKER_REGISTRY)/$*:$(IMAGE_TAG)-%,$(IMAGE_ARCHS))
 
 .PHONY: .img.release.manifest.promote.%
 .img.release.manifest.promote.%: .img.release.promote
-	@[ "$(CHANNEL)" = "master" ] || docker buildx imagetools create --tag $(DOCKER_REGISTRY)/$*:$(VERSION)-$(CHANNEL) $(patsubst %,$(DOCKER_REGISTRY)/$*:$(VERSION)-%,$(IMAGE_ARCHS)) || $(FAIL)
-	@docker buildx imagetools create --tag $(DOCKER_REGISTRY)/$*:$(CHANNEL) $(patsubst %,$(DOCKER_REGISTRY)/$*:$(VERSION)-%,$(IMAGE_ARCHS))
+	@[ "$(CHANNEL)" = "master" ] || docker buildx imagetools create --tag $(DOCKER_REGISTRY)/$*:$(IMAGE_TAG)-$(CHANNEL) $(patsubst %,$(DOCKER_REGISTRY)/$*:$(IMAGE_TAG)-%,$(IMAGE_ARCHS)) || $(FAIL)
+	@docker buildx imagetools create --tag $(DOCKER_REGISTRY)/$*:$(CHANNEL) $(patsubst %,$(DOCKER_REGISTRY)/$*:$(IMAGE_TAG)-%,$(IMAGE_ARCHS))
 
 .img.release.build: ;@
 .img.release.publish: ;@
