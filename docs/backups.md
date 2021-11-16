@@ -11,7 +11,7 @@ menu:
 
 Backups are stored on object storage services like S3 or Google Cloud Storage.
 
-In order to be able to store a backup, the secret defined under `backupBucketSecretName` must have
+In order to be able to store a backup, the secret defined under `backupSecretName` must have
 the credentials to store those backups. The backups are uploaded using [Rclone](https://rclone.org/). The contents of the secret are used to generate a rclone.conf in [docker-entrypoint.sh](https://github.com/presslabs/mysql-operator/blob/master/hack/docker/sidecar-entrypoint.sh#L5).
 
 ### Setup a backup on S3
