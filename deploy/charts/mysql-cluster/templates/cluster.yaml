@@ -36,7 +36,7 @@ spec:
   {{- else if .Values.backupCredentials }}
   backupSecretName: {{ include "mysql-cluster.backupSecretName" . }}
   {{- else if .Values.backupSchedule }}
-  {{ required "One of .mysql.backupBucketSecretName and .mysql.backupCredentials should be specified" "" }}
+  {{ required "One of .mysql.backupSecretName and .mysql.backupCredentials should be specified" "" }}
   {{- end }}
 
   {{- if .Values.serverIDOffset }}
