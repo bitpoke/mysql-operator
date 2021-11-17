@@ -19,6 +19,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Use `Service.spec.publishNotReadyAddresses` instead of `service.alpha.kubernetes.io/tolerate-unready-endpoints`
  * Use [git-semver](https://github.com/mdomke/git-semver) for setting versions
 ### Removed
+ * Removed support for Helm 2
 ### Fixed
 
 ## [0.5.0] - 2021-10-06
