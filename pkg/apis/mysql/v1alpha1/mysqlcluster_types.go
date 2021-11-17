@@ -107,6 +107,14 @@ type MysqlClusterSpec struct {
 	// +optional
 	VolumeSpec VolumeSpec `json:"volumeSpec,omitempty"`
 
+	// Master service extra specification
+	// +optional
+	MasterServiceSpec ServiceSpec `json:"masterServiceSpec,omitempty"`
+
+	// Healthy replica service extra specification
+	// +optional
+	ReplicaServiceSpec ServiceSpec `json:"replicaServiceSpec,omitempty"`
+
 	// TmpfsSize if specified, mounts a tmpfs of this size into /tmp
 	// DEPRECATED: use instead PodSpec.Volumes and PodSpec.VolumeMounts
 	// +optional
@@ -239,6 +247,21 @@ type VolumeSpec struct {
 	// EmptyDir. And represents the PVC specification.
 	// +optional
 	PersistentVolumeClaim *core.PersistentVolumeClaimSpec `json:"persistentVolumeClaim,omitempty"`
+}
+
+// ServiceSpec is the desired spec for addition configuration of MysqlCluster services
+type ServiceSpec struct {
+	// LoadBalancer configures whether a service is a LoadBalancer or not.
+	// +optional
+	LoadBalancer bool `json:"loadBalancer,omitempty"`
+
+	// AllowedSourceRanges sets a list of CIDR blocks allowed to access the cluster using LoadBalancer service.
+	// +optional
+	AllowedSourceRanges []string `json:"allowedSourceRanges,omitempty"`
+
+	// Annotations allow to specify annotations for MysqlCluster's services
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // QueryLimits represents the pt-kill parameters, more info can be found

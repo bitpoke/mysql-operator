@@ -12,6 +12,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
    provisioners wich don't support fsGroup in security context (fixes #615)
  * Add `appSecretLabels`, `appSecretAnnotations`, `backupSecretLabels`, `backupSecretAnnotations` to provide 
    custom labels and annotations to created app and backup secrets
+ * Add ability to provision LoadBalancers for master/replica services
+ * Support specifying additional annotations for master/replica services
 ### Changed
  * Allow setting pod security context when deploying with Helm
  * Use [distroless](https://github.com/GoogleContainerTools/distroless) as base image for orchestrator container

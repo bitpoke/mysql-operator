@@ -75,6 +75,9 @@ var _ = Describe("Test MySQL cluster wrapper", func() {
 		Expect(cluster.Spec.MysqlConf).To(HaveKey(Equal("innodb-buffer-pool-size")))
 		Expect(cluster.Spec.MysqlConf).To(HaveKey(Equal("innodb-log-file-size")))
 		Expect(cluster.Spec.MysqlConf).NotTo(HaveKey(Equal("max-binlog-size")))
+
+		Expect(cluster.Spec.MasterServiceSpec.LoadBalancer).To(Equal(false))
+		Expect(cluster.Spec.ReplicaServiceSpec.LoadBalancer).To(Equal(false))
 	})
 
 	It("should use init MySQL container", func() {

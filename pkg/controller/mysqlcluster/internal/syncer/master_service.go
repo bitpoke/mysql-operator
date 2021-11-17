@@ -17,6 +17,7 @@ limitations under the License.
 package mysqlcluster
 
 import (
+	"github.com/imdario/mergo"
 	"github.com/presslabs/controller-util/syncer"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,6 +37,17 @@ func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 	}
 
 	return syncer.NewObjectSyncer("MasterSVC", cluster.Unwrap(), service, c, func() error {
+		// set service type
+		if cluster.Spec.MasterServiceSpec.LoadBalancer {
+			service.Spec.Type = core.ServiceTypeLoadBalancer
+			service.Spec.LoadBalancerSourceRanges = cluster.Spec.MasterServiceSpec.AllowedSourceRanges
+		}
+
+		// merge annotations
+		if err := mergo.Merge(&service.ObjectMeta.Annotations, cluster.Spec.MasterServiceSpec.Annotations); err != nil {
+			return err
+		}
+
 		// set service labels
 		service.Labels = cluster.GetLabels()
 		service.Labels["mysql.presslabs.org/service-type"] = "master"
