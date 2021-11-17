@@ -2,7 +2,7 @@ apiVersion: v2
 name: mysql-operator
 description: A helm chart for Bitpoke Operator for MySQL
 appVersion: "master"
-kubeVersion: ">= 1.16.0"
+kubeVersion: ">= 1.16.0-0"
 keywords:
   - mysql
   - percona
