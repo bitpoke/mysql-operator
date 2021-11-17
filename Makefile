@@ -57,7 +57,6 @@ RBAC_DIR := config/rbac
 	@set -e; \
 		for crd in $(wildcard $(CRD_DIR)/*.yaml) ; do \
 			cp $${crd} $(HELM_CHARTS_DIR)/mysql-operator/crds/ ; \
-			$(YQ) e '.metadata.annotations["helm.sh/hook"]="crd-install"' -i $(HELM_CHARTS_DIR)/mysql-operator/crds/$$(basename $${crd}) ; \
 			$(YQ) e '.metadata.labels["app"]="mysql-operator"'            -i $(HELM_CHARTS_DIR)/mysql-operator/crds/$$(basename $${crd}) ; \
 			$(YQ) e 'del(.metadata.creationTimestamp)'                    -i $(HELM_CHARTS_DIR)/mysql-operator/crds/$$(basename $${crd}) ; \
 			$(YQ) e 'del(.status)'                                        -i $(HELM_CHARTS_DIR)/mysql-operator/crds/$$(basename $${crd}) ; \
@@ -92,6 +91,7 @@ RBAC_DIR := config/rbac
 	@$(YQ) e '.sidecarImage="$(DOCKER_REGISTRY)/mysql-operator-sidecar-5.7:$(VERSION)"'        -i $(HELM_CHARTS_WORK_DIR)/mysql-operator/values.yaml
 	@$(YQ) e '.sidecarMysql8Image="$(DOCKER_REGISTRY)/mysql-operator-sidecar-8.0:$(VERSION)"'  -i $(HELM_CHARTS_WORK_DIR)/mysql-operator/values.yaml
 	@$(YQ) e '.orchestrator.image="$(DOCKER_REGISTRY)/mysql-operator-orchestrator:$(VERSION)"' -i $(HELM_CHARTS_WORK_DIR)/mysql-operator/values.yaml
+	@$(SED) 's/:latest/:$(VERSION)/g' $(HELM_CHARTS_WORK_DIR)/mysql-operator/Chart.yaml
 	@$(OK) prepare mysql-operator chart $(HELM_CHART_VERSION)
 .helm.package.run.mysql-operator: .helm.package.prepare.mysql-operator
 

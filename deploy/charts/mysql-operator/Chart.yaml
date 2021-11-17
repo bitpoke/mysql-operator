@@ -1,13 +1,29 @@
-apiVersion: v1
-description: A helm chart for Bitpoke Operator for MySQL
+apiVersion: v2
 name: mysql-operator
+description: A helm chart for Bitpoke Operator for MySQL
+appVersion: "master"
+kubeVersion: ">= 1.16.0"
 keywords:
   - mysql
   - percona
   - orchestrator
   - bitpoke
+  - database
 version: 0.1.1+master
-home: https://github.com/bitpoke/mysql-operator
+home: https://www.bitpoke.io/mysql-operator/
 sources:
   - https://github.com/bitpoke/mysql-operator.git
-appVersion: "master"
+annotations:
+  artifacthub.io/license: "Apache-2.0"
+  artifacthub.io/operator: "true"
+  artifacthub.io/operatorCapabilities: "full lifecycle"
+  artifacthub.io/images: |
+    - name: mysql-operator
+      image: docker.io/bitpoke/mysql-operator:latest
+    - name: orchestrator
+      image: docker.io/bitpoke/mysql-operator-orchestrator:latest
+    - name: mysql-5.7-sidecar
+      image: docker.io/bitpoke/mysql-operator-sidecar-5.7:latest
+    - name: mysql-8.0-sidecar
+      image: docker.io/bitpoke/mysql-operator-sidecar-8.0:latest
+

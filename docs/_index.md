@@ -149,7 +149,7 @@ data:
   # Optional, the AWS region to connect
   # AWS_REGION: us-east1
   # Optional, specify the storage class
-  # AWS_STORAGE_CLASS: standard
+  # AWS_STORAGE_CLASS: STANDARD
   # Optional, canned ACL to use
   # AWS_ACL:
   # Optional, the S3 provider to use (default: AWS)
