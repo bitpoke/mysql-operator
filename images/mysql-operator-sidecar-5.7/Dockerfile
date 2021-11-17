@@ -15,7 +15,7 @@ RUN apt-get update \
         apt-transport-https ca-certificates unzip pigz wget gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-RUN export RCLONE_VERSION=1.56.0 \
+RUN export RCLONE_VERSION=1.57.0 \
     && gpg --import /etc/gpg-keys/rclone.gpg \
     && wget -nv https://github.com/ncw/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip \
     && wget -nv https://github.com/ncw/rclone/releases/download/v${RCLONE_VERSION}/SHA256SUMS \

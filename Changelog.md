@@ -7,6 +7,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 ### Added
 ### Changed
+ * Update rclone to `v1.57.0`
 ### Removed
 ### Fixed
  * Make sure orchestrator can find it's templates [#741](https://github.com/bitpoke/mysql-operator/issues/741)
