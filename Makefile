@@ -27,6 +27,7 @@ GO_LDFLAGS += \
 ifeq ($(CI),true)
 E2E_IMAGE_REGISTRY ?= $(DOCKER_REGISTRY)
 E2E_IMAGE_TAG ?= $(GIT_COMMIT)
+GO_LINT_ARGS += --timeout 3m
 else
 E2E_IMAGE_REGISTRY ?= docker.io/$(BUILD_REGISTRY)
 E2E_IMAGE_TAG ?= latest
