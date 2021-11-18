@@ -16,7 +16,7 @@ impersonate = ${GDRIVE_IMPERSONATOR}
 
 [s3]
 type = s3
-env_auth = false
+env_auth = true
 provider = ${S3_PROVIDER:-"AWS"}
 access_key_id = ${AWS_ACCESS_KEY_ID}
 secret_access_key = ${AWS_SECRET_ACCESS_KEY:-$AWS_SECRET_KEY}
