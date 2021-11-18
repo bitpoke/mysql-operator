@@ -7,7 +7,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 ### Added
-  * If you want to save mysql backup to AWS S3, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` were the only options, but now you can use `AWS_SESSION_TOKEN`.
+  * If you want to save mysql backup to AWS S3, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` were the only options, but now you can use `AWS_SESSION_TOKEN` or `AWS_ROLE_ARN` and `AWS_WEB_IDENTITY_TOKEN_FILE`
  * Add `orchestrator.persistence.fsGroupWorkaroundEnabled` for persistent volume
    provisioners wich don't support fsGroup in security context (fixes #615)
  * Add `appSecretLabels`, `appSecretAnnotations`, `backupSecretLabels`, `backupSecretAnnotations` to provide 
