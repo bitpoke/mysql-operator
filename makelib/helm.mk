@@ -83,6 +83,7 @@ $(HELM_OUTPUT_DIR)/$(1)-$(HELM_CHART_VERSION).tgz: $(HELM_HOME) $(HELM_OUTPUT_DI
 .helm.lint.$(1): $(HELM_HOME)
 	@$(INFO) helm lint $(1)
 	@rm -rf $(abspath $(HELM_CHARTS_DIR)/$(1)/charts)
+	@$(HELM) dependency build $(abspath $(HELM_CHARTS_DIR)/$(1))
 	@$(HELM) lint $(abspath $(HELM_CHARTS_DIR)/$(1)) $(HELM_CHART_LINT_ARGS_$(1)) --strict || $$(FAIL)
 	@$(OK) helm lint $(1)
 
