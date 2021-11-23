@@ -1,6 +1,6 @@
 # Docker image for orchestrator
 # The base image is pinned to the debug-nonroot tag
-FROM gcr.io/distroless/base-debian11@sha256:6894e9a1136595d0ef17499caee73e75be4f39fa0d30f588d91277ddb051a44a
+FROM gcr.io/distroless/base-debian11@sha256:e76722f06f7c15e0076072fb02782ec59923b0d658b8a3d80bb79deaee6fb44d
 SHELL ["/busybox/sh", "-c"]
 
 # switch to root for installing software
