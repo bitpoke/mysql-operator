@@ -22,6 +22,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
  * Removed support for Helm 2
 ### Fixed
+ * Make sure orchestrator can find it's templates [#741](https://github.com/bitpoke/mysql-operator/issues/741)
 
 ## [0.5.0] - 2021-10-06
 ### Added
