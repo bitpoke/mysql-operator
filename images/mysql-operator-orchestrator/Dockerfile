@@ -27,6 +27,8 @@ USER 65532
 EXPOSE 3000 10008
 VOLUME [ "/var/lib/orchestrator" ]
 
+WORKDIR "/usr/local/orchestrator"
+
 ENTRYPOINT [ "/usr/local/bin/dockerize", \
              "-no-overwrite", \
              "-template", \

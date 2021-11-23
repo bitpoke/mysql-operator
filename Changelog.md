@@ -9,6 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 ### Removed
 ### Fixed
+ * Make sure orchestrator can find it's templates [#741](https://github.com/bitpoke/mysql-operator/issues/741)
 
 ## [0.5.1] - 2021-10-12
 ### Added
