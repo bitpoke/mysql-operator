@@ -1,6 +1,6 @@
 # Copy the mysql-operator binary into a thin image
 # The image is pinned to the nonroot tag
-FROM gcr.io/distroless/base-debian11@sha256:46d4514c17aca7a68559ee03975983339fc548e6d1014e2d7633f9123f2d3c59
+FROM gcr.io/distroless/base-debian11@sha256:e76722f06f7c15e0076072fb02782ec59923b0d658b8a3d80bb79deaee6fb44d
 
 COPY rootfs /
 ENTRYPOINT ["/mysql-operator"]
