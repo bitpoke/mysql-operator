@@ -23,6 +23,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Removed support for Helm 2
 ### Fixed
  * Make sure orchestrator can find it's templates [#741](https://github.com/bitpoke/mysql-operator/issues/741)
+ * Workaround CRD generation with `preserveUnknownFields=false` [kubernetes-sigs/controller-tools#476](https://github.com/kubernetes-sigs/controller-tools/issues/476)
 
 ## [0.5.0] - 2021-10-06
 ### Added
