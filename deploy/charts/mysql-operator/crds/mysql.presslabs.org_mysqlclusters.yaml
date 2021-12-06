@@ -3988,3 +3988,4 @@ spec:
           specReplicasPath: .spec.replicas
           statusReplicasPath: .status.readyNodes
         status: {}
+  preserveUnknownFields: false

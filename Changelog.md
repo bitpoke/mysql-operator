@@ -9,6 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 ### Removed
 ### Fixed
+ * Workaround CRD generation with `preserveUnknownFields=false` [kubernetes-sigs/controller-tools#476](https://github.com/kubernetes-sigs/controller-tools/issues/476)
 
 ## [0.5.2] - 2021-11-23
 ### Added
