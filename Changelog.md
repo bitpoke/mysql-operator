@@ -13,6 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Add `appSecretLabels`, `appSecretAnnotations`, `backupSecretLabels`, `backupSecretAnnotations` to provide 
    custom labels and annotations to created app and backup secrets
  * Update rclone to `v1.57.0`
+ * For s3, enable the no_check_bucket option for rclone
 ### Changed
  * Allow setting pod security context when deploying with Helm
  * Use [distroless](https://github.com/GoogleContainerTools/distroless) as base image for orchestrator container
