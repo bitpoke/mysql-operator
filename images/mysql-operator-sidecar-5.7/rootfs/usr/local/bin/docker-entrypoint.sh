@@ -25,6 +25,7 @@ endpoint = ${S3_ENDPOINT}
 acl = ${AWS_ACL}
 storage_class = ${AWS_STORAGE_CLASS}
 session_token = ${AWS_SESSION_TOKEN}
+no_check_bucket = true
 
 [gs]
 type = google cloud storage
