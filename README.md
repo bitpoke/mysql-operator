@@ -39,7 +39,9 @@ helm install presslabs/mysql-operator --name mysql-operator
 
 For more information about chart values see chart [README](charts/mysql-operator/README.md). This chart will deploy the controller together with an [orchestrator](https://github.com/github/orchestrator) cluster.
 
-__NOTE__: MySQL operator 0.2.x requires at least Kubernetes 1.11.x (or 1.10.x with alpha features) while version 0.1.x is known to work with Kubernetes up 1.9.x. To upgrade, check the [0.2.x upgrade notes](#v02x-upgrade) as some additional steps are required.
+__NOTE__: MySQL operator 0.6.x requires at least Kubernetes 1.19.x o upgrade, check the [0.6.x upgrade notes](https://www.bitpoke.io/docs/mysql-operator/operator-upgrades/#v06x-upgrade) as some additional steps may be required.
+
+__NOTE__: MySQL operator 0.2.x requires at least Kubernetes 1.11.x (or 1.10.x with alpha features) while version 0.1.x is known to work with Kubernetes up 1.9.x. To upgrade, check the [0.2.x upgrade notes](https://www.bitpoke.io/docs/mysql-operator/operator-upgrades/#v02x-upgrade) as some additional steps are required.
 
 ## Controller upgrade
 

@@ -2,15 +2,12 @@
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: '{{ template "mysql-operator.fullname" . }}'
+  name: {{ include "mysql-operator.fullname" . }}-psp
   labels:
-    app: '{{ template "mysql-operator.name" . }}'
-    chart: '{{ template "mysql-operator.chart" . }}'
-    heritage: '{{ .Release.Service }}'
-    release: '{{ .Release.Name }}'
+    {{- include "mysql-operator.labels" . | nindent 4 }}
 roleRef:
   kind: Role
-  name: '{{ template "mysql-operator.fullname" . }}'
+  name: {{ template "mysql-operator.fullname" . }}-psp
   apiGroup: rbac.authorization.k8s.io
 subjects:
 # Authorize specific service accounts:

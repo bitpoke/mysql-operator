@@ -17,7 +17,7 @@ limitations under the License.
 package framework
 
 import (
-	"fmt"
+	"strings"
 
 	"os"
 	"os/exec"
@@ -25,17 +25,31 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func setImage(p, image string) []string {
+	repositoryTag := strings.SplitN(image, ":", 2)
+
+	ret := []string{
+		"--set-string", p + ".repository=" + repositoryTag[0],
+	}
+
+	if len(repositoryTag) == 2 {
+		ret = append(ret, "--set-string", p+".tag="+repositoryTag[1])
+	}
+
+	return ret
+}
+
 func HelmInstallChart(release, ns string) {
 	args := []string{
 		"install", release, "./" + TestContext.ChartPath,
 		"--namespace", ns,
 		"--values", TestContext.ChartValues, "--wait",
 		"--kube-context", TestContext.KubeContext,
-		"--set", fmt.Sprintf("image=%s", TestContext.OperatorImage),
-		"--set", fmt.Sprintf("sidecarImage=%s", TestContext.SidecarMysql57Image),
-		"--set", fmt.Sprintf("sidecarMysql8Image=%s", TestContext.SidecarMysql8Image),
-		"--set", fmt.Sprintf("orchestrator.image=%s", TestContext.OrchestratorImage),
 	}
+	args = append(args, setImage("image", TestContext.OperatorImage)...)
+	args = append(args, setImage("sidecar57.image", TestContext.SidecarMysql57Image)...)
+	args = append(args, setImage("sidecar80.image", TestContext.SidecarMysql8Image)...)
+	args = append(args, setImage("orchestrator.image", TestContext.OrchestratorImage)...)
 
 	cmd := exec.Command("helm", args...)
 	cmd.Stdout = os.Stdout

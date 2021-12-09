@@ -1,58 +1,67 @@
+{{- $appVersion := .Chart.AppVersion -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ template "mysql-operator.fullname" . }}
+  name: {{ include "mysql-operator.fullname" . }}
   labels:
-    app: {{ template "mysql-operator.name" . }}
-    chart: {{ template "mysql-operator.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    {{- include "mysql-operator.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicas }}
-  serviceName: {{ template "mysql-operator.orc-service-name" . }}
+  replicas: {{ .Values.replicaCount }}
+  serviceName: {{ include "orchestrator.fullname" . }}
   podManagementPolicy: Parallel
   selector:
     matchLabels:
-      app: {{ template "mysql-operator.name" . }}
-      release: {{ .Release.Name }}
+      {{- include "mysql-operator.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      labels:
-        app: {{ template "mysql-operator.name" . }}
-        release: {{ .Release.Name }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/orc-config.yaml") . | sha256sum }}
-        checksum/secret: {{ include (print $.Template.BasePath "/orc-secret.yaml") . | sha256sum }}
-    spec:
-      serviceAccountName: {{ template "mysql-operator.serviceAccountName" . }}
-      {{- if .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{ toYaml .Values.imagePullSecrets | indent 2 }}
+      {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
       {{- end }}
+        checksum/orchestrator-config: {{ include (print $.Template.BasePath "/orchestrator-config.yaml") . | sha256sum }}
+        checksum/orchestrator-secret: {{ include (print $.Template.BasePath "/orchestrator-secret.yaml") . | sha256sum }}
+      labels:
+        {{- include "mysql-operator.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "mysql-operator.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: operator
-          image: "{{ .Values.image }}"
-          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default $appVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+              name: prometheus
+              protocol: TCP
           env:
             - name: ORC_TOPOLOGY_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "mysql-operator.orc-secret-name" . }}
+                  name: {{ template "orchestrator.fullname" . }}
                   key: TOPOLOGY_USER
             - name: ORC_TOPOLOGY_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "mysql-operator.orc-secret-name" . }}
+                  name: {{ template "orchestrator.fullname" . }}
                   key: TOPOLOGY_PASSWORD
+          {{- if .Values.extraEnv }}
+            {{- toYaml .Values.extraEnv | nindent 12 }}
+          {{- end }}
           args:
             - --leader-election-namespace={{ .Release.Namespace }}
-            # connect to orchestrator on localhost
-            - --orchestrator-uri=http://{{ template "mysql-operator.fullname" . }}.{{ .Release.Namespace }}:{{ .Values.orchestrator.service.port }}/api
-            {{- if .Values.sidecarImage }}
-            - --sidecar-image={{ .Values.sidecarImage }}
+            - --orchestrator-uri={{ include "orchestrator.apiURL" . }}
+            {{- with .Values.sidecar57 }}
+            - --sidecar-image={{ .image.repository }}:{{ .image.tag | default $appVersion }}
             {{- end -}}
-            {{- if .Values.sidecarMysql8Image }}
-            - --sidecar-mysql8-image={{ .Values.sidecarMysql8Image }}
+            {{- with .Values.sidecar80 }}
+            - --sidecar-mysql8-image={{ .image.repository }}:{{ .image.tag | default $appVersion }}
             {{- end -}}
             {{- if .Values.watchNamespace }}
             - --namespace={{ .Values.watchNamespace }}
@@ -65,18 +74,24 @@ spec:
             {{- range $arg := .Values.extraArgs }}
             - {{ $arg }}
             {{- end }}
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
             httpGet:
               path: /healthz
               port: 8081
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
         - name: orchestrator
-          image: {{ .Values.orchestrator.image }}
-          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          securityContext:
+            {{- toYaml .Values.orchestrator.securityContext | nindent 12 }}
+          image: {{ .Values.orchestrator.image.repository }}:{{ .Values.orchestrator.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.orchestrator.image.pullPolicy }}
           ports:
             - containerPort: 3000
-              name: web
+              name: http
               protocol: TCP
             - containerPort: 10008
               name: raft
@@ -86,10 +101,13 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+          {{- if .Values.orchestrator.extraEnv }}
+            {{- toYaml .Values.orchestrator.extraEnv | nindent 12 }}
+          {{- end }}
           envFrom:
             - prefix: ORC_
               secretRef:
-                name: {{ template "mysql-operator.orc-secret-name" . }}
+                name: {{ template "orchestrator.fullname" . }}
           volumeMounts:
             - name: data
               mountPath: /var/lib/orchestrator
@@ -113,7 +131,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: {{ template "mysql-operator.orc-config-name" . }}
+            name: {{ template "orchestrator.fullname" . }}
         {{- if not .Values.orchestrator.persistence.enabled }}
         - name: data
           emptyDir: {}
@@ -125,47 +143,20 @@ spec:
           securityContext:
             runAsUser: 0
           image: busybox:1.34.0
-          command: ['sh', '-c', "chown -R {{ .Values.securityContext.fsGroup | default "0" }}:{{ .Values.securityContext.fsGroup | default "0" }} /var/lib/orchestrator"]
+          command: ['sh', '-c', "chown -R {{ .Values.podSecurityContext.fsGroup | default "0" }}:{{ .Values.podSecurityContext.fsGroup | default "0" }} /var/lib/orchestrator"]
           volumeMounts:
             - name: data
               mountPath: /var/lib/orchestrator
-      {{- end }}
-
-      # security context to mount corectly the volume for orc
-      {{- with .Values.securityContext }}
-      securityContext:
-        {{- toYaml . | nindent 8 }}
       {{- end }}
 
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-
+      {{- with .Values.affinity }}
       affinity:
-        {{- if .Values.nodeAffinity }}
-        nodeAffinity:
-          {{- toYaml .Values.nodeAffinity | nindent 10 }}
-        {{- end }}
-        {{- if eq "hard" .Values.antiAffinity }}
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - topologyKey: kubernetes.io/hostname
-            labelSelector:
-              matchLabels:
-                app: {{ template "mysql-operator.name" . }}
-        {{- else if eq "soft" .Values.antiAffinity }}
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          # strongly prefer to stay away from other orchestrators
-          - weight: 100
-            podAffinityTerm:
-              topologyKey: kubernetes.io/hostname
-              labelSelector:
-                matchLabels:
-                  app: {{ template "mysql-operator.name" . }}
-        {{- end }}
-
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}

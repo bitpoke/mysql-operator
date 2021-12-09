@@ -1,15 +1,15 @@
 apiVersion: v2
 name: mysql-operator
 description: A helm chart for Bitpoke Operator for MySQL
-appVersion: "master"
-kubeVersion: ">= 1.16.0-0"
+appVersion: "latest"
+kubeVersion: ">= 1.19.0-0"
 keywords:
   - mysql
   - percona
   - orchestrator
   - bitpoke
   - database
-version: 0.1.1+master
+version: 0.0.0
 home: https://www.bitpoke.io/mysql-operator/
 sources:
   - https://github.com/bitpoke/mysql-operator.git
@@ -20,10 +20,32 @@ annotations:
   artifacthub.io/images: |
     - name: mysql-operator
       image: docker.io/bitpoke/mysql-operator:latest
+      whitelisted: true
     - name: orchestrator
       image: docker.io/bitpoke/mysql-operator-orchestrator:latest
+      whitelisted: true
     - name: mysql-5.7-sidecar
       image: docker.io/bitpoke/mysql-operator-sidecar-5.7:latest
+      whitelisted: true
     - name: mysql-8.0-sidecar
       image: docker.io/bitpoke/mysql-operator-sidecar-8.0:latest
+      whitelisted: true
+  artifacthub.io/crds: |
+    - kind: MySQLCluster
+      version: v1alpha1
+      name: mysqlclusters.mysql.presslabs.org
+      displayName: MySQLCluster
+      description: Represents a MySQL cluster managed by Bitpoke's Operator for MySQL.
+  artifacthub.io/crdsExamples: |
+    - apiVersion: v1alpha1
+      kind: MysqlCluster
+      metadata:
+        name: my-cluster
+      spec:
+        replicas: 3
+        secretName: my-secret
+      mysqlConf:
+         innodb-buffer-size: 128M
+      targetSLO:
+        maxSlaveLatency: 10s
 

@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	. "github.com/onsi/gomega/types"
+	gomegatypes "github.com/onsi/gomega/types"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -350,7 +350,7 @@ func testClusterRegistrationInOrchestrator(f *framework.Framework, cluster *api.
 		cluster)).To(Succeed())
 
 	// update the list of expected nodes to be in orchestrator
-	consistOfNodes := []GomegaMatcher{
+	consistOfNodes := []gomegatypes.GomegaMatcher{
 		MatchFields(IgnoreExtras, Fields{
 			"Key": Equal(orc.InstanceKey{
 				Hostname: f.GetPodHostname(cluster, 0),

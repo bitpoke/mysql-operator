@@ -1,6 +1,6 @@
-{{- $fullname := include "mysql-operator.fullname" . }}
-{{- $replicas := int .Values.replicas }}
-{{- $raftNodes := include "mysql-operator.raftlist" . | splitList "," }}
+{{- $replicas := int .Values.replicaCount }}
+{{- $raftNodes := include "orchestrator.raftList" . | splitList "," }}
+{{- $raftServiceName := include "orchestrator.fullname" . }}
 {{- $conf := .Values.orchestrator.config }}
 {{- $_ := set $conf "ListenAddress" ":3000" }}
 {{- $_ := set $conf "MySQLTopologyCredentialsConfigFile" "/etc/orchestrator/orc-topology.cnf" }}
@@ -8,9 +8,9 @@
 {{- $_ := set $conf "SQLite3DataFile" "/var/lib/orchestrator/orc.db" }}
 {{- $_ := set $conf "RaftEnabled" true }}
 {{- $_ := set $conf "RaftDataDir" "/var/lib/orchestrator" }}
-{{- $_ := set $conf "RaftAdvertise" "{{ .Env.HOSTNAME }}-svc" }}
+{{- $_ := set $conf "RaftAdvertise" (printf "{{ .Env.HOSTNAME }}.%s" $raftServiceName) }}
 {{- $_ := set $conf "RaftBind" "{{ .Env.HOSTNAME }}"}}
-{{- $_ := set $conf "HTTPAdvertise" "http://{{ .Env.HOSTNAME }}-svc:80" }}
+{{- $_ := set $conf "HTTPAdvertise" (printf "http://{{ .Env.HOSTNAME }}.%s:3000" $raftServiceName) }}
 {{- if eq 1 $replicas -}}
 {{- $_ := set $conf "RaftNodes" (list) }}
 {{- else -}}
@@ -19,12 +19,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ template "mysql-operator.orc-config-name" . }}
+  name: {{ template "orchestrator.fullname" . }}
   labels:
-    app: {{ template "mysql-operator.name" . }}
-    chart: {{ template "mysql-operator.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    {{- include "mysql-operator.labels" . | nindent 4 }}
 data:
   orchestrator.conf.json: {{ toPrettyJson $conf | quote }}
   orc-topology.cnf: |

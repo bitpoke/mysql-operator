@@ -34,6 +34,8 @@ steps:
 
 - name: test
   image: docker.io/bitpoke/build:v0.7.0
+  environment:
+    ACK_GINKGO_DEPRECATIONS: 1.16.4
   commands:
   - make test
 
@@ -85,10 +87,8 @@ steps:
 - name: publish
   image: docker.io/bitpoke/build:v0.7.0
   environment:
-    DOCKER_REGISTRY:
-      from_secret: DOCKER_REGISTRY
-    DOCKER_USERNAME:
-      from_secret: DOCKER_USERNAME
+    DOCKER_REGISTRY: docker.io/bitpoke
+    DOCKER_USERNAME: bitpokebot
     DOCKER_PASSWORD:
       from_secret: DOCKER_PASSWORD
     SSH_KEY:
@@ -182,6 +182,7 @@ steps:
   environment:
     <<: *e2eEnvironment
     GOOGLE_CLOUD_CLUSTER: mysql-operator-e2e-testing-${DRONE_COMMIT:0:8}
+    ACK_GINKGO_DEPRECATIONS: 1.16.4
   commands:
   - /usr/local/bin/setup-credentials-helper.sh
   - make e2e
