@@ -12,7 +12,7 @@ GO111MODULE=on
 
 include build/makelib/common.mk
 include build/makelib/golang.mk
-include build/makelib/kubebuilder-v2.mk
+include build/makelib/kubebuilder-v3.mk
 include build/makelib/image.mk
 include build/makelib/helm.mk
 
@@ -46,15 +46,10 @@ GO_INTEGRATION_TESTS_PARAMS ?= -timeout 50m \
 
 TEST_FILTER_PARAM += $(GO_INTEGRATION_TESTS_PARAMS)
 
-# Kubebuilder v2 compatible paths
-CRD_DIR := config/crd/bases
-RBAC_DIR := config/rbac
-GEN_CRD_OPTIONS := crd:crdVersions=v1,preserveUnknownFields=false
-
 # fix for https://github.com/kubernetes-sigs/controller-tools/issues/476
 .PHONY: .kubebuilder.fix-preserve-unknown-fields
 .kubebuilder.fix-preserve-unknown-fields:
-		for crd in $(wildcard $(CRD_DIR)/*.yaml) ; do \
+		@for crd in $(wildcard $(CRD_DIR)/*.yaml) ; do \
 			$(YQ) e '.spec.preserveUnknownFields=false' -i "$${crd}" ;\
 		done
 .kubebuilder.manifests.done: .kubebuilder.fix-preserve-unknown-fields
