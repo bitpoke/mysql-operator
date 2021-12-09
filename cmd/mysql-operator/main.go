@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	logf "github.com/presslabs/controller-util/log"
@@ -39,18 +38,14 @@ import (
 var log = logf.Log.WithName("mysql-operator")
 
 func main() {
-	fs := pflag.NewFlagSet(os.Args[0], pflag.ExitOnError)
-	fs.AddGoFlagSet(flag.CommandLine)
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
 	debug := false
-	fs.BoolVar(&debug, "debug", false, "Set logger in debug mode")
+	pflag.CommandLine.BoolVar(&debug, "debug", false, "Set logger in debug mode")
 
 	opt := options.GetOptions()
-	opt.AddFlags(fs)
-	if err := fs.Parse(os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to parse command line args, see help, err: %s", err)
-		os.Exit(1)
-	}
+	opt.AddFlags(pflag.CommandLine)
+	pflag.Parse()
 
 	// set logging
 	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
@@ -80,7 +75,8 @@ func main() {
 		LeaderElectionNamespace: opt.LeaderElectionNamespace,
 		LeaderElectionID:        opt.LeaderElectionID,
 		Namespace:               opt.Namespace,
-		HealthProbeBindAddress:  ":8081",
+		MetricsBindAddress:      opt.MetricsBindAddress,
+		HealthProbeBindAddress:  opt.HealthProbeBindAddress,
 	})
 	if err != nil {
 		log.Error(err, "unable to create a new manager")
@@ -88,7 +84,12 @@ func main() {
 	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		log.Error(err, "unable to add healthzCheck to manager")
+		log.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		log.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 

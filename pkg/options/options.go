@@ -17,7 +17,9 @@ limitations under the License.
 package options
 
 import (
+	"io/ioutil"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/spf13/pflag"
@@ -84,6 +86,13 @@ type Options struct {
 
 	// AllowCrossNamespaceDatabase allow creating users resources in clusters that are not in the same namespace.
 	AllowCrossNamespaceDatabases bool
+
+	// MetricsBindAddress is the TCP address that the controller should bind to for serving prometheus metrics.
+	// It can be set to "0" to disable the metrics serving.
+	MetricsBindAddress string
+
+	// HealthProbeBindAddress is the TCP address that the controller should bind to for serving health probes.
+	HealthProbeBindAddress string
 }
 
 type pullpolicy corev1.PullPolicy
@@ -116,18 +125,38 @@ const (
 	defaultOrchestratorTopologyUser     = ""
 	defaultOrchestratorTopologyPassword = ""
 
-	defaultLeaderElectionNamespace = "default"
-	defaultLeaderElectionID        = "mysql-operator-leader-election"
+	defaultLeaderElectionID = "mysql-operator-leader-election"
 
 	defaultNamespace = ""
 
 	defaultFailoverBeforeShutdownEnabled = true
+
+	defaultMetricsBindAddress     = ":8080"
+	defaultHealthProbeBindAddress = ":8081"
 )
 
 var (
 	defaultSidecarMysql57Image = "docker.io/bitpoke/mysql-operator-sidecar-5.7:" + version.GetInfo().GitVersion
 	defaultSidecarMysql8Image  = "docker.io/bitpoke/mysql-operator-sidecar-8.0:" + version.GetInfo().GitVersion
 )
+
+func namespace() string {
+	if ns := os.Getenv("KUBE_NAMESPACE"); ns != "" {
+		return ns
+	}
+
+	if ns := os.Getenv("MY_POD_NAMESPACE"); ns != "" {
+		return ns
+	}
+
+	if data, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
+		if ns := strings.TrimSpace(string(data)); len(ns) > 0 {
+			return ns
+		}
+	}
+
+	return corev1.NamespaceDefault
+}
 
 // AddFlags registers all mysql-operator needed flags
 func (o *Options) AddFlags(fs *pflag.FlagSet) {
@@ -152,7 +181,7 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.OrchestratorTopologyUser, "orchestrator-topology-user", defaultOrchestratorTopologyPassword,
 		"The orchestrator topology user. Can also be set as ORC_TOPOLOGY_USER environment variable.")
 
-	fs.StringVar(&o.LeaderElectionNamespace, "leader-election-namespace", defaultLeaderElectionNamespace,
+	fs.StringVar(&o.LeaderElectionNamespace, "leader-election-namespace", namespace(),
 		"The leader election namespace.")
 	fs.StringVar(&o.LeaderElectionID, "leader-election-id", defaultLeaderElectionID,
 		"The leader election id.")
@@ -174,6 +203,12 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 	fs.BoolVar(&o.AllowCrossNamespaceDatabases, "allow-cross-namespace-database", false,
 		"Allow the operator create database in clusters from other namespaces. Enabling this may be a security issue")
+
+	fs.StringVar(&o.MetricsBindAddress, "metrics-addr", defaultMetricsBindAddress,
+		"The TCP address that the controller should bind to for serving prometheus metrics."+
+			" It can be set to \"0\" to disable the metrics serving.")
+	fs.StringVar(&o.HealthProbeBindAddress, "healthz-addr", defaultHealthProbeBindAddress,
+		"The TCP address that the controller should bind to for serving health probes.")
 }
 
 var instance *Options
@@ -195,7 +230,12 @@ func GetOptions() *Options {
 
 			Namespace: defaultNamespace,
 
+			LeaderElectionNamespace: namespace(),
+
 			FailoverBeforeShutdownEnabled: defaultFailoverBeforeShutdownEnabled,
+
+			MetricsBindAddress:     defaultMetricsBindAddress,
+			HealthProbeBindAddress: defaultHealthProbeBindAddress,
 		}
 	})
 
