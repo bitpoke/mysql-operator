@@ -2,12 +2,9 @@
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: '{{ template "mysql-operator.fullname" . }}'
+  name: {{ include "mysql-operator.fullname" . }}-psp
   labels:
-    app: '{{ template "mysql-operator.name" . }}'
-    chart: '{{ template "mysql-operator.chart" . }}'
-    heritage: '{{ .Release.Service }}'
-    release: '{{ .Release.Name }}'
+    {{- include "mysql-operator.labels" . | nindent 4 }}
 rules:
 - apiGroups: ['policy']
   resources: ['podsecuritypolicies']

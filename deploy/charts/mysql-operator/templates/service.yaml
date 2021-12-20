@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mysql-operator.fullname" . }}
+  labels:
+    {{- include "mysql-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: operator
+spec:
+  type: {{ .Values.orchestrator.service.type }}
+  ports:
+    - port: {{ .Values.orchestrator.service.port }}
+      name: http
+      protocol: TCP
+      targetPort: http
+      {{- if .Values.orchestrator.service.nodePort }}
+      nodePort: {{ .Values.orchestrator.service.nodePort }}
+      {{- end }}
+    - port: {{ .Values.serviceMonitor.servicePort }}
+      name: {{ .Values.serviceMonitor.servicePortName }}
+      protocol: TCP
+      targetPort: prometheus
+  selector:
+    {{- include "mysql-operator.selectorLabels" . | nindent 4 }}
