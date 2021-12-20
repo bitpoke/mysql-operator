@@ -25,9 +25,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	. "github.com/onsi/gomega/types"
+	gomegatypes "github.com/onsi/gomega/types"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/types"
 
 	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -36,7 +37,7 @@ import (
 )
 
 const (
-	POLLING = 2 * time.Second
+	POLLING = 500 * time.Millisecond
 )
 
 var (
@@ -74,125 +75,97 @@ var _ = Describe("MySQL Cluster E2E Tests", func() {
 		testClusterReadiness(f, cluster)
 
 		By("testing that cluster is registered with orchestrator")
-		testClusterIsRegistredWithOrchestrator(f, cluster)
+		testClusterRegistrationInOrchestrator(f, cluster)
 
 		Expect(f.Client.Get(context.TODO(), clusterKey, cluster)).To(Succeed(), "failed to get cluster %s", cluster.Name)
 	})
 
-	It("scale up a cluster", func() {
-		// scale up the cluster
-		cluster.Spec.Replicas = &two
-		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
-
-		// test cluster
-		By("test cluster is ready after scale up")
-		testClusterReadiness(f, cluster)
-		By("test cluster is registered in orchestrator after scale up")
-		testClusterIsRegistredWithOrchestrator(f, cluster)
-		By("test cluster endpoints are set correctly")
-		testClusterEndpoints(f, cluster, []int{0}, []int{0, 1})
-	})
-
-	It("failover cluster", func() {
-		cluster.Spec.Replicas = &two
-		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
-
-		// test cluster to be ready
-		By("test cluster is ready after cluster update")
-		testClusterReadiness(f, cluster)
-		By("test cluster is registered in orchestrator after cluster update")
-		testClusterIsRegistredWithOrchestrator(f, cluster)
-
-		// check cluster to have a master and a slave
-		By("test cluster nodes master condition is properly set")
-		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionMaster, core.ConditionTrue, f.Timeout)
-		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionFalse, f.Timeout)
+	It("scales up and fails over a cluster", func() {
+		scaleToTwoNodes(f, cluster)
 
 		// remove master pod
+		By("removing master pod and waiting to become terminated")
 		podName := framework.GetNameForResource("sts", cluster) + "-0"
+		podKey := types.NamespacedName{Name: podName, Namespace: f.Namespace.Name}
+
 		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), podName, meta.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete pod %s", podName)
+
+		Eventually(func() bool {
+			pod := &core.Pod{}
+			f.Client.Get(context.TODO(), podKey, pod)
+			return pod.ObjectMeta.DeletionTimestamp != nil && !pod.ObjectMeta.DeletionTimestamp.IsZero()
+		}, f.Timeout, POLLING).Should(BeTrue(), fmt.Sprintf("Pod '%s' did not become terminated", f.GetPodHostname(cluster, 0)))
 
 		// check failover done, this is a regression test
-		// TODO: decrease this timeout to 20
-		failoverTimeout := 60 * time.Second
-		By(fmt.Sprintf("Check failover done; timeout=%s", failoverTimeout))
-		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionTrue, failoverTimeout)
+		By("checking cluster failover is done")
+		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionTrue, f.Timeout)
 
 		// after some time node 0 should be up and should be slave
-		By("test cluster master condition is properly set")
+		By("testing that old master is now designated as slave")
 		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionMaster, core.ConditionFalse, f.Timeout)
 		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionReplicating, core.ConditionTrue, f.Timeout)
 
-		By("test cluster endpoints after failover")
-		testClusterEndpoints(f, cluster, []int{1}, []int{0, 1})
+		// test cluster to be ready
+		By("testing cluster after failover")
+		testClusterReadiness(f, cluster)
+		testClusterRegistrationInOrchestrator(f, cluster, ExpectDesignatedMaster(1))
 	})
 
-	It("fails over and successfully reclones master from replica", func() {
-		cluster.Spec.Replicas = &two
-		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
+	It("fails over and successfully re-clones master from replica", func() {
+		scaleToTwoNodes(f, cluster)
 
-		// test cluster to be ready
-		By("test cluster is ready after cluster update")
-		testClusterReadiness(f, cluster)
-		By("test cluster is registered in orchestrator after cluster update")
-		testClusterIsRegistredWithOrchestrator(f, cluster)
-
-		// check cluster to have a master and a slave
-		By("test cluster nodes master condition is properly set")
-		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionMaster, core.ConditionTrue, f.Timeout)
-		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionFalse, f.Timeout)
-
+		// remove master pod
+		By("removing master pod, its PVC and waiting to become terminated")
 		podName := framework.GetNameForResource("sts", cluster) + "-0"
+		pvcName := "data-" + podName
+		podKey := types.NamespacedName{Name: podName, Namespace: f.Namespace.Name}
 
 		// delete PVC from master pod and wait for it to be removed
-		pvcName := "data-" + podName
-		deletePVCSynchronously(f, pvcName, cluster.Namespace, 60*time.Second)
+		deletePVCSynchronously(f, pvcName, cluster.Namespace, f.Timeout)
 
-		// now delete master pod
 		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), podName, meta.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete pod %s", podName)
 
-		failoverTimeout := 60 * time.Second
-		By(fmt.Sprintf("Check failover done; timeout=%s", failoverTimeout))
-		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionTrue, failoverTimeout)
+		Eventually(func() bool {
+			pod := &core.Pod{}
+			f.Client.Get(context.TODO(), podKey, pod)
+			return pod.ObjectMeta.DeletionTimestamp != nil && !pod.ObjectMeta.DeletionTimestamp.IsZero()
+		}, f.Timeout, POLLING).Should(BeTrue(), fmt.Sprintf("Pod '%s' did not become terminated", f.GetPodHostname(cluster, 0)))
+
+		// check failover done, this is a regression test
+		By("checking cluster failover is done")
+		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionTrue, f.Timeout)
 
 		// after some time node 0 should be up and should be slave
-		By("test cluster master condition is properly set")
+		By("testing that old master is now designated as slave")
 		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionMaster, core.ConditionFalse, f.Timeout)
 		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionReplicating, core.ConditionTrue, f.Timeout)
 
-		By("test cluster endpoints after failover")
-		testClusterEndpoints(f, cluster, []int{1}, []int{0, 1})
+		// test cluster to be ready
+		By("testing cluster after failover")
+		testClusterReadiness(f, cluster)
+		testClusterRegistrationInOrchestrator(f, cluster, ExpectDesignatedMaster(1))
 	})
 
-	It("scale down a cluster", func() {
-		// configure MySQL cluster to have 2 replicas and to use PV for data storage
-		cluster.Spec.Replicas = &two
-		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
-
-		// test cluster to be ready
-		By("test cluster is ready after cluster update")
-		testClusterReadiness(f, cluster)
-		By("test cluster is registered in orchestrator after cluster update")
-		testClusterIsRegistredWithOrchestrator(f, cluster)
-
-		Expect(f.Client.Get(context.TODO(), clusterKey, cluster)).To(Succeed())
+	It("scales down a cluster", func() {
+		scaleToTwoNodes(f, cluster)
 
 		// check PVCs
+		Expect(f.Client.Get(context.TODO(), clusterKey, cluster)).To(Succeed())
 		Eventually(f.GetClusterPVCsFn(cluster)).Should(HaveLen(2))
 
 		// scale down the cluster
 		cluster.Spec.Replicas = &one
 		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
 
-		By("test cluster is ready after scale down")
+		By("testing that cluster is ready after scale down")
 		testClusterReadiness(f, cluster)
 
-		By("check pvc gets deleted")
-		Eventually(f.GetClusterPVCsFn(cluster), "30s", POLLING).Should(HaveLen(1))
+		By("checking that PVCs gets deleted")
+		Eventually(f.GetClusterPVCsFn(cluster), f.Timeout, POLLING).Should(HaveLen(1))
 
-		By("scale cluster to zero")
+		By("scaling cluster to zero")
 		// refresh cluster to prevent a update conflict
 		Expect(f.Client.Get(context.TODO(), clusterKey, cluster)).To(Succeed())
 
@@ -201,22 +174,15 @@ var _ = Describe("MySQL Cluster E2E Tests", func() {
 		cluster.Spec.Replicas = &zero
 		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
 
-		By("test cluster is ready after scale down")
+		By("testing that cluster is ready after scale down")
 		testClusterReadiness(f, cluster)
 
 		// it must not delete the PVC 0
-		Consistently(f.GetClusterPVCsFn(cluster), "30s", POLLING).Should(HaveLen(1))
+		Consistently(f.GetClusterPVCsFn(cluster), f.Timeout, POLLING).Should(HaveLen(1))
 	})
 
-	It("slave io running stopped", func() {
-		cluster.Spec.Replicas = &two
-		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
-
-		// test cluster to be ready
-		By("test cluster is ready after cluster update")
-		testClusterReadiness(f, cluster)
-		By("test cluster is registered in orchestrator after cluster update")
-		testClusterIsRegistredWithOrchestrator(f, cluster)
+	It("removes nodes with slave io stopped", func() {
+		scaleToTwoNodes(f, cluster)
 
 		Expect(f.Client.Get(context.TODO(), clusterKey, cluster)).To(Succeed())
 
@@ -224,60 +190,63 @@ var _ = Describe("MySQL Cluster E2E Tests", func() {
 		f.ExecSQLOnNode(cluster, 1, "root", pw, "STOP SLAVE;")
 
 		// expect node to be removed from service and status to be updated
-		By("test cluster node 1 replicating condition is set to false")
-		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionReplicating, core.ConditionFalse, 30*time.Second)
-		// node 1 should not be in healty service
-		By("test cluster endpoints after stop slave")
-		testClusterEndpoints(f, cluster, []int{0}, []int{0})
+		By("testing pod-1 replicating condition is set to false")
+		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionReplicating, core.ConditionFalse, f.Timeout)
+
+		By("testing that pod-1 has healthy label set to 'no'")
+		podName := framework.GetNameForResource("sts", cluster) + "-1"
+		podKey := types.NamespacedName{Name: podName, Namespace: f.Namespace.Name}
+		Eventually(func() *core.Pod {
+			pod := &core.Pod{}
+			f.Client.Get(context.TODO(), podKey, pod)
+			return pod
+		}, f.Timeout, POLLING).Should(haveLabelWithValue("healthy", "no"))
 	})
 
-	It("slave latency", func() {
-		cluster.Spec.Replicas = &two
+	It("removes lagging nodes", func() {
 		one := int64(1)
 		cluster.Spec.MaxSlaveLatency = &one
-
-		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
-
-		// test cluster to be ready
-		By("test cluster is ready after cluster update")
-		testClusterReadiness(f, cluster)
-		By("test cluster is registered in orchestrator after cluster update")
-		testClusterIsRegistredWithOrchestrator(f, cluster)
+		scaleToTwoNodes(f, cluster)
 
 		Expect(f.Client.Get(context.TODO(), clusterKey, cluster)).To(Succeed())
 
 		// set delayed replication
 		f.ExecSQLOnNode(cluster, 1, "root", pw, "STOP SLAVE; CHANGE MASTER TO MASTER_DELAY = 100; START SLAVE;")
 
-		// expect node to be marked as lagged and removed from service
-		By("test cluster node 1 to be lagged")
-		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionLagged, core.ConditionTrue, 20*time.Second)
-		// node 1 should not be in healty service
-		By("test cluster endpoints after delayed slave")
-		testClusterEndpoints(f, cluster, []int{0}, []int{0})
+		// expect node to be removed from service and status to be updated
+		By("testing pod-1 lagged condition is set to true")
+		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionLagged, core.ConditionTrue, f.Timeout)
+
+		By("testing that pod-1 has healthy label set to 'no'")
+		podName := framework.GetNameForResource("sts", cluster) + "-1"
+		podKey := types.NamespacedName{Name: podName, Namespace: f.Namespace.Name}
+		Eventually(func() *core.Pod {
+			pod := &core.Pod{}
+			f.Client.Get(context.TODO(), podKey, pod)
+			return pod
+		}, f.Timeout, POLLING).Should(haveLabelWithValue("healthy", "no"))
 	})
 
-	It("cluster readOnly", func() {
+	It("properly sets up and doesn't failover a read only cluster", func() {
 		cluster.Spec.Replicas = &two
 		cluster.Spec.ReadOnly = true
 		Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
 
 		// test cluster to be ready
-		By("test cluster is ready after cluster update")
+		By("testing cluster is ready after scaling to two nodes and setting it read only")
 		testClusterReadiness(f, cluster)
-		By("test cluster is registered in orchestrator after cluster update")
-		testClusterReadOnlyIsRegistredWithOrchestrator(f, cluster)
+		testClusterRegistrationInOrchestrator(f, cluster, ExpectReadOnlyCluster())
 
 		// get cluster
 		Expect(f.Client.Get(context.TODO(), clusterKey, cluster)).To(Succeed())
 
-		// expect cluster to be marked readOnly
-		By("test cluster to be readOnly")
+		// expect cluster to be marked read only
+		By("testing the cluster to be read only")
 		f.ClusterEventuallyCondition(cluster, api.ClusterConditionReadOnly, core.ConditionTrue, f.Timeout)
 
 		// expect node to be marked as lagged and removed from service
-		By("test cluster node 0 to be readOnly")
-		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionReadOnly, core.ConditionTrue, 20*time.Second)
+		By("testing cluster node 0 to be read only")
+		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionReadOnly, core.ConditionTrue, f.Timeout)
 
 		// TODO: fix this test
 		// // node 1 should not be in healthy service because is marked as lagged (heartbeat can't write to master anymore)
@@ -286,17 +255,36 @@ var _ = Describe("MySQL Cluster E2E Tests", func() {
 
 		// remove master pod
 		podName := framework.GetNameForResource("sts", cluster) + "-0"
+		podKey := types.NamespacedName{Name: podName, Namespace: f.Namespace.Name}
+
 		err = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), podName, meta.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete pod %s", podName)
 
+		Eventually(func() bool {
+			pod := &core.Pod{}
+			f.Client.Get(context.TODO(), podKey, pod)
+			return pod.ObjectMeta.DeletionTimestamp != nil && !pod.ObjectMeta.DeletionTimestamp.IsZero()
+		}, f.Timeout, POLLING).Should(BeTrue(), fmt.Sprintf("Pod '%s' did not become terminated", f.GetPodHostname(cluster, 0)))
+
 		// check failover to not be started
-		failoverTimeout := 80 * time.Second
-		By(fmt.Sprintf("ensure that failover is not started; timeout=%s", failoverTimeout))
-		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionFalse, failoverTimeout)
-		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionReadOnly, core.ConditionTrue, failoverTimeout)
+		By("ensuring that failover is not started")
+		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionFalse, f.Timeout)
+		f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionReadOnly, core.ConditionTrue, f.Timeout)
 	})
 
 })
+
+func scaleToTwoNodes(f *framework.Framework, cluster *api.MysqlCluster) {
+	// scale up the cluster
+	By("scaling cluster up to two replicas")
+	cluster.Spec.Replicas = &two
+	Expect(f.Client.Update(context.TODO(), cluster)).To(Succeed())
+	testClusterReadiness(f, cluster)
+	testClusterRegistrationInOrchestrator(f, cluster)
+	// test pod-0 is master and pod-1 is slave
+	f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 0), api.NodeConditionMaster, core.ConditionTrue, f.Timeout)
+	f.NodeEventuallyCondition(cluster, f.GetPodHostname(cluster, 1), api.NodeConditionMaster, core.ConditionFalse, f.Timeout)
+}
 
 func deletePVCSynchronously(f *framework.Framework, pvcName, namespace string, timeout time.Duration) {
 	pvc := &core.PersistentVolumeClaim{}
@@ -329,42 +317,41 @@ func testClusterReadiness(f *framework.Framework, cluster *api.MysqlCluster) {
 	}, timeout, POLLING).Should(Equal(int(*cluster.Spec.Replicas)), "Not ready replicas of cluster '%s'", cluster.Name)
 
 	f.ClusterEventuallyCondition(cluster, api.ClusterConditionReady, core.ConditionTrue, f.Timeout)
-	// TODO: investigate way sometime exists failover ACK even to a newly created cluster.
-	// f.ClusterEventuallyCondition(cluster, api.ClusterConditionFailoverAck, core.ConditionFalse, f.Timeout)
+	f.ClusterEventuallyCondition(cluster, api.ClusterConditionFailoverAck, core.ConditionFalse, f.Timeout)
 }
 
-//test if a non-readOnly cluster is registered with orchestrator
-func testClusterIsRegistredWithOrchestrator(f *framework.Framework, cluster *api.MysqlCluster) {
-	testClusterRegistrationInOrchestrator(f, cluster, false)
+type clusterOrchestratorRegistrationOptions struct {
+	DesignatedMaster int
+	ReadOnlyCluster  bool
+}
+type clusterOrchestratorRegistrationOption func(*clusterOrchestratorRegistrationOptions)
+
+func ExpectDesignatedMaster(idx int) clusterOrchestratorRegistrationOption {
+	return func(o *clusterOrchestratorRegistrationOptions) {
+		o.DesignatedMaster = idx
+	}
 }
 
-//test if a readOnly cluster is registered with orchestrator
-func testClusterReadOnlyIsRegistredWithOrchestrator(f *framework.Framework, cluster *api.MysqlCluster) {
-	testClusterRegistrationInOrchestrator(f, cluster, true)
+func ExpectReadOnlyCluster() clusterOrchestratorRegistrationOption {
+	return func(o *clusterOrchestratorRegistrationOptions) {
+		o.ReadOnlyCluster = true
+	}
 }
 
 // tests if the cluster is in orchestrator and is properly configured
-func testClusterRegistrationInOrchestrator(f *framework.Framework, cluster *api.MysqlCluster, clusterReadOnly bool) {
-	Expect(f.Client.Get(context.TODO(),
-		types.NamespacedName{Name: cluster.Name, Namespace: cluster.Namespace},
-		cluster)).To(Succeed())
-
-	// update the list of expected nodes to be in orchestrator
-	consistOfNodes := []GomegaMatcher{
-		MatchFields(IgnoreExtras, Fields{
-			"Key": Equal(orc.InstanceKey{
-				Hostname: f.GetPodHostname(cluster, 0),
-				Port:     3306,
-			}),
-			"GTIDMode":          Equal("ON"),
-			"IsUpToDate":        Equal(true),
-			"IsRecentlyChecked": Equal(true),
-			"Binlog_format":     Equal("ROW"),
-			"ReadOnly":          Equal(clusterReadOnly),
-		}), // master node
+func testClusterRegistrationInOrchestrator(f *framework.Framework, cluster *api.MysqlCluster, opts ...clusterOrchestratorRegistrationOption) {
+	o := clusterOrchestratorRegistrationOptions{}
+	for _, optFn := range opts {
+		optFn(&o)
 	}
-	for i := 1; i < int(*cluster.Spec.Replicas); i++ {
-		consistOfNodes = append(consistOfNodes, MatchFields(IgnoreExtras, Fields{
+
+	replicas := int(*cluster.Spec.Replicas)
+	consistOfNodes := make([]gomegatypes.GomegaMatcher, replicas, replicas)
+
+	for i := 0; i < replicas; i++ {
+		readOnly := o.ReadOnlyCluster || i != o.DesignatedMaster
+
+		consistOfNodes[i] = MatchFields(IgnoreExtras, Fields{
 			"Key": Equal(orc.InstanceKey{
 				Hostname: f.GetPodHostname(cluster, i),
 				Port:     3306,
@@ -373,12 +360,12 @@ func testClusterRegistrationInOrchestrator(f *framework.Framework, cluster *api.
 			"IsUpToDate":        Equal(true),
 			"IsRecentlyChecked": Equal(true),
 			"Binlog_format":     Equal("ROW"),
-			"ReadOnly":          Equal(true),
-		})) // slave node
+			"ReadOnly":          Equal(readOnly),
+		})
 	}
 
 	// check orchestrator nodes to be equal.
-	timeout := time.Duration(*cluster.Spec.Replicas) * f.Timeout
+	timeout := time.Duration(replicas) * f.Timeout
 	Eventually(func() []orc.Instance {
 		insts, err := f.OrcClient.Cluster(framework.OrcClusterName(cluster))
 		if err != nil {
@@ -391,64 +378,10 @@ func testClusterRegistrationInOrchestrator(f *framework.Framework, cluster *api.
 	}, timeout, POLLING).Should(ConsistOf(consistOfNodes), "Cluster is not configured correctly in orchestrator.")
 }
 
-// checks for cluster endpoints to exists when cluster is ready
-// TODO: check in more detail
-func testClusterEndpoints(f *framework.Framework, cluster *api.MysqlCluster, master []int, nodes []int) {
-	Expect(f.Client.Get(context.TODO(),
-		types.NamespacedName{Name: cluster.Name, Namespace: cluster.Namespace},
-		cluster)).To(Succeed())
-
-	// prepare the expected list of ips that should be set in endpoints
-	var masterIPs []string
-	var healthyIPs []string
-
-	for _, node := range master {
-		pod := f.GetPodForNode(cluster, node)
-		masterIPs = append(masterIPs, pod.Status.PodIP)
-	}
-
-	for _, node := range nodes {
-		pod := f.GetPodForNode(cluster, node)
-		healthyIPs = append(healthyIPs, pod.Status.PodIP)
-	}
-
-	// a helper function that return a callback that returns ips for a specific service
-	getAddrForSVC := func(name string, ready bool) func() []string {
-		return func() []string {
-			endpoints, err := f.ClientSet.CoreV1().Endpoints(cluster.Namespace).Get(context.TODO(), name, meta.GetOptions{})
-			if err != nil {
-				return nil
-			}
-
-			addrs := endpoints.Subsets[0].NotReadyAddresses
-			if ready {
-				addrs = endpoints.Subsets[0].Addresses
-			}
-
-			var ips []string
-			for _, addr := range addrs {
-				ips = append(ips, addr.IP)
-			}
-
-			return ips
-		}
-	}
-
-	timeout := 30 * time.Second
-
-	// master service
-	master_ep := framework.GetNameForResource("svc-master", cluster)
-	if len(masterIPs) > 0 {
-		Eventually(getAddrForSVC(master_ep, true), timeout).Should(ConsistOf(masterIPs), "Master ready endpoints are not correctly set.")
-	} else {
-		Eventually(getAddrForSVC(master_ep, true), timeout).Should(HaveLen(0), "Master ready endpoints should be 0.")
-	}
-
-	// healthy nodes service
-	hnodes_ep := framework.GetNameForResource("svc-read", cluster)
-	if len(healthyIPs) > 0 {
-		Eventually(getAddrForSVC(hnodes_ep, true), timeout).Should(ConsistOf(healthyIPs), "Healthy nodes ready endpoints are not correctly set.")
-	} else {
-		Eventually(getAddrForSVC(hnodes_ep, true), timeout).Should(HaveLen(0), "Healthy nodes not ready endpoints are not correctly set.")
-	}
+func haveLabelWithValue(label, value string) gomegatypes.GomegaMatcher {
+	return PointTo(MatchFields(IgnoreExtras, Fields{
+		"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+			"Labels": HaveKeyWithValue(label, value),
+		}),
+	}))
 }

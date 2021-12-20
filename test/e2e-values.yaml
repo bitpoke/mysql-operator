@@ -5,5 +5,3 @@ imagePullPolicy: IfNotPresent
 
 orchestrator:
   topologyPassword: password1
-  antiAffinity: soft
-  replicas: 1
