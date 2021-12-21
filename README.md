@@ -16,7 +16,7 @@ The main goals of this operator are:
 
 ## Contributing
 
-We welcome all contributions in the form of new issues for feature requests, bugs or even pull requests. We are open to discuss ideas on how to improve the operator and would also love to find out where and how it's used. The discussion related to this project should happen on the Kubernetes Community [Slack](https://kubernetes.slack.com/messages/CEKQXFR0E/). The current maintainers of this project can be reached via [email](mailto:info@bitpoke.io), too.
+We welcome all contributions in the form of new issues for feature requests, bugs or even pull requests. We are open to discuss ideas on how to improve the operator and would also love to find out where and how it's used. The discussion related to this project should happen on the Kubernetes Community [Slack](https://kubernetes.slack.com/messages/CEKQXFR0E/). The current maintainers of this project can be reached via [email](mailto:hello@bitpoke.io), too.
 
 ## Documentation
 
@@ -33,13 +33,13 @@ We welcome all contributions in the form of new issues for feature requests, bug
 To deploy this controller, use the provided helm chart by running:
 
 ```shell
-helm repo add presslabs https://presslabs.github.io/charts
-helm install presslabs/mysql-operator --name mysql-operator
+helm repo add bitpoke https://helm-charts.bitpoke.io
+helm install mysql-operator bitpoke/mysql-operator
 ```
 
-For more information about chart values see chart [README](charts/mysql-operator/README.md). This chart will deploy the controller together with an [orchestrator](https://github.com/github/orchestrator) cluster.
+For more information about chart values see chart [README](deploy/charts/mysql-operator/README.md). This chart will deploy the controller together with an [orchestrator](https://github.com/github/orchestrator) cluster.
 
-__NOTE__: MySQL operator 0.6.x requires at least Kubernetes 1.19.x o upgrade, check the [0.6.x upgrade notes](https://www.bitpoke.io/docs/mysql-operator/operator-upgrades/#v06x-upgrade) as some additional steps may be required.
+__NOTE__: MySQL operator 0.6.x requires at least Kubernetes 1.19.x to upgrade, check the [0.6.x upgrade notes](https://www.bitpoke.io/docs/mysql-operator/operator-upgrades/#v06x-upgrade) as some additional steps may be required.
 
 __NOTE__: MySQL operator 0.2.x requires at least Kubernetes 1.11.x (or 1.10.x with alpha features) while version 0.1.x is known to work with Kubernetes up 1.9.x. To upgrade, check the [0.2.x upgrade notes](https://www.bitpoke.io/docs/mysql-operator/operator-upgrades/#v02x-upgrade) as some additional steps are required.
 
