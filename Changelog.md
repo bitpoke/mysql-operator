@@ -4,10 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-
 ## [Unreleased]
 ### Added
-  * If you want to save mysql backup to AWS S3, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` were the only options, but now you can use `AWS_SESSION_TOKEN` or `AWS_ROLE_ARN` and `AWS_WEB_IDENTITY_TOKEN_FILE`
+### Changed
+### Removed
+### Fixed
+
+## [0.6.0] - 2021-12-21
+### Added
+ * If you want to save mysql backup to AWS S3, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` were the only options, but now you can use `AWS_SESSION_TOKEN` or `AWS_ROLE_ARN` and `AWS_WEB_IDENTITY_TOKEN_FILE`
  * Add `orchestrator.persistence.selector.matchLabels` and `orchestrator.persistence.annotations` for
    persistence depolyment with constraints
  * Add `orchestrator.persistence.fsGroupWorkaroundEnabled` for persistent volume
@@ -27,8 +32,34 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
  * Removed support for Helm 2
 ### Fixed
- * Make sure orchestrator can find it's templates [#741](https://github.com/bitpoke/mysql-operator/issues/741)
+ * Make sure orchestrator can find its templates [#741](https://github.com/bitpoke/mysql-operator/issues/741)
  * Workaround CRD generation with `preserveUnknownFields=false` [kubernetes-sigs/controller-tools#476](https://github.com/kubernetes-sigs/controller-tools/issues/476)
+
+## [0.5.3] - 2021-12-06
+### Added
+### Changed
+### Removed
+### Fixed
+ * Workaround CRD generation with `preserveUnknownFields=false` [kubernetes-sigs/controller-tools#476](https://github.com/kubernetes-sigs/controller-tools/issues/476)
+
+## [0.5.2] - 2021-11-23
+### Added
+ * If you want to save mysql backup to AWS S3, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` were the only options, but now you can use `AWS_SESSION_TOKEN` or `AWS_ROLE_ARN` and `AWS_WEB_IDENTITY_TOKEN_FILE`
+### Changed
+ * Update rclone to `v1.57.0`
+### Removed
+### Fixed
+ * Make sure orchestrator can find its templates [#741](https://github.com/bitpoke/mysql-operator/issues/741)
+
+## [0.5.1] - 2021-10-12
+### Added
+ * Add `orchestrator.persistence.fsGroupWorkaroundEnabled` for persistent volume
+   provisioners wich don't support fsGroup in security context (fixes #615)
+### Changed
+ * Allow setting pod security context when deploying with Helm
+ * Use [distroless](https://github.com/GoogleContainerTools/distroless) as base image for orchestrator container
+### Removed
+### Fixed
 
 ## [0.5.0] - 2021-10-06
 ### Added
