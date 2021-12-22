@@ -40,6 +40,7 @@ export HELM_HOME
 
 # remove the leading `v` for helm chart versions
 HELM_CHART_VERSION := $(VERSION:v%=%)
+HELM_APP_VERSION ?= $(VERSION)
 
 # ====================================================================================
 # Tools install targets
@@ -67,7 +68,7 @@ define helm.chart
 	@cp -a $(abspath $(HELM_CHARTS_DIR)/$(1)) $(HELM_CHARTS_WORK_DIR)/$(1)
 .helm.package.run.$(1): $(HELM_OUTPUT_DIR) $(HELM_HOME)
 	@$(INFO) helm package $(1) $(HELM_CHART_VERSION)
-	@$(HELM) package --version $(HELM_CHART_VERSION) --app-version $(HELM_CHART_VERSION) -d $(HELM_OUTPUT_DIR) $(HELM_CHARTS_WORK_DIR)/$(1)
+	@$(HELM) package --version $(HELM_CHART_VERSION) --app-version $(HELM_APP_VERSION) -d $(HELM_OUTPUT_DIR) $(HELM_CHARTS_WORK_DIR)/$(1)
 	@$(OK) helm package $(1) $(HELM_CHART_VERSION)
 .helm.package.done.$(1): ; @:
 .helm.package.$(1):
