@@ -5,7 +5,7 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.7.0
   name: mysqlclusters.mysql.presslabs.org
   labels:
-    app: mysql-operator
+    app.kubernetes.io/name: mysql-operator
 spec:
   group: mysql.presslabs.org
   names:

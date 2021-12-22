@@ -10,6 +10,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 ### Fixed
 
+## [0.6.1] - 2021-12-22
+### Changed
+ * Bump https://github.com/bitpoke/build to 0.7.1
+### Fixed
+ * Fix the app version in the published Helm charts
+
 ## [0.6.0] - 2021-12-21
 ### Added
  * If you want to save mysql backup to AWS S3, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` were the only options, but now you can use `AWS_SESSION_TOKEN` or `AWS_ROLE_ARN` and `AWS_WEB_IDENTITY_TOKEN_FILE`

@@ -60,9 +60,9 @@ include build/makelib/helm.mk
 	@set -e; \
 		for crd in $(wildcard $(CRD_DIR)/*.yaml) ; do \
 			cp $${crd} $(HELM_CHARTS_DIR)/mysql-operator/crds/ ; \
-			$(YQ) e '.metadata.labels["app"]="mysql-operator"'            -i $(HELM_CHARTS_DIR)/mysql-operator/crds/$$(basename $${crd}) ; \
-			$(YQ) e 'del(.metadata.creationTimestamp)'                    -i $(HELM_CHARTS_DIR)/mysql-operator/crds/$$(basename $${crd}) ; \
-			$(YQ) e 'del(.status)'                                        -i $(HELM_CHARTS_DIR)/mysql-operator/crds/$$(basename $${crd}) ; \
+			$(YQ) e '.metadata.labels["app.kubernetes.io/name"]="mysql-operator"' -i $(HELM_CHARTS_DIR)/mysql-operator/crds/$$(basename $${crd}) ; \
+			$(YQ) e 'del(.metadata.creationTimestamp)'                            -i $(HELM_CHARTS_DIR)/mysql-operator/crds/$$(basename $${crd}) ; \
+			$(YQ) e 'del(.status)'                                                -i $(HELM_CHARTS_DIR)/mysql-operator/crds/$$(basename $${crd}) ; \
 		done
 	@echo '{{- if .Values.rbac.create }}'                             > $(HELM_CHARTS_DIR)/mysql-operator/templates/clusterrole.yaml
 	@echo 'apiVersion: rbac.authorization.k8s.io/v1'                 >> $(HELM_CHARTS_DIR)/mysql-operator/templates/clusterrole.yaml
