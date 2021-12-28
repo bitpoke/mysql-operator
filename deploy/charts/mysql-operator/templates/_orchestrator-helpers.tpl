@@ -20,11 +20,11 @@
 {{- end }}
 
 {{- define "orchestrator.secretName" -}}
-{{- if .Values.orchestrator.secretName }}
-  {{ .Values.orchestrator.secretName }}
-{{- else }}
-  {{ include "orchestrator.fullname" . }}
-{{- end }}
+{{- if .Values.orchestrator.secretName -}}
+{{ .Values.orchestrator.secretName }}
+{{- else -}}
+{{ include "orchestrator.fullname" . }}
+{{- end -}}
 {{- end }}
 
 {{- define "orchestrator.apiURL" -}}

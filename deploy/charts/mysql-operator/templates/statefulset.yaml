@@ -44,12 +44,12 @@ spec:
             - name: ORC_TOPOLOGY_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "orchestrator.fullname" . }}
+                  name: {{ include "orchestrator.secretName" . }}
                   key: TOPOLOGY_USER
             - name: ORC_TOPOLOGY_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "orchestrator.fullname" . }}
+                  name: {{ include "orchestrator.secretName" . }}
                   key: TOPOLOGY_PASSWORD
           {{- if .Values.extraEnv }}
             {{- toYaml .Values.extraEnv | nindent 12 }}
@@ -107,7 +107,7 @@ spec:
           envFrom:
             - prefix: ORC_
               secretRef:
-                name: {{ template "orchestrator.fullname" . }}
+                name: {{ include "orchestrator.secretName" . }}
           volumeMounts:
             - name: data
               mountPath: /var/lib/orchestrator
