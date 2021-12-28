@@ -9,6 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 ### Removed
 ### Fixed
+ * `orchestrator.secretName` is ignored in helm charts
 
 ## [0.6.1] - 2021-12-22
 ### Changed
