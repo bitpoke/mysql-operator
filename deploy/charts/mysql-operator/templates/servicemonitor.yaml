@@ -29,7 +29,7 @@ spec:
   {{- end }}
   endpoints:
     - path: /metrics
-      port: {{ .Values.serviceMonitor.serviceName }}
+      port: {{ .Values.serviceMonitor.servicePortName }}
   {{- if .Values.serviceMonitor.interval }}
       interval: {{ .Values.serviceMonitor.interval }}
   {{- end }}
