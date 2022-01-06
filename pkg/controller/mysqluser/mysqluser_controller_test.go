@@ -538,6 +538,8 @@ var _ = Describe("MySQL user controller", func() {
 			})
 
 			It("doesn't remove the user finalizer and it tries to reconcile again", func() {
+				fakeSQL.AllowExtraCalls()
+
 				expectedQueryRunnerCall := func(query string, args ...interface{}) error {
 					Expect(query).To(Equal("DROP USER IF EXISTS ?@?;"))
 
