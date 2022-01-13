@@ -22,6 +22,8 @@ The following table contains the configuration parameters for mysql-operator and
 | `sidecar57.image.tag`           | Docker image tag for sidecar image for MySQL 5.7                                              | `latest`                                                |
 | `sidecar80.image.repository`    | Docker repository for sidecar image for MySQL 8.0                                             | `docker.io/bitpoke/mysql-operator-sidecar-8.0`          |
 | `sidecar80.image.tag`           | Docker image tag for sidecar image for MySQL 8.0                                              | `latest`                                                |
+| `nodeExporter.image.repository` | Docker repository for node-exporter image                                                     | `prom/mysqld-exporter`                                  |
+| `nodeExporter.image.tag`        | Docker image tag for node-exporter image                                                      | `v0.13.0`                                               |
 | `imagePullSecrets`              | Controller image pull secrets                                                                 | `[]`                                                    |
 | `extraEnv`                      | MySQL Operator controller extra environment variables                                         | `[]`                                                    |
 | `extraArgs`                     | MySQL Operator controller extra command line arguments                                        | `[]`                                                    |

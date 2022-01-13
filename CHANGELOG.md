@@ -6,6 +6,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 ### Added
+ * Add `nodeExporter.image` options to MysqlOperator chart, Support for custom node-exporter images
 ### Changed
 ### Removed
 ### Fixed
