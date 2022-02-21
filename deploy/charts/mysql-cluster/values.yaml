@@ -22,6 +22,17 @@ podSpec:
 mysqlConf:
 volumeSpec:
 
+service: 
+  # - name: test-prometheus
+  #   labels: {}
+  #   ports: 
+  #     - name: prometheus
+  #       port: 9125
+  #       protocol: TCP
+  #       targetPort: 9125
+  #   selector: {}
+  #   type: ClusterIP
+    
 serverIDOffset:
 
 initBucketURL:
