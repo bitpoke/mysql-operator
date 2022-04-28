@@ -44,7 +44,6 @@ import (
 const (
 	confVolumeName    = "conf"
 	confMapVolumeName = "config-map"
-	initDBVolumeName  = "init-scripts"
 	dataVolumeName    = "data"
 	tmpfsVolumeName   = "tmp"
 )
@@ -537,10 +536,6 @@ func (s *sfsSyncer) ensureVolumes() []core.Volume {
 
 	volumes := []core.Volume{
 		ensureVolume(confVolumeName, core.VolumeSource{
-			EmptyDir: &core.EmptyDirVolumeSource{},
-		}),
-
-		ensureVolume(initDBVolumeName, core.VolumeSource{
 			EmptyDir: &core.EmptyDirVolumeSource{},
 		}),
 
