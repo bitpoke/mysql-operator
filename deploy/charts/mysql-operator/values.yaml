@@ -124,6 +124,8 @@ mysqlClustersGlobalServiceMonitor:
   # jobLabel:
   # targetLabels:
   # podTargetLabels:
+  # metricRelabelings:
+  servicePortName: prometheus
   namespaceSelector:
     any: true
   selector:
