@@ -1,0 +1,47 @@
+# This is a ServicMonitor for the MySQL Clusters.
+# To scrape the operator, we need https://github.com/bitpoke/mysql-operator/issues/151 first.
+{{- if .Values.mysqlClustersGlobalServiceMonitor.enabled }}
+{{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ template "mysql-operator.fullname" . }}-clusters
+  labels:
+    {{- include "mysql-operator.labels" . | nindent 4 }}
+  {{- if .Values.mysqlClustersGlobalServiceMonitor.additionalLabels }}
+{{ toYaml .Values.mysqlClustersGlobalServiceMonitor.additionalLabels | indent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.mysqlClustersGlobalServiceMonitor.namespaceSelector }}
+  namespaceSelector:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.mysqlClustersGlobalServiceMonitor.selector }}
+  selector:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.mysqlClustersGlobalServiceMonitor.jobLabel }}
+  jobLabel: {{ . | quote}}
+  {{- end }}
+  {{- with .Values.mysqlClustersGlobalServiceMonitor.targetLabels }}
+  targetLabels:
+{{ toYaml . | trim | indent 4 -}}
+  {{- end }}
+  {{- with .Values.serviceMonitor.podTargetLabels }}
+  podTargetLabels:
+{{ toYaml . | trim | indent 4 -}}
+  {{- end }}
+  endpoints:
+    - path: /metrics
+      port: {{ .Values.mysqlClustersGlobalServiceMonitor.servicePortName }}
+  {{- if .Values.mysqlClustersGlobalServiceMonitor.interval }}
+      interval: {{ .Values.mysqlClustersGlobalServiceMonitor.interval }}
+  {{- end }}
+  {{- if .Values.mysqlClustersGlobalServiceMonitor.scrapeTimeout }}
+      scrapeTimeout: {{ .Values.mysqlClustersGlobalServiceMonitor.scrapeTimeout }}
+  {{- end }}
+  {{- if .Values.mysqlClustersGlobalServiceMonitor.metricRelabelings }}
+      metricRelabelings: {{ toYaml .Values.mysqlClustersGlobalServiceMonitor.metricRelabelings | nindent 8 }}
+  {{- end }}
+{{- end }}
+{{- end }}
