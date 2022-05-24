@@ -49,3 +49,12 @@ backupCredentials:
 
   # HTTP_URL: ?
 
+## For enabling and configuring pt-kill: https://www.percona.com/doc/percona-toolkit/LATEST/pt-kill.html
+#queryLimits:
+#  maxIdleTime: ...                # pt-kill --idle-time
+#  maxQueryTime: ...               # pt-kill --busy-time
+#  kill: oldest|all|all-but-oldest # pt-kill --victims
+#  killMode: query|connection      # pt-kill --kill-query or pt-kill --kill
+#  ignoreDb: []                    # pt-kill --ignore-db ...
+#  ignoreCommand: []               # pt-kill --ignore-command ...
+#  ignoreUser: []                  # pt-kill --ignore-user
