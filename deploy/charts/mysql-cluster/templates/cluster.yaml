@@ -71,3 +71,8 @@ spec:
   initFileExtraSQL:
     {{- toYaml .Values.initFileExtraSQL | nindent 6 }}
   {{- end }}
+
+  {{- if .Values.queryLimits }}
+  queryLimits:
+    {{ toYaml .Values.queryLimits | indent 4 }}
+  {{- end }}
