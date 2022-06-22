@@ -10,6 +10,8 @@ apiVersion: mysql.presslabs.org/v1alpha1
 kind: MysqlUser
 metadata:
   name: my-user
+#  labels:
+#    mysql-operator.presslabs.org/resourceDeletionPolicy: retain # When the MysqlUser is deleted, the MySQL user will be preserved
 spec:
   user: user-name-in-mysql
   clusterRef:
