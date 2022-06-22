@@ -6,11 +6,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 ### Added
+ * `MysqlDatabase` `MysqlUser` Add delete policy
 ### Changed
 ### Removed
 ### Fixed
  * `orchestrator.secretName` is ignored in helm charts
- * `MysqlDatabase` `MysqlUser` Add delete policy
 
 ## [0.6.1] - 2021-12-22
 ### Changed
