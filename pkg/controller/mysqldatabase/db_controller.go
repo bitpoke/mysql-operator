@@ -94,7 +94,7 @@ func (r *ReconcileMySQLDatabase) Reconcile(ctx context.Context, request reconcil
 
 	// Check if the resource is deleted
 	if !db.ObjectMeta.DeletionTimestamp.IsZero() {
-		if db.ObjectMeta.Annotations != nil && mysqlv1alpha1.MysqlResourceDeletionPolicy(db.ObjectMeta.Annotations[mysqlv1alpha1.MysqlResourceDeletionPolicyAnnotationKey]) == mysqlv1alpha1.MysqlResourceDeletionPolicyRetain {
+		if mysqlv1alpha1.CheckResourceDeletionPolicyRetain(db) {
 			// retain
 		} else {
 			err = r.deleteDatabase(ctx, db)
