@@ -64,6 +64,7 @@ spec:
   #   priorityClassName:
   #   serviceAccountName: default
   #   # Use a initContainer to fix the permissons of a hostPath volume.
+  #   # If the version of mysql is 8.0, please change "999" to "1001"
   #   initContainers:
   #     - name: volume-permissions
   #       image: busybox

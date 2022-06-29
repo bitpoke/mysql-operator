@@ -22,6 +22,10 @@ const (
 	// MysqlPort is the default mysql port.
 	MysqlPort = 3306
 
+	// UserID should be selected according to different versions of mysql
+	Mysql57UserID = 999
+	Mysql8UserID  = 1001
+
 	// OrcTopologyDir path where orc conf secret is mounted
 	OrcTopologyDir = "/var/run/orc-topology"
 
