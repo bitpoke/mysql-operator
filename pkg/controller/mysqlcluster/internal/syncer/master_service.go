@@ -42,7 +42,7 @@ func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 
 		// set selectors for master node
 		service.Spec.Selector = cluster.GetSelectorLabels()
-		service.Spec.Selector["role"] = "master"
+		service.Spec.Selector["role"] = labelMaster
 
 		if len(service.Spec.Ports) != 2 {
 			service.Spec.Ports = make([]core.ServicePort, 2)
