@@ -42,10 +42,10 @@ type podSyncer struct {
 }
 
 const (
-	labelMaster    = "master"
-	labelReplica   = "replica"
-	labelHealty    = "yes"
-	labelNotHealty = "no"
+	labelMaster     = "master"
+	labelReplica    = "replica"
+	labelHealthy    = "yes"
+	labelNotHealthy = "no"
 )
 
 // NewPodSyncer returns the syncer for pod
@@ -94,9 +94,9 @@ func (s *podSyncer) SyncFn(out *core.Pod) error {
 	}
 
 	// set healthy label
-	healthy := labelNotHealty
+	healthy := labelNotHealthy
 	if isMaster || !isMaster && isReplicating && !isLagged {
-		healthy = labelHealty
+		healthy = labelHealthy
 	}
 
 	if len(out.ObjectMeta.Labels) == 0 {
