@@ -42,8 +42,8 @@ func NewHealthyReplicasSVCSyncer(c client.Client, scheme *runtime.Scheme, cluste
 
 		// set selectors for healthy replica (non-master) mysql pods only
 		service.Spec.Selector = cluster.GetSelectorLabels()
-		service.Spec.Selector["role"] = "replica"
-		service.Spec.Selector["healthy"] = "yes"
+		service.Spec.Selector["role"] = labelReplica
+		service.Spec.Selector["healthy"] = labelHealthy
 
 		if len(service.Spec.Ports) != 2 {
 			service.Spec.Ports = make([]core.ServicePort, 2)
