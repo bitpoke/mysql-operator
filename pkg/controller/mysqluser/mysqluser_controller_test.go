@@ -503,7 +503,7 @@ var _ = Describe("MySQL user controller", func() {
 				// We need to make sure that the controller does not create infinite loops
 				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 			})
-			It("removes the user finalizer, and the resource is deleted", func() {
+			It("removes the user finalizer, and the resource is deleted,database user retain", func() {
 				fakeSQL.AddExpectedCalls(func(query string, args ...interface{}) error {
 					defer GinkgoRecover()
 
