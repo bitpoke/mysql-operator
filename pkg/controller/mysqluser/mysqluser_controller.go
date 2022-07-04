@@ -94,7 +94,7 @@ func (r *ReconcileMySQLUser) Reconcile(ctx context.Context, request reconcile.Re
 
 	// if the user has been deleted then remove it from mysql cluster
 	if !user.ObjectMeta.DeletionTimestamp.IsZero() {
-		if mysqlv1alpha1.CheckResourceDeletionPolicyRetain(user) {
+		if mysqlv1alpha1.DeletionPolicyRetain(user) {
 			// retain
 			return reconcile.Result{}, nil
 		}

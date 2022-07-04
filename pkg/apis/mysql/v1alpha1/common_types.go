@@ -14,8 +14,8 @@ const (
 	MysqlResourceDeletionPolicyRetain = MysqlResourceDeletionPolicy("retain")
 )
 
-// CheckResourceDeletionPolicyRetain parse obj is need to delete
-func CheckResourceDeletionPolicyRetain(obj client.Object) bool {
+// DeletionPolicyRetain parse obj is need to delete
+func DeletionPolicyRetain(obj client.Object) bool {
 	annotations := obj.GetAnnotations()
 	return annotations != nil && MysqlResourceDeletionPolicy(annotations[MysqlResourceDeletionPolicyAnnotationKey]) == MysqlResourceDeletionPolicyRetain
 }
