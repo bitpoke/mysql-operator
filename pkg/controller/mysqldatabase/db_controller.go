@@ -94,15 +94,13 @@ func (r *ReconcileMySQLDatabase) Reconcile(ctx context.Context, request reconcil
 
 	// Check if the resource is deleted
 	if !db.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !mysqlv1alpha1.DeletionPolicyRetain(db) {
-			err = r.deleteDatabase(ctx, db)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
+		err = r.deleteDatabase(ctx, db)
+		if err != nil {
+			return reconcile.Result{}, err
 		}
+
 		// remove finalizer
 		utilmeta.RemoveFinalizer(&db.ObjectMeta, mysqlPreventDeletionFinalizer)
-
 		// update resource to remove finalizer, no status
 		return reconcile.Result{}, r.Update(ctx, db.Unwrap())
 	}
@@ -125,6 +123,10 @@ func (r *ReconcileMySQLDatabase) Reconcile(ctx context.Context, request reconcil
 }
 
 func (r *ReconcileMySQLDatabase) deleteDatabase(ctx context.Context, db *mysqldatabase.Database) error {
+	// if it's retain,do nothing.
+	if mysqlv1alpha1.DeletionPolicyRetain(db) {
+		return nil
+	}
 	log.Info("deleting MySQL database", "name", db.Name, "database", db.Spec.Database)
 	sql, closeConn, err := r.SQLRunnerFactory(mysql.NewConfigFromClusterKey(r.Client, db.GetClusterKey()))
 	if apierrors.IsNotFound(err) {

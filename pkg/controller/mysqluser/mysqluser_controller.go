@@ -94,10 +94,6 @@ func (r *ReconcileMySQLUser) Reconcile(ctx context.Context, request reconcile.Re
 
 	// if the user has been deleted then remove it from mysql cluster
 	if !user.ObjectMeta.DeletionTimestamp.IsZero() {
-		if mysqlv1alpha1.DeletionPolicyRetain(user) {
-			// retain
-			return reconcile.Result{}, nil
-		}
 		return reconcile.Result{}, r.removeUser(ctx, user)
 	}
 
@@ -116,6 +112,10 @@ func (r *ReconcileMySQLUser) Reconcile(ctx context.Context, request reconcile.Re
 }
 
 func (r *ReconcileMySQLUser) removeUser(ctx context.Context, user *mysqluser.MySQLUser) error {
+	// if it's retain,do nothing.
+	if mysqlv1alpha1.DeletionPolicyRetain(user) {
+		return nil
+	}
 	// The resource has been deleted
 	if meta.HasFinalizer(&user.ObjectMeta, userFinalizer) {
 		// Drop the user if the finalizer is still present
