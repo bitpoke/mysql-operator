@@ -503,6 +503,22 @@ var _ = Describe("MySQL user controller", func() {
 				// We need to make sure that the controller does not create infinite loops
 				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 			})
+			It("removes the user finalizer, and the resource is deleted", func() {
+				fakeSQL.AllowExtraCalls()
+
+				Expect(c.Delete(context.TODO(), user.Unwrap())).To(Succeed())
+				// Wait for initial reconciliation
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+				// Wait for second reconciliation triggered by finalizer removal
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+				// We need to make sure that the controller does not create infinite loops
+				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
+
+				err := c.Get(context.TODO(), userKey, user.Unwrap())
+				Expect(apierrors.IsNotFound(err)).To(BeTrue())
+			})
 			It("removes the user finalizer, and the resource is deleted,database user retain", func() {
 				fakeSQL.AddExpectedCalls(func(query string, args ...interface{}) error {
 					defer GinkgoRecover()
@@ -529,22 +545,6 @@ var _ = Describe("MySQL user controller", func() {
 				err := c.Get(context.TODO(), userKey, user.Unwrap())
 				Expect(apierrors.IsNotFound(err)).To(BeTrue())
 				delete(user.ObjectMeta.Annotations, mysqlv1alpha1.MysqlResourceDeletionPolicyAnnotationKey)
-			})
-			It("removes the user finalizer, and the resource is deleted", func() {
-				fakeSQL.AllowExtraCalls()
-
-				Expect(c.Delete(context.TODO(), user.Unwrap())).To(Succeed())
-				// Wait for initial reconciliation
-				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-
-				// Wait for second reconciliation triggered by finalizer removal
-				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
-
-				// We need to make sure that the controller does not create infinite loops
-				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
-
-				err := c.Get(context.TODO(), userKey, user.Unwrap())
-				Expect(apierrors.IsNotFound(err)).To(BeTrue())
 			})
 		})
 		Context("and the user cannot be deleted in mysql", func() {
