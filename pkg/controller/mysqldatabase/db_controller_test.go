@@ -167,24 +167,24 @@ var _ = Describe("MySQL database controller", func() {
 					},
 				)
 
-				dbClone := mysqldatabase.Wrap(db.DeepCopy())
-				if dbClone.ObjectMeta.Annotations == nil {
-					dbClone.ObjectMeta.Annotations = map[string]string{}
+				if db.ObjectMeta.Annotations == nil {
+					db.ObjectMeta.Annotations = map[string]string{}
 				}
-				dbClone.ObjectMeta.Annotations[mysqlv1alpha1.MysqlResourceDeletionPolicyAnnotationKey] = string(mysqlv1alpha1.MysqlResourceDeletionPolicyRetain)
+				db.ObjectMeta.Annotations[mysqlv1alpha1.MysqlResourceDeletionPolicyAnnotationKey] = string(mysqlv1alpha1.MysqlResourceDeletionPolicyRetain)
 
 				// delete the resource
-				Expect(c.Delete(context.TODO(), dbClone.Unwrap())).To(Succeed())
+				Expect(c.Delete(context.TODO(), db.Unwrap())).To(Succeed())
 
 				// expect the reconcile event to delete db and remove finalizer
 				Eventually(requests).Should(Receive(Equal(expectedRequest)))
 
 				// the database should be gone
-				Expect(c.Get(context.TODO(), dbObjKey(dbClone), dbClone.Unwrap())).To(Succeed())
-				Expect(dbClone.Finalizers).To(BeEmpty())
+				Expect(c.Get(context.TODO(), dbObjKey(db), db.Unwrap())).ShouldNot(Succeed())
 
 				// last event but already deleted
 				Eventually(requests).Should(Receive(Equal(expectedRequest)))
+
+				delete(db.ObjectMeta.Annotations, mysqlv1alpha1.MysqlResourceDeletionPolicyAnnotationKey)
 			})
 			It("should drop the database when deleted ", func() {
 				fakeQR.AddExpectedCalls(

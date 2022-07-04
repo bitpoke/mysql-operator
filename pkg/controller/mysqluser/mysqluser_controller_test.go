@@ -511,11 +511,10 @@ var _ = Describe("MySQL user controller", func() {
 					return nil
 				})
 
-				userClone := mysqluser.Wrap(user.DeepCopy())
-				if userClone.ObjectMeta.Annotations == nil {
-					userClone.ObjectMeta.Annotations = map[string]string{}
+				if user.ObjectMeta.Annotations == nil {
+					user.ObjectMeta.Annotations = map[string]string{}
 				}
-				userClone.ObjectMeta.Annotations[mysqlv1alpha1.MysqlResourceDeletionPolicyAnnotationKey] = string(mysqlv1alpha1.MysqlResourceDeletionPolicyRetain)
+				user.ObjectMeta.Annotations[mysqlv1alpha1.MysqlResourceDeletionPolicyAnnotationKey] = string(mysqlv1alpha1.MysqlResourceDeletionPolicyRetain)
 
 				Expect(c.Delete(context.TODO(), user.Unwrap())).To(Succeed())
 				// Wait for initial reconciliation
@@ -527,8 +526,9 @@ var _ = Describe("MySQL user controller", func() {
 				// We need to make sure that the controller does not create infinite loops
 				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 
-				err := c.Get(context.TODO(), userKey, userClone.Unwrap())
+				err := c.Get(context.TODO(), userKey, user.Unwrap())
 				Expect(apierrors.IsNotFound(err)).To(BeTrue())
+				delete(user.ObjectMeta.Annotations, mysqlv1alpha1.MysqlResourceDeletionPolicyAnnotationKey)
 			})
 			It("removes the user finalizer, and the resource is deleted", func() {
 				fakeSQL.AllowExtraCalls()
