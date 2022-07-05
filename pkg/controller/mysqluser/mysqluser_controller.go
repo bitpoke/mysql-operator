@@ -114,11 +114,13 @@ func (r *ReconcileMySQLUser) Reconcile(ctx context.Context, request reconcile.Re
 func (r *ReconcileMySQLUser) removeUser(ctx context.Context, user *mysqluser.MySQLUser) error {
 	// The resource has been deleted
 	if meta.HasFinalizer(&user.ObjectMeta, userFinalizer) {
-		// Drop the user if the finalizer is still present
-		if err := r.dropUserFromDB(ctx, user); err != nil {
-			return err
+		// if it's retain,don't drop user.
+		if !mysqlv1alpha1.DeletionPolicyRetain(user) {
+			// Drop the user if the finalizer is still present
+			if err := r.dropUserFromDB(ctx, user); err != nil {
+				return err
+			}
 		}
-
 		meta.RemoveFinalizer(&user.ObjectMeta, userFinalizer)
 
 		// update resource so it will remove the finalizer
