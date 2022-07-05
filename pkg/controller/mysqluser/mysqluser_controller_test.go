@@ -503,7 +503,6 @@ var _ = Describe("MySQL user controller", func() {
 				// We need to make sure that the controller does not create infinite loops
 				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
 			})
-
 			It("removes the user finalizer, and the resource is deleted", func() {
 				fakeSQL.AllowExtraCalls()
 
@@ -519,6 +518,33 @@ var _ = Describe("MySQL user controller", func() {
 
 				err := c.Get(context.TODO(), userKey, user.Unwrap())
 				Expect(apierrors.IsNotFound(err)).To(BeTrue())
+			})
+			It("removes the user finalizer, and the resource is deleted,database user retain", func() {
+				fakeSQL.AddExpectedCalls(func(query string, args ...interface{}) error {
+					defer GinkgoRecover()
+
+					PanicWith("Shouldn't call this!")
+					return nil
+				})
+
+				if user.ObjectMeta.Annotations == nil {
+					user.ObjectMeta.Annotations = map[string]string{}
+				}
+				user.ObjectMeta.Annotations[mysqlv1alpha1.MysqlResourceDeletionPolicyAnnotationKey] = string(mysqlv1alpha1.MysqlResourceDeletionPolicyRetain)
+
+				Expect(c.Delete(context.TODO(), user.Unwrap())).To(Succeed())
+				// Wait for initial reconciliation
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+				// Wait for second reconciliation triggered by finalizer removal
+				Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+				// We need to make sure that the controller does not create infinite loops
+				Consistently(requests).ShouldNot(Receive(Equal(expectedRequest)))
+
+				err := c.Get(context.TODO(), userKey, user.Unwrap())
+				Expect(apierrors.IsNotFound(err)).To(BeTrue())
+				delete(user.ObjectMeta.Annotations, mysqlv1alpha1.MysqlResourceDeletionPolicyAnnotationKey)
 			})
 		})
 		Context("and the user cannot be deleted in mysql", func() {
