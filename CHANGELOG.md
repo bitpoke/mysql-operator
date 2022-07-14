@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
  * `MysqlDatabase` `MysqlUser` Add delete policy
 ### Changed
+ * Set default MySQL server version to `5.7.35`
 ### Removed
 ### Fixed
  * `orchestrator.secretName` is ignored in helm charts
