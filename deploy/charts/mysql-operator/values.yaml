@@ -21,6 +21,11 @@ sidecar80:
     # Overrides the image tag whose default is the chart appVersion.
     tag: ""
 
+metricsExporter:
+  image:
+    repository: docker.io/prom/mysqld-exporter
+    tag: "v0.13.0"
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""

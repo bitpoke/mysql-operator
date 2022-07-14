@@ -63,6 +63,9 @@ spec:
             {{- with .Values.sidecar80 }}
             - --sidecar-mysql8-image={{ .image.repository }}:{{ .image.tag | default $appVersion }}
             {{- end -}}
+            {{- with .Values.metricsExporter }}
+            - --metrics-exporter-image={{ .image.repository }}:{{ .image.tag }}
+            {{- end -}}
             {{- if .Values.watchNamespace }}
             - --namespace={{ .Values.watchNamespace }}
             {{- end }}
