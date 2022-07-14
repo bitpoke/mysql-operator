@@ -82,15 +82,16 @@ const (
 
 var (
 	// MySQLDefaultVersion is the version for mysql that should be used
-	MySQLDefaultVersion = semver.MustParse("5.7.31")
+	MySQLDefaultVersion = semver.MustParse("5.7.35")
 	// MySQLTagsToSemVer maps simple version to semver versions
 	MySQLTagsToSemVer = map[string]string{
-		"5.7": "5.7.31",
+		"5.7": "5.7.35",
 		"8.0": "8.0.20",
 	}
 	// MysqlImageVersions is a map of supported mysql version and their image
 	MysqlImageVersions = map[string]string{
-
+		// percona:5.7.35 CentOS based image
+		"5.7.35": "percona@sha256:caab4e854bd75040d07802bf1862bfef1d2b4db0acbc9c4aaf5c21c698fdd393",
 		// percona:5.7.31-centos
 		"5.7.31": "percona@sha256:68dad5e2efeb6893e2d7d116a1eae144f2c641c17d00e7869397395590c91651",
 		// This version of mysql has a bug and doesn't work with the operator,
