@@ -94,6 +94,20 @@ func (c *MysqlCluster) setPodSpecDefaults(spec *PodSpec) {
 		// for the sidecar set the same limits as for mysql
 		spec.MySQLOperatorSidecarResources.Limits = spec.Resources.Limits
 	}
+
+	if len(spec.PtHeartbeatResources.Requests) == 0 {
+		spec.PtHeartbeatResources.Requests = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("10m"),
+			corev1.ResourceMemory: resource.MustParse("32Mi"),
+		}
+	}
+
+	if len(spec.PtHeartbeatResources.Limits) == 0 {
+		spec.PtHeartbeatResources.Limits = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		}
+	}
 }
 
 // SetDefaults for VolumeSpec
