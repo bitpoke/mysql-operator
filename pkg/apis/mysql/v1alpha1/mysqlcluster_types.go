@@ -218,6 +218,10 @@ type PodSpec struct {
 	// used to take backups with xtrabackup
 	// +optional
 	MySQLOperatorSidecarResources core.ResourceRequirements `json:"mysqlOperatorSidecarResources,omitempty"`
+
+	// PtHeartbeatResources allows you to specify resources for pt-heartbeat container
+	// +optional
+	PtHeartbeatResources core.ResourceRequirements `json:"ptHeartbeatResources,omitempty"`
 }
 
 // VolumeSpec is the desired spec for storing mysql data. Only one of its

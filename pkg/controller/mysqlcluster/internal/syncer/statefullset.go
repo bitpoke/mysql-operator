@@ -672,14 +672,6 @@ func (s *sfsSyncer) getLabels(extra map[string]string) map[string]string {
 }
 
 func (s *sfsSyncer) ensureResources(name string) core.ResourceRequirements {
-	limits := core.ResourceList{
-		core.ResourceCPU: resource.MustParse("100m"),
-	}
-	requests := core.ResourceList{
-		core.ResourceCPU:    resource.MustParse("10m"),
-		core.ResourceMemory: resource.MustParse("32Mi"),
-	}
-
 	switch name {
 	case containerExporterName:
 		return s.cluster.Spec.PodSpec.MetricsExporterResources
@@ -688,16 +680,20 @@ func (s *sfsSyncer) ensureResources(name string) core.ResourceRequirements {
 		return s.cluster.Spec.PodSpec.Resources
 
 	case containerHeartBeatName:
-		limits[core.ResourceMemory] = resource.MustParse("64Mi")
+		return s.cluster.Spec.PodSpec.PtHeartbeatResources
 
 	case containerSidecarName:
 		return s.cluster.Spec.PodSpec.MySQLOperatorSidecarResources
 
 	}
-
 	return core.ResourceRequirements{
-		Limits:   limits,
-		Requests: requests,
+		Limits: core.ResourceList{
+			core.ResourceCPU: resource.MustParse("100m"),
+		},
+		Requests: core.ResourceList{
+			core.ResourceCPU:    resource.MustParse("10m"),
+			core.ResourceMemory: resource.MustParse("32Mi"),
+		},
 	}
 }
 
