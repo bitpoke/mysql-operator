@@ -134,8 +134,11 @@ func (r *ReconcileMysqlBackup) Reconcile(ctx context.Context, request reconcile.
 		return reconcile.Result{}, err
 	}
 
-	// if spec.backupScheduler is not set then don't do anything
+	// if Spec.BackupSchedule is not set, here are two cases:
+	// 	1. change to empty string, call unregisterCluster, it will remove the cron job
+	// 	2. remain empty string, call unregisterCluster, it will do nothing
 	if len(cluster.Spec.BackupSchedule) == 0 {
+		r.unregisterCluster(request.NamespacedName)
 		return reconcile.Result{}, nil
 	}
 

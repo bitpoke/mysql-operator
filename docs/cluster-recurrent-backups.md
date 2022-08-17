@@ -42,3 +42,21 @@ Crontab takes 6 arguments from the traditional 5. The additional argument is a s
 | 0 0 0 * * 0   | @weekly                | Run once a week, midnight between Sat/Sun, 0 second  |
 | 0 0 0 * * *   | @daily (or @midnight)  | Run once a day, midnight, 0 second, 0 second                   |
 | 0 0 * * * *   | @hourly                | Run once an hour, beginning of hour, 0 second        |
+
+
+### Disable recurrent backups for MySQL cluster
+
+
+``` yaml
+apiVersion: mysql.presslabs.org/v1alpha1
+kind: MysqlCluster
+metadata:
+  name: my-cluster
+spec:
+  secretName: the-secret
+  
+  backupSchedule: ""  # set to empty string will disables recurrent backups
+  backupURL: gs://bucket_name/path/
+  backupSecretName: backup-secret
+  backupRemoteDeletePolicy: retain|delete
+```
