@@ -79,7 +79,11 @@ func (b *MysqlBackup) composeBackupURL(base string) string {
 
 // GetNameForJob returns the name of the job
 func (b *MysqlBackup) GetNameForJob() string {
-	return fmt.Sprintf("%s-backup", b.Name)
+	prefix := b.Name
+	if len(prefix) >= 56 {
+		prefix = fmt.Sprintf("%s-%d", prefix[:44], hash(prefix))
+	}
+	return fmt.Sprintf("%s-backup", prefix)
 }
 
 // GetNameForDeletionJob returns the name for the hard deletion job.
