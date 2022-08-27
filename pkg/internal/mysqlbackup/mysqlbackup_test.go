@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://wwb.apache.org/licenses/LICENSE-2.0
+	http://wwb.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -54,5 +54,23 @@ var _ = Describe("MySQL backup unit tests", func() {
 		backup.Name = "not-too-long-backup-name-for-testing-cleanup-job-test"
 		Expect(backup.GetNameForDeletionJob()).To(Equal("not-too-long-backup-name-for-testing-cleanup-job-test-cleanup"))
 		Expect(len(backup.GetNameForDeletionJob())).To(BeNumerically("<=", 63))
+	})
+
+	It("should generate the correct backup job name", func() {
+		backup := New(&api.MysqlBackup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "backup-name",
+			},
+		})
+
+		Expect(backup.GetNameForJob()).To(Equal("backup-name-backup"))
+
+		backup.Name = "super-long-backup-name-for-testing-backup-job-name-generator"
+		Expect(backup.GetNameForJob()).To(Equal("super-long-backup-name-for-testing-backup-jo-4133418200-backup"))
+		Expect(len(backup.GetNameForJob())).To(BeNumerically("<=", 63))
+
+		backup.Name = "not-too-long-backup-name-for-testing-backup-job-test"
+		Expect(backup.GetNameForJob()).To(Equal("not-too-long-backup-name-for-testing-backup-job-test-backup"))
+		Expect(len(backup.GetNameForJob())).To(BeNumerically("<=", 63))
 	})
 })
