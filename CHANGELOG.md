@@ -14,6 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 ### Fixed
  * `orchestrator.secretName` is ignored in helm charts
+ * Operator service account have no access to update mysqlbackups/status
 
 ## [0.6.1] - 2021-12-22
 ### Changed

@@ -76,6 +76,7 @@ rules:
   - mysql.presslabs.org
   resources:
   - mysqlbackups
+  - mysqlbackups/status
   verbs:
   - create
   - delete
