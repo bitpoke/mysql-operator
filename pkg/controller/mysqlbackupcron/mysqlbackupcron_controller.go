@@ -166,11 +166,8 @@ func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.Mysq
 
 			// change scheduler for already added crons
 			if !reflect.DeepEqual(entry.Schedule, schedule) {
-				log.Info("update cluster scheduler", "key", cluster,
-					"scheduler", cluster.Spec.BackupSchedule)
-
+				log.Info("update cluster scheduler", "key", cluster, "scheduler", cluster.Spec.BackupSchedule)
 				r.cron.Remove(entry.ID)
-
 				break
 			}
 
@@ -182,9 +179,14 @@ func (r *ReconcileMysqlBackup) updateClusterSchedule(cluster *mysqlv1alpha1.Mysq
 				}
 				log.Info("update cluster backup limit", "key", cluster, "limit_val", newValFmt)
 				r.cron.Remove(entry.ID)
-
 				break
+			}
 
+			// update backup remote delete policy for already added crons
+			if !reflect.DeepEqual(cluster.Spec.BackupRemoteDeletePolicy, j.BackupRemoteDeletePolicy) {
+				log.Info("update cluster backup remote delete policy", "key", cluster, "policy", cluster.Spec.BackupRemoteDeletePolicy)
+				r.cron.Remove(entry.ID)
+				break
 			}
 
 			// nothing to change for this cluster, return

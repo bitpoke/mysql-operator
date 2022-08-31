@@ -200,6 +200,30 @@ var _ = Describe("MysqlBackupCron controller", func() {
 			})))
 		})
 
+		It("should update backup remote delete policy", func() {
+			cluster.Spec.BackupRemoteDeletePolicy = api.Delete
+			Expect(c.Update(context.TODO(), cluster)).To(Succeed())
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			Expect(cron.Entries()).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Job": PointTo(MatchFields(IgnoreExtras, Fields{
+					"ClusterName":              Equal(cluster.Name),
+					"BackupRemoteDeletePolicy": Equal(api.Delete),
+				})),
+			})))
+
+			cluster.Spec.BackupRemoteDeletePolicy = api.Retain
+			Expect(c.Update(context.TODO(), cluster)).To(Succeed())
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			Expect(cron.Entries()).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Job": PointTo(MatchFields(IgnoreExtras, Fields{
+					"ClusterName":              Equal(cluster.Name),
+					"BackupRemoteDeletePolicy": Equal(api.Retain),
+				})),
+			})))
+
+			Expect(cron.Entries()).To(HaveLen(1))
+		})
+
 		When("backup is executed once per second", func() {
 			var (
 				timeout = 5 * time.Second
