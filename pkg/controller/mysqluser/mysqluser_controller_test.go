@@ -158,7 +158,7 @@ var _ = Describe("MySQL user controller", func() {
 					return nil
 				}
 
-				fakeSQL.AssertDSN(expectedDSN)
+				fakeSQL.AddExpectedDSN(expectedDSN)
 				// the create user runs twice
 				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
@@ -262,7 +262,7 @@ var _ = Describe("MySQL user controller", func() {
 					return nil
 				}
 
-				fakeSQL.AssertDSN(expectedDSN)
+				fakeSQL.AddExpectedDSN(expectedDSN)
 				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 
@@ -490,7 +490,7 @@ var _ = Describe("MySQL user controller", func() {
 					return deletionResult
 				}
 
-				fakeSQL.AssertDSN(expectedDSN)
+				fakeSQL.AddExpectedDSN(expectedDSN)
 				fakeSQL.AddExpectedCalls(expectedQueryRunnerCall)
 
 				Expect(c.Delete(context.TODO(), user.Unwrap())).To(Succeed())

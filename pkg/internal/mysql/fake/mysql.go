@@ -47,6 +47,13 @@ func (qr *SQLRunner) AddExpectedCalls(expectedCalls ...SQLCall) {
 	qr.expectedCalls = append(qr.expectedCalls, expectedCalls...)
 }
 
+// AddExpectedDSN add a expected DSN to the fake SQLRunner for later assert.
+func (qr *SQLRunner) AddExpectedDSN(expectedDSN string) {
+	qr.lock.Lock()
+	defer qr.lock.Unlock()
+	qr.expectedDSN = &expectedDSN
+}
+
 // PurgeExpectedCalls removes all the expected query runner calls
 func (qr *SQLRunner) PurgeExpectedCalls() {
 	qr.lock.Lock()
