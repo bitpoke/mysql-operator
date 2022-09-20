@@ -11,7 +11,7 @@ replicas: 1
 # mysqlVersion: "5.7"
 
 ## MySQL connect credentials, those credentials will be provisioned in the cluster
-rootPassword: ""
+rootPassword: "CHANGE_ME"
 appUser: ""
 appPassword: ""
 appDatabase: ""
@@ -48,7 +48,6 @@ backupCredentials:
   # GCS_STORAGE_CLASS: MULTI_REGIONAL
 
   # HTTP_URL: ?
-
 ## For enabling and configuring pt-kill: https://www.percona.com/doc/percona-toolkit/LATEST/pt-kill.html
 #queryLimits:
 #  maxIdleTime: ...                # pt-kill --idle-time
