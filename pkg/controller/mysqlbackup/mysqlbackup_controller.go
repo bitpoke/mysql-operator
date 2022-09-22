@@ -119,6 +119,10 @@ func (r *ReconcileMysqlBackup) Reconcile(ctx context.Context, request reconcile.
 		return reconcile.Result{}, err
 	}
 
+	if backup.Status.Completed {
+		return reconcile.Result{}, nil
+	}
+
 	log.V(1).Info("reconcile backup", "backup", backup.String())
 
 	// Set defaults on backup

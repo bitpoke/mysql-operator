@@ -16,7 +16,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * `orchestrator.secretName` is ignored in helm charts
  * Operator service account have no access to update mysqlbackups/status
  * Recurrent backup remote delete policy can not update according to the `cluster.Spec.BackupRemoteDeletePolicy`
-
+ * Restart the operator to reduce the number of useless requests for backups.
 ## [0.6.1] - 2021-12-22
 ### Changed
  * Bump https://github.com/bitpoke/build to 0.7.1
