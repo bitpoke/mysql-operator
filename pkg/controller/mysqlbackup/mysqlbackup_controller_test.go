@@ -238,8 +238,8 @@ var _ = Describe("MysqlBackup controller", func() {
 			Expect(c.Get(context.TODO(), jobKey, job)).ToNot(Succeed())
 		})
 
-		It("should not receive more reconcile requests", func() {
-			Consistently(requests, timeout).ShouldNot(Receive(Equal(expectedRequest)))
+		It("should receive reconcile requests immediately", func() {
+			Consistently(requests, timeout).Should(Receive(Equal(expectedRequest)))
 		})
 	})
 
