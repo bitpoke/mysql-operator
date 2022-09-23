@@ -235,11 +235,11 @@ var _ = Describe("MysqlBackup controller", func() {
 
 		It("should skip creating job", func() {
 			job := &batch.Job{}
-			Expect(c.Get(context.TODO(), jobKey, job)).ToNot(Succeed())
+			Expect(c.Get(context.TODO(), jobKey, job)).To(Succeed())
 		})
 
 		It("should receive reconcile requests immediately", func() {
-			Consistently(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
 		})
 	})
 
