@@ -16,14 +16,11 @@ have installed [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/
 To deploy this controller, use the provided helm chart by running:
 
 ```shell
-helm repo add presslabs https://presslabs.github.io/charts
-helm install presslabs/mysql-operator --name mysql-operator
+helm repo add bitpoke https://helm-charts.bitpoke.io
+helm install mysql-operator bitpoke/mysql-operator
 ```
 
-For more information about chart values see chart
-[README](https://github.com/presslabs/mysql-operator/blob/master/charts/mysql-operator/README.md).
-This chart will deploy the controller along with an
-[orchestrator](https://github.com/github/orchestrator) cluster.
+For more information about chart values see chart [README](deploy/charts/mysql-operator/README.md). This chart will deploy the controller together with an [orchestrator](https://github.com/github/orchestrator) cluster.
 
 __NOTE__: At every deploy a random password is generated for the orchestrator user. When running
 `helm upgrade` this will change the password on the orchestrator side but not in the clusters and
