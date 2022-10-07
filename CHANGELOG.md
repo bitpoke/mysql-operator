@@ -11,6 +11,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * Set `MysqlCluter.Spec.BackupSchedule` to empty string to disable recurrent backups
 ### Changed
  * Set default MySQL server version to `5.7.35`
+ * Bump Orchestrator to `3.2.6`
 ### Removed
 ### Fixed
 
