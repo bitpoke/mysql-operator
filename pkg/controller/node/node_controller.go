@@ -120,9 +120,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch for changes to MysqlCluster
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
-		// no need to init nodes when are created
 		CreateFunc: func(evt event.CreateEvent) bool {
-			return false
+			return isOwnedByMySQL(evt.Object) && isRunning(evt.Object) && !isReady(evt.Object)
 		},
 
 		// trigger node initialization only on pod update, after pod is created for a while
