@@ -2,7 +2,7 @@
 PROJECT_NAME := mysql-operator
 PROJECT_REPO := github.com/bitpoke/mysql-operator
 
-PLATFORMS := darwin_amd64 linux_amd64
+PLATFORMS := darwin_amd64 linux_amd64 linux_arm64
 include build/makelib/common.mk
 
 GO111MODULE=on
