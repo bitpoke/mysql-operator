@@ -17,7 +17,7 @@ limitations under the License.
 package mysqlcluster
 
 import (
-	policy "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -30,7 +30,7 @@ import (
 
 // NewPDBSyncer returns the syncer for pdb
 func NewPDBSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlcluster.MysqlCluster) syncer.Interface {
-	pdb := &policy.PodDisruptionBudget{
+	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.GetNameForResource(mysqlcluster.PodDisruptionBudget),
 			Namespace: cluster.Namespace,
