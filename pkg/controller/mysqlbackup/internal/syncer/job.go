@@ -88,9 +88,18 @@ func (s *jobSyncer) SyncFn() error {
 	return nil
 }
 
-// getBackupCandidate returns the hostname of the first not-lagged and
+// getBackupCandidate returns candidate node in mysqlbackup spec at first,
+// if not, it will return the hostname of the first not-lagged and
 // replicating slave node, else returns the master node.
 func (s *jobSyncer) getBackupCandidate() string {
+	if s.backup.Spec.CandidateNode != "" {
+		err := s.backup.Validate(s.cluster)
+		if err == nil {
+			return s.backup.Spec.CandidateNode
+		}
+		log.Error(err, "backup's candidate node is not valid, will try to calculate candidate node")
+	}
+
 	for _, node := range s.cluster.Status.Nodes {
 		master := s.cluster.GetNodeCondition(node.Name, api.NodeConditionMaster)
 		replicating := s.cluster.GetNodeCondition(node.Name, api.NodeConditionReplicating)

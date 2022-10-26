@@ -119,16 +119,7 @@ var _ = Describe("MysqlBackup controller", func() {
 		BeforeEach(func() {
 			// create a cluster with 2 nodes
 			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
-			cluster.Status.Nodes = []api.NodeStatus{
-				{
-					Name:       cluster.GetPodHostname(0),
-					Conditions: testutil.NodeConditions(true, false, false, false),
-				},
-				{
-					Name:       cluster.GetPodHostname(1),
-					Conditions: testutil.NodeConditions(false, true, false, true),
-				},
-			}
+			cluster.Status.Nodes = getHealthyNodeStatus(cluster, 2)
 			Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
 			// create the backup
 			Expect(c.Create(context.TODO(), backup.Unwrap())).To(Succeed())
@@ -316,7 +307,73 @@ var _ = Describe("MysqlBackup controller", func() {
 			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
 		})
 	})
+
+	When("candidate node is setted to wrong node", func() {
+		BeforeEach(func() {
+			backup.Spec.CandidateNode = cluster.GetPodHostname(3)
+			Expect(c.Create(context.TODO(), backup.Unwrap())).To(Succeed())
+
+			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
+			cluster.Status.Nodes = getHealthyNodeStatus(cluster, 2)
+			Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
+
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			testutil.DrainChan(requests)
+		})
+		AfterEach(func() {
+			Expect(c.Delete(context.TODO(), backup.Unwrap())).To(Succeed())
+			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
+		})
+
+		It("should take backup from replica 1", func() {
+			job := &batch.Job{}
+			Expect(c.Get(context.TODO(), jobKey, job)).To(Succeed())
+			Expect(job.Spec.Template.Spec.Containers[0].Args).To(ContainElement(Equal(cluster.GetPodHostname(1))))
+		})
+	})
+
+	When("candidate node is setted to master", func() {
+		BeforeEach(func() {
+			backup.Spec.CandidateNode = cluster.GetPodHostname(0)
+			Expect(c.Create(context.TODO(), backup.Unwrap())).To(Succeed())
+
+			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
+			cluster.Status.Nodes = getHealthyNodeStatus(cluster, 2)
+			Expect(c.Status().Update(context.TODO(), cluster.Unwrap())).To(Succeed())
+
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			testutil.DrainChan(requests)
+		})
+		AfterEach(func() {
+			Expect(c.Delete(context.TODO(), backup.Unwrap())).To(Succeed())
+			Expect(c.Delete(context.TODO(), cluster.Unwrap())).To(Succeed())
+		})
+
+		It("should take backup from master", func() {
+			job := &batch.Job{}
+			Expect(c.Get(context.TODO(), jobKey, job)).To(Succeed())
+			Expect(job.Spec.Template.Spec.Containers[0].Args).To(ContainElement(Equal(cluster.GetPodHostname(0))))
+		})
+	})
 })
+
+func getHealthyNodeStatus(cluster *mysqlcluster.MysqlCluster, count int) []api.NodeStatus {
+	status := []api.NodeStatus{
+		{
+			Name:       cluster.GetPodHostname(0),
+			Conditions: testutil.NodeConditions(true, false, false, false),
+		},
+	}
+	for i := 1; i < count; i++ {
+		status = append(status, api.NodeStatus{
+			Name:       cluster.GetPodHostname(i),
+			Conditions: testutil.NodeConditions(false, true, false, false),
+		})
+	}
+	return status
+}
 
 func refreshFn(c client.Client, backupKey types.NamespacedName) func() *api.MysqlBackup {
 	return func() *api.MysqlBackup {
