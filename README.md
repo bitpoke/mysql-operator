@@ -71,7 +71,7 @@ kubectl apply -f https://raw.githubusercontent.com/bitpoke/mysql-operator/master
 
 ## Tech considerations
 
-This project uses Percona Server for MySQL 5.7 because of backup improvements (eg. backup locks), monitoring improvements and some serviceability improvements (eg. utility user). Although we could have used MariaDB, our primary focus being WordPress, we wanted a drop-in rather than a fork. In the future we might support MariaDB if that can be implemented in a compatible way.
+This project uses Percona Server for MySQL 5.7 / 8.0 because of backup improvements (eg. backup locks), monitoring improvements and some serviceability improvements (eg. utility user). Although we could have used MariaDB, our primary focus being WordPress, we wanted a drop-in rather than a fork. In the future we might support MariaDB if that can be implemented in a compatible way.
 
 ## License
 
