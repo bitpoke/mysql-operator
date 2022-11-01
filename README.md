@@ -20,13 +20,13 @@ We welcome all contributions in the form of new issues for feature requests, bug
 
 ## Documentation
 
-* [Getting started](docs/_index.md) provides an overview over deploying and using the MySQL operator
-* [Deploy a MySQL cluster](docs/deploy-mysql-cluster.md) describes in detail how a cluster can be installed and configured
-* [Configure backups](docs/backups.md) shows how to configure and take backups of a cluster
-* [Recurrent backups](docs/cluster-recurrent-backups.md) describes how to setup recurrent backups for the cluster
-* [Restore a cluster](docs/cluster-recover.md) explains how to restore a cluster from a backup
-* [How to integrate](docs/integrate-operator.md) the operator with your deployment setup. This presents a simple way of using the MySQL operator and helm to deploy your application
-* [Orchestrator](docs/orchestrator.md) shows you how to access the orchestrator for more details.
+* [Getting started](https://www.bitpoke.io/docs/mysql-operator/getting-started/) provides an overview over deploying and using the MySQL operator
+* [Deploy a MySQL cluster](https://www.bitpoke.io/docs/mysql-operator/deploy-mysql-cluster/) describes in detail how a cluster can be installed and configured
+* [Configure backups](https://www.bitpoke.io/docs/mysql-operator/backups/) shows how to configure and take backups of a cluster
+* [Recurrent backups](https://www.bitpoke.io/docs/mysql-operator/cluster-recurrent-backups/) describes how to setup recurrent backups for the cluster
+* [Restore a cluster](https://www.bitpoke.io/docs/mysql-operator/backups/#initialize-a-cluster-from-a-backup) explains how to restore a cluster from a backup
+* [How to integrate](https://www.bitpoke.io/docs/mysql-operator/integrate-operator/) the operator with your deployment setup. This presents a simple way of using the MySQL operator and helm to deploy your application
+* [Orchestrator](https://www.bitpoke.io/docs/mysql-operator/orchestrator/) shows you how to access the orchestrator for more details.
 
 ## Controller deploy
 
@@ -71,7 +71,7 @@ kubectl apply -f https://raw.githubusercontent.com/bitpoke/mysql-operator/master
 
 ## Tech considerations
 
-This project uses Percona Server for MySQL 5.7 because of backup improvements (eg. backup locks), monitoring improvements and some serviceability improvements (eg. utility user). Although we could have used MariaDB, our primary focus being WordPress, we wanted a drop-in rather than a fork. In the future we might support MariaDB if that can be implemented in a compatible way.
+This project uses Percona Server for MySQL 5.7 / 8.0 because of backup improvements (eg. backup locks), monitoring improvements and some serviceability improvements (eg. utility user). Although we could have used MariaDB, our primary focus being WordPress, we wanted a drop-in rather than a fork. In the future we might support MariaDB if that can be implemented in a compatible way.
 
 ## License
 
