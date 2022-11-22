@@ -44,6 +44,11 @@ url = ${HTTP_URL}
 type = azureblob
 account = ${AZUREBLOB_ACCOUNT}
 key = ${AZUREBLOB_KEY}
+
+[hdfs]
+type = hdfs
+namenode = ${HDFS_NAMENODE}
+username = ${HDFS_USERNAME}
 EOF
 
 if [[ -n "${GCS_SERVICE_ACCOUNT_JSON_KEY:-}" ]]; then 
