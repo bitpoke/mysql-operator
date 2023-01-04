@@ -19,7 +19,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
  * `orchestrator.secretName` is ignored in helm charts
  * Operator service account have no access to update mysqlbackups/status
  * Recurrent backup remote delete policy can not update according to the `cluster.Spec.BackupRemoteDeletePolicy`
- * When operator restart，will handle podList.
+ * When the operator is restarted, it will process the Pod list once to prevent the state of the pod from being changed automatically because it is not updated (especially if the pvc is full).
 
 ## [0.6.1] - 2021-12-22
 ### Changed
