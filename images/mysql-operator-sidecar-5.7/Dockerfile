@@ -4,8 +4,9 @@
 
 FROM debian:buster-slim as sidecar
 
-RUN groupadd -g 999 mysql
-RUN useradd -u 999 -r -g 999 -s /sbin/nologin \
+ARG USER_ID=999
+RUN groupadd -g ${USER_ID} mysql
+RUN useradd -u ${USER_ID} -r -g ${USER_ID} -s /sbin/nologin \
     -c "Default Application User" mysql
 
 COPY rootfs/ /

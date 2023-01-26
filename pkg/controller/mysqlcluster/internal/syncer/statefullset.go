@@ -129,7 +129,7 @@ func (s *sfsSyncer) SyncFn(in runtime.Object) error {
 }
 
 func (s *sfsSyncer) ensurePodSpec() core.PodSpec {
-	fsGroup := int64(999) // mysql user UID
+	fsGroup := s.ensureUserID() // mysql user UID
 	return core.PodSpec{
 		InitContainers: s.ensureInitContainersSpec(),
 		Containers:     s.ensureContainersSpec(),
@@ -146,6 +146,15 @@ func (s *sfsSyncer) ensurePodSpec() core.PodSpec {
 		Tolerations:        s.cluster.Spec.PodSpec.Tolerations,
 		ServiceAccountName: s.cluster.Spec.PodSpec.ServiceAccountName,
 	}
+}
+
+func (s *sfsSyncer) ensureUserID() int64 {
+	if s.cluster.GetMySQLSemVer().Major == 5 {
+		return int64(constants.Mysql57UserID)
+	} else if s.cluster.GetMySQLSemVer().Major == 8 {
+		return int64(constants.Mysql8UserID)
+	}
+	return int64(constants.Mysql57UserID)
 }
 
 func (s *sfsSyncer) ensureContainer(name, image string, args []string) core.Container {

@@ -5,4 +5,4 @@ IMAGE = $(BUILD_REGISTRY)/mysql-operator-sidecar-8.0-$(ARCH)
 include ../../build/makelib/image.mk
 
 img.build:
-	@$(MAKE) -C ../mysql-operator-sidecar-5.7 IMAGE=$(IMAGE) BUILD_ARGS="--build-arg XTRABACKUP_PKG=percona-xtrabackup-80"
+	@$(MAKE) -C ../mysql-operator-sidecar-5.7 IMAGE=$(IMAGE) BUILD_ARGS="--build-arg USER_ID=1001 --build-arg XTRABACKUP_PKG=percona-xtrabackup-80"
