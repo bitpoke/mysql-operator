@@ -9,12 +9,11 @@
 {{- end }}
 
 {{- define "orchestrator.raftList" -}}
-{{- $fullname := include "mysql-operator.fullname" . }}
 {{- $replicas := int .Values.replicaCount }}
 {{- $raftServiceName := include "orchestrator.fullname" . }}
 {{- $nodes := (dict)  }}
 {{- range $i := until $replicas }}
-{{- $_ := set $nodes (printf "%d" $i) (printf "%s-%d.%s" $fullname $i $raftServiceName) }}
+{{- $_ := set $nodes (printf "%d" $i) (printf "%s-%d-svc" $raftServiceName $i) }}
 {{- end }}
 {{- values $nodes | sortAlpha | join "," }}
 {{- end }}
