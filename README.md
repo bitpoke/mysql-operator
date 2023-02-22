@@ -2,7 +2,15 @@
 
 MySQL Operator enables bulletproof MySQL on Kubernetes. It manages all the necessary resources for deploying and managing a highly available MySQL cluster. It provides effortless backups, while keeping the cluster highly available.
 
-MySQL Operator is maintained and developed by [Bitpoke](https://www.bitpoke.io/), a self managed WordPress hosting app running cloud-native.
+:beer: :pizza: :coffee:
+If the operator has helped you out with your projects, **please consider [sponsoring](https://github.com/sponsors/bitpoke)** it to speed up the development. [Issues](https://github.com/bitpoke/mysql-operator/issues) are answered in this repo on a best-effort basis. 
+
+
+:wrench: :nut_and_bolt: :hammer: 
+For **paid commercial support**, deployment, integration and prioritizing of features, please check the dedicated service provided by [Bitpoke](https://www.bitpoke.io/services/mysql-support/).  
+
+The operator has been developed by [Bitpoke](https://www.bitpoke.io/) for internal use to [run WordPress in a cloud-native app](https://www.bitpoke.io/wordpress/) and has been open-sourced for the general public to benefit.
+
 
 ## Goals and status
 
@@ -45,7 +53,7 @@ __NOTE__: MySQL operator 0.2.x requires at least Kubernetes 1.11.x (or 1.10.x wi
 
 ## Controller upgrade
 
-Maybe upgrading the MySQL operator to a newer version requires additional steps. Those steps can be found in the operator's documentation at [upgrades](docs/operator-upgrades.md) section.
+It is possible that upgrading the MySQL operator to a newer version requires additional steps. Those steps can be found in the operator's documentation at [upgrades](docs/operator-upgrades.md) section.
 
 ## Deploying a cluster
 
