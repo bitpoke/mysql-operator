@@ -22,8 +22,8 @@ import (
 	"reflect"
 
 	"github.com/go-test/deep"
-	logf "github.com/presslabs/controller-util/log"
-	utilmeta "github.com/presslabs/controller-util/meta"
+	logf "github.com/presslabs/controller-util/pkg/log"
+	utilmeta "github.com/presslabs/controller-util/pkg/meta"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"

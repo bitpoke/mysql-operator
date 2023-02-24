@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 
-	logf "github.com/presslabs/controller-util/log"
+	logf "github.com/presslabs/controller-util/pkg/log"
 	"github.com/spf13/cobra"
 	"k8s.io/klog/v2/klogr"
 

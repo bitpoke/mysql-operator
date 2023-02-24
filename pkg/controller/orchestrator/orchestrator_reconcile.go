@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	logf "github.com/presslabs/controller-util/log"
-	"github.com/presslabs/controller-util/syncer"
+	logf "github.com/presslabs/controller-util/pkg/log"
+	"github.com/presslabs/controller-util/pkg/syncer"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"

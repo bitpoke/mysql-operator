@@ -31,8 +31,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/presslabs/controller-util/mergo/transformers"
-	"github.com/presslabs/controller-util/syncer"
+	"github.com/presslabs/controller-util/pkg/mergo/transformers"
+	"github.com/presslabs/controller-util/pkg/syncer"
 
 	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
@@ -376,7 +376,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		ContainerPort: MysqlPort,
 	})
 	mysql.Resources = s.ensureResources(containerMysqlName)
-	mysql.LivenessProbe = ensureProbe(60, 5, 5, core.Handler{
+	mysql.LivenessProbe = ensureProbe(60, 5, 5, core.ProbeHandler{
 		Exec: &core.ExecAction{
 			Command: []string{
 				"mysqladmin",
@@ -391,7 +391,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		mysql.Lifecycle = s.cluster.Spec.PodSpec.MysqlLifecycle
 	} else if s.opt.FailoverBeforeShutdownEnabled {
 		mysql.Lifecycle = &core.Lifecycle{
-			PreStop: &core.Handler{
+			PreStop: &core.LifecycleHandler{
 				Exec: &core.ExecAction{
 					Command: []string{"bash", fmt.Sprintf("%s/%s", ConfVolumeMountPath, shPreStopFile)},
 				},
@@ -404,7 +404,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		confClientPath, constants.OperatorDbName, constants.OperatorStatusTableName)
 
 	// we have to know ASAP when server is not ready to remove it from endpoints
-	mysql.ReadinessProbe = ensureProbe(5, 5, 2, core.Handler{
+	mysql.ReadinessProbe = ensureProbe(5, 5, 2, core.ProbeHandler{
 		Exec: &core.ExecAction{
 			Command: []string{
 				"/bin/sh", "-c",
@@ -423,7 +423,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		ContainerPort: SidecarServerPort,
 	})
 	sidecar.Resources = s.ensureResources(containerSidecarName)
-	sidecar.ReadinessProbe = ensureProbe(30, 5, 5, core.Handler{
+	sidecar.ReadinessProbe = ensureProbe(30, 5, 5, core.ProbeHandler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   SidecarServerProbePath,
 			Port:   intstr.FromInt(SidecarServerPort),
@@ -455,7 +455,7 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 
 	exporter.Resources = s.ensureResources(containerExporterName)
 
-	exporter.LivenessProbe = ensureProbe(30, 30, 30, core.Handler{
+	exporter.LivenessProbe = ensureProbe(30, 30, 30, core.ProbeHandler{
 		HTTPGet: &core.HTTPGetAction{
 			Path:   ExporterPath,
 			Port:   ExporterTargetPort,
@@ -746,12 +746,12 @@ func getCliOptionsFromQueryLimits(ql *api.QueryLimits) []string {
 	return options
 }
 
-func ensureProbe(delay, timeout, period int32, handler core.Handler) *core.Probe {
+func ensureProbe(delay, timeout, period int32, handler core.ProbeHandler) *core.Probe {
 	return &core.Probe{
 		InitialDelaySeconds: delay,
 		TimeoutSeconds:      timeout,
 		PeriodSeconds:       period,
-		Handler:             handler,
+		ProbeHandler:        handler,
 		SuccessThreshold:    1,
 		FailureThreshold:    3,
 	}

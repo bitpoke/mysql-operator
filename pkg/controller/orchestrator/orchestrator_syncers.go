@@ -17,7 +17,7 @@ limitations under the License.
 package orchestrator
 
 import (
-	"github.com/presslabs/controller-util/syncer"
+	"github.com/presslabs/controller-util/pkg/syncer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"

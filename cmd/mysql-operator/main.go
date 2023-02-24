@@ -20,7 +20,7 @@ import (
 	"flag"
 	"os"
 
-	logf "github.com/presslabs/controller-util/log"
+	logf "github.com/presslabs/controller-util/pkg/log"
 	"github.com/spf13/pflag"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/klog"

@@ -30,7 +30,7 @@ import (
 	"k8s.io/klog"
 	"k8s.io/klog/v2/klogr"
 
-	logf "github.com/presslabs/controller-util/log"
+	logf "github.com/presslabs/controller-util/pkg/log"
 
 	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/bitpoke/mysql-operator/pkg/options"

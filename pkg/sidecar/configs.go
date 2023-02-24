@@ -28,7 +28,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/blang/semver"
-	"github.com/presslabs/controller-util/rand"
+	"github.com/presslabs/controller-util/pkg/rand"
 
 	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
 	"github.com/bitpoke/mysql-operator/pkg/util/constants"
