@@ -17,8 +17,6 @@ import (
 	"flag"
 	"os"
 
-	"github.com/onsi/ginkgo/config"
-
 	"github.com/bitpoke/mysql-operator/pkg/version"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -51,15 +49,6 @@ var TestContext TestContextType
 
 // Register flags common to all e2e test suites.
 func RegisterCommonFlags() {
-	// Turn on verbose by default to get spec names
-	config.DefaultReporterConfig.Verbose = true
-
-	// Turn on EmitSpecProgress to get spec progress (especially on interrupt)
-	config.GinkgoConfig.EmitSpecProgress = true
-
-	// Randomize specs as well as suites
-	config.GinkgoConfig.RandomizeAllSpecs = true
-
 	commit := version.GetInfo().GitCommit
 
 	flag.StringVar(&TestContext.KubeHost, "kubernetes-host", "", "The kubernetes host, or apiserver, to connect to")

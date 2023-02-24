@@ -24,10 +24,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
-	"github.com/onsi/ginkgo/reporters"
-	"github.com/onsi/ginkgo/types"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2/reporters"
+	"github.com/onsi/ginkgo/v2/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	clientset "k8s.io/client-go/kubernetes"
@@ -56,7 +55,7 @@ func NewLogsPodReporter(ns, path string) reporters.Reporter {
 }
 
 // called when suite starts
-func (r *podLogReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, s *types.SuiteSummary) {
+func (r *podLogReporter) SuiteWillBegin(report types.Report) {
 	if r.logPath != "" {
 		var err error
 		r.logFile, err = os.OpenFile(r.logPath, os.O_RDWR|os.O_CREATE, 0644)
@@ -69,11 +68,17 @@ func (r *podLogReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, s *t
 	}
 }
 
-// called before BeforeSuite before starting tests
 func (r *podLogReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {}
 
 // called before every test
-func (r *podLogReporter) SpecWillRun(specSummary *types.SpecSummary) {}
+func (n podLogReporter) WillRun(report types.SpecReport) {}
+
+// called before BeforeSuite before starting tests
+func (n podLogReporter) DidRun(report types.SpecReport)                           {}
+func (n podLogReporter) EmitFailure(state types.SpecState, failure types.Failure) {}
+func (n podLogReporter) EmitProgressReport(progressReport types.ProgressReport)   {}
+func (n podLogReporter) EmitReportEntry(entry types.ReportEntry)                  {}
+func (n podLogReporter) EmitSpecEvent(event types.SpecEvent)                      {}
 
 // called after every test
 func (r *podLogReporter) SpecDidComplete(specSummary *types.SpecSummary) {
@@ -103,11 +108,8 @@ func (r *podLogReporter) SpecDidComplete(specSummary *types.SpecSummary) {
 
 }
 
-// called before AfterSuite runs
-func (r *podLogReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {}
-
 // caleed at the end
-func (r *podLogReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
+func (r *podLogReporter) SuiteDidEnd(report types.Report) {
 	if r.logFile != nil {
 		r.logFile.Close()
 	}

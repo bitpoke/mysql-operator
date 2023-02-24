@@ -19,8 +19,6 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"os"
-	"path"
 	"strings"
 	"testing"
 
@@ -29,9 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/golang/glog"
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
-	"github.com/onsi/ginkgo/reporters"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2/types"
 	"github.com/onsi/gomega"
 	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
 	clientset "k8s.io/client-go/kubernetes"
@@ -137,41 +134,46 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 // generated in this directory, and cluster logs will also be saved.
 // This function is called on each Ginkgo node in parallel mode.
 func RunE2ETests(t *testing.T) {
+	config := types.NewDefaultSuiteConfig()
+	config.EmitSpecProgress = true
+	config.RandomizeAllSpecs = true
+
 	runtimeutils.ReallyCrash = true
 
 	gomega.RegisterFailHandler(ginkgowrapper.Fail)
 	// Disable skipped tests unless they are explicitly requested.
-	if len(config.GinkgoConfig.FocusStrings) == 0 && len(config.GinkgoConfig.SkipStrings) == 0 {
-		config.GinkgoConfig.SkipStrings = []string{`\[Flaky\]`, `\[Feature:.+\]`}
+	if len(config.FocusStrings) == 0 && len(config.SkipStrings) == 0 {
+		config.SkipStrings = []string{`\[Flaky\]`, `\[Feature:.+\]`}
 	}
 
-	rps := func() (rps []ginkgo.Reporter) {
-		// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
-		if framework.TestContext.ReportDir != "" {
-			// TODO: we should probably only be trying to create this directory once
-			// rather than once-per-Ginkgo-node.
-			if err := os.MkdirAll(framework.TestContext.ReportDir, 0755); err != nil {
-				glog.Errorf("Failed creating report directory: %v", err)
-				return
-			}
-			// add junit report
-			rps = append(rps, reporters.NewJUnitReporter(path.Join(framework.TestContext.ReportDir, fmt.Sprintf("junit_%v%02d.xml", "mysql_o_", config.GinkgoConfig.ParallelNode))))
+	// rps := func() (rps []ginkgo.Reporter) {
+	// 	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
+	// 	if framework.TestContext.ReportDir != "" {
+	// 		// TODO: we should probably only be trying to create this directory once
+	// 		// rather than once-per-Ginkgo-node.
+	// 		if err := os.MkdirAll(framework.TestContext.ReportDir, 0755); err != nil {
+	// 			glog.Errorf("Failed creating report directory: %v", err)
+	// 			return
+	// 		}
+	// 		// add junit report
+	// 		rps = append(rps, reporters.NewJUnitReporter(path.Join(framework.TestContext.ReportDir, fmt.Sprintf("junit_%v%02d.xml", "mysql_o_", config.ParallelProcess))))
 
-			// add logs dumper
-			if framework.TestContext.DumpLogsOnFailure {
-				rps = append(rps, NewLogsPodReporter(operatorNamespace, path.Join(framework.TestContext.ReportDir,
-					fmt.Sprintf("pods_logs_%d_%d.txt", config.GinkgoConfig.RandomSeed, config.GinkgoConfig.ParallelNode))))
-			}
-		} else {
-			// if reportDir is not specified then print logs to stdout
-			if framework.TestContext.DumpLogsOnFailure {
-				rps = append(rps, NewLogsPodReporter(operatorNamespace, ""))
-			}
-		}
-		return
-	}()
+	// 		// add logs dumper
+	// 		if framework.TestContext.DumpLogsOnFailure {
+	// 			rps = append(rps, NewLogsPodReporter(
+	// 				operatorNamespace,
+	// 				path.Join(framework.TestContext.ReportDir, fmt.Sprintf("pods_logs_%d_%d.txt", config.RandomSeed, config.ParallelNode))))
+	// 		}
+	// 	} else {
+	// 		// if reportDir is not specified then print logs to stdout
+	// 		if framework.TestContext.DumpLogsOnFailure {
+	// 			rps = append(rps, NewLogsPodReporter(operatorNamespace, ""))
+	// 		}
+	// 	}
+	// 	return
+	// }()
 
-	glog.Infof("Starting e2e run on Ginkgo node %d", config.GinkgoConfig.ParallelNode)
+	glog.Infof("Starting e2e run on Ginkgo node %d", config.ParallelProcess)
 
-	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "MySQL Operator E2E Suite", rps)
+	ginkgo.RunSpecs(t, "MySQL Operator E2E Suite")
 }

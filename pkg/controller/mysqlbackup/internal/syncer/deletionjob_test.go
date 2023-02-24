@@ -21,7 +21,7 @@ import (
 	"math/rand"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	syncerpkg "github.com/presslabs/controller-util/syncer"
 	batch "k8s.io/api/batch/v1"

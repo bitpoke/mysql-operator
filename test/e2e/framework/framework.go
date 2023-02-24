@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/logr"
@@ -75,7 +75,7 @@ func NewFramework(baseName string) *Framework {
 // BeforeEach gets a client and makes a namespace.
 func (f *Framework) BeforeEach() {
 	// The fact that we need this feels like a bug in ginkgo.
-	// https://github.com/onsi/ginkgo/issues/222
+	// https://github.com/onsi/ginkgo/v2/issues/222
 	f.cleanupHandle = AddCleanupAction(f.AfterEach)
 	f.Timeout = time.Duration(TestContext.TimeoutSeconds) * time.Second
 

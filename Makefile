@@ -31,7 +31,8 @@ GO_INTEGRATION_TESTS_PARAMS ?= -timeout 50m \
 							   --operator-image $(E2E_IMAGE_REGISTRY)/mysql-operator$(E2E_IMAGE_SUFFIX):$(E2E_IMAGE_TAG) \
 							   --sidecar-mysql57-image $(E2E_IMAGE_REGISTRY)/mysql-operator-sidecar-5.7$(E2E_IMAGE_SUFFIX):$(E2E_IMAGE_TAG) \
 							   --sidecar-mysql8-image $(E2E_IMAGE_REGISTRY)/mysql-operator-sidecar-8.0$(E2E_IMAGE_SUFFIX):$(E2E_IMAGE_TAG) \
-							   --orchestrator-image $(E2E_IMAGE_REGISTRY)/mysql-operator-orchestrator$(E2E_IMAGE_SUFFIX):$(E2E_IMAGE_TAG)
+							   --orchestrator-image $(E2E_IMAGE_REGISTRY)/mysql-operator-orchestrator$(E2E_IMAGE_SUFFIX):$(E2E_IMAGE_TAG) \
+							   --junit-report
 TEST_FILTER_PARAM += $(GO_INTEGRATION_TESTS_PARAMS)
 include build/makelib/golang.mk
 

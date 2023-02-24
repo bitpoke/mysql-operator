@@ -21,13 +21,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 
 	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 )
@@ -38,7 +37,7 @@ var c client.Client
 
 func TestSyncers(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Syncers suit", []Reporter{printer.NewlineReporter{}})
+	RunSpecs(t, "Syncers suit")
 }
 
 var _ = BeforeSuite(func() {
