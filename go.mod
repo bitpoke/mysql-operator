@@ -14,7 +14,7 @@ require (
 	github.com/onsi/gomega v1.27.1
 	github.com/presslabs/controller-util v0.3.0
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/spf13/cobra v1.1.1
+	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/net v0.7.0
 
@@ -46,7 +46,7 @@ require (
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/iancoleman/strcase v0.0.0-20190422225806-e506e3ef7365 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
