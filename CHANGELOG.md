@@ -24,6 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Remove PodSecurityPolicy
 
 ### Fixed
+
+* Orchestrator can't properly update or migrate when it more than one
 * Operator service account have no access to update mysqlbackups/status
 * Recurrent backup remote delete policy can not update according to the `cluster.Spec.BackupRemoteDeletePolicy`
 * When the operator is restarted, it will process the Pod list once to prevent the state of the pod from being changed automatically because it is not updated (especially if the pvc is full).
