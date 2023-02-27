@@ -1,20 +1,25 @@
+{{- $replicas := int .Values.replicaCount -}}
+{{- $labels :=  (include "mysql-operator.labels" .) -}}
+{{- $fullName := (include "mysql-operator.fullname" .) -}}
+{{- range $i := until $replicas -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "orchestrator.fullname" . }}
+  name: {{ printf "%s-%d-orc-svc" $fullName $i }}
   labels:
     app.kubernetes.io/component: orchestrator-raft
-    {{- include "mysql-operator.labels" . | nindent 4 }}
+    {{- $labels | nindent 4}}
 spec:
   type: ClusterIP
-  clusterIP: None
   publishNotReadyAddresses: true
   ports:
-    - name: http
-      port: 80
-      targetPort: 3000
-    - name: raft
-      port: 10008
-      targetPort: 10008
+  - name: http
+    port: 80
+    targetPort: 3000
+  - name: raft
+    port: 10008
+    targetPort: 10008
   selector:
-    {{- include "mysql-operator.selectorLabels" . | nindent 4 }}
+    statefulset.kubernetes.io/pod-name: {{ printf "%s-%d" $fullName $i }}
+---
+{{end}}

@@ -25,6 +25,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+* Orchestrator can't properly update or migrate when it more than one
 * `orchestrator.secretName` is ignored in helm charts
 * Operator service account have no access to update mysqlbackups/status
 * Recurrent backup remote delete policy can not update according to the `cluster.Spec.BackupRemoteDeletePolicy`
