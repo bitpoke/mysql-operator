@@ -29,7 +29,7 @@ import (
 	"golang.org/x/net/context"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -155,7 +155,7 @@ var _ = Describe("MysqlCluster controller", func() {
 						Namespace: cluster.Namespace,
 					},
 				},
-				&policyv1beta1.PodDisruptionBudget{
+				&policyv1.PodDisruptionBudget{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-mysql", name),
 						Namespace: cluster.Namespace,
@@ -211,7 +211,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			Entry("reconciles the master service", "%s-mysql-master", &corev1.Service{}),
 			Entry("reconciles the operator secret", "%s-mysql-operated", &corev1.Secret{}),
 			Entry("reconciles the config map", "%s-mysql", &corev1.ConfigMap{}),
-			Entry("reconciles the pod disruption budget", "%s-mysql", &policyv1beta1.PodDisruptionBudget{}),
+			Entry("reconciles the pod disruption budget", "%s-mysql", &policyv1.PodDisruptionBudget{}),
 		)
 
 		Describe("the reconciler", func() {

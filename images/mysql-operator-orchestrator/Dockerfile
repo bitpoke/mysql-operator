@@ -13,7 +13,7 @@ RUN set -ex \
         tar -C /usr/local/bin -xzv
 
 RUN set -ex \
-    && export ORCHESTRATOR_VERSION=3.2.3 \
+    && export ORCHESTRATOR_VERSION=3.2.6 \
     && wget https://github.com/openark/orchestrator/releases/download/v${ORCHESTRATOR_VERSION}/orchestrator-${ORCHESTRATOR_VERSION}-linux-amd64.tar.gz -O- | \
         tar -C / -xzv
 
