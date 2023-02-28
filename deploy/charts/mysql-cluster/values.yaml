@@ -11,7 +11,7 @@ replicas: 1
 # mysqlVersion: "5.7"
 
 ## MySQL connect credentials, those credentials will be provisioned in the cluster
-rootPassword: ""
+rootPassword: "CHANGE_ME"
 appUser: ""
 appPassword: ""
 appDatabase: ""
