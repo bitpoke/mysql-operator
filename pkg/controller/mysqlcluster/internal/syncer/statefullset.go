@@ -376,15 +376,19 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		ContainerPort: MysqlPort,
 	})
 	mysql.Resources = s.ensureResources(containerMysqlName)
-	mysql.LivenessProbe = ensureProbe(60, 5, 5, core.Handler{
-		Exec: &core.ExecAction{
-			Command: []string{
-				"mysqladmin",
-				fmt.Sprintf("--defaults-file=%s", confClientPath),
-				"ping",
+	if probe := s.cluster.Spec.PodSpec.MySQLLivenessProbe; probe == nil {
+		mysql.LivenessProbe = ensureProbe(60, 5, 5, core.Handler{
+			Exec: &core.ExecAction{
+				Command: []string{
+					"mysqladmin",
+					fmt.Sprintf("--defaults-file=%s", confClientPath),
+					"ping",
+				},
 			},
-		},
-	})
+		})
+	} else {
+		mysql.LivenessProbe = probe
+	}
 
 	// set lifecycle hook on MySQL container
 	if s.cluster.Spec.PodSpec.MysqlLifecycle != nil {
@@ -404,14 +408,18 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		confClientPath, constants.OperatorDbName, constants.OperatorStatusTableName)
 
 	// we have to know ASAP when server is not ready to remove it from endpoints
-	mysql.ReadinessProbe = ensureProbe(5, 5, 2, core.Handler{
-		Exec: &core.ExecAction{
-			Command: []string{
-				"/bin/sh", "-c",
-				fmt.Sprintf(`test $(%s) -eq 1`, mysqlTestCmd),
+	if probe := s.cluster.Spec.PodSpec.MySQLReadinessProbe; probe == nil {
+		mysql.ReadinessProbe = ensureProbe(5, 5, 2, core.Handler{
+			Exec: &core.ExecAction{
+				Command: []string{
+					"/bin/sh", "-c",
+					fmt.Sprintf(`test $(%s) -eq 1`, mysqlTestCmd),
+				},
 			},
-		},
-	})
+		})
+	} else {
+		mysql.ReadinessProbe = probe
+	}
 
 	// SIDECAR container
 	sidecar := s.ensureContainer(containerSidecarName,
@@ -423,13 +431,17 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 		ContainerPort: SidecarServerPort,
 	})
 	sidecar.Resources = s.ensureResources(containerSidecarName)
-	sidecar.ReadinessProbe = ensureProbe(30, 5, 5, core.Handler{
-		HTTPGet: &core.HTTPGetAction{
-			Path:   SidecarServerProbePath,
-			Port:   intstr.FromInt(SidecarServerPort),
-			Scheme: core.URISchemeHTTP,
-		},
-	})
+	if probe := s.cluster.Spec.PodSpec.SidecarReadinessProbe; probe == nil {
+		sidecar.ReadinessProbe = ensureProbe(30, 5, 5, core.Handler{
+			HTTPGet: &core.HTTPGetAction{
+				Path:   SidecarServerProbePath,
+				Port:   intstr.FromInt(SidecarServerPort),
+				Scheme: core.URISchemeHTTP,
+			},
+		})
+	} else {
+		sidecar.ReadinessProbe = probe
+	}
 
 	// METRICS container
 	exporterCommand := []string{
@@ -455,13 +467,17 @@ func (s *sfsSyncer) ensureContainersSpec() []core.Container {
 
 	exporter.Resources = s.ensureResources(containerExporterName)
 
-	exporter.LivenessProbe = ensureProbe(30, 30, 30, core.Handler{
-		HTTPGet: &core.HTTPGetAction{
-			Path:   ExporterPath,
-			Port:   ExporterTargetPort,
-			Scheme: core.URISchemeHTTP,
-		},
-	})
+	if probe := s.cluster.Spec.PodSpec.ExporterLivenessProbe; probe == nil {
+		exporter.LivenessProbe = ensureProbe(30, 30, 30, core.Handler{
+			HTTPGet: &core.HTTPGetAction{
+				Path:   ExporterPath,
+				Port:   ExporterTargetPort,
+				Scheme: core.URISchemeHTTP,
+			},
+		})
+	} else {
+		exporter.LivenessProbe = probe
+	}
 
 	// PT-HEARTBEAT container
 	heartbeat := s.ensureContainer(containerHeartBeatName,

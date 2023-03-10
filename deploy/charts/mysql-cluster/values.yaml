@@ -19,6 +19,10 @@ appDatabase: ""
 # appSecretAnnotations: {}
 
 podSpec:
+#  mysqlReadinessProbe:
+#  mysqlLivenessProbe:
+#  sidecarReadinessProbe:
+#  exporterLivenessProbe:
 mysqlConf:
 volumeSpec:
 

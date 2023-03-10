@@ -55,6 +55,48 @@ spec:
   #       exec:
   #         command:
   #           - /scripts/demote-if-master
+  #   mysqlReadinessProbe:
+  #     exec:
+  #       command:
+  #         - /bin/sh
+  #         - -c
+  #         - test $(mysql --defaults-file=/etc/mysql/client.conf -NB -e 'SELECT COUNT(*) FROM sys_operator.status WHERE name="configured" AND value="1"') -eq 1
+  #     failureThreshold: 3
+  #     initialDelaySeconds: 5
+  #     periodSeconds: 2
+  #     successThreshold: 1
+  #     timeoutSeconds: 5
+  #   mysqlLivenessProbe:
+  #     exec:
+  #       command:
+  #         - mysqladmin
+  #         - --defaults-file=/etc/mysql/client.conf
+  #         - ping
+  #     failureThreshold: 3
+  #     initialDelaySeconds: 600
+  #     periodSeconds: 5
+  #     successThreshold: 1
+  #     timeoutSeconds: 5
+  #   sidecarReadinessProbe:
+  #     failureThreshold: 3
+  #     httpGet:
+  #       path: /health
+  #       port: 8080
+  #       scheme: HTTP
+  #     initialDelaySeconds: 30
+  #     periodSeconds: 5
+  #     successThreshold: 1
+  #     timeoutSeconds: 5
+  #   exporterLivenessProbe:
+  #     failureThreshold: 3
+  #     httpGet:
+  #       path: /metrics
+  #       port: 9125
+  #       scheme: HTTP
+  #     initialDelaySeconds: 30
+  #     periodSeconds: 30
+  #     successThreshold: 1
+  #     timeoutSeconds: 30
   #   nodeSelector: {}
   #   resources:
   #     requests:
