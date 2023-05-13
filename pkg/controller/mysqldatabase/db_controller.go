@@ -65,7 +65,7 @@ type ReconcileMySQLDatabase struct {
 var _ reconcile.Reconciler = &ReconcileMySQLDatabase{}
 
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
-// +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqldatabases;mysqldatabases/status,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqldatabases;mysqldatabases/status;mysqldatabases/finalizers,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reads that state of the cluster for a Wordpress object and makes changes based on the state read
 // and what is in the Wordpress.Spec

@@ -181,8 +181,8 @@ func (r *ReconcileMySQLUser) reconcileUserInDB(ctx context.Context, user *mysqlu
 		return errors.New("the MySQL user's password must not be empty")
 	}
 
-	// create/ update user in database
-	log.Info("creating mysql user", "key", user.GetKey(), "username", user.Spec.User, "cluster", user.GetClusterKey())
+	// reconcile user in database
+	log.V(1).Info("reconciling mysql user", "key", user.GetKey(), "username", user.Spec.User, "cluster", user.GetClusterKey())
 	if err := mysql.CreateUserIfNotExists(ctx, sql, user.Spec.User, password, user.Spec.AllowedHosts,
 		user.Spec.Permissions, user.Spec.ResourceLimits); err != nil {
 		return err
