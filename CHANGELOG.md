@@ -19,7 +19,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Set default MySQL 8.0 server version to `8.0.32`
 * Change xtrabackup to match corresponding 5.7 default version, 2.4.26
 * Change xtrabackup to match corresponding 8.0 default version, 8.0.32-26
-* Bump Orchestrator to `3.2.6`
+* Bump Orchestrator to `3.2.6` and use Percona's fork
 * Change policy/v1beta1 to policy/v1
 * Add RBAC permissions when deploying on OpenShift
 
