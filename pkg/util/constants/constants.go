@@ -86,7 +86,7 @@ var (
 	// MySQLTagsToSemVer maps simple version to semver versions
 	MySQLTagsToSemVer = map[string]string{
 		"5.7": "5.7.35",
-		"8.0": "8.0.20",
+		"8.0": "8.0.32",
 	}
 	// MysqlImageVersions is a map of supported mysql version and their image
 	MysqlImageVersions = map[string]string{
@@ -101,6 +101,8 @@ var (
 		"5.7.26": "percona@sha256:713c1817615b333b17d0fbd252b0ccc53c48a665d4cfcb42178167435a957322",
 		// Percona:5.7.24 CentOS based image
 		"5.7.24": "percona@sha256:b3b7fb177b416563c46fe012298e042ec1607cc0539ce6014146380b0d27b08c",
+		// Percona:8.0.32-24 CentOS based image
+		"8.0.32": "percona@sha256:5332a2dd238486f597566403403410e85cc4438f11f317f65458105be00feeba",
 		// Percona:8.0.20-11 CentOS based image
 		"8.0.20": "percona@sha256:6d4524eccd26af7bd7fb623c567159dfbd7f3d9a0e2f7bebd54af1e9ca9903dc",
 	}

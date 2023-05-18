@@ -15,7 +15,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-* Set default MySQL server version to `5.7.35`
+* Set default MySQL 5.7 server version to `5.7.35`
+* Set default MySQL 8.0 server version to `8.0.32`
 * Bump Orchestrator to `3.2.6`
 * Change policy/v1beta1 to policy/v1
 * Add RBAC permissions when deploying on OpenShift
