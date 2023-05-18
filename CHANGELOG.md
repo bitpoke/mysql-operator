@@ -9,7 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-* `MysqlDatabase` `MysqlUser` Add delete policy
+* Add `mysql-operator.presslabs.org/resourceDeletionPolicy` annotation for `MysqlDatabase` and `MysqlUser`
 * Add `PtHeartbeatResources` in `.Spec.PodSpec` to allow the user specifying resources for pt-heartbeat.
 * Set `MysqlCluter.Spec.BackupSchedule` to empty string to disable recurrent backups
 
