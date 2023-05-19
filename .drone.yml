@@ -15,16 +15,20 @@ steps:
     depth: 0
     tags: true
 
+- name: install dependencies
+  image: docker.io/bitpoke/build:v0.8.0
+  commands:
+  - make -j4 build.tools
+
 - name: build
   pull: true
-  image: docker.io/bitpoke/build:v0.3.0
+  image: docker.io/bitpoke/build:v0.8.0
   commands:
-  - make -j4 build
-  depends_on:
-    - clone
+  - dockerize -wait http://docker:2375/_ping -timeout 30s
+  - make V=1 build
 
 - name: publish
-  image: docker.io/bitpoke/build:v0.3.0
+  image: docker.io/bitpoke/build:v0.8.0
   commands:
   - /usr/local/bin/setup-credentials-helper.sh
   - make publish
@@ -32,17 +36,18 @@ steps:
     DOCKER_USERNAME: bitpokebot
     DOCKER_PASSWORD:
       from_secret: DOCKER_PASSWORD
-  depends_on:
-    - build
+  when:
+    ref:
+    - refs/heads/master-*
+    - refs/heads/release-*
 
 services:
 - name: docker
-  image: docker:20.10.8-dind
-  privileged: true
-  commands:
-    - /usr/local/bin/dockerd-entrypoint.sh dockerd --host "unix:///workspace/docker.sock" --storage-driver overlay2 --log-level error
+  image: docker:20.10.8-dind-rootless
+  environment:
+    DOCKER_TLS_CERTDIR: ""
 
 trigger:
   ref:
-    - refs/heads/master
-    - refs/heads/release-*
+    - refs/pull/**
+    - refs/heads/**
