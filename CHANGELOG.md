@@ -26,6 +26,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+* Bump `golang.org/x/net` to 0.8 (fix: CVE-2022-41723, CVE-2022-27664, CVE-2021-33194)
 * Orchestrator can't properly update or migrate when it more than one
 * Operator service account have no access to update mysqlbackups/status
 * Recurrent backup remote delete policy can not update according to the `cluster.Spec.BackupRemoteDeletePolicy`
