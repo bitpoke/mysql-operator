@@ -16,19 +16,19 @@ steps:
     tags: true
 
 - name: install dependencies
-  image: docker.io/bitpoke/build:v0.6.0
+  image: docker.io/bitpoke/build:v0.8.0
   commands:
   - make -j4 build.tools
 
 - name: build
   pull: true
-  image: docker.io/bitpoke/build:v0.6.0
+  image: docker.io/bitpoke/build:v0.8.0
   commands:
   - dockerize -wait http://docker:2375/_ping -timeout 30s
-  - make -j4 build
+  - make V=1 build
 
 - name: publish
-  image: docker.io/bitpoke/build:v0.6.0
+  image: docker.io/bitpoke/build:v0.8.0
   commands:
   - /usr/local/bin/setup-credentials-helper.sh
   - make publish

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM google/cloud-sdk:357.0.0
+FROM google/cloud-sdk:431.0.0
 
 ARG ARCH
 
@@ -20,8 +20,15 @@ ENV DEBIAN_FRONTEND noninteractive
 
 COPY build-scripts /usr/local/build-scripts
 
-COPY --from=docker/buildx-bin:0.6.1 /buildx /usr/libexec/docker/cli-plugins/docker-buildx
-RUN docker buildx version
+# ------------------------------------------------------------------------------------------------
+# git config
+RUN set -ex \
+    && git config --global user.email "bot@bitpoke.cloud" \
+    && git config --global user.name "Bitpoke Bot" \
+    && git config --global diff.tar-filelist.binary true \
+    && git config --global diff.tar-filelist.textconv 'tar -tvf' \
+    && git config --global diff.tar.binary true \
+    && git config --global diff.tar.textconv 'tar -xvOf'
 
 # ------------------------------------------------------------------------------------------------
 # install build and release tools
@@ -36,48 +43,11 @@ RUN /usr/local/build-scripts/install-packages.sh \
         sudo \
         wget \
         zip
-# ------------------------------------------------------------------------------------------------
-# PHP
-RUN sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list' \
-    && wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg \
-    && /usr/local/build-scripts/install-packages.sh \
-        php7.4-bcmath \
-        php7.4-curl \
-        php7.4-cli \
-        php7.4-fpm \
-        php7.4-gd \
-        php7.4-mbstring \
-        php7.4-mysql \
-        php7.4-opcache \
-        php7.4-tidy \
-        php7.4-xml \
-        php7.4-xmlrpc \
-        php7.4-xsl \
-        php7.4-zip \
-        php-apcu \
-        php-apcu-bc \
-        php-geoip \
-        php-imagick \
-        php-memcached \
-        php-redis \
-        php-sodium \
-        php-yaml \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# ------------------------------------------------------------------------------------------------
-# git config
-RUN set -ex \
-    && git config --global user.email "bot@bitpoke.cloud" \
-    && git config --global user.name "Bitpoke Bot" \
-    && git config --global diff.tar-filelist.binary true \
-    && git config --global diff.tar-filelist.textconv 'tar -tvf' \
-    && git config --global diff.tar.binary true \
-    && git config --global diff.tar.textconv 'tar -xvOf'
 
 # ------------------------------------------------------------------------------------------------
 # Go support
-RUN GO_VERSION=1.16.7 && \
-    GO_HASH=7fe7a73f55ba3e2285da36f8b085e5c0159e9564ef5f63ee0ed6b818ade8ef04 && \
+RUN GO_VERSION=1.17.13 && \
+    GO_HASH=4cdd2bc664724dc7db94ad51b503512c5ae7220951cac568120f64f8e94399fc && \
     curl -fsSL https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz -o golang.tar.gz && \
     echo "${GO_HASH}  golang.tar.gz" | sha256sum -c - && \
     tar -C /usr/local -xzf golang.tar.gz && \
@@ -113,9 +83,50 @@ RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # ------------------------------------------------------------------------------------------------
+# PHP
+RUN sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list' \
+    && wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg \
+    && /usr/local/build-scripts/install-packages.sh \
+        php7.4-bcmath \
+        php7.4-curl \
+        php7.4-cli \
+        php7.4-fpm \
+        php7.4-gd \
+        php7.4-mbstring \
+        php7.4-mysql \
+        php7.4-opcache \
+        php7.4-tidy \
+        php7.4-xml \
+        php7.4-xmlrpc \
+        php7.4-xsl \
+        php7.4-zip \
+        php7.4-apcu \
+        php7.4-apcu-bc \
+        php7.4-geoip \
+        php7.4-imagick \
+        php7.4-memcached \
+        php7.4-redis \
+        php7.4-yaml \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && COMPOSER_VERSION=2.2.21 \
+    && COMPOSER_HASH=5211584ad39af26704da9f6209bc5d8104a2d576e80ce9c7ed8368ddd779d0af \
+    && curl -fsSL -o /usr/local/bin/composer https://getcomposer.org/download/${COMPOSER_VERSION}/composer.phar \
+    && echo "${COMPOSER_HASH}  /usr/local/bin/composer" | sha256sum -c - \
+    && chmod +x /usr/local/bin/composer
+
+# ------------------------------------------------------------------------------------------------
+# docker-compose and docker-buildx
+
+COPY --from=docker/buildx-bin:0.10.4 /buildx /usr/libexec/docker/cli-plugins/docker-buildx
+RUN set -ex \
+    && export DOCKER_COMPOSE_VERSION="2.18.1" \
+    && curl -sL -o /usr/libexec/docker/cli-plugins/docker-compose "https://github.com/docker/compose/releases/download/v${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" \
+    && chmod 0755 /usr/libexec/docker/cli-plugins/docker-compose
+
+# ------------------------------------------------------------------------------------------------
 # rclone
 RUN set -ex \
-    && export RCLONE_VERSION=1.56.0 \
+    && export RCLONE_VERSION=1.62.2 \
     && curl -sL -o rclone-v${RCLONE_VERSION}-linux-amd64.deb https://github.com/rclone/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.deb \
     && dpkg -i rclone-v${RCLONE_VERSION}-linux-amd64.deb \
     && rm rclone-v${RCLONE_VERSION}-linux-amd64.deb \
@@ -124,8 +135,8 @@ RUN set -ex \
 # ------------------------------------------------------------------------------------------------
 # dockerize
 RUN set -ex \
-    && export DOCKERIZE_VERSION="2.1.0" \
-    && curl -sL -o dockerize.tar.gz "https://github.com/presslabs/dockerize/releases/download/v${DOCKERIZE_VERSION}/dockerize-linux-amd64-v${DOCKERIZE_VERSION}.tar.gz" \
+    && export DOCKERIZE_VERSION="2.2.0" \
+    && curl -sL -o dockerize.tar.gz "https://github.com/bitpoke/dockerize/releases/download/v${DOCKERIZE_VERSION}/dockerize-linux-amd64-v${DOCKERIZE_VERSION}.tar.gz" \
     && tar -C /usr/local/bin -xzvf dockerize.tar.gz \
     && rm dockerize.tar.gz \
     && chmod 0755 /usr/local/bin/dockerize \
@@ -134,7 +145,7 @@ RUN set -ex \
 # ------------------------------------------------------------------------------------------------
 # sops
 RUN set -ex \
-    && export SOPS_VERSION="3.7.1" \
+    && export SOPS_VERSION="3.7.3" \
     && curl -sL -o /usr/local/bin/sops "https://github.com/mozilla/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux" \
     && chmod 0755 /usr/local/bin/sops \
     && chown root:root /usr/local/bin/sops
@@ -142,7 +153,7 @@ RUN set -ex \
 # ------------------------------------------------------------------------------------------------
 # helm
 RUN set -ex \
-    && export HELM_VERSION="3.6.3" \
+    && export HELM_VERSION="3.12.0" \
     && curl -sL -o helm.tar.gz "https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz" \
     && tar -C /usr/local/bin -xzvf helm.tar.gz --strip-components 1 linux-amd64/helm \
     && rm helm.tar.gz \
@@ -152,13 +163,13 @@ RUN set -ex \
 # ------------------------------------------------------------------------------------------------
 # helm secrets plugin
 RUN set -ex \
-    && export HELM_SECRETS_VERSION="3.8.3" \
+    && export HELM_SECRETS_VERSION="3.15.0" \
     && helm plugin install https://github.com/jkroepke/helm-secrets --version ${HELM_SECRETS_VERSION}
 
 # ------------------------------------------------------------------------------------------------
 # kustomize
 RUN set -ex \
-    && export KUSTOMIZE_VERSION="4.2.0" \
+    && export KUSTOMIZE_VERSION="4.5.7" \
     && curl -sL -o kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
     && tar -C /usr/local/bin -xzvf kustomize.tar.gz \
     && rm kustomize.tar.gz \
@@ -166,17 +177,20 @@ RUN set -ex \
     && chown root:root /usr/local/bin/kustomize
 
 # ------------------------------------------------------------------------------------------------
-# docker-compose
-
+# hugo
 RUN set -ex \
-    && export DOCKER_COMPOSE_VERSION="1.29.2" \
-    && curl -sL -o /usr/local/bin/docker-compose "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-Linux-x86_64" \
-    && chmod +x /usr/local/bin/docker-compose \
-    && chown root:root /usr/local/bin/docker
+    && export HUGO_VERSION="0.111.3" \
+    && curl -sLo- "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_Linux-64bit.tar.gz" | tar -zx -C /usr/local/bin hugo \
+    && pip3 install pygments \
+    && npm install -g postcss postcss-cli
+
+# ------------------------------------------------------------------------------------------------
+# firebase-cli
+RUN set -ex \
+    && npm install -g firebase-tools
 
 # ------------------------------------------------------------------------------------------------
 # Run tini as PID 1 and avoid signal handling issues
-
 RUN set -ex \
     && export TINI_VERSION=v0.19.0 \
     && curl -sL -o /tini https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${ARCH} \

@@ -16,8 +16,8 @@ ifndef __UTILS_MAKEFILE__
 __UTILS_MAKEFILE__ := included
 
 COMMA := ,
-SPACE :=
-SPACE +=
+# define literal space character in a way that work with both GNU make 3 and 4
+SPACE := $(subst ,, )
 
 # define a newline
 define \n
@@ -25,6 +25,43 @@ define \n
 
 endef
 
+# ====================================================================================
+# Colors
+
+BLACK        := $(shell printf "\033[30m")
+BLACK_BOLD   := $(shell printf "\033[30;1m")
+RED          := $(shell printf "\033[31m")
+RED_BOLD     := $(shell printf "\033[31;1m")
+GREEN        := $(shell printf "\033[32m")
+GREEN_BOLD   := $(shell printf "\033[32;1m")
+YELLOW       := $(shell printf "\033[33m")
+YELLOW_BOLD  := $(shell printf "\033[33;1m")
+BLUE         := $(shell printf "\033[34m")
+BLUE_BOLD    := $(shell printf "\033[34;1m")
+MAGENTA      := $(shell printf "\033[35m")
+MAGENTA_BOLD := $(shell printf "\033[35;1m")
+CYAN         := $(shell printf "\033[36m")
+CYAN_BOLD    := $(shell printf "\033[36;1m")
+WHITE        := $(shell printf "\033[37m")
+WHITE_BOLD   := $(shell printf "\033[37;1m")
+CNone        := $(shell printf "\033[0m")
+
+# ====================================================================================
+# Logger
+
+TIME_LONG	= `date +%Y-%m-%d' '%H:%M:%S`
+TIME_SHORT	= `date +%H:%M:%S`
+TIME		= $(TIME_SHORT)
+
+INFO	= echo ${TIME} ${BLUE}[ .. ]${CNone}
+WARN	= echo ${TIME} ${YELLOW}[WARN]${CNone}
+ERR		= echo ${TIME} ${RED}[FAIL]${CNone}
+OK		= echo ${TIME} ${GREEN}[ OK ]${CNone}
+FAIL	= (echo ${TIME} ${RED}[FAIL]${CNone} && false)
+
+
+# ====================================================================================
+# Utility functions
 lower = $(subst A,a,$(subst B,b,$(subst C,c,$(subst D,d,$(subst E,e,$(subst F,f,$(subst G,g,$(subst H,h,$(subst I,i,$(subst J,j,$(subst K,k,$(subst L,l,$(subst M,m,$(subst N,n,$(subst O,o,$(subst P,p,$(subst Q,q,$(subst R,r,$(subst S,s,$(subst T,t,$(subst U,u,$(subst V,v,$(subst W,w,$(subst X,x,$(subst Y,y,$(subst Z,z,$1))))))))))))))))))))))))))
 upper = $(subst a,A,$(subst b,B,$(subst c,C,$(subst d,D,$(subst e,E,$(subst f,F,$(subst g,G,$(subst h,H,$(subst i,I,$(subst j,J,$(subst k,K,$(subst l,L,$(subst m,M,$(subst n,N,$(subst o,O,$(subst p,P,$(subst q,Q,$(subst r,R,$(subst s,S,$(subst t,T,$(subst u,U,$(subst v,V,$(subst w,W,$(subst x,X,$(subst y,Y,$(subst z,Z,$1))))))))))))))))))))))))))
 list-join = $(subst $(SPACE),$(1),$(strip $(2)))
