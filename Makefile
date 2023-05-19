@@ -7,7 +7,9 @@ include build/makelib/common.mk
 
 GO111MODULE=on
 GO_STATIC_PACKAGES = $(GO_PROJECT)/cmd/mysql-operator $(GO_PROJECT)/cmd/mysql-operator-sidecar $(GO_PROJECT)/cmd/orc-helper
-GOLANGCI_LINT_VERSION = 1.25.0
+GO_SUPPORTED_VERSIONS = 1.17
+GOFMT_VERSION = 1.17
+GOLANGCI_LINT_VERSION = 1.42.1
 GO_LDFLAGS += \
 	       -X $(GO_PROJECT)/pkg/version.buildDate=$(BUILD_DATE) \
 	       -X $(GO_PROJECT)/pkg/version.gitVersion=$(VERSION) \
