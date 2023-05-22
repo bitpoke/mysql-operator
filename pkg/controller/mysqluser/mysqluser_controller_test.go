@@ -120,6 +120,7 @@ var _ = Describe("MySQL user controller", func() {
 			BeforeEach(func() {
 				// Create prerequisite resources
 				cluster = factories.NewMySQLCluster(
+					factories.WithClusterReadyCondition(),
 					factories.CreateMySQLClusterSecret(c, &corev1.Secret{}),
 					factories.CreateMySQLClusterInK8s(c),
 				)
@@ -201,6 +202,7 @@ var _ = Describe("MySQL user controller", func() {
 			BeforeEach(func() {
 				// Create prerequisite resources
 				cluster = factories.NewMySQLCluster(
+					factories.WithClusterReadyCondition(),
 					factories.CreateMySQLClusterSecret(c, &corev1.Secret{}),
 					factories.CreateMySQLClusterInK8s(c),
 				)
@@ -302,6 +304,7 @@ var _ = Describe("MySQL user controller", func() {
 
 				// Create prerequisite resources
 				cluster = factories.NewMySQLCluster(
+					factories.WithClusterReadyCondition(),
 					factories.CreateMySQLClusterSecret(c, &corev1.Secret{}),
 					factories.CreateMySQLClusterInK8s(c),
 				)
@@ -394,7 +397,9 @@ var _ = Describe("MySQL user controller", func() {
 			BeforeEach(func() {
 				// Create prerequisite resources
 				cluster = factories.NewMySQLCluster(
-					factories.CreateMySQLClusterSecret(c, &corev1.Secret{}), factories.CreateMySQLClusterInK8s(c),
+					factories.WithClusterReadyCondition(),
+					factories.CreateMySQLClusterSecret(c, &corev1.Secret{}),
+					factories.CreateMySQLClusterInK8s(c),
 				)
 
 				// The mysql user creation fails
@@ -444,6 +449,7 @@ var _ = Describe("MySQL user controller", func() {
 		BeforeEach(func() {
 			// Create prerequisite resources
 			cluster = factories.NewMySQLCluster(
+				factories.WithClusterReadyCondition(),
 				factories.CreateMySQLClusterSecret(c, &corev1.Secret{}),
 				factories.CreateMySQLClusterInK8s(c),
 			)

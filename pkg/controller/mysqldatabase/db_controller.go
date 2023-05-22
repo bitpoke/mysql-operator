@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/go-test/deep"
 	logf "github.com/presslabs/controller-util/log"
@@ -69,6 +70,7 @@ var _ reconcile.Reconciler = &ReconcileMySQLDatabase{}
 
 // Reconcile reads that state of the cluster for a Wordpress object and makes changes based on the state read
 // and what is in the Wordpress.Spec
+// nolint: gocyclo
 func (r *ReconcileMySQLDatabase) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the MysqlDatabase instance
 	db := mysqldatabase.Wrap(&mysqlv1alpha1.MysqlDatabase{})
@@ -103,6 +105,23 @@ func (r *ReconcileMySQLDatabase) Reconcile(ctx context.Context, request reconcil
 		utilmeta.RemoveFinalizer(&db.ObjectMeta, mysqlPreventDeletionFinalizer)
 		// update resource to remove finalizer, no status
 		return reconcile.Result{}, r.Update(ctx, db.Unwrap())
+	}
+
+	cluster := mysqlcluster.New(&mysqlv1alpha1.MysqlCluster{})
+	if err = r.Get(ctx, db.GetClusterKey(), cluster.Unwrap()); err != nil {
+		return reconcile.Result{}, r.updateReadyCondition(ctx, oldDBStatus, db, err)
+	}
+
+	if !cluster.IsClusterReady() {
+
+		log.Error(r.updateReadyCondition(ctx, oldDBStatus, db, fmt.Errorf("cluster is not ready")),
+			"cluster is not ready when create database",
+			"cluster", cluster.GetNamespacedName())
+
+		// The MysqlCluster and MysqlDatabase are separate Custom Resources (CRs). We typically apply both CRs at the same time.
+		// If the MysqlCluster is not ready, the database creation will fail. The requeue time becomes exponential when an error is returned.
+		// Therefore, we return a nil error here and specify the RequeueAfter to avoid the exponential requeue time.
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
 	// reconcile database in mysql
