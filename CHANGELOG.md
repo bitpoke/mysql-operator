@@ -8,10 +8,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+### Changed
+### Removed
+### Fixed
+
+## [0.6.3] - 2023-05-22
+
+### Added
 
 * Add `mysql-operator.presslabs.org/resourceDeletionPolicy` annotation for `MysqlDatabase` and `MysqlUser`
 * Add `PtHeartbeatResources` in `.Spec.PodSpec` to allow the user specifying resources for pt-heartbeat.
 * Set `MysqlCluter.Spec.BackupSchedule` to empty string to disable recurrent backups
+* Add support for backing up to HDFS
 
 ### Changed
 
@@ -33,7 +41,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Orchestrator can't properly update or migrate when it more than one
 * Operator service account have no access to update mysqlbackups/status
 * Recurrent backup remote delete policy can not update according to the `cluster.Spec.BackupRemoteDeletePolicy`
-* When the operator is restarted, it will process the Pod list once to prevent the state of the pod from being changed automatically because it is not updated (especially if the pvc is full).
+* When the operator is restarted, it will process the Pod list once to prevent the state of the pod from being changed automatically because it is not updated (especially if the PVC is full).
 
 ## [0.6.2] - 2021-12-28
 
