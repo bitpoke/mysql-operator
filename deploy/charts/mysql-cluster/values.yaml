@@ -35,11 +35,17 @@ backupRemoteDeletePolicy:
 # backupSecretLabels: {}
 # backupSecretAnnotations: {}
 backupCredentials:
+  # use s3 https://rclone.org/s3/
+  # S3_PROVIDER: ?             # like: AWS, Minio, Ceph, and so on
+  # S3_ENDPOINT: ?
   # AWS_ACCESS_KEY_ID: ?
   # AWS_SECRET_ACCESS_KEY: ?
-  # AWS_REGION: us-east-1
+  # AWS_REGION: ?
   # AWS_ACL: ?
+  # AWS_STORAGE_CLASS: ?
+  # AWS_SESSION_TOKEN: ?
 
+  # use google cloud storage https://rclone.org/googlecloudstorage/
   # GCS_SERVICE_ACCOUNT_JSON_KEY: ?
   # GCS_PROJECT_ID: ?
   # GCS_OBJECT_ACL: ?
@@ -47,7 +53,18 @@ backupCredentials:
   # GCS_LOCATION: ?
   # GCS_STORAGE_CLASS: MULTI_REGIONAL
 
+  # use http https://rclone.org/http/
   # HTTP_URL: ?
+
+  # use google drive https://rclone.org/drive/
+  # GDRIVE_CLIENT_ID: ?
+  # GDRIVE_ROOT_FOLDER_ID: ?
+  # GDRIVE_IMPERSONATOR: ?
+
+  # use azure https://rclone.org/azureblob/
+  # AZUREBLOB_ACCOUNT: ?
+  # AZUREBLOB_KEY: ?
+
 ## For enabling and configuring pt-kill: https://www.percona.com/doc/percona-toolkit/LATEST/pt-kill.html
 #queryLimits:
 #  maxIdleTime: ...                # pt-kill --idle-time
