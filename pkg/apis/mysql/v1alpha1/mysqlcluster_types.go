@@ -179,15 +179,19 @@ type PodSpec struct {
 	ImagePullPolicy  core.PullPolicy             `json:"imagePullPolicy,omitempty"`
 	ImagePullSecrets []core.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	Labels             map[string]string         `json:"labels,omitempty"`
-	Annotations        map[string]string         `json:"annotations,omitempty"`
-	Resources          core.ResourceRequirements `json:"resources,omitempty"`
-	Affinity           *core.Affinity            `json:"affinity,omitempty"`
-	MysqlLifecycle     *core.Lifecycle           `json:"mysqlLifecycle,omitempty"`
-	NodeSelector       map[string]string         `json:"nodeSelector,omitempty"`
-	PriorityClassName  string                    `json:"priorityClassName,omitempty"`
-	Tolerations        []core.Toleration         `json:"tolerations,omitempty"`
-	ServiceAccountName string                    `json:"serviceAccountName,omitempty"`
+	Labels                map[string]string         `json:"labels,omitempty"`
+	Annotations           map[string]string         `json:"annotations,omitempty"`
+	Resources             core.ResourceRequirements `json:"resources,omitempty"`
+	Affinity              *core.Affinity            `json:"affinity,omitempty"`
+	MysqlLifecycle        *core.Lifecycle           `json:"mysqlLifecycle,omitempty"`
+	MySQLReadinessProbe   *core.Probe               `json:"mysqlReadinessProbe,omitempty"`
+	MySQLLivenessProbe    *core.Probe               `json:"mysqlLivenessProbe,omitempty"`
+	SidecarReadinessProbe *core.Probe               `json:"sidecarReadinessProbe,omitempty"`
+	ExporterLivenessProbe *core.Probe               `json:"exporterLivenessProbe,omitempty"`
+	NodeSelector          map[string]string         `json:"nodeSelector,omitempty"`
+	PriorityClassName     string                    `json:"priorityClassName,omitempty"`
+	Tolerations           []core.Toleration         `json:"tolerations,omitempty"`
+	ServiceAccountName    string                    `json:"serviceAccountName,omitempty"`
 
 	BackupAffinity          *core.Affinity    `json:"backupAffinity,omitempty"`
 	BackupNodeSelector      map[string]string `json:"backupNodeSelector,omitempty"`

@@ -721,6 +721,26 @@ func (in *PodSpec) DeepCopyInto(out *PodSpec) {
 		*out = new(v1.Lifecycle)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.MySQLReadinessProbe != nil {
+		in, out := &in.MySQLReadinessProbe, &out.MySQLReadinessProbe
+		*out = new(v1.Probe)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.MySQLLivenessProbe != nil {
+		in, out := &in.MySQLLivenessProbe, &out.MySQLLivenessProbe
+		*out = new(v1.Probe)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.SidecarReadinessProbe != nil {
+		in, out := &in.SidecarReadinessProbe, &out.SidecarReadinessProbe
+		*out = new(v1.Probe)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ExporterLivenessProbe != nil {
+		in, out := &in.ExporterLivenessProbe, &out.ExporterLivenessProbe
+		*out = new(v1.Probe)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.NodeSelector != nil {
 		in, out := &in.NodeSelector, &out.NodeSelector
 		*out = make(map[string]string, len(*in))
