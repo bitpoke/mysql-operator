@@ -8,6 +8,8 @@
 : "${DOCKER_PASSWORD:="$PLUGIN_DOCKER_PASSWORD"}"
 : "${DOCKER_REGISTRY:="${PLUGIN_DOCKER_REGISTRY:-docker.io}"}"
 
+DOCKER_REGISTRY_HOST="$(echo "${DOCKER_REGISTRY}" | awk 'BEGIN{ FS="/" }{print $1}')"
+
 export PATH="$CI_WORKSPACE/bin:$PATH"
 
 require_param() {
@@ -34,8 +36,8 @@ run() {
 
 if [ -n "$DOCKER_PASSWORD" ] ; then
     require_param DOCKER_USERNAME
-    echo "+ docker login $DOCKER_REGISTRY -u $DOCKER_USERNAME"
-    docker login "$DOCKER_REGISTRY" -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+    echo "+ docker login $DOCKER_REGISTRY_HOST -u $DOCKER_USERNAME"
+    echo "$DOCKER_PASSWORD" | docker login "$DOCKER_REGISTRY_HOST" -u "$DOCKER_USERNAME" --password-stdin
 fi
 
 if [ -n "$GOOGLE_CREDENTIALS" ] ; then

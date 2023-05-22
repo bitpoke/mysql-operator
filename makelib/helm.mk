@@ -35,10 +35,12 @@ HELM_INDEX := $(HELM_OUTPUT_DIR)/index.yaml
 
 # helm home
 HELM_HOME := $(abspath $(WORK_DIR)/helm)
+HELM_CHARTS_WORK_DIR := $(abspath $(WORK_DIR)/charts)
 export HELM_HOME
 
 # remove the leading `v` for helm chart versions
 HELM_CHART_VERSION := $(VERSION:v%=%)
+HELM_APP_VERSION ?= $(VERSION)
 
 # ====================================================================================
 # Tools install targets
@@ -56,16 +58,33 @@ $(HELM_HOME): $(HELM)
 $(HELM_OUTPUT_DIR):
 	@mkdir -p $(HELM_OUTPUT_DIR)
 
+$(HELM_CHARTS_WORK_DIR):
+	@mkdir -p $(HELM_CHARTS_WORK_DIR)
+
 define helm.chart
-$(HELM_OUTPUT_DIR)/$(1)-$(HELM_CHART_VERSION).tgz: $(HELM_HOME) $(HELM_OUTPUT_DIR) $(shell find $(HELM_CHARTS_DIR)/$(1) -type f)
+
+.helm.package.init.$(1): $(HELM_CHARTS_WORK_DIR)
+	@rm -rf $(HELM_CHARTS_WORK_DIR)/$(1)
+	@cp -a $(abspath $(HELM_CHARTS_DIR)/$(1)) $(HELM_CHARTS_WORK_DIR)/$(1)
+.helm.package.run.$(1): $(HELM_OUTPUT_DIR) $(HELM_HOME)
 	@$(INFO) helm package $(1) $(HELM_CHART_VERSION)
-	@$(HELM) package --version $(HELM_CHART_VERSION) --app-version $(HELM_CHART_VERSION) -d $(HELM_OUTPUT_DIR) $(abspath $(HELM_CHARTS_DIR)/$(1))
+	@$(HELM) package --version $(HELM_CHART_VERSION) --app-version $(HELM_APP_VERSION) -d $(HELM_OUTPUT_DIR) $(HELM_CHARTS_WORK_DIR)/$(1)
 	@$(OK) helm package $(1) $(HELM_CHART_VERSION)
+.helm.package.done.$(1): ; @:
+.helm.package.$(1):
+	@$(MAKE) .helm.package.init.$(1)
+	@$(MAKE) .helm.package.run.$(1)
+	@$(MAKE) .helm.package.done.$(1)
+
+.PHONY: .helm.package.init.$(1) .helm.package.run.$(1) .helm.package.done.$(1) .helm.package.$(1)
+
+$(HELM_OUTPUT_DIR)/$(1)-$(HELM_CHART_VERSION).tgz: $(HELM_HOME) $(HELM_OUTPUT_DIR) $(shell find $(HELM_CHARTS_DIR)/$(1) -type f)
 
 .PHONY: .helm.lint.$(1)
 .helm.lint.$(1): $(HELM_HOME)
 	@$(INFO) helm lint $(1)
 	@rm -rf $(abspath $(HELM_CHARTS_DIR)/$(1)/charts)
+	@$(HELM) dependency build $(abspath $(HELM_CHARTS_DIR)/$(1))
 	@$(HELM) lint $(abspath $(HELM_CHARTS_DIR)/$(1)) $(HELM_CHART_LINT_ARGS_$(1)) --strict || $$(FAIL)
 	@$(OK) helm lint $(1)
 
@@ -79,7 +98,7 @@ helm.lint: .helm.lint.$(1)
 
 helm.dep: .helm.dep.$(1)
 
-$(HELM_INDEX): $(HELM_OUTPUT_DIR)/$(1)-$(HELM_CHART_VERSION).tgz
+$(HELM_INDEX): .helm.package.$(1)
 endef
 $(foreach p,$(HELM_CHARTS),$(eval $(call helm.chart,$(p))))
 
