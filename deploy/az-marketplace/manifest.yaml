@@ -1,0 +1,11 @@
+applicationName: io.bitpoke.mysql-operator
+publisher: "Bitpoke"
+description: "Bitpoke Kubernetes operator for MySQL"
+version: 0.7.0
+helmChart: "../charts/mysql-operator"
+clusterArmTemplate: "./mainTemplate.json"
+uiDefinition: "./createUIDefinition.json"
+registryServer: "bitpoke.azurecr.io"
+extensionRegistrationParameters:
+  defaultScope: "cluster"
+  namespace: "bitpoke"

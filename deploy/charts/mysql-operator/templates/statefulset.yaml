@@ -15,6 +15,9 @@ spec:
   template:
     metadata:
       annotations:
+      {{- if .Values.global.azure.images }}
+        azure-extensions-usage-release-identifier: {{.Release.Name}}
+      {{- end }}
       {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -34,8 +37,12 @@ spec:
         - name: operator
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- if .Values.global.azure.images }}
+          image: "{{ .Values.global.azure.images.operator.registry }}/{{ .Values.global.azure.images.operator.image }}@{{ .Values.global.azure.images.operator.digest }}"
+          {{- else }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default $appVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- end }}
           ports:
             - containerPort: 8080
               name: prometheus
@@ -90,8 +97,12 @@ spec:
         - name: orchestrator
           securityContext:
             {{- toYaml .Values.orchestrator.securityContext | nindent 12 }}
+          {{- if .Values.global.azure.images }}
+          image: "{{ .Values.global.azure.images.orchestrator.registry }}/{{ .Values.global.azure.images.orchestrator.image }}@{{ .Values.global.azure.images.orchestrator.digest }}"
+          {{- else }}
           image: {{ .Values.orchestrator.image.repository }}:{{ .Values.orchestrator.image.tag | default .Chart.AppVersion }}
           imagePullPolicy: {{ .Values.orchestrator.image.pullPolicy }}
+          {{- end }}
           ports:
             - containerPort: 3000
               name: http
