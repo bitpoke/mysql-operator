@@ -221,7 +221,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-* [#422](https://github.com/presslabs/mysql-operator/pull/422) adds the `SidecarServerPort` to the
+* [#422](https://github.com/bitpoke/mysql-operator/pull/422) adds the `SidecarServerPort` to the
    `MasterService` and introduces one new service, HealthyReplicasService, so that we can try to
    clone from replicas first, then fall back to master.
 * Changed the connect timeout from the default of 30s to 5s so that an empty k8s service will not
@@ -282,7 +282,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 * Increase size of `value` column in `sys.operator` table (see
-   [#447](https://github.com/presslabs/mysql-operator/pull/447#issuecomment-572538559)) (fixes #446)
+   [#447](https://github.com/bitpoke/mysql-operator/pull/447#issuecomment-572538559)) (fixes #446)
 * Determine master logic: prevent to follow infinit loops
 
 ### Fixed
@@ -391,13 +391,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * fix #350 where no backups were created when one fails
 * fix #107, the orchestrator RAFT issue
 
-[Unreleased]: https://github.com/presslabs/mysql-operator/compare/v0.4.0...HEAD
-[0.3.8]: https://github.com/presslabs/mysql-operator/compare/v0.3.7...v0.3.8
-[0.3.7]: https://github.com/presslabs/mysql-operator/compare/v0.3.6...v0.3.7
-[0.3.6]: https://github.com/presslabs/mysql-operator/compare/v0.3.5...v0.3.6
-[0.3.5]: https://github.com/presslabs/mysql-operator/compare/v0.3.4...v0.3.5
-[0.3.4]: https://github.com/presslabs/mysql-operator/compare/v0.3.3...v0.3.4
-[0.3.3]: https://github.com/presslabs/mysql-operator/compare/v0.3.2...v0.3.3
-[0.3.2]: https://github.com/presslabs/mysql-operator/compare/v0.3.1...v0.3.2
-[0.3.1]: https://github.com/presslabs/mysql-operator/compare/v0.3.0...v0.3.1
-[0.3.0]: https://github.com/presslabs/mysql-operator/compare/v0.2.10...v0.3.0
+[Unreleased]: https://github.com/bitpoke/mysql-operator/compare/v0.4.0...HEAD
+[0.3.8]: https://github.com/bitpoke/mysql-operator/compare/v0.3.7...v0.3.8
+[0.3.7]: https://github.com/bitpoke/mysql-operator/compare/v0.3.6...v0.3.7
+[0.3.6]: https://github.com/bitpoke/mysql-operator/compare/v0.3.5...v0.3.6
+[0.3.5]: https://github.com/bitpoke/mysql-operator/compare/v0.3.4...v0.3.5
+[0.3.4]: https://github.com/bitpoke/mysql-operator/compare/v0.3.3...v0.3.4
+[0.3.3]: https://github.com/bitpoke/mysql-operator/compare/v0.3.2...v0.3.3
+[0.3.2]: https://github.com/bitpoke/mysql-operator/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/bitpoke/mysql-operator/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/bitpoke/mysql-operator/compare/v0.2.10...v0.3.0

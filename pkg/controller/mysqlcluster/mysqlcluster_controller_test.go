@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2018 Pressinfra SRL
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -109,7 +110,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			cluster = mysqlcluster.New(&api.MysqlCluster{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns,
 					Annotations: map[string]string{
-						"mysql.presslabs.org/version": "300",
+						"mysql.bitpoke.io/version": "300",
 					},
 				},
 				Spec: api.MysqlClusterSpec{
@@ -433,7 +434,7 @@ var _ = Describe("MysqlCluster controller", func() {
 			cluster = mysqlcluster.New(&api.MysqlCluster{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns,
 					Annotations: map[string]string{
-						"mysql.presslabs.org/version": "300",
+						"mysql.bitpoke.io/version": "300",
 					},
 				},
 				Spec: api.MysqlClusterSpec{

@@ -3,11 +3,11 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
-  name: mysqldatabases.mysql.presslabs.org
+  name: mysqldatabases.mysql.bitpoke.io
   labels:
     app.kubernetes.io/name: mysql-operator
 spec:
-  group: mysql.presslabs.org
+  group: mysql.bitpoke.io
   names:
     kind: MysqlDatabase
     listKind: MysqlDatabaseList

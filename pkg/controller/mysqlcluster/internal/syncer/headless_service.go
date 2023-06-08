@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2018 Pressinfra SRL
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,14 +42,14 @@ func NewHeadlessSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 		// add general labels to this service
 		service.Labels = map[string]string{
 			"app.kubernetes.io/name":       "mysql",
-			"app.kubernetes.io/managed-by": "mysql.presslabs.org",
+			"app.kubernetes.io/managed-by": "mysql.bitpoke.io",
 		}
-		service.Labels["mysql.presslabs.org/service-type"] = "namespace-nodes"
+		service.Labels["mysql.bitpoke.io/service-type"] = "namespace-nodes"
 
 		service.Spec.ClusterIP = "None"
 		service.Spec.Selector = labels.Set{
 			"app.kubernetes.io/name":       "mysql",
-			"app.kubernetes.io/managed-by": "mysql.presslabs.org",
+			"app.kubernetes.io/managed-by": "mysql.bitpoke.io",
 		}
 		// we want to be able to access pods even if the pod is not ready because the operator should update
 		// the in memory table to mark the pod ready.

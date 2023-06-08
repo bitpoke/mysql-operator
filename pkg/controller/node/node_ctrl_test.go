@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2019 Pressinfra SRL
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,7 +90,7 @@ var _ = Describe("MysqlNode controller", func() {
 					Name:      fmt.Sprintf("cluster-%d", rand.Int31()),
 					Namespace: "default",
 					Annotations: map[string]string{
-						"mysql.presslabs.org/version": "300",
+						"mysql.bitpoke.io/version": "300",
 					},
 				},
 				Spec: api.MysqlClusterSpec{
@@ -206,7 +207,7 @@ func getOrCreatePod(c client.Client, cluster *mysqlcluster.MysqlCluster, index i
 				Name:      fmt.Sprintf("%s-%d", cluster.GetNameForResource(mysqlcluster.StatefulSet), index),
 				Namespace: cluster.Namespace,
 				Labels: map[string]string{
-					"app.kubernetes.io/managed-by": "mysql.presslabs.org",
+					"app.kubernetes.io/managed-by": "mysql.bitpoke.io",
 				},
 			},
 			Spec: corev1.PodSpec{

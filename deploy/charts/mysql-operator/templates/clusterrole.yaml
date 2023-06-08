@@ -73,7 +73,7 @@ rules:
     - update
     - watch
 - apiGroups:
-    - mysql.presslabs.org
+    - mysql.bitpoke.io
   resources:
     - mysqlbackups
     - mysqlbackups/finalizers
@@ -87,7 +87,7 @@ rules:
     - update
     - watch
 - apiGroups:
-    - mysql.presslabs.org
+    - mysql.bitpoke.io
   resources:
     - mysqlclusters
     - mysqlclusters/finalizers
@@ -101,7 +101,7 @@ rules:
     - update
     - watch
 - apiGroups:
-    - mysql.presslabs.org
+    - mysql.bitpoke.io
   resources:
     - mysqldatabases
     - mysqldatabases/finalizers
@@ -115,7 +115,7 @@ rules:
     - update
     - watch
 - apiGroups:
-    - mysql.presslabs.org
+    - mysql.bitpoke.io
   resources:
     - mysqlusers
     - mysqlusers/status

@@ -33,7 +33,7 @@ annotations:
   artifacthub.io/crds: |
     - kind: MySQLCluster
       version: v1alpha1
-      name: mysqlclusters.mysql.presslabs.org
+      name: mysqlclusters.mysql.bitpoke.io
       displayName: MySQLCluster
       description: Represents a MySQL cluster managed by Bitpoke's Operator for MySQL.
   artifacthub.io/crdsExamples: |

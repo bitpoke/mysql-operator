@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2018 Pressinfra SRL
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,7 +43,7 @@ type MysqlCluster struct {
 
 // NodeInitializedConditionType is the extended new pod condition that marks the pod as initialized from MySQL
 // point of view.
-const NodeInitializedConditionType core.PodConditionType = "mysql.presslabs.org/NodeInitialized"
+const NodeInitializedConditionType core.PodConditionType = "mysql.bitpoke.io/NodeInitialized"
 
 // New returns a wrapper for mysqlcluster
 func New(mc *api.MysqlCluster) *MysqlCluster {
@@ -70,13 +71,13 @@ func (c *MysqlCluster) GetLabels() labels.Set {
 	}
 
 	labels := labels.Set{
-		"mysql.presslabs.org/cluster": c.Name,
+		"mysql.bitpoke.io/cluster": c.Name,
 
 		"app.kubernetes.io/name":       "mysql",
 		"app.kubernetes.io/instance":   instance,
 		"app.kubernetes.io/version":    c.GetMySQLSemVer().String(),
 		"app.kubernetes.io/component":  component,
-		"app.kubernetes.io/managed-by": "mysql.presslabs.org",
+		"app.kubernetes.io/managed-by": "mysql.bitpoke.io",
 	}
 
 	if part, ok := c.Annotations["app.kubernetes.io/part-of"]; ok {
@@ -89,10 +90,10 @@ func (c *MysqlCluster) GetLabels() labels.Set {
 // GetSelectorLabels returns the labels that will be used as selector
 func (c *MysqlCluster) GetSelectorLabels() labels.Set {
 	return labels.Set{
-		"mysql.presslabs.org/cluster": c.Name,
+		"mysql.bitpoke.io/cluster": c.Name,
 
 		"app.kubernetes.io/name":       "mysql",
-		"app.kubernetes.io/managed-by": "mysql.presslabs.org",
+		"app.kubernetes.io/managed-by": "mysql.bitpoke.io",
 	}
 }
 

@@ -2,10 +2,10 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/mysql.presslabs.org_mysqlclusters.yaml
-- bases/mysql.presslabs.org_mysqlbackups.yaml
-- bases/mysql.presslabs.org_mysqlusers.yaml
-- bases/mysql.presslabs.org_mysqldatabases.yaml
+- bases/mysql.bitpoke.io_mysqlclusters.yaml
+- bases/mysql.bitpoke.io_mysqlbackups.yaml
+- bases/mysql.bitpoke.io_mysqlusers.yaml
+- bases/mysql.bitpoke.io_mysqldatabases.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

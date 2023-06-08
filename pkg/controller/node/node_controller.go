@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2019 Pressinfra SRL
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,7 +55,7 @@ const mysqlReconciliationTimeout = 5 * time.Second
 
 // skipGTIDPurgedAnnotations, if this annotations is set on the cluster then the node controller skip setting GTID_PURGED variable.
 // this is the case for the upgrade when the old cluster has already set GTID_PURGED
-const skipGTIDPurgedAnnotation = "mysql.presslabs.org/skip-gtid-purged"
+const skipGTIDPurgedAnnotation = "mysql.bitpoke.io/skip-gtid-purged"
 
 // Add creates a new MysqlCluster Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -87,7 +88,7 @@ func isOwnedByMySQL(meta metav1.Object) bool {
 
 	labels := meta.GetLabels()
 	if val, ok := labels["app.kubernetes.io/managed-by"]; ok {
-		return val == "mysql.presslabs.org"
+		return val == "mysql.bitpoke.io"
 	}
 
 	return false
@@ -425,7 +426,7 @@ func podCondIndex(p *corev1.Pod, condType corev1.PodConditionType) (int, bool) {
 func shouldUpdateToVersion(cluster *mysqlcluster.MysqlCluster, targetVersion int) bool {
 	var version string
 	var ok bool
-	if version, ok = cluster.ObjectMeta.Annotations["mysql.presslabs.org/version"]; !ok {
+	if version, ok = cluster.ObjectMeta.Annotations["mysql.bitpoke.io/version"]; !ok {
 		// no version annotation present, (it's a cluster older than 0.3.0) or it's a new cluster
 		log.Info("annotation not set on cluster", "key", cluster)
 		return true

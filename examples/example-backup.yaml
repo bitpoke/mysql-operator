@@ -1,4 +1,4 @@
-apiVersion: mysql.presslabs.org/v1alpha1
+apiVersion: mysql.bitpoke.io/v1alpha1
 kind: MysqlBackup
 metadata:
   name: my-cluster-backup

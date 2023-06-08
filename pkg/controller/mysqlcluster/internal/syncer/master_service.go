@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2018 Pressinfra SRL
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +39,7 @@ func NewMasterSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysqlc
 	return syncer.NewObjectSyncer("MasterSVC", cluster.Unwrap(), service, c, func() error {
 		// set service labels
 		service.Labels = cluster.GetLabels()
-		service.Labels["mysql.presslabs.org/service-type"] = "master"
+		service.Labels["mysql.bitpoke.io/service-type"] = "master"
 
 		// set selectors for master node
 		service.Spec.Selector = cluster.GetSelectorLabels()

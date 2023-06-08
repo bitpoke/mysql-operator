@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2018 Pressinfra SRL
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,7 +41,7 @@ import (
 
 const (
 	// RemoteStorageFinalizer is the finalizer name used when hardDelete policy is used
-	RemoteStorageFinalizer = "backups.mysql.presslabs.org/remote-storage-cleanup"
+	RemoteStorageFinalizer = "backups.mysql.bitpoke.io/remote-storage-cleanup"
 
 	// RemoteDeletionFailedEvent is the event that is set on the cluster when the cleanup job fails
 	RemoteDeletionFailedEvent = "RemoteDeletionFailed"

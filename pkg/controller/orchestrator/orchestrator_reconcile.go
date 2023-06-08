@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2018 Pressinfra SRL
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -672,7 +673,7 @@ func instToLog(inst *orc.Instance) map[string]string {
 }
 
 func shouldRemoveOldNode(node *api.NodeStatus, cluster *mysqlcluster.MysqlCluster) bool {
-	if version, ok := cluster.ObjectMeta.Annotations["mysql.presslabs.org/version"]; ok && version == "300" {
+	if version, ok := cluster.ObjectMeta.Annotations["mysql.bitpoke.io/version"]; ok && version == "300" {
 		return strings.Contains(node.Name, "-mysql-nodes")
 	}
 

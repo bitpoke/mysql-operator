@@ -7,7 +7,7 @@ type MysqlResourceDeletionPolicy string
 
 const (
 	// MysqlResourceDeletionPolicyAnnotationKey delete policy key defined
-	MysqlResourceDeletionPolicyAnnotationKey = "mysql-operator.presslabs.org/resourceDeletionPolicy"
+	MysqlResourceDeletionPolicyAnnotationKey = "mysql-operator.bitpoke.io/resourceDeletionPolicy"
 	// MysqlResourceDeletionPolicyDelete delete policy delete
 	MysqlResourceDeletionPolicyDelete = MysqlResourceDeletionPolicy("delete")
 	// MysqlResourceDeletionPolicyRetain delete policy retain

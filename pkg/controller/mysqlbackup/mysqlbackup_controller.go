@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2018 Pressinfra SRL
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -101,7 +102,7 @@ type ReconcileMysqlBackup struct {
 
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlbackups;mysqlbackups/status;mysqlbackups/finalizers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=mysql.bitpoke.io,resources=mysqlbackups;mysqlbackups/status;mysqlbackups/finalizers,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reads that state of the cluster for a MysqlBackup object and makes changes based on the state read
 // and what is in the MysqlBackup.Spec

@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2018 Pressinfra SRL
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +39,7 @@ func NewHealthyReplicasSVCSyncer(c client.Client, scheme *runtime.Scheme, cluste
 	return syncer.NewObjectSyncer("HealthyReplicasSVC", cluster.Unwrap(), service, c, func() error {
 		// set service labels
 		service.Labels = cluster.GetLabels()
-		service.Labels["mysql.presslabs.org/service-type"] = "ready-replicas"
+		service.Labels["mysql.bitpoke.io/service-type"] = "ready-replicas"
 
 		// set selectors for healthy replica (non-master) mysql pods only
 		service.Spec.Selector = cluster.GetSelectorLabels()

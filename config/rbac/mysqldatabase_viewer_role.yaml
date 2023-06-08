@@ -5,7 +5,7 @@ metadata:
   name: mysqldatabase-viewer-role
 rules:
 - apiGroups:
-  - mysql.presslabs.org
+  - mysql.bitpoke.io
   resources:
   - mysqldatabases
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - mysql.presslabs.org
+  - mysql.bitpoke.io
   resources:
   - mysqldatabases/status
   verbs:

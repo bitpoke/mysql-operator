@@ -1,9 +1,9 @@
-apiVersion: mysql.presslabs.org/v1alpha1
+apiVersion: mysql.bitpoke.io/v1alpha1
 kind: MysqlDatabase
 metadata:
   name: my-database
 #  annotations:
-#    mysql-operator.presslabs.org/resourceDeletionPolicy: retain # When the MysqlDatabase is deleted, the MySQL DB will be preserved
+#    mysql-operator.bitpoke.io/resourceDeletionPolicy: retain # When the MysqlDatabase is deleted, the MySQL DB will be preserved
 spec:
   database: db-name-in-mysql
   clusterRef:

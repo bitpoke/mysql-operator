@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2018 Pressinfra SRL
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -233,8 +234,8 @@ func (f *Framework) ReadSQLTest(cluster *api.MysqlCluster, pod int, pw string) s
 // GetClusterLabels returns labels.Set for the given cluster
 func GetClusterLabels(cluster *api.MysqlCluster) labels.Set {
 	labels := labels.Set{
-		"mysql.presslabs.org/cluster": cluster.Name,
-		"app.kubernetes.io/name":      "mysql",
+		"mysql.bitpoke.io/cluster": cluster.Name,
+		"app.kubernetes.io/name":   "mysql",
 	}
 
 	return labels

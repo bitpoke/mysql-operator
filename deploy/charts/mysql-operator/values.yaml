@@ -129,7 +129,7 @@ mysqlClustersGlobalServiceMonitor:
     any: true
   selector:
     matchLabels:
-      app.kubernetes.io/managed-by: mysql.presslabs.org
+      app.kubernetes.io/managed-by: mysql.bitpoke.io
       app.kubernetes.io/name: mysql
 
 orchestrator:

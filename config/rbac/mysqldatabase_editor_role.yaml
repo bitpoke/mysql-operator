@@ -5,7 +5,7 @@ metadata:
   name: mysqldatabase-editor-role
 rules:
 - apiGroups:
-  - mysql.presslabs.org
+  - mysql.bitpoke.io
   resources:
   - mysqldatabases
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - mysql.presslabs.org
+  - mysql.bitpoke.io
   resources:
   - mysqldatabases/status
   verbs:

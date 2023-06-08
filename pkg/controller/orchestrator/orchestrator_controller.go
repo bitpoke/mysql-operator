@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2018 Pressinfra SRL
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,7 +53,7 @@ const (
 
 	// OrchestratorFinalizer is set when the cluster is registered in
 	// orchestrator and is removed when no nodes are in orchestrator
-	OrchestratorFinalizer = "mysql.presslabs.org/registered-in-orchestrator"
+	OrchestratorFinalizer = "mysql.bitpoke.io/registered-in-orchestrator"
 
 	// OldOrchestratorFinalizer is the old finalizer name that is DEPRECATED
 	OldOrchestratorFinalizer = "OrchestratorFinalizer"

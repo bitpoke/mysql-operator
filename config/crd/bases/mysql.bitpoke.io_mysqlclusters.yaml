@@ -3,11 +3,10 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
-  name: mysqlclusters.mysql.presslabs.org
-  labels:
-    app.kubernetes.io/name: mysql-operator
+  creationTimestamp: null
+  name: mysqlclusters.mysql.bitpoke.io
 spec:
-  group: mysql.presslabs.org
+  group: mysql.bitpoke.io
   names:
     kind: MysqlCluster
     listKind: MysqlClusterList
@@ -4010,3 +4009,9 @@ spec:
           statusReplicasPath: .status.readyNodes
         status: {}
   preserveUnknownFields: false
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2018 Pressinfra SRL
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +42,7 @@ var log = logf.Log.WithName("upgrades.cluster")
 
 const (
 	// VersionAnnotation represents the annotation used to annotate a cluster to it's version
-	VersionAnnotation = "mysql.presslabs.org/version"
+	VersionAnnotation = "mysql.bitpoke.io/version"
 )
 
 // Interface represents the upgrader interface

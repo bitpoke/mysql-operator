@@ -1,4 +1,5 @@
 /*
+Copyright 2023 Bitpoke Soft SRL
 Copyright 2020 Pressinfra SRL.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,7 +48,7 @@ import (
 
 const (
 	controllerName = "mysql-user"
-	userFinalizer  = "mysql-operator.presslabs.org/user"
+	userFinalizer  = "mysql-operator.bitpoke.io/user"
 )
 
 var log = logf.Log.WithName("controller.mysql-user")
@@ -67,7 +68,7 @@ type ReconcileMySQLUser struct {
 var _ reconcile.Reconciler = &ReconcileMySQLUser{}
 
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
-// +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlusers;mysqlusers/status,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=mysql.bitpoke.io,resources=mysqlusers;mysqlusers/status,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reads that state of the cluster for a MysqlUser object and makes changes based on the state read
 // and what is in the MysqlUser.Spec
