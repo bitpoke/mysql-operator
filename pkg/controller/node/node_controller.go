@@ -114,6 +114,8 @@ func isRunning(obj runtime.Object) bool {
 var NodeGenericEvents = make(chan event.GenericEvent, 1024)
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
+//
+//nolint:gocyclo
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
 	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
