@@ -19,7 +19,11 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"github.com/bitpoke/mysql-operator/pkg/controller/node"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"regexp"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"strconv"
 	"strings"
 	"time"
@@ -50,6 +54,7 @@ const (
 
 type orcUpdater struct {
 	cluster   *mysqlcluster.MysqlCluster
+	client    client.Client
 	recorder  record.EventRecorder
 	orcClient orc.Interface
 
@@ -57,8 +62,9 @@ type orcUpdater struct {
 }
 
 // NewOrcUpdater returns a syncer that updates cluster status from orchestrator.
-func NewOrcUpdater(cluster *mysqlcluster.MysqlCluster, r record.EventRecorder, orcClient orc.Interface) syncer.Interface {
+func NewOrcUpdater(cluster *mysqlcluster.MysqlCluster, r record.EventRecorder, orcClient orc.Interface, client client.Client) syncer.Interface {
 	return &orcUpdater{
+		client:    client,
 		cluster:   cluster,
 		recorder:  r,
 		orcClient: orcClient,
@@ -322,6 +328,25 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) (InstancesSet, []
 					Port:     mysqlPort,
 				}
 				shouldDiscover = append(shouldDiscover, hostKey)
+				go func(i int) {
+					// check if the pod is running
+					// if pod is running, we should gen a event to let the replica reconnect to the master
+					pod := &core.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-mysql-%d", ou.cluster.Name, i),
+							Namespace: ou.cluster.Namespace,
+						},
+					}
+					err := ou.client.Get(context.Background(), client.ObjectKeyFromObject(pod), pod)
+					if err != nil {
+						return
+					}
+					if pod.Status.Phase == core.PodRunning {
+						node.NodeGenericEvents <- event.GenericEvent{
+							Object: pod,
+						}
+					}
+				}(i)
 			}
 		} else {
 			// this instance is present in both k8s and orchestrator

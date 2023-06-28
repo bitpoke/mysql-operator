@@ -57,7 +57,7 @@ func (c *MysqlCluster) Unwrap() *api.MysqlCluster {
 }
 
 // GetLabels returns cluster labels
-func (c *MysqlCluster) GetLabels() labels.Set {
+func (c *MysqlCluster) GetLabels() map[string]string {
 
 	instance := c.Name
 	if inst, ok := c.Annotations["app.kubernetes.io/instance"]; ok {

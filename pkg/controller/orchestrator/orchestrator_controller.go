@@ -212,7 +212,7 @@ func (r *ReconcileMysqlCluster) Reconcile(ctx context.Context, request reconcile
 
 	// TODO no sync should be triggered if no replica is available
 
-	orcSyncer := NewOrcUpdater(cluster, r.recorder, r.orcClient)
+	orcSyncer := NewOrcUpdater(cluster, r.recorder, r.orcClient, r.Client)
 	if err := syncer.Sync(context.TODO(), orcSyncer, r.recorder); err != nil {
 		return reconcile.Result{}, err
 	}

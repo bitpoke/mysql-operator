@@ -110,6 +110,9 @@ func isRunning(obj runtime.Object) bool {
 	return pod.Status.Phase == corev1.PodRunning
 }
 
+// NodeGenericEvents is for do something by otherController
+var NodeGenericEvents = make(chan event.GenericEvent, 1024)
+
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
@@ -138,6 +141,29 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
+
+	// create source channel that listen for events on events chan
+	events := make(chan event.GenericEvent, 1024)
+	chSource := source.Channel{Source: events}
+
+	// watch for events on channel `events`
+	if err = c.Watch(&chSource, &handler.EnqueueRequestForObject{}); err != nil {
+		return err
+	}
+
+	// create a runnable function that dispatches events to events channel
+	// this runnableFunc is passed to the manager that starts it.
+	var f manager.RunnableFunc = func(ctx context.Context) error {
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case genericEvent := <-NodeGenericEvents:
+				events <- genericEvent
+			}
+		}
+	}
+	err = mgr.Add(f)
 
 	return nil
 }
