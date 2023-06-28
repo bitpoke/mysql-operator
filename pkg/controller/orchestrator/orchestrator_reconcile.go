@@ -19,25 +19,24 @@ package orchestrator
 import (
 	"context"
 	"fmt"
-	"github.com/bitpoke/mysql-operator/pkg/controller/node"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"regexp"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"strconv"
 	"strings"
 	"time"
 
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/controller/node"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	orc "github.com/bitpoke/mysql-operator/pkg/orchestrator"
 	"github.com/go-logr/logr"
 	logf "github.com/presslabs/controller-util/log"
 	"github.com/presslabs/controller-util/syncer"
 	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
-
-	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
-	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
-	orc "github.com/bitpoke/mysql-operator/pkg/orchestrator"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
 const (

@@ -163,9 +163,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			}
 		}
 	}
-	err = mgr.Add(f)
 
-	return nil
+	return mgr.Add(f)
 }
 
 var _ reconcile.Reconciler = &ReconcileMysqlNode{}
