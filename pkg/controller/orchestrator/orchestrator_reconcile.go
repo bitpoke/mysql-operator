@@ -329,6 +329,9 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) (InstancesSet, []
 				}
 				shouldDiscover = append(shouldDiscover, hostKey)
 				go func(i int) {
+					if ou.client == nil {
+						return
+					}
 					// check if the pod is running
 					// if pod is running, we should gen a event to let the replica reconnect to the master
 					pod := &core.Pod{
