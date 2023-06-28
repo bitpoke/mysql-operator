@@ -67,7 +67,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 			},
 		})
 
-		orcSyncer = NewOrcUpdater(cluster, rec, orcClient)
+		orcSyncer = NewOrcUpdater(cluster, rec, orcClient, nil)
 	})
 
 	When("cluster does not exists in orchestrator", func() {
@@ -372,7 +372,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 		)
 
 		BeforeEach(func() {
-			updater = NewOrcUpdater(cluster, rec, orcClient).(*orcUpdater)
+			updater = NewOrcUpdater(cluster, rec, orcClient, nil).(*orcUpdater)
 			// set cluster on readonly, master should be in read only state
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
@@ -564,7 +564,7 @@ var _ = Describe("Orchestrator reconciler", func() {
 		)
 
 		BeforeEach(func() {
-			updater = NewOrcUpdater(cluster, rec, orcClient).(*orcUpdater)
+			updater = NewOrcUpdater(cluster, rec, orcClient, nil).(*orcUpdater)
 			// set cluster on readonly, master should be in read only state
 			orcClient.AddInstance(orc.Instance{
 				ClusterName: cluster.GetClusterAlias(),
