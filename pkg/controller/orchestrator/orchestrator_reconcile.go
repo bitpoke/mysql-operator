@@ -24,10 +24,7 @@ import (
 	"strings"
 	"time"
 
-	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/bitpoke/mysql-operator/pkg/controller/node"
-	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
-	orc "github.com/bitpoke/mysql-operator/pkg/orchestrator"
 	"github.com/go-logr/logr"
 	logf "github.com/presslabs/controller-util/log"
 	"github.com/presslabs/controller-util/syncer"
@@ -37,6 +34,10 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+
+	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
+	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
+	orc "github.com/bitpoke/mysql-operator/pkg/orchestrator"
 )
 
 const (
