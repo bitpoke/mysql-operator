@@ -305,6 +305,7 @@ func (ou *orcUpdater) updateClusterFailoverInProgressStatus(master *orc.Instance
 
 // updateNodesInOrc is the functions that tries to register
 // unregistered nodes and to remove nodes that does not exists.
+// nolint:gocyclo
 func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) (InstancesSet, []orc.InstanceKey, []orc.InstanceKey) {
 	var (
 		// hosts that should be discovered
