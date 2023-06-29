@@ -28,8 +28,10 @@ import (
 	logf "github.com/presslabs/controller-util/log"
 	"github.com/presslabs/controller-util/syncer"
 	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/bitpoke/mysql-operator/pkg/internal/mysqlcluster"
@@ -49,6 +51,7 @@ const (
 )
 
 type orcUpdater struct {
+	client    client.Client
 	cluster   *mysqlcluster.MysqlCluster
 	recorder  record.EventRecorder
 	orcClient orc.Interface
@@ -57,8 +60,9 @@ type orcUpdater struct {
 }
 
 // NewOrcUpdater returns a syncer that updates cluster status from orchestrator.
-func NewOrcUpdater(cluster *mysqlcluster.MysqlCluster, r record.EventRecorder, orcClient orc.Interface) syncer.Interface {
+func NewOrcUpdater(cluster *mysqlcluster.MysqlCluster, r record.EventRecorder, orcClient orc.Interface, client client.Client) syncer.Interface {
 	return &orcUpdater{
+		client:    client,
 		cluster:   cluster,
 		recorder:  r,
 		orcClient: orcClient,
@@ -322,6 +326,13 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) (InstancesSet, []
 					Port:     mysqlPort,
 				}
 				shouldDiscover = append(shouldDiscover, hostKey)
+				// When a pod is detected that has not changed and needs to be joined
+				// we restart it to trigger a state change of the pod and rejoin the cluster.
+				podName := fmt.Sprintf("%s-%d", ou.cluster.GetNameForResource(mysqlcluster.StatefulSet), i)
+				err := ou.restartPod(ou.cluster.Namespace, fmt.Sprintf("%s-%d", podName))
+				if err != nil {
+					ou.log.Error(err, "restart failed:", "pod", podName)
+				}
 			}
 		} else {
 			// this instance is present in both k8s and orchestrator
@@ -345,6 +356,38 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) (InstancesSet, []
 		toRemove = append(toRemove, i.Key)
 	}
 	return readyInstances, []orc.InstanceKey{}, toRemove
+}
+
+// restartPod - restart Pod to trigger a state change of the pod and rejoin the cluster.
+func (ou *orcUpdater) restartPod(nameSpace, podName string) error {
+	pod := &core.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podName,
+			Namespace: nameSpace,
+		},
+	}
+	err := ou.client.Get(context.Background(), client.ObjectKeyFromObject(pod), pod)
+	if err != nil {
+		return err
+	}
+	if pod.Status.Phase == core.PodRunning {
+		readyNum := 0
+		for _, con := range pod.Status.Conditions {
+			if con.Type == core.PodReady && con.Status == core.ConditionTrue {
+				readyNum++
+			}
+			if con.Type == "mysql.presslabs.org/NodeInitialized" && con.Status == core.ConditionTrue {
+				readyNum++
+			}
+			if con.Type == "Initialized" && con.Status == core.ConditionTrue {
+				readyNum++
+			}
+		}
+		if readyNum == 3 {
+			return ou.client.Delete(context.Background(), pod)
+		}
+	}
+	return nil
 }
 
 func (ou *orcUpdater) forgetNodesFromOrc(keys []orc.InstanceKey) {
