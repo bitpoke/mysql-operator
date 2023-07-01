@@ -37,6 +37,9 @@ spec:
                 backupURL:
                   description: BackupURL represents the URL to the backup location, this can be partially specifyied. Default is used the one specified in the cluster.
                   type: string
+                candidateNode:
+                  description: CandidateNode is the node host that will be used to take the backup. If not set or set to wrong node, the operator will calculate candidate node by itself.
+                  type: string
                 clusterName:
                   description: ClustterName represents the cluster for which to take backup
                   type: string

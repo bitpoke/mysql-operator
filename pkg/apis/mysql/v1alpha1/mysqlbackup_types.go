@@ -44,6 +44,11 @@ type MysqlBackupSpec struct {
 	// default it's used softDelete.
 	// +optional
 	RemoteDeletePolicy DeletePolicy `json:"remoteDeletePolicy,omitempty"`
+
+	// CandidateNode is the node host that will be used to take the backup.
+	// If not set or set to wrong node, the operator will calculate candidate node by itself.
+	// +optional
+	CandidateNode string `json:"candidateNode,omitempty"`
 }
 
 // BackupCondition defines condition struct for backup resource
@@ -94,7 +99,6 @@ type MysqlBackupStatus struct {
 
 // MysqlBackup is the Schema for the mysqlbackups API
 // +kubebuilder:object:root=true
-//
 type MysqlBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -105,7 +109,6 @@ type MysqlBackup struct {
 
 // MysqlBackupList contains a list of MysqlBackup
 // +kubebuilder:object:root=true
-//
 type MysqlBackupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

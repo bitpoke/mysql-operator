@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+ * Add `CandidateNode` field in `MysqlBackup.Spec` to allow the user specifying candidate node for backup.
+
 ### Changed
 ### Removed
 ### Fixed
@@ -15,7 +17,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.6.3] - 2023-05-22
 
 ### Added
-
 * `MysqlDatabase` `MysqlUser` Add delete policy
 * Add `PtHeartbeatResources` in `.Spec.PodSpec` to allow the user specifying resources for pt-heartbeat.
 * Set `MysqlCluter.Spec.BackupSchedule` to empty string to disable recurrent backups
