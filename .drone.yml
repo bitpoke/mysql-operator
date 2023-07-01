@@ -17,32 +17,32 @@ steps:
     tags: true
 
 - name: install dependencies
-  image: docker.io/bitpoke/build:v0.7.0
+  image: docker.io/bitpoke/build:v0.8.3
   commands:
   - make -j4 build.tools
 
 - name: verify generated code
-  image: docker.io/bitpoke/build:v0.7.0
+  image: docker.io/bitpoke/build:v0.8.3
   commands:
   - make generate
   - git diff --exit-code
 
 - name: lint
-  image: docker.io/bitpoke/build:v0.7.0
+  image: docker.io/bitpoke/build:v0.8.3
   commands:
   - make -j4 lint
 
 - name: test
-  image: docker.io/bitpoke/build:v0.7.0
+  image: docker.io/bitpoke/build:v0.8.3
   environment:
     ACK_GINKGO_DEPRECATIONS: 1.16.4
   commands:
   - make test
 
 - name: build
-  image: docker.io/bitpoke/build:v0.7.0
+  image: docker.io/bitpoke/build:v0.8.3
   commands:
-  - make -j4 build
+  - make build
 
 services:
 - name: docker
@@ -80,12 +80,12 @@ steps:
     tags: true
 
 - name: build
-  image: docker.io/bitpoke/build:v0.7.0
+  image: docker.io/bitpoke/build:v0.8.3
   commands:
-  - make -j4 build
+  - make build
 
 - name: publish
-  image: docker.io/bitpoke/build:v0.7.0
+  image: docker.io/bitpoke/build:v0.8.3
   environment:
     DOCKER_REGISTRY: docker.io/bitpoke
     DOCKER_USERNAME: bitpokebot
@@ -135,7 +135,7 @@ steps:
     tags: true
 
 - name: create gke cluster
-  image: docker.io/bitpoke/build:v0.7.0
+  image: docker.io/bitpoke/build:v0.8.3
   environment: &e2eEnvironment
     # set version in stone, as we need stable tags for e2e testing
     VERSION: ${DRONE_COMMIT}
@@ -151,12 +151,12 @@ steps:
   - gcloud container clusters create $CLUSTER_NAME
       --zone $GOOGLE_CLOUD_ZONE
       --preemptible
-      --cluster-version 1.19
+      --cluster-version 1.25
       --addons=GcePersistentDiskCsiDriver
       --monitoring=NONE
 
 - name: build
-  image: docker.io/bitpoke/build:v0.7.0
+  image: docker.io/bitpoke/build:v0.8.3
   volumes:
   - name: dockersock
     path: /var/run
@@ -167,7 +167,7 @@ steps:
     - git
 
 - name: publish e2e images
-  image: docker.io/bitpoke/build:v0.7.0
+  image: docker.io/bitpoke/build:v0.8.3
   environment:
     <<: *e2eEnvironment
   commands:
@@ -178,7 +178,7 @@ steps:
     - build
 
 - name: e2e test
-  image: docker.io/bitpoke/build:v0.7.0
+  image: docker.io/bitpoke/build:v0.8.3
   environment:
     <<: *e2eEnvironment
     GOOGLE_CLOUD_CLUSTER: mysql-operator-e2e-testing-${DRONE_COMMIT:0:8}
@@ -191,7 +191,7 @@ steps:
     - create gke cluster
 
 - name: delete gke cluster
-  image: docker.io/bitpoke/build:v0.7.0
+  image: docker.io/bitpoke/build:v0.8.3
   environment:
     <<: *e2eEnvironment
   commands:

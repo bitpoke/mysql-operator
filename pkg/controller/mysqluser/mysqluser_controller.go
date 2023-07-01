@@ -97,6 +97,26 @@ func (r *ReconcileMySQLUser) Reconcile(ctx context.Context, request reconcile.Re
 		return reconcile.Result{}, r.removeUser(ctx, user)
 	}
 
+	cluster := mysqlcluster.New(&mysqlv1alpha1.MysqlCluster{})
+	if err = r.Get(ctx, user.GetClusterKey(), cluster.Unwrap()); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if !cluster.IsClusterReady() {
+		user.UpdateStatusCondition(
+			mysqlv1alpha1.MySQLUserReady, corev1.ConditionFalse,
+			mysqluser.ProvisionFailedReason, "cluster is not ready",
+		)
+		log.Error(r.updateStatusAndErr(ctx, user, oldStatus, fmt.Errorf("cluster is not ready")),
+			"cluster is not ready when create user",
+			"cluster", cluster.GetNamespacedName())
+
+		// The MysqlCluster and MysqlUser are separate Custom Resources (CRs). We typically apply both CRs at the same time.
+		// If the MysqlCluster is not ready, the user creation will fail. The requeue time becomes exponential when an error is returned.
+		// Therefore, we return a nil error here and specify the RequeueAfter to avoid the exponential requeue time.
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
 	// write the desired status into mysql cluster
 	ruErr := r.reconcileUserInCluster(ctx, user)
 	if err := r.updateStatusAndErr(ctx, user, oldStatus, ruErr); err != nil {
@@ -181,8 +201,8 @@ func (r *ReconcileMySQLUser) reconcileUserInDB(ctx context.Context, user *mysqlu
 		return errors.New("the MySQL user's password must not be empty")
 	}
 
-	// create/ update user in database
-	log.Info("creating mysql user", "key", user.GetKey(), "username", user.Spec.User, "cluster", user.GetClusterKey())
+	// reconcile user in database
+	log.V(1).Info("reconciling mysql user", "key", user.GetKey(), "username", user.Spec.User, "cluster", user.GetClusterKey())
 	if err := mysql.CreateUserIfNotExists(ctx, sql, user.Spec.User, password, user.Spec.AllowedHosts,
 		user.Spec.Permissions, user.Spec.ResourceLimits); err != nil {
 		return err

@@ -7,7 +7,9 @@ include build/makelib/common.mk
 
 GO111MODULE=on
 GO_STATIC_PACKAGES = $(GO_PROJECT)/cmd/mysql-operator $(GO_PROJECT)/cmd/mysql-operator-sidecar $(GO_PROJECT)/cmd/orc-helper
-GOLANGCI_LINT_VERSION = 1.25.0
+GO_SUPPORTED_VERSIONS = 1.17
+GOFMT_VERSION = 1.17
+GOLANGCI_LINT_VERSION = 1.42.1
 GO_LDFLAGS += \
 	       -X $(GO_PROJECT)/pkg/version.buildDate=$(BUILD_DATE) \
 	       -X $(GO_PROJECT)/pkg/version.gitVersion=$(VERSION) \
@@ -39,6 +41,7 @@ DOCKER_REGISTRY ?= docker.io/bitpoke
 IMAGES ?= mysql-operator mysql-operator-orchestrator mysql-operator-sidecar-5.7 mysql-operator-sidecar-8.0
 include build/makelib/image.mk
 
+KUBEBUILDER_ASSETS_VERSION := 1.21.2
 GEN_CRD_OPTIONS := crd:crdVersions=v1,preserveUnknownFields=false
 include build/makelib/kubebuilder-v3.mk
 

@@ -249,7 +249,7 @@ $(eval $(call common.target,go.build))
 .go.build.run: .do.go.build
 .do.go.build:
 	@$(INFO) go build $(PLATFORM) $(GO_TAGS)
-	$(foreach p,$(GO_STATIC_PACKAGES),@CGO_ENABLED=0 $(GO) build -v -i -o $(GO_OUT_DIR)/$(call list-join,_,$(lastword $(subst /, ,$(p))) $(call lower,$(GO_TAGS)))$(GO_OUT_EXT) $(GO_STATIC_FLAGS) $(p) || $(FAIL) ${\n})
+	$(foreach p,$(GO_STATIC_PACKAGES),@CGO_ENABLED=0 $(GO) build -v -o $(GO_OUT_DIR)/$(call list-join,_,$(lastword $(subst /, ,$(p))) $(call lower,$(GO_TAGS)))$(GO_OUT_EXT) $(GO_STATIC_FLAGS) $(p) || $(FAIL) ${\n})
 	@$(OK) go build $(PLATFORM) $(GO_TAGS)
 
 ifeq ($(GO_TEST_TOOL),ginkgo)
@@ -269,7 +269,7 @@ else # GO_TEST_TOOL != ginkgo
 go.test.unit: $(GO_JUNIT_REPORT)
 	@$(INFO) go test unit-tests
 	@mkdir -p $(GO_TEST_OUTPUT)
-	@CGO_ENABLED=0 $(GOHOST) test -i $(GO_STATIC_FLAGS) $(GO_TEST_PACKAGES) || $(FAIL)
+	@CGO_ENABLED=0 $(GOHOST) test $(GO_STATIC_FLAGS) $(GO_TEST_PACKAGES) || $(FAIL)
 	@CGO_ENABLED=0 $(GOHOST) test $(GO_TEST_FLAGS) $(GO_STATIC_FLAGS) $(GO_TEST_PACKAGES) $(TEST_FILTER_PARAM) 2>&1 | tee $(GO_TEST_OUTPUT)/unit-tests.log || $(FAIL)
 	@cat $(GO_TEST_OUTPUT)/unit-tests.log | $(GO_JUNIT_REPORT) -set-exit-code > $(GO_TEST_OUTPUT)/unit-tests.xml || $(FAIL)
 	@$(OK) go test unit-tests

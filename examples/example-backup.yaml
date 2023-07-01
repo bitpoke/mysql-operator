@@ -11,6 +11,7 @@ spec:
   ## at this path, else the backup URL will be filled with
   ## the cluster preset backupURL and a random name
   # backupURL: gs://bucket_name/path/to/backup.xtrabackup.gz
+  # backupURL: hdfs://bucket_name/path/to/backup.xtrabackup.gz
 
   ## specify a secret where to find credentials to access the
   ## bucket

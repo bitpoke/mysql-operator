@@ -52,40 +52,6 @@ HOST_PLATFORM := $(HOSTOS)_$(HOSTARCH)
 all: build
 
 # ====================================================================================
-# Colors
-
-BLACK        := $(shell printf "\033[30m")
-BLACK_BOLD   := $(shell printf "\033[30;1m")
-RED          := $(shell printf "\033[31m")
-RED_BOLD     := $(shell printf "\033[31;1m")
-GREEN        := $(shell printf "\033[32m")
-GREEN_BOLD   := $(shell printf "\033[32;1m")
-YELLOW       := $(shell printf "\033[33m")
-YELLOW_BOLD  := $(shell printf "\033[33;1m")
-BLUE         := $(shell printf "\033[34m")
-BLUE_BOLD    := $(shell printf "\033[34;1m")
-MAGENTA      := $(shell printf "\033[35m")
-MAGENTA_BOLD := $(shell printf "\033[35;1m")
-CYAN         := $(shell printf "\033[36m")
-CYAN_BOLD    := $(shell printf "\033[36;1m")
-WHITE        := $(shell printf "\033[37m")
-WHITE_BOLD   := $(shell printf "\033[37;1m")
-CNone        := $(shell printf "\033[0m")
-
-# ====================================================================================
-# Logger
-
-TIME_LONG	= `date +%Y-%m-%d' '%H:%M:%S`
-TIME_SHORT	= `date +%H:%M:%S`
-TIME		= $(TIME_SHORT)
-
-INFO	= echo ${TIME} ${BLUE}[ .. ]${CNone}
-WARN	= echo ${TIME} ${YELLOW}[WARN]${CNone}
-ERR		= echo ${TIME} ${RED}[FAIL]${CNone}
-OK		= echo ${TIME} ${GREEN}[ OK ]${CNone}
-FAIL	= (echo ${TIME} ${RED}[FAIL]${CNone} && false)
-
-# ====================================================================================
 # Helpers
 
 ifeq ($(HOSTOS),darwin)
@@ -236,9 +202,7 @@ endif
 
 TAGS := $(shell git tag -l --points-at HEAD)
 
-ifeq ($(origin BRANCH_NAME), undefined)
-BRANCH_NAME := $(shell git rev-parse --abbrev-ref HEAD)
-endif
+GIT_HEAD := $(shell git rev-parse --abbrev-ref HEAD)
 
 # Set default GIT_TREE_STATE
 ifeq ($(shell git status -s | head -c1 | wc -c | tr -d '[[:space:]]'), 0)
@@ -267,10 +231,11 @@ BUILD_DATE ?= $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 # set a semantic version number from git if VERSION is undefined.
 ifeq ($(origin VERSION), undefined)
 ifeq ($(GIT_TREE_STATE),clean)
-VERSION := $(shell $(GIT_SEMVER) -prefix v)
+VERSION := $(shell $(GIT_SEMVER) -prefix v $(ROOT_DIR))
 else
-VERSION := $(shell $(GIT_SEMVER) -prefix v -set-meta $(shell echo "$(COMMIT_HASH)" | head -c8)-dirty)
+VERSION := $(shell $(GIT_SEMVER) -prefix v -set-meta $(shell echo "$(COMMIT_HASH)" | head -c8)-dirty $(ROOT_DIR))
 endif
+else
 endif
 export VERSION
 
@@ -279,6 +244,15 @@ VERSION_VALID := $(shell echo "$(VERSION)" | grep -E -q '$(VERSION_REGEX)' && ec
 VERSION_MAJOR := $(shell echo "$(VERSION)" | sed -E -e 's/$(VERSION_REGEX)/\1/')
 VERSION_MINOR := $(shell echo "$(VERSION)" | sed -E -e 's/$(VERSION_REGEX)/\2/')
 VERSION_PATCH := $(shell echo "$(VERSION)" | sed -E -e 's/$(VERSION_REGEX)/\3/')
+
+ifeq ($(origin BRANCH_NAME), undefined)
+ifeq ($(GIT_HEAD),HEAD)
+# pretend we are on a release branch if we are just checking out a commit
+BRANCH_NAME := release-$(VERSION_MAJOR).$(VERSION_MINOR)
+else
+BRANCH_NAME := $(GIT_HEAD)
+endif
+endif
 
 .publish.tag: .version.require.clean.tree
 ifneq ($(VERSION_VALID),1)

@@ -1,6 +1,5 @@
 {{- $replicas := int .Values.replicaCount }}
 {{- $raftNodes := include "orchestrator.raftList" . | splitList "," }}
-{{- $raftServiceName := include "orchestrator.fullname" . }}
 {{- $conf := .Values.orchestrator.config }}
 {{- $_ := set $conf "ListenAddress" ":3000" }}
 {{- $_ := set $conf "MySQLTopologyCredentialsConfigFile" "/etc/orchestrator/orc-topology.cnf" }}
@@ -8,9 +7,9 @@
 {{- $_ := set $conf "SQLite3DataFile" "/var/lib/orchestrator/orc.db" }}
 {{- $_ := set $conf "RaftEnabled" true }}
 {{- $_ := set $conf "RaftDataDir" "/var/lib/orchestrator" }}
-{{- $_ := set $conf "RaftAdvertise" (printf "{{ .Env.HOSTNAME }}.%s" $raftServiceName) }}
+{{- $_ := set $conf "RaftAdvertise" "{{ .Env.HOSTNAME }}-orc-svc" }}
 {{- $_ := set $conf "RaftBind" "{{ .Env.HOSTNAME }}"}}
-{{- $_ := set $conf "HTTPAdvertise" (printf "http://{{ .Env.HOSTNAME }}.%s:3000" $raftServiceName) }}
+{{- $_ := set $conf "HTTPAdvertise" "http://{{ .Env.HOSTNAME }}-orc-svc:80" }}
 {{- if eq 1 $replicas -}}
 {{- $_ := set $conf "RaftNodes" (list) }}
 {{- else -}}

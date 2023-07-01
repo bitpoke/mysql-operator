@@ -2,7 +2,15 @@
 
 MySQL Operator enables bulletproof MySQL on Kubernetes. It manages all the necessary resources for deploying and managing a highly available MySQL cluster. It provides effortless backups, while keeping the cluster highly available.
 
-MySQL Operator is maintained and developed by [Bitpoke](https://www.bitpoke.io/), a self managed WordPress hosting app running cloud-native.
+:beer: :pizza: :coffee:
+If the operator has helped you out with your projects, **please consider [sponsoring](https://github.com/sponsors/bitpoke)** it to speed up the development. [Issues](https://github.com/bitpoke/mysql-operator/issues) are answered in this repo on a best-effort basis. 
+
+
+:wrench: :nut_and_bolt: :hammer: 
+For **paid commercial support**, deployment, integration and prioritizing of features, please check the dedicated service provided by [Bitpoke](https://www.bitpoke.io/services/mysql-support/).  
+
+The operator has been developed by [Bitpoke](https://www.bitpoke.io/) for internal use to [run WordPress in a cloud-native app](https://www.bitpoke.io/wordpress/) and has been open-sourced for the general public to benefit.
+
 
 ## Goals and status
 
@@ -20,13 +28,13 @@ We welcome all contributions in the form of new issues for feature requests, bug
 
 ## Documentation
 
-* [Getting started](docs/_index.md) provides an overview over deploying and using the MySQL operator
-* [Deploy a MySQL cluster](docs/deploy-mysql-cluster.md) describes in detail how a cluster can be installed and configured
-* [Configure backups](docs/backups.md) shows how to configure and take backups of a cluster
-* [Recurrent backups](docs/cluster-recurrent-backups.md) describes how to setup recurrent backups for the cluster
-* [Restore a cluster](docs/cluster-recover.md) explains how to restore a cluster from a backup
-* [How to integrate](docs/integrate-operator.md) the operator with your deployment setup. This presents a simple way of using the MySQL operator and helm to deploy your application
-* [Orchestrator](docs/orchestrator.md) shows you how to access the orchestrator for more details.
+* [Getting started](https://www.bitpoke.io/docs/mysql-operator/getting-started/) provides an overview over deploying and using the MySQL operator
+* [Deploy a MySQL cluster](https://www.bitpoke.io/docs/mysql-operator/deploy-mysql-cluster/) describes in detail how a cluster can be installed and configured
+* [Configure backups](https://www.bitpoke.io/docs/mysql-operator/backups/) shows how to configure and take backups of a cluster
+* [Recurrent backups](https://www.bitpoke.io/docs/mysql-operator/cluster-recurrent-backups/) describes how to setup recurrent backups for the cluster
+* [Restore a cluster](https://www.bitpoke.io/docs/mysql-operator/backups/#initialize-a-cluster-from-a-backup) explains how to restore a cluster from a backup
+* [How to integrate](https://www.bitpoke.io/docs/mysql-operator/integrate-operator/) the operator with your deployment setup. This presents a simple way of using the MySQL operator and helm to deploy your application
+* [Orchestrator](https://www.bitpoke.io/docs/mysql-operator/orchestrator/) shows you how to access the orchestrator for more details.
 
 ## Controller deploy
 
@@ -45,7 +53,7 @@ __NOTE__: MySQL operator 0.2.x requires at least Kubernetes 1.11.x (or 1.10.x wi
 
 ## Controller upgrade
 
-Maybe upgrading the MySQL operator to a newer version requires additional steps. Those steps can be found in the operator's documentation at [upgrades](docs/operator-upgrades.md) section.
+It is possible that upgrading the MySQL operator to a newer version requires additional steps. Those steps can be found in the operator's documentation at [upgrades](docs/operator-upgrades.md) section.
 
 ## Deploying a cluster
 
@@ -71,7 +79,7 @@ kubectl apply -f https://raw.githubusercontent.com/bitpoke/mysql-operator/master
 
 ## Tech considerations
 
-This project uses Percona Server for MySQL 5.7 because of backup improvements (eg. backup locks), monitoring improvements and some serviceability improvements (eg. utility user). Although we could have used MariaDB, our primary focus being WordPress, we wanted a drop-in rather than a fork. In the future we might support MariaDB if that can be implemented in a compatible way.
+This project uses Percona Server for MySQL 5.7 / 8.0 because of backup improvements (eg. backup locks), monitoring improvements and some serviceability improvements (eg. utility user). Although we could have used MariaDB, our primary focus being WordPress, we wanted a drop-in rather than a fork. In the future we might support MariaDB if that can be implemented in a compatible way.
 
 ## License
 

@@ -23,7 +23,7 @@ import (
 	"github.com/presslabs/controller-util/syncer"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -104,7 +104,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	err = c.Watch(&source.Kind{Type: &policyv1beta1.PodDisruptionBudget{}}, &handler.EnqueueRequestForOwner{
+	err = c.Watch(&source.Kind{Type: &policyv1.PodDisruptionBudget{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &mysqlv1alpha1.MysqlCluster{},
 	})
@@ -136,7 +136,7 @@ type ReconcileMysqlCluster struct {
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps;secrets;services;events;jobs;pods;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlclusters;mysqlclusters/status,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=mysql.presslabs.org,resources=mysqlclusters;mysqlclusters/status;mysqlclusters/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 

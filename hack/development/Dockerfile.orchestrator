@@ -50,7 +50,7 @@ EXPOSE 3000 10008
 VOLUME [ "/var/lib/orchestrator" ]
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint"]
-CMD ["/usr/local/bin/orchestrator", "-quiet", "-config", "/etc/orchestrator/orchestrator.conf.json", "http"]
+CMD ["/usr/local/bin/orchestrator", "-config", "/etc/orchestrator/orchestrator.conf.json", "http"]
 
 # set expiration time for dev images
 # https://support.coreos.com/hc/en-us/articles/115001384693-Tag-Expiration

@@ -277,6 +277,18 @@ func (c *MysqlCluster) GetSidecarImage() string {
 	return sidecarImage
 }
 
+// IsClusterReady checks if the cluster is ready or not.
+func (c *MysqlCluster) IsClusterReady() bool {
+	isReady := false
+	for _, cond := range c.Status.Conditions {
+		if cond.Type == api.ClusterConditionReady && cond.Status == core.ConditionTrue {
+			isReady = true
+			break
+		}
+	}
+	return isReady
+}
+
 // IsMysqlClusterKind for the given kind checks if CRD kind is for MysqlCluster CRD
 func IsMysqlClusterKind(kind string) bool {
 	switch kind {

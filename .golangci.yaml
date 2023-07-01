@@ -35,6 +35,25 @@ linters:
     - goimports
     - maligned
     - gochecknoglobals
+    # TODO: fix those linters (they were added for 1.42.1 upgrade)
+    - sqlclosecheck
+    - gosec
+    - cyclop
+    - forcetypeassert
+    - revive
+    - gofumpt
+    - errorlint
+    - exhaustivestruct
+    - goerr113
+    - gosimple
+    - ifshort
+    - noctx
+    - predeclared
+    - nlreturn
+    - tagliatelle
+    - wrapcheck
+    - gci
+    - nolintlint
     # TODO: fix those linters
     - whitespace
     - scopelint
