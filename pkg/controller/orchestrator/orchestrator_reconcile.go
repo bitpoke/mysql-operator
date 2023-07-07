@@ -329,7 +329,7 @@ func (ou *orcUpdater) updateNodesInOrc(instances InstancesSet) (InstancesSet, []
 				// When a pod is detected that has not changed and needs to be joined
 				// we restart it to trigger a state change of the pod and rejoin the cluster.
 				podName := fmt.Sprintf("%s-%d", ou.cluster.GetNameForResource(mysqlcluster.StatefulSet), i)
-				err := ou.restartPod(ou.cluster.Namespace, fmt.Sprintf("%s-%d", podName))
+				err := ou.restartPod(ou.cluster.Namespace, podName)
 				if err != nil {
 					ou.log.Error(err, "restart failed:", "pod", podName)
 				}
@@ -383,7 +383,13 @@ func (ou *orcUpdater) restartPod(nameSpace, podName string) error {
 				readyNum++
 			}
 		}
-		if readyNum == 3 {
+		if pod.Labels["role"] == "replica" {
+			readyNum++
+		}
+		if pod.Labels["healthy"] == "no" {
+			readyNum++
+		}
+		if readyNum == 5 {
 			return ou.client.Delete(context.Background(), pod)
 		}
 	}
