@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+  * Allow using custom service in `mysql-cluster` chart.
 ### Changed
 ### Removed
 ### Fixed

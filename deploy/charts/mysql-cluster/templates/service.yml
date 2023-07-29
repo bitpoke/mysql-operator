@@ -1,0 +1,25 @@
+{{- if .Values.service }}
+apiVersion: v1
+kind: List
+items:
+{{- range $key, $value := .Values.service }}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      mysql.presslabs.org/cluster: {{ include "mysql-cluster.clusterName" $ }}
+      {{- with $value.labels }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+    name: {{ $value.name }}
+  spec:
+    ports: {{- toYaml $value.ports | nindent 4 }}
+    selector:
+      mysql.presslabs.org/cluster: {{ include "mysql-cluster.clusterName" $ }}
+      {{- with $value.selector }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+    type: {{ $value.type }}
+{{- end }}
+{{- end }}
+
