@@ -3827,6 +3827,9 @@ spec:
                       required:
                         - path
                       type: object
+                    keepAfterDelete:
+                      description: KeepAfterDelete specifies whether the PVC should be kept after the MysqlCluster is deleted.
+                      type: boolean
                     persistentVolumeClaim:
                       description: PersistentVolumeClaim to specify PVC spec for the volume for mysql data. It has the highest level of precedence, followed by HostPath and EmptyDir. And represents the PVC specification.
                       properties:
