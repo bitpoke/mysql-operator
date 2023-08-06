@@ -581,7 +581,7 @@ func (s *sfsSyncer) ensureVolumeClaimTemplates(in []core.PersistentVolumeClaim) 
 
 	data.Name = dataVolumeName
 
-	if initPvc {
+	if initPvc && !s.cluster.Spec.VolumeSpec.KeepAfterDelete {
 		// This can be set only when creating new PVC. It ensures that PVC can be
 		// terminated after deleting parent MySQL cluster
 		trueVar := true

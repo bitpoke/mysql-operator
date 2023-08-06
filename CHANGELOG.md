@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+* Add `KeepAfterDelete` in `.Spec.VolumeSpec` to keep pvc after mysql cluster been deleted.
+
 ### Changed
 ### Removed
 ### Fixed
