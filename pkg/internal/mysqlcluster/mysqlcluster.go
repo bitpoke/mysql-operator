@@ -30,11 +30,6 @@ import (
 	"github.com/bitpoke/mysql-operator/pkg/util/constants"
 )
 
-const (
-	// HeadlessSVCName is the name of the headless service that is commonly used for all clusters
-	HeadlessSVCName = "mysql"
-)
-
 // MysqlCluster is the wrapper for api.MysqlCluster type
 type MysqlCluster struct {
 	*api.MysqlCluster
@@ -137,7 +132,7 @@ func GetNameForResource(name ResourceName, clusterName string) string {
 	case HealthyReplicasService:
 		return fmt.Sprintf("%s-mysql-replicas", clusterName)
 	case HeadlessSVC:
-		return HeadlessSVCName
+		return fmt.Sprintf("%s-mysql-headless", clusterName)
 	case OldHeadlessSVC:
 		return fmt.Sprintf("%s-mysql-nodes", clusterName)
 	case Secret:

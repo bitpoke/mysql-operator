@@ -11,6 +11,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Add `KeepAfterDelete` in `.Spec.VolumeSpec` to keep pvc after mysql cluster been deleted.
 
 ### Changed
+* Changed headless svc name to a templated name that includes the mysql cluster name
+
 ### Removed
 ### Fixed
 
