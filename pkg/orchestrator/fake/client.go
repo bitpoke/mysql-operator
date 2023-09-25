@@ -171,7 +171,7 @@ func (o *OrcFakeClient) CheckDiscovered(key string) bool {
 func (o *OrcFakeClient) getHostClusterAlias(host string) string {
 	// input: cluster-1943285891-mysql-0.mysql.default
 	// output: cluster-1943285891.default
-	re := regexp.MustCompile(`^([\w-]+)-mysql-\d*.mysql.([\w-]+)$`)
+	re := regexp.MustCompile(`^([\w-]+)-mysql-\d*.([\w-]+)-mysql-headless.([\w-]+)$`)
 	values := re.FindStringSubmatch(host)
 	return fmt.Sprintf("%s.%s", values[1], values[2])
 }
