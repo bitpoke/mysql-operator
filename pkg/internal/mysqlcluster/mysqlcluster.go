@@ -67,7 +67,7 @@ func (c *MysqlCluster) GetLabels() labels.Set {
 	labels := labels.Set{
 		"mysql.presslabs.org/cluster": c.Name,
 
-		"app.kubernetes.io/name":       "mysql",
+		"app.kubernetes.io/name":       fmt.Sprintf("%s-mysql-headless", c.Name),
 		"app.kubernetes.io/instance":   instance,
 		"app.kubernetes.io/version":    c.GetMySQLSemVer().String(),
 		"app.kubernetes.io/component":  component,
@@ -86,7 +86,7 @@ func (c *MysqlCluster) GetSelectorLabels() labels.Set {
 	return labels.Set{
 		"mysql.presslabs.org/cluster": c.Name,
 
-		"app.kubernetes.io/name":       "mysql",
+		"app.kubernetes.io/name":       fmt.Sprintf("%s-mysql-headless", c.Name),
 		"app.kubernetes.io/managed-by": "mysql.presslabs.org",
 	}
 }
@@ -160,7 +160,7 @@ func (c *MysqlCluster) GetMasterHost() string {
 
 	for _, ns := range c.Status.Nodes {
 		if cond := c.GetNodeCondition(ns.Name, api.NodeConditionMaster); cond != nil &&
-			cond.Status == core.ConditionTrue {
+		cond.Status == core.ConditionTrue {
 			masterHost = ns.Name
 		}
 	}

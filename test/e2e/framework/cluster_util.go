@@ -234,7 +234,7 @@ func (f *Framework) ReadSQLTest(cluster *api.MysqlCluster, pod int, pw string) s
 func GetClusterLabels(cluster *api.MysqlCluster) labels.Set {
 	labels := labels.Set{
 		"mysql.presslabs.org/cluster": cluster.Name,
-		"app.kubernetes.io/name":      "mysql",
+		"app.kubernetes.io/name":      fmt.Sprintf("%s-mysql-headless", cluster.Name),
 	}
 
 	return labels

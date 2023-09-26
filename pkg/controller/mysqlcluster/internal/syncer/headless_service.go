@@ -17,6 +17,8 @@ limitations under the License.
 package mysqlcluster
 
 import (
+	"fmt"
+
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -40,14 +42,14 @@ func NewHeadlessSVCSyncer(c client.Client, scheme *runtime.Scheme, cluster *mysq
 	return syncer.NewObjectSyncer("HeadlessSVC", nil, service, c, func() error {
 		// add general labels to this service
 		service.Labels = map[string]string{
-			"app.kubernetes.io/name":       "mysql",
+			"app.kubernetes.io/name":       fmt.Sprintf("%s-mysql-headless", cluster.Name),
 			"app.kubernetes.io/managed-by": "mysql.presslabs.org",
 		}
 		service.Labels["mysql.presslabs.org/service-type"] = "namespace-nodes"
 
 		service.Spec.ClusterIP = "None"
 		service.Spec.Selector = labels.Set{
-			"app.kubernetes.io/name":       "mysql",
+			"app.kubernetes.io/name":       fmt.Sprintf("%s-mysql-headless", cluster.Name),
 			"app.kubernetes.io/managed-by": "mysql.presslabs.org",
 		}
 		// we want to be able to access pods even if the pod is not ready because the operator should update
