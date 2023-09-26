@@ -143,7 +143,7 @@ func GetNameForResource(name string, cluster *api.MysqlCluster) string {
 	case "svc-read":
 		return fmt.Sprintf("%s-mysql", cluster.Name)
 	case "svc-headless":
-		return "mysql"
+		return fmt.Sprintf("%s-mysql-headless", cluster.Name)
 	default:
 		return fmt.Sprintf("%s-mysql", cluster.Name)
 	}
