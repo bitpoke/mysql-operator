@@ -160,7 +160,7 @@ func (c *MysqlCluster) GetMasterHost() string {
 
 	for _, ns := range c.Status.Nodes {
 		if cond := c.GetNodeCondition(ns.Name, api.NodeConditionMaster); cond != nil &&
-		cond.Status == core.ConditionTrue {
+			cond.Status == core.ConditionTrue {
 			masterHost = ns.Name
 		}
 	}
