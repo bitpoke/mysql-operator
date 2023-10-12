@@ -351,6 +351,7 @@ func (s *sfsSyncer) ensureInitContainersSpec() []core.Container {
 		s.cluster.GetSidecarImage(),
 		[]string{"clone-and-init"},
 	)
+	cloneInit.Resources = s.ensureResources(containerCloneAndInitName)
 	initCs = append(initCs, cloneInit)
 
 	// add init container for MySQL if docker image supports this
@@ -676,7 +677,7 @@ func (s *sfsSyncer) ensureResources(name string) core.ResourceRequirements {
 	case containerExporterName:
 		return s.cluster.Spec.PodSpec.MetricsExporterResources
 
-	case containerMySQLInitName, containerMysqlName:
+	case containerMySQLInitName, containerCloneAndInitName, containerMysqlName:
 		return s.cluster.Spec.PodSpec.Resources
 
 	case containerHeartBeatName:

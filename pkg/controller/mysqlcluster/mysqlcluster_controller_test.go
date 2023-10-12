@@ -21,6 +21,8 @@ import (
 	"math/rand"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -439,6 +441,18 @@ var _ = Describe("MysqlCluster controller", func() {
 				Spec: api.MysqlClusterSpec{
 					Replicas:   &two,
 					SecretName: secret.Name,
+					PodSpec: api.PodSpec{
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("100Mi"),
+							},
+							Limits: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("100Mi"),
+							},
+						},
+					},
 				},
 			})
 
@@ -478,6 +492,31 @@ var _ = Describe("MysqlCluster controller", func() {
 			)))
 		})
 
+		It("should have default resource", func() {
+			cluster.Spec.VolumeSpec = api.VolumeSpec{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			}
+
+			// crete cluster
+			Expect(c.Create(context.TODO(), cluster.Unwrap())).To(Succeed())
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+			Eventually(requests, timeout).Should(Receive(Equal(expectedRequest)))
+
+			sts := &appsv1.StatefulSet{}
+			stsKey := types.NamespacedName{
+				Name:      cluster.GetNameForResource(mysqlcluster.StatefulSet),
+				Namespace: cluster.Namespace,
+			}
+
+			Expect(c.Get(context.TODO(), stsKey, sts)).To(Succeed())
+
+			// test default resource of sts.Spec.Template.Spec.InitContainers should be set
+			Expect(sts.Spec.Template.Spec.InitContainers[0].Resources.Requests[corev1.ResourceCPU]).To(Equal(resource.MustParse("100m")))
+			Expect(sts.Spec.Template.Spec.InitContainers[0].Resources.Requests[corev1.ResourceMemory]).To(Equal(resource.MustParse("100Mi")))
+			Expect(sts.Spec.Template.Spec.InitContainers[0].Resources.Limits[corev1.ResourceCPU]).To(Equal(resource.MustParse("100m")))
+			Expect(sts.Spec.Template.Spec.InitContainers[0].Resources.Limits[corev1.ResourceMemory]).To(Equal(resource.MustParse("100Mi")))
+		})
+
 	})
 
 	Context("testing defaults", func() {
@@ -485,6 +524,8 @@ var _ = Describe("MysqlCluster controller", func() {
 			newCl := &api.MysqlCluster{}
 			scheme.Default(newCl)
 			Expect(newCl.Spec.Replicas).To(PointTo(Equal(int32(1))))
+
+			// test default resource of spec.podSpec
 		})
 	})
 })
