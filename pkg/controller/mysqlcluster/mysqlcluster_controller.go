@@ -37,7 +37,6 @@ import (
 
 	mysqlv1alpha1 "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 
-	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 	cleaner "github.com/bitpoke/mysql-operator/pkg/controller/mysqlcluster/internal/cleaner"
 	clustersyncer "github.com/bitpoke/mysql-operator/pkg/controller/mysqlcluster/internal/syncer"
 	"github.com/bitpoke/mysql-operator/pkg/controller/mysqlcluster/internal/upgrades"
@@ -191,11 +190,11 @@ func (r *ReconcileMysqlCluster) Reconcile(ctx context.Context, request reconcile
 	// condition will be true all the time. When user set cluster's replicas to a value greater than 0,
 	// the pods of the cluster will boot one by one, but node controller will not init mysql when FailoverInProgress
 	// is true.
-	fip := cluster.GetClusterCondition(api.ClusterConditionFailoverInProgress)
+	fip := cluster.GetClusterCondition(mysqlv1alpha1.ClusterConditionFailoverInProgress)
 	if fip != nil && fip.Status == corev1.ConditionTrue &&
 		*cluster.Spec.Replicas == 0 && cluster.Status.ReadyNodes == 0 {
 
-		cluster.UpdateStatusCondition(api.ClusterConditionFailoverInProgress, corev1.ConditionFalse,
+		cluster.UpdateStatusCondition(mysqlv1alpha1.ClusterConditionFailoverInProgress, corev1.ConditionFalse,
 			"ClusterNotRunning", "cluster is not running")
 
 		if sErr := r.Status().Update(context.TODO(), cluster.Unwrap()); sErr != nil {
