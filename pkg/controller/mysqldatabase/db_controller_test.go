@@ -26,7 +26,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -185,7 +184,7 @@ var _ = Describe("MySQL database controller", func() {
 			It("should succeed if the cluster has been deleted", func() {
 				// delete the cluster
 				cluster := &mysqlv1alpha1.MysqlCluster{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: clusterName, Namespace: db.Namespace,
 					},
 				}
