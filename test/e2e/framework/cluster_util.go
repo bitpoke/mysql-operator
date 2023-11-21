@@ -143,7 +143,7 @@ func GetNameForResource(name string, cluster *api.MysqlCluster) string {
 	case "svc-read":
 		return fmt.Sprintf("%s-mysql", cluster.Name)
 	case "svc-headless":
-		return "mysql"
+		return fmt.Sprintf("%s-mysql-headless", cluster.Name)
 	default:
 		return fmt.Sprintf("%s-mysql", cluster.Name)
 	}
@@ -234,7 +234,7 @@ func (f *Framework) ReadSQLTest(cluster *api.MysqlCluster, pod int, pw string) s
 func GetClusterLabels(cluster *api.MysqlCluster) labels.Set {
 	labels := labels.Set{
 		"mysql.presslabs.org/cluster": cluster.Name,
-		"app.kubernetes.io/name":      "mysql",
+		"app.kubernetes.io/name":      fmt.Sprintf("%s-mysql-headless", cluster.Name),
 	}
 
 	return labels
