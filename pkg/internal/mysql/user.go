@@ -44,7 +44,11 @@ func CreateUserIfNotExists(ctx context.Context, sql SQLRunner,
 	}
 
 	if len(permissions) > 0 {
-		queries = append(queries, permissionsToQuery(permissions, user, allowedHosts))
+		query, err := permissionsToQuery(permissions, user, allowedHosts)
+		if err != nil {
+			return err
+		}
+		queries = append(queries, query)
 	}
 
 	query := BuildAtomicQuery(queries...)
@@ -114,11 +118,14 @@ func DropUser(ctx context.Context, sql SQLRunner, user, host string) error {
 	return nil
 }
 
-func permissionsToQuery(permissions []mysqlv1alpha1.MysqlPermission, user string, allowedHosts []string) Query {
+func permissionsToQuery(permissions []mysqlv1alpha1.MysqlPermission, user string, allowedHosts []string) (Query, error) {
 	permQueries := []Query{}
 
 	for _, perm := range permissions {
 		// If you wish to grant permissions on all tables, you should explicitly use "*"
+		if perm.Tables == nil || len(perm.Tables) == 0 {
+			return Query{}, fmt.Errorf("empty table name in permission %+v, if you wish to grant permissions on all tables, you should explicitly use \"*\"", perm)
+		}
 		for _, table := range perm.Tables {
 			args := []interface{}{}
 
@@ -139,7 +146,7 @@ func permissionsToQuery(permissions []mysqlv1alpha1.MysqlPermission, user string
 		}
 	}
 
-	return ConcatenateQueries(permQueries...)
+	return ConcatenateQueries(permQueries...), nil
 }
 
 func escapeID(id string) string {
