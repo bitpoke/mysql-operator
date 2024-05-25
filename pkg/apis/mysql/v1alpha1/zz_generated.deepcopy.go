@@ -259,6 +259,14 @@ func (in *MysqlClusterSpec) DeepCopyInto(out *MysqlClusterSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	in.BackupResources.DeepCopyInto(&out.BackupResources)
+	if in.BackupLabels != nil {
+		in, out := &in.BackupLabels, &out.BackupLabels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.MysqlConf != nil {
 		in, out := &in.MysqlConf, &out.MysqlConf
 		*out = make(MysqlConf, len(*in))

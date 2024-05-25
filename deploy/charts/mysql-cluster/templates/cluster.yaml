@@ -51,6 +51,14 @@ spec:
   {{- if .Values.backupScheduleJobsHistoryLimit }}
   backupScheduleJobsHistoryLimit: {{ .Values.backupScheduleJobsHistoryLimit }}
   {{- end }}
+  {{- if .Values.backupResources }}
+  backupResources:
+    {{- toYaml .Values.backupResources | nindent 4 }}
+  {{- end }}
+  {{- if .Values.backupLabels }}
+  backupLabels:
+    {{- toYaml .Values.backupLabels | nindent 4 }}
+  {{- end }}
 
   {{- if .Values.mysqlConf }}
   mysqlConf:

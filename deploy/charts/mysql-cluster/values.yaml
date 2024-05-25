@@ -34,6 +34,8 @@ backupSecretName:
 backupRemoteDeletePolicy:
 # backupSecretLabels: {}
 # backupSecretAnnotations: {}
+# backupResources: {}
+# backupLabels: {}
 backupCredentials:
   # use s3 https://rclone.org/s3/
   # S3_PROVIDER: ?             # like: AWS, Minio, Ceph, and so on

@@ -54,9 +54,36 @@ spec:
                   items:
                     type: string
                   type: array
+                backupLabels:
+                  additionalProperties:
+                    type: string
+                  description: BackupLabels set labels to backup pods
+                  type: object
                 backupRemoteDeletePolicy:
                   description: BackupRemoteDeletePolicy the deletion policy that specify how to treat the data from remote storage. By default it's used softDelete.
                   type: string
+                backupResources:
+                  description: BackupResources sets resources to backup pod container
+                  properties:
+                    limits:
+                      additionalProperties:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                      type: object
+                    requests:
+                      additionalProperties:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                      type: object
+                  type: object
                 backupSchedule:
                   description: Specify under crontab format interval to take backups leave it empty to deactivate the backup process Defaults to ""
                   type: string
