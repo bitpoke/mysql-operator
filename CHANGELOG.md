@@ -14,6 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 ### Removed
 ### Fixed
+* Avoid set read_only conflict when graceful takeover
 
 ## [0.6.3] - 2023-05-22
 
