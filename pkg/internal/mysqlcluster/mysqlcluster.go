@@ -30,11 +30,6 @@ import (
 	"github.com/bitpoke/mysql-operator/pkg/util/constants"
 )
 
-const (
-	// HeadlessSVCName is the name of the headless service that is commonly used for all clusters
-	HeadlessSVCName = "mysql"
-)
-
 // MysqlCluster is the wrapper for api.MysqlCluster type
 type MysqlCluster struct {
 	*api.MysqlCluster
@@ -72,7 +67,7 @@ func (c *MysqlCluster) GetLabels() labels.Set {
 	labels := labels.Set{
 		"mysql.presslabs.org/cluster": c.Name,
 
-		"app.kubernetes.io/name":       "mysql",
+		"app.kubernetes.io/name":       fmt.Sprintf("%s-mysql-headless", c.Name),
 		"app.kubernetes.io/instance":   instance,
 		"app.kubernetes.io/version":    c.GetMySQLSemVer().String(),
 		"app.kubernetes.io/component":  component,
@@ -91,7 +86,7 @@ func (c *MysqlCluster) GetSelectorLabels() labels.Set {
 	return labels.Set{
 		"mysql.presslabs.org/cluster": c.Name,
 
-		"app.kubernetes.io/name":       "mysql",
+		"app.kubernetes.io/name":       fmt.Sprintf("%s-mysql-headless", c.Name),
 		"app.kubernetes.io/managed-by": "mysql.presslabs.org",
 	}
 }
@@ -137,7 +132,7 @@ func GetNameForResource(name ResourceName, clusterName string) string {
 	case HealthyReplicasService:
 		return fmt.Sprintf("%s-mysql-replicas", clusterName)
 	case HeadlessSVC:
-		return HeadlessSVCName
+		return fmt.Sprintf("%s-mysql-headless", clusterName)
 	case OldHeadlessSVC:
 		return fmt.Sprintf("%s-mysql-nodes", clusterName)
 	case Secret:

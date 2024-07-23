@@ -486,7 +486,7 @@ func (ou *orcUpdater) removeNodeConditionNotInOrc(insts InstancesSet) {
 
 // indexInSts is a helper function that returns the index of the pod in statefulset
 func indexInSts(name string) (int32, error) {
-	re := regexp.MustCompile(`^[\w-]+-mysql-(\d*)\.[\w-]*mysql(?:-nodes)?\.[\w-]+$`)
+	re := regexp.MustCompile(`^[\w-]+-mysql-(\d*)\.[\w-]*mysql(?:-nodes|-headless)?\.[\w-]+$`)
 	values := re.FindStringSubmatch(name)
 	if len(values) != 2 {
 		return 0, fmt.Errorf("no match found")
