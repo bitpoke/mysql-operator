@@ -151,7 +151,7 @@ steps:
   - gcloud container clusters create $CLUSTER_NAME
       --zone $GOOGLE_CLOUD_ZONE
       --preemptible
-      --cluster-version 1.25
+      --cluster-version 1.28
       --addons=GcePersistentDiskCsiDriver
       --monitoring=NONE
 
