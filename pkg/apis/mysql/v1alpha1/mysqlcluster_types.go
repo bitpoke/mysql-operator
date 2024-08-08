@@ -57,6 +57,11 @@ type MysqlClusterSpec struct {
 	// +optional
 	Image string `json:"image,omitempty"`
 
+	// To specify the image that will be used for sidecar container.
+	// It will override --sidecar-image or --sidecar-mysql8-image flags.
+	// +optional
+	SidecarImage string `json:"sidecarImage,omitempty"`
+
 	// A bucket URL that contains a xtrabackup to initialize the mysql database.
 	// +optional
 	InitBucketURL string `json:"initBucketURL,omitempty"`
