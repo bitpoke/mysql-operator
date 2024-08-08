@@ -84,6 +84,7 @@ func (s *jobSyncer) SyncFn() error {
 		"cluster": s.backup.Spec.ClusterName,
 	}
 
+	s.job.Spec.Template.Labels = s.cluster.Spec.BackupLabels
 	s.job.Spec.Template.Spec = s.ensurePodSpec(s.job.Spec.Template.Spec)
 	return nil
 }
@@ -129,6 +130,7 @@ func (s *jobSyncer) ensurePodSpec(in core.PodSpec) core.PodSpec {
 	in.Containers[0].Name = "backup"
 	in.Containers[0].Image = s.cluster.GetSidecarImage()
 	in.Containers[0].ImagePullPolicy = s.opt.ImagePullPolicy
+	in.Containers[0].Resources = s.cluster.Spec.BackupResources
 	in.Containers[0].Args = []string{
 		"take-backup-to",
 		s.getBackupCandidate(),
