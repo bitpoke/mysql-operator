@@ -3818,6 +3818,9 @@ spec:
                 serverIDOffset:
                   description: Set a custom offset for Server IDs.  ServerID for each node will be the index of the statefulset, plus offset
                   type: integer
+                sidecarImage:
+                  description: To specify the image that will be used for sidecar container. It will override --sidecar-image or --sidecar-mysql8-image flags.
+                  type: string
                 tmpfsSize:
                   anyOf:
                     - type: integer
