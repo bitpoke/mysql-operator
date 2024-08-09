@@ -22,6 +22,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/blang/semver"
 	"github.com/go-ini/ini"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,17 +97,20 @@ fi
 func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
 	cfg := ini.Empty()
 	sec := cfg.Section("mysqld")
+	version := cluster.GetMySQLSemVer()
 
-	if cluster.GetMySQLSemVer().Major == 5 {
-		addKVConfigsToSection(sec, convertMapToKVConfig(mysql5xConfigs))
-	} else if cluster.GetMySQLSemVer().Major == 8 {
-		addKVConfigsToSection(sec, convertMapToKVConfig(mysql8xConfigs))
-	}
-
-	// boolean configs
-	addBConfigsToSection(sec, mysqlMasterSlaveBooleanConfigs)
-	// add custom configs, would overwrite common configs
-	addKVConfigsToSection(sec, convertMapToKVConfig(mysqlCommonConfigs), cluster.Spec.MysqlConf)
+	addBConfigsToSection(
+		sec,
+		mysqlMasterSlaveBooleanConfigs,
+		getBConfigsByVersion(version),
+	)
+	// add custom configs in the latest order, so they can override the default ones
+	addKVConfigsToSection(
+		sec,
+		getKVConfigsByVersion(version),
+		convertMapToKVConfig(mysqlCommonConfigs),
+		cluster.Spec.MysqlConf,
+	)
 
 	// include configs from /etc/mysql/conf.d/*.cnf
 	_, err := sec.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
@@ -121,6 +125,41 @@ func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
 
 	return data, nil
 
+}
+
+func getKVConfigsByVersion(version semver.Version) map[string]intstr.IntOrString {
+	configs := make(map[string]intstr.IntOrString)
+
+	if version.Major == 5 {
+		configs = convertMapToKVConfig(mysql5xConfigs)
+	} else {
+		configs = convertMapToKVConfig(mysql8xConfigs)
+	}
+
+	// https://dev.mysql.com/doc/relnotes/mysql/8.3/en/news-8-3-0.html
+	if version.LT(semver.MustParse("8.3.0")) {
+		configs["relay-log-info-repository"] = intstr.Parse("TABLE")
+		configs["master-info-repository"] = intstr.Parse("TABLE")
+	}
+
+	// https://dev.mysql.com/doc/relnotes/mysql/8.0/en/news-8-0-30.html
+	if version.GTE(semver.MustParse("8.0.30")) {
+		// set host_cache_size to 0 for backward compatibility
+		configs["host_cache_size"] = intstr.Parse("0")
+	}
+
+	return configs
+}
+
+func getBConfigsByVersion(version semver.Version) []string {
+	var configs []string
+
+	// https://dev.mysql.com/doc/relnotes/mysql/8.0/en/news-8-0-30.html
+	if version.LT(semver.MustParse("8.0.30")) {
+		configs = append(configs, "skip-host-cache")
+	}
+
+	return configs
 }
 
 func convertMapToKVConfig(m map[string]string) map[string]intstr.IntOrString {
@@ -191,11 +230,7 @@ var mysqlCommonConfigs = map[string]string{
 	"skip-slave-start": "on",
 
 	// Crash safe
-	"relay-log-info-repository": "TABLE",
-	"relay-log-recovery":        "on",
-
-	// https://github.com/github/orchestrator/issues/323#issuecomment-338451838
-	"master-info-repository": "TABLE",
+	"relay-log-recovery": "on",
 
 	"default-storage-engine":   "InnoDB",
 	"gtid-mode":                "on",
@@ -256,5 +291,4 @@ var mysql8xConfigs = map[string]string{
 var mysqlMasterSlaveBooleanConfigs = []string{
 	// Safety
 	"skip-name-resolve",
-	"skip-host-cache",
 }
