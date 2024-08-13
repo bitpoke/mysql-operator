@@ -13,6 +13,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Add SidecarImage fields to `.Spec` to allow specifying custom sidecar image.
 
 ### Changed
+* Changed headless svc name to a templated name that includes the mysql cluster name
+
 ### Removed
 ### Fixed
 * Avoid set read_only conflict when graceful takeover
