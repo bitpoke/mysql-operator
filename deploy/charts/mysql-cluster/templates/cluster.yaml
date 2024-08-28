@@ -74,5 +74,5 @@ spec:
 
   {{- if .Values.queryLimits }}
   queryLimits:
-    {{ toYaml .Values.queryLimits | indent 4 }}
+    {{- toYaml .Values.queryLimits | nindent 4 }}
   {{- end }}
