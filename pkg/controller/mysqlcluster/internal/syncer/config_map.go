@@ -94,7 +94,10 @@ fi
 }
 
 func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
-	cfg := ini.Empty()
+	// allow duplicate key in section
+	cfg := ini.Empty(ini.LoadOptions{
+		AllowShadows: true,
+	})
 	sec := cfg.Section("mysqld")
 
 	if cluster.GetMySQLSemVer().Major == 5 {
@@ -106,8 +109,13 @@ func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
 	// boolean configs
 	addBConfigsToSection(sec, mysqlMasterSlaveBooleanConfigs)
 	// add custom configs, would overwrite common configs
-	addKVConfigsToSection(sec, convertMapToKVConfig(mysqlCommonConfigs), cluster.Spec.MysqlConf)
-
+	extraMysqld := cluster.Spec.MysqlConf.ToMap()
+	if extraMysqld != nil {
+		extraMysqld = append(extraMysqld, convertMapToKVConfig(mysqlCommonConfigs))
+	} else {
+		extraMysqld = make([]map[string]intstr.IntOrString, 0)
+	}
+	addKVConfigsToSection(sec, extraMysqld...)
 	// include configs from /etc/mysql/conf.d/*.cnf
 	_, err := sec.NewBooleanKey(fmt.Sprintf("!includedir %s", ConfDPath))
 	if err != nil {
@@ -120,7 +128,6 @@ func buildMysqlConfData(cluster *mysqlcluster.MysqlCluster) (string, error) {
 	}
 
 	return data, nil
-
 }
 
 func convertMapToKVConfig(m map[string]string) map[string]intstr.IntOrString {
@@ -146,8 +153,15 @@ func addKVConfigsToSection(s *ini.Section, extraMysqld ...map[string]intstr.IntO
 
 		for _, k := range keys {
 			value := extra[k]
-			if _, err := s.NewKey(k, value.String()); err != nil {
-				log.Error(err, "failed to add key to config section", "key", k, "value", extra[k], "section", s)
+			// in (m MysqlConf) ToMap() we set it to "<nil>" when spec.mysqlConf no value.
+			if value.String() == "<nil>" {
+				if _, err := s.NewBooleanKey(k); err != nil {
+					log.Error(err, "failed to add boolean key to config section", "key", k)
+				}
+			} else {
+				if _, err := s.NewKey(k, value.String()); err != nil {
+					log.Error(err, "failed to add key to config section", "key", k, "value", extra[k], "section", s)
+				}
 			}
 		}
 	}

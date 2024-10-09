@@ -99,13 +99,8 @@ spec:
                   description: The number of pods from that set that must still be available after the eviction, even in the absence of the evicted pod Defaults to 50%
                   type: string
                 mysqlConf:
-                  additionalProperties:
-                    anyOf:
-                      - type: integer
-                      - type: string
-                    x-kubernetes-int-or-string: true
-                  description: A map[string]string that will be passed to my.cnf file.
-                  type: object
+                  description: A string that will be passed to my.cnf file, it should be compatible with mysql config format.
+                  type: string
                 mysqlVersion:
                   description: 'Represents the MySQL version that will be run. The available version can be found here: https://github.com/bitpoke/mysql-operator/blob/0fd4641ce4f756a0aab9d31c8b1f1c44ee10fcb2/pkg/util/constants/constants.go#L87 This field should be set even if the Image is set to let the operator know which mysql version is running. Based on this version the operator can take decisions which features can be used. Defaults to 5.7'
                   type: string

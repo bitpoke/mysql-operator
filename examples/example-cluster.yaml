@@ -58,8 +58,9 @@ spec:
   # serverIDOffset: 100
 
   ## Configs that will be added to my.cnf for cluster
-  mysqlConf:
-  #   innodb-buffer-size: 128M
+  ## just write it the same way you write the MySQL configuration file
+  mysqlConf: |-
+  #   innodb-buffer-size = 128M
 
 
   ## Specify additional pod specification
