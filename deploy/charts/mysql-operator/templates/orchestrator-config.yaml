@@ -8,7 +8,7 @@
 {{- $_ := set $conf "RaftEnabled" true }}
 {{- $_ := set $conf "RaftDataDir" "/var/lib/orchestrator" }}
 {{- $_ := set $conf "RaftAdvertise" "{{ .Env.HOSTNAME }}-orc-svc" }}
-{{- $_ := set $conf "RaftBind" "{{ .Env.HOSTNAME }}"}}
+{{- $_ := set $conf "RaftBind" "{{ .Env.POD_IP }}"}}
 {{- $_ := set $conf "HTTPAdvertise" "http://{{ .Env.HOSTNAME }}-orc-svc:80" }}
 {{- if eq 1 $replicas -}}
 {{- $_ := set $conf "RaftNodes" (list) }}

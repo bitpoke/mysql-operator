@@ -16,6 +16,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 ### Fixed
 * Avoid set read_only conflict when graceful takeover
+* Fix orchestrator startup crash in DualStack cluster
 
 ## [0.6.3] - 2023-05-22
 

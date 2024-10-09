@@ -212,7 +212,7 @@ orchestrator:
   #   - SQLite3DataFile /var/lib/orchestrator/orc.db
   #   - RaftEnabled true
   #   - RaftDataDir /var/lib/orchestrator
-  #   - RaftBind $HOSTNAME
+  #   - RaftBind $POD_IP
   #   - RaftNodes The statefullset members
   config:
     Debug: false
