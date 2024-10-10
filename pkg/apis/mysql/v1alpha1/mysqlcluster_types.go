@@ -17,10 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"strings"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -175,9 +177,97 @@ type MysqlClusterSpec struct {
 	InitFileExtraSQL []string `json:"initFileExtraSQL,omitempty"`
 }
 
-// MysqlConf defines type for extra cluster configs. It's a simple map between
-// string and string.
-type MysqlConf map[string]intstr.IntOrString
+// MysqlConf defines type for extra cluster configs. value is a mysql ini string, allow duplicate keys, like:
+// replicated_do_db=db1
+// replicated_do_db=db2
+type MysqlConf string
+
+// Get returns the value of key, if found, mysql allow no value in config, so we need to return a bool
+func (m MysqlConf) Get(key string) (string, bool) {
+	s := string(m)
+	lines := strings.Split(s, "\n")
+	for _, line := range lines {
+		keyAndValue := strings.Split(strings.TrimSpace(line), "=")
+		if strings.TrimSpace(keyAndValue[0]) == strings.TrimSpace(key) {
+			if len(keyAndValue) == 1 {
+				return "", true
+			}
+			if len(keyAndValue) == 2 {
+				return strings.TrimSpace(keyAndValue[1]), true
+			}
+		}
+	}
+	return "", false
+}
+
+// Set a key value pair, if key already exists, it will be overwritten else it will append at the end
+func (m MysqlConf) Set(key string, value string) MysqlConf {
+	s := string(m)
+	lines := strings.Split(s, "\n")
+	trimmedKey := strings.TrimSpace(key)
+	trimmedValue := strings.TrimSpace(value)
+	found := false
+	for index, line := range lines {
+		keyAndValue := strings.Split(strings.TrimSpace(line), "=")
+		if strings.TrimSpace(keyAndValue[0]) == trimmedKey {
+			found = true
+			// mysql allow bare boolean options with no value assignment,like:
+			// [mysqld]
+			// skip-name-resolve # no value here, when len(keyAndValue) == 1
+
+			// when len(keyAndValue) == 2 means "key = value"
+			if len(keyAndValue) == 1 && trimmedValue != "" || len(keyAndValue) == 2 {
+				// need to set key = value
+				lines[index] = fmt.Sprintf("%s = %s", trimmedKey, trimmedValue)
+			}
+		}
+	}
+	res := strings.Join(lines, "\n")
+	if !found {
+		if trimmedValue != "" {
+			res += fmt.Sprintf("\n%s = %s", trimmedKey, trimmedValue)
+		} else {
+			res += fmt.Sprintf("\n%s", trimmedKey)
+		}
+	}
+	return MysqlConf(res)
+}
+
+// ToMap returns a map[string]string, to compatible with addKVConfigsToSection
+func (m MysqlConf) ToMap() []map[string]intstr.IntOrString {
+	trimmed := strings.TrimSpace(string(m))
+	res := make([]map[string]intstr.IntOrString, 0)
+	if trimmed == "" {
+		return res
+	}
+	lines := strings.Split(trimmed, "\n")
+	total := make(map[string]intstr.IntOrString)
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+		if trimmedLine == "" {
+			continue
+		}
+		keyAndValue := strings.Split(trimmedLine, "=")
+		length := len(keyAndValue)
+		if length != 1 && length != 2 {
+			continue
+		}
+		key := strings.TrimSpace(keyAndValue[0])
+		value := intstr.FromString("<nil>")
+		if length == 2 {
+			value = intstr.FromString(strings.TrimSpace(keyAndValue[1]))
+		}
+		if _, ok := total[key]; ok {
+			res = append(res, map[string]intstr.IntOrString{key: value})
+		} else {
+			total[key] = value
+		}
+	}
+	if len(total) != 0 {
+		res = append(res, total)
+	}
+	return res
+}
 
 // PodSpec defines type for configure cluster pod spec.
 type PodSpec struct {
@@ -376,7 +466,6 @@ type MysqlClusterStatus struct {
 // +kubebuilder:printcolumn:name="Replicas",type="integer",JSONPath=".spec.replicas",description="The number of desired nodes"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:shortName=mysql
-//
 type MysqlCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -387,7 +476,6 @@ type MysqlCluster struct {
 
 // MysqlClusterList contains a list of MysqlCluster
 // +kubebuilder:object:root=true
-//
 type MysqlClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

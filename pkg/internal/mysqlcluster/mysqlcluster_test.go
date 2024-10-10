@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/klog"
 	"k8s.io/klog/v2/klogr"
 
@@ -59,7 +58,7 @@ var _ = Describe("Test MySQL cluster wrapper", func() {
 			},
 			Spec: api.MysqlClusterSpec{
 				SecretName: "sct-name",
-				MysqlConf:  map[string]intstr.IntOrString{},
+				MysqlConf:  "",
 			},
 		})
 		// set defaults
@@ -105,7 +104,7 @@ var _ = Describe("Test MySQL cluster wrapper", func() {
 		func(mem, cpu, expectedBufferSize, expectedBufferInstances string) {
 			cluster = New(&api.MysqlCluster{
 				Spec: api.MysqlClusterSpec{
-					MysqlConf: map[string]intstr.IntOrString{},
+					MysqlConf: "",
 					PodSpec: api.PodSpec{
 						Resources: corev1.ResourceRequirements{
 							Limits: corev1.ResourceList{
@@ -120,11 +119,13 @@ var _ = Describe("Test MySQL cluster wrapper", func() {
 			})
 			cluster.SetDefaults(options.GetOptions())
 
-			valBS := cluster.Spec.MysqlConf["innodb-buffer-pool-size"]
-			Expect(valBS.String()).To(Equal(expectedBufferSize))
+			valBS, found := cluster.Spec.MysqlConf.Get("innodb-buffer-pool-size")
+			Expect(found).Should(BeTrue())
+			Expect(valBS).To(Equal(expectedBufferSize))
 
-			valBI := cluster.Spec.MysqlConf["innodb-buffer-pool-instances"]
-			Expect(valBI.String()).To(Equal(expectedBufferInstances))
+			valBI, found := cluster.Spec.MysqlConf.Get("innodb-buffer-pool-instances")
+			Expect(found).Should(BeTrue())
+			Expect(valBI).To(Equal(expectedBufferInstances))
 		},
 		//        memory, cpu,  innodbBufferSize,  innodbBufferInstances
 		Entry("zero", "0", "0", "0", "0"),
