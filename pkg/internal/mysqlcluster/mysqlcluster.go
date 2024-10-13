@@ -18,6 +18,7 @@ package mysqlcluster
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/blang/semver"
@@ -246,10 +247,15 @@ func (c *MysqlCluster) ExporterDataSourcePort() int {
 	extraMaxConnectionsSettings := []string{"extra_max_connections", "extra-max-connections"}
 
 	for _, setting := range extraPortSettings {
-		if port, ok := c.Spec.MysqlConf[setting]; ok {
+		if port, ok := c.Spec.MysqlConf.Get(setting); ok {
 			for _, setting := range extraMaxConnectionsSettings {
-				if conns, ok := c.Spec.MysqlConf[setting]; ok && conns.IntValue() > 1 {
-					return port.IntValue()
+				if conns, ok := c.Spec.MysqlConf.Get(setting); ok {
+					connsInt, err := strconv.Atoi(conns)
+					if err == nil && connsInt > 1 {
+						if portInt, err := strconv.Atoi(port); err == nil {
+							return portInt
+						}
+					}
 				}
 			}
 		}

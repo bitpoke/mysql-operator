@@ -13,6 +13,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Add SidecarImage fields to `.Spec` to allow specifying custom sidecar image.
 
 ### Changed
+* Change the type of `spec.mysqlConf` in the `mysqlclusters` crd to string
+
 ### Removed
 ### Fixed
 * Avoid set read_only conflict when graceful takeover

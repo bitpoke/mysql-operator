@@ -50,7 +50,7 @@ func SetDefaults_MysqlCluster(c *MysqlCluster) {
 	}
 
 	if len(c.Spec.MysqlConf) == 0 {
-		c.Spec.MysqlConf = make(MysqlConf)
+		c.Spec.MysqlConf = ""
 	}
 
 	if len(c.Spec.MinAvailable) == 0 && *c.Spec.Replicas > 1 {

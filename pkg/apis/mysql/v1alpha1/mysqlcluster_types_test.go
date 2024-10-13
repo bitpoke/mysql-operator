@@ -83,7 +83,7 @@ var _ = Describe("MysqlCluster CRUD", func() {
 		It("should populate fields defaults", func() {
 			SetDefaults_MysqlCluster(cluster)
 
-			Expect(cluster.Spec.MysqlConf).NotTo(BeNil())
+			Expect(cluster.Spec.MysqlConf).NotTo(Equal(""))
 		})
 	})
 

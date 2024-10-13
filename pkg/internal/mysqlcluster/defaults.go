@@ -87,13 +87,13 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 	if mem := cluster.Spec.PodSpec.Resources.Requests.Memory(); mem != nil && !mem.IsZero() {
 		var cErr error
 		if innodbBufferPoolSize, cErr = computeInnodbBufferPoolSize(mem); cErr == nil {
-			setConfigIfNotSet(cluster.Spec.MysqlConf, "innodb-buffer-pool-size", humanizeSize(innodbBufferPoolSize))
+			cluster.Spec.MysqlConf = setConfigIfNotSet(cluster.Spec.MysqlConf, "innodb-buffer-pool-size", humanizeSize(innodbBufferPoolSize))
 		}
 	}
 
 	if mem := cluster.Spec.PodSpec.Resources.Requests.Memory(); mem != nil {
 		logFileSize := humanizeSize(computeInnodbLogFileSize(mem))
-		setConfigIfNotSet(cluster.Spec.MysqlConf, "innodb-log-file-size", logFileSize)
+		cluster.Spec.MysqlConf = setConfigIfNotSet(cluster.Spec.MysqlConf, "innodb-log-file-size", logFileSize)
 	}
 
 	if pvc := cluster.Spec.VolumeSpec.PersistentVolumeClaim; pvc != nil {
@@ -107,11 +107,13 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 
 			if cluster.IsPerconaImage() {
 				// binlog-space-limit = totalSpace / 2
-				setConfigIfNotSet(cluster.Spec.MysqlConf, "binlog-space-limit", humanizeSize(binlogSpaceLimit))
+				cluster.Spec.MysqlConf = setConfigIfNotSet(cluster.Spec.MysqlConf, "binlog-space-limit",
+					humanizeSize(binlogSpaceLimit))
 			}
 
 			// max-binlog-size = min(binlog-space-limit / 4, 1*gb)
-			setConfigIfNotSet(cluster.Spec.MysqlConf, "max-binlog-size", humanizeSize(maxBinlogSize))
+			cluster.Spec.MysqlConf = setConfigIfNotSet(cluster.Spec.MysqlConf, "max-binlog-size",
+				humanizeSize(maxBinlogSize))
 		}
 	}
 
@@ -119,7 +121,8 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 		// innodb_buffer_pool_instances = min(ceil(resources.limits.cpu), floor(innodb_buffer_pool_size/1Gi))
 		cpuRounded := math.Ceil(float64(cpu.MilliValue()) / float64(1000))
 		instances := math.Max(math.Min(cpuRounded, math.Floor(float64(innodbBufferPoolSize)/float64(gb))), 1)
-		setConfigIfNotSet(cluster.Spec.MysqlConf, "innodb-buffer-pool-instances", intstr.FromInt(int(instances)))
+		cluster.Spec.MysqlConf = setConfigIfNotSet(cluster.Spec.MysqlConf, "innodb-buffer-pool-instances",
+			intstr.FromInt(int(instances)))
 	}
 
 	// set default xtrabackup target directory
@@ -128,10 +131,12 @@ func (cluster *MysqlCluster) SetDefaults(opt *options.Options) {
 	}
 }
 
-func setConfigIfNotSet(conf api.MysqlConf, option string, value intstr.IntOrString) {
-	if _, ok := conf[option]; !ok {
-		conf[option] = value
+func setConfigIfNotSet(conf api.MysqlConf, option string, value intstr.IntOrString) api.MysqlConf {
+	valueStr := value.String()
+	if valueStr == "<nil>" {
+		valueStr = ""
 	}
+	return conf.Set(option, valueStr)
 }
 
 func getRequestedStorage(pvc *core.PersistentVolumeClaimSpec) *resource.Quantity {
