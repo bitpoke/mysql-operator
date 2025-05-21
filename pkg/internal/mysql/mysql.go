@@ -28,7 +28,7 @@ import (
 
 	mysqlv1alpha1 "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 
-	logf "github.com/presslabs/controller-util/log"
+	logf "github.com/presslabs/controller-util/pkg/log"
 )
 
 var log = logf.Log.WithName("mysql-internal")

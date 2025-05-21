@@ -27,7 +27,6 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	api "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
@@ -40,7 +39,7 @@ var c client.Client
 
 func TestSyncers(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Cleaners suit", []Reporter{printer.NewlineReporter{}})
+	RunSpecs(t, "Cleaners suit")
 }
 
 var _ = BeforeSuite(func() {

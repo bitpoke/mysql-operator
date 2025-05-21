@@ -33,8 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/presslabs/controller-util/meta"
-	"github.com/presslabs/controller-util/rand"
+	"github.com/presslabs/controller-util/pkg/meta"
+	"github.com/presslabs/controller-util/pkg/rand"
 
 	mysqlv1alpha1 "github.com/bitpoke/mysql-operator/pkg/apis/mysql/v1alpha1"
 	"github.com/bitpoke/mysql-operator/pkg/controller/internal/testutil"

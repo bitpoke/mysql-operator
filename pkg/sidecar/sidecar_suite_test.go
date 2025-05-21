@@ -24,7 +24,7 @@ import (
 	"k8s.io/klog"
 	"k8s.io/klog/v2/klogr"
 
-	logf "github.com/presslabs/controller-util/log"
+	logf "github.com/presslabs/controller-util/pkg/log"
 )
 
 func TestSidecarApp(t *testing.T) {
